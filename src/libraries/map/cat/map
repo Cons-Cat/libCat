@@ -86,7 +86,7 @@ union map_slot {
    constexpr map_slot() {
    }
 
-   constexpr ~map_slot()
+   constexpr ~map_slot() noexcept(!__has_feature(cxx_exceptions))
       requires(is_trivially_destructible<tuple<Key, T>>)
    = default;
 
@@ -120,21 +120,36 @@ struct map_group {
    = default;
 
    // Only occupied slots are moved.
-   constexpr map_group(map_group&& other) : metadata(other.metadata) {
-      for (idx i = 0u; i < 15u; ++i) {
+   constexpr map_group(map_group&& other) noexcept(
+      is_nothrow_move_constructible<tuple<Key, T>>
+      && !__has_feature(cxx_exceptions)
+   )
+       : metadata(other.metadata) {
+      idx i = 0u;
+      // The destructor does not run if this constructor throws.
+      detail::exception_defer guard([&] {
+         while (i > 0u) {
+            i = idx(i - 1u);
+            if (is_occupied(i)) {
+               map_slots[i].value.~tuple();
+            }
+         }
+      });
+      for (; i < 15u; ++i) {
          if (is_occupied(i)) {
             new (&map_slots[i].value)
                tuple<Key, T>(move(other.map_slots[i].value));
          }
       }
+      guard.commit();
    }
 
-   constexpr ~map_group()
+   constexpr ~map_group() noexcept(!__has_feature(cxx_exceptions))
       requires(is_trivially_destructible<tuple<Key, T>>)
    = default;
 
    // Only occupied slots are destroyed.
-   constexpr ~map_group() {
+   constexpr ~map_group() noexcept(!__has_feature(cxx_exceptions)) {
       for (idx i = 0u; i < 15u; ++i) {
          if (is_occupied(i)) {
             map_slots[i].value.~tuple();
@@ -363,14 +378,14 @@ class [[gsl::Owner]] map_base {
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_size;
    }
 
    // The number of slots, which is 0 before the first insertion.
    [[nodiscard]]
    constexpr auto
-   capacity() const -> idx {
+   capacity() const noexcept -> idx {
       if (m_groups.is_empty()) {
          return 0u;
       }
@@ -474,7 +489,7 @@ class [[gsl::Owner]] map_base {
    operator=(map_base const&) -> map_base& = default;
    constexpr auto
    operator=(map_base&&) -> map_base& = default;
-   constexpr ~map_base() = default;
+   constexpr ~map_base() noexcept(!__has_feature(cxx_exceptions)) = default;
 
  private:
    using group_type = detail::map_group<Key, T>;
@@ -629,6 +644,13 @@ class [[gsl::Owner]] map_base {
    move_entries_from(
       allocator_ref<Allocator> allocator, Container&& old_groups
    ) {
+      // If hashing or moving an entry throws, clear this `map` rather than
+      // lose track of its entries, like `boost::unordered_flat_map`.
+      detail::exception_defer guard([&] {
+         old_groups.free(allocator);
+         free(allocator);
+      });
+
       // Moved-from entries are destroyed with their old groups.
       for (group_type& group : old_groups) {
          for (idx i = 0u; i < group_slots; ++i) {
@@ -641,6 +663,7 @@ class [[gsl::Owner]] map_base {
             }
          }
       }
+      guard.commit();
       old_groups.free(allocator);
    }
 
@@ -661,7 +684,12 @@ class [[gsl::Owner]] map_base {
          group_count_for(slots_for(m_size + m_size / 61u + 1u))
       ));
       Container old_groups = swap_groups(move(groups));
+      // If moving the new entry throws, restore the old groups.
+      detail::exception_defer guard([&] {
+         swap_groups(move(old_groups)).free(allocator);
+      });
       place(hash, move(key), move(value));
+      guard.commit();
       move_entries_from(allocator, move(old_groups));
       return monostate;
    }

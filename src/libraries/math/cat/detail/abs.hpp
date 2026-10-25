@@ -9,7 +9,7 @@ namespace cat {
 template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-abs(T value) -> T {
+abs(T value) noexcept -> T {
    if constexpr (is_unsigned_integral<T>) {
       return value;
    } else {

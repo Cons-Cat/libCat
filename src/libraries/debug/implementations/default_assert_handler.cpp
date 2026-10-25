@@ -44,7 +44,7 @@ auto
 is_assert_frame(
    cat::detail::symbolizer const* _Nullable p_symbolizer,
    cat::stacktrace_entry entry
-) -> bool {
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    cat::detail::frame_origin const origin =
       cat::detail::resolve_stacktrace_frame(p_symbolizer, entry);
    // `verify()` and `assert()` might be inlined or duplicated by LTO, so we
@@ -57,7 +57,7 @@ is_assert_frame(
 }  // namespace
 
 void
-cat::detail::print_assert_location(source_location const& callsite) {
+cat::detail::print_assert_location(source_location const& callsite) noexcept {
    // Format the line number into a stack buffer. Avoid `fmt` so assert does not
    // pull the full formatter or Dragonbox into every binary.
    char line_buffer[16];
@@ -81,7 +81,9 @@ cat::detail::print_assert_location(source_location const& callsite) {
 [[clang::disable_tail_calls]]
 #endif
 void
-cat::default_assert_handler(source_location const& callsite) {
+cat::default_assert_handler(source_location const& callsite) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    // We can't propagate internal errors out of assert handlers, so they fail
    // fast.
    detail::print_assert_location(callsite);

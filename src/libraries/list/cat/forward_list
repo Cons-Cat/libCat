@@ -32,7 +32,17 @@ namespace detail {
 template <typename T>
 struct forward_list_node {
    forward_list_node<T>* _Nullable p_next_node = nullptr;
-   T storage;
+
+   // The element is constructed and destroyed by the list, not the node.
+   union {
+      T storage;
+   };
+
+   constexpr forward_list_node() {
+   }
+
+   constexpr ~forward_list_node() {
+   }
 };
 
 template <typename T>
@@ -46,7 +56,7 @@ struct forward_list_storage {
 
    // Reset head pointer to empty state.
    constexpr void
-   reset() {
+   reset() noexcept {
       m_p_head = nullptr;
    }
 };
@@ -66,11 +76,12 @@ using forward_list = basic_forward_list<T>;
 namespace detail {
 template <typename T>
 constexpr auto
-maybe_forward_list_has_value(basic_forward_list<T> const& value) -> bool;
+maybe_forward_list_has_value(basic_forward_list<T> const& value) noexcept(false)
+   -> bool;
 
 template <typename T>
 constexpr auto
-maybe_forward_list_nullopt() -> basic_forward_list<T>;
+maybe_forward_list_nullopt() noexcept(false) -> basic_forward_list<T>;
 }  // namespace detail
 
 inline namespace manual {
@@ -89,6 +100,22 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
 
    using node_type = detail::forward_list_node<T>;
 
+   // Allocate a node and construct its element from `arguments`. If the
+   // constructor throws, the node is freed.
+   template <is_allocator Allocator, typename... Args>
+   constexpr auto
+   make_node(allocator_ref<Allocator> allocator, Args&&... arguments)
+      -> maybe<node_type* _Nonnull> {
+      node_type* _Nonnull const p_node =
+         $prop(allocator.template alloc<node_type>());
+      detail::exception_defer guard([&] {
+         allocator.free(p_node);
+      });
+      new (__builtin_addressof(p_node->storage)) T($fwd(arguments)...);
+      guard.commit();
+      return p_node;
+   }
+
  public:
    using value_type = T;
    using size_type = idx;
@@ -105,7 +132,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    constexpr basic_forward_list() = default;
 
    // Move construct by taking ownership of other's nodes.
-   constexpr basic_forward_list(basic_forward_list&& other_list)
+   constexpr basic_forward_list(basic_forward_list&& other_list) noexcept
        : m_storage(other_list.m_storage), m_size(other_list.m_size) {
       other_list.m_storage.m_p_head = nullptr;
       other_list.m_size = 0u;
@@ -118,15 +145,18 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    );
 
    auto
-   operator=(basic_forward_list const&) -> basic_forward_list& = delete (
-      "Implicit copying of `cat::basic_forward_list` is forbidden. Call "
-      "`.clone()` or move instead!"
-   );
+   operator=(basic_forward_list const&) noexcept(!__has_feature(cxx_exceptions))
+      -> basic_forward_list& = delete (
+         "Implicit copying of `cat::basic_forward_list` is forbidden. Call "
+         "`.clone()` or move instead!"
+      );
 
    // Move assign by transferring ownership from other_list.
    [[clang::reinitializes]]
    constexpr auto
-   operator=(basic_forward_list&& other_list) -> basic_forward_list& {
+   operator=(basic_forward_list&& other_list) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> basic_forward_list& {
       if (this == __builtin_addressof(other_list)) {
          return *this;
       }
@@ -158,21 +188,21 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    // Return number of elements in the `cat::basic_forward_list`.
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_size;
    }
 
    // Return theoretical capacity based on size type.
    [[nodiscard]]
    constexpr auto
-   capacity() const -> idx {
+   capacity() const noexcept -> idx {
       return m_size.max();
    }
 
    // Return maximum supported number of elements.
    [[nodiscard]]
    static constexpr auto
-   max_size() -> idx {
+   max_size() noexcept -> idx {
       return idx::max() / sizeof(node_type);
    }
 
@@ -186,7 +216,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    // Destroy contained elements and set size to zero.
    [[clang::reinitializes]]
    constexpr void
-   reset() {
+   reset() noexcept {
       if constexpr (!is_trivially_destructible<T>) {
          node_type* p_current = m_storage.m_p_head;
          for (idx i = 0u; i < m_size; ++i) {
@@ -281,9 +311,8 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       allocator_ref<Allocator> allocator, node_type* _Nullable& p_tail,
       U&& value
    ) -> maybe<iterator> {
-      node_type* p_node = $prop(allocator.template alloc<node_type>());
+      node_type* p_node = $prop(this->make_node(allocator, $fwd(value)));
       p_node->p_next_node = nullptr;
-      p_node->storage = $fwd(value);
 
       if (m_size == 0u) {
          m_storage.m_p_head = p_node;
@@ -326,10 +355,22 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       basic_forward_list<T> new_list;
       node_type* p_tail = nullptr;
       node_type* p_node = m_storage.m_p_head;
+      // Free the partial copy if allocating or copying an element fails.
+      detail::exception_defer guard([&] {
+         new_list.free(allocator);
+      });
       for (idx i = 0u; i < m_size; ++i) {
-         $prop(new_list.append_new_node(allocator, p_tail, p_node->storage));
+         if (
+            new_list.append_new_node(allocator, p_tail, p_node->storage)
+               .is_empty()
+         ) {
+            guard.commit();
+            new_list.free(allocator);
+            return nullopt;
+         }
          p_node = p_node->p_next_node;
       }
+      guard.commit();
       return new_list;
    }
 
@@ -346,9 +387,8 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    constexpr auto
    insert(allocator_ref<Allocator> allocator, iterator where, U&& value)
       -> maybe<iterator> {
-      node_type* p_node = $prop(allocator.template alloc<node_type>());
+      node_type* p_node = $prop(this->make_node(allocator, $fwd(value)));
       node_type& node = *p_node;
-      node.storage = $fwd(value);
 
       if (m_size == 0) [[unlikely]] {
          this->place_initial_node(node);
@@ -424,9 +464,9 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    emplace(
       allocator_ref<Allocator> allocator, iterator where, Args&&... arguments
    ) -> maybe<iterator> {
-      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
+      auto* _Nonnull p_node =
+         $prop(this->make_node(allocator, $fwd(arguments)...));
       node_type& node = *p_node;
-      new (&node.storage) T($fwd(arguments)...);
 
       if (m_size == 0) [[unlikely]] {
          this->place_initial_node(node);
@@ -445,6 +485,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       node.p_next_node = p_remove->p_next_node;
 
       m_size = idx(m_size - 1u);
+      p_remove->storage.~T();
       allocator.free(p_remove);
    }
 
@@ -454,9 +495,9 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    constexpr auto
    push_front(allocator_ref<Allocator> allocator, U const& value)
       -> maybe<iterator> {
-      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
+      auto* _Nonnull p_node =
+         $prop(this->make_node(allocator, static_cast<T>(value)));
       node_type& node = *p_node;
-      node.storage = static_cast<T>(value);
       this->place_node_front(node);
 
       return iterator(p_node);
@@ -468,9 +509,8 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    constexpr auto
    push_front(allocator_ref<Allocator> allocator, T&& value)
       -> maybe<iterator> {
-      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
+      auto* _Nonnull p_node = $prop(this->make_node(allocator, move(value)));
       node_type& node = *p_node;
-      node.storage = move(value);
       this->place_node_front(node);
 
       return iterator(p_node);
@@ -492,9 +532,9 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    constexpr auto
    emplace_front(allocator_ref<Allocator> allocator, Args&&... arguments)
       -> maybe<iterator> {
-      auto* _Nonnull p_node = $prop(allocator.template alloc<node_type>());
+      auto* _Nonnull p_node =
+         $prop(this->make_node(allocator, $fwd(arguments)...));
       node_type& node = *p_node;
-      new (&node.storage) T($fwd(arguments)...);
       this->place_node_front(node);
 
       return iterator(p_node);
@@ -508,6 +548,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
          node_type& node = *(this->begin().m_p_node);
          m_storage.m_p_head = node.p_next_node;
          m_size = idx(m_size - 1u);
+         node.storage.~T();
          allocator.free(&node);
       }
    }
@@ -729,7 +770,7 @@ class forward_list_stepanov_iterator
 
    // Access the element at the iterator.
    constexpr auto
-   dereference() const -> T& {
+   dereference() const noexcept(!__has_feature(cxx_exceptions)) -> T& {
       assert(m_p_node);
       return m_p_node->storage;
    }

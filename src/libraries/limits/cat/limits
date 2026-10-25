@@ -63,12 +63,12 @@ struct limits<bool> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> bool {
+   min() noexcept -> bool {
       return false;
    }
 
    static consteval auto
-   max() -> bool {
+   max() noexcept -> bool {
       return true;
    }
 
@@ -86,12 +86,12 @@ struct limits<char> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __INT8_TYPE__ {
+   min() noexcept -> __INT8_TYPE__ {
       return -128;
    }
 
    static consteval auto
-   max() -> __INT8_TYPE__ {
+   max() noexcept -> __INT8_TYPE__ {
       return 127;
    }
 
@@ -108,12 +108,12 @@ struct limits<__INT8_TYPE__> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __INT8_TYPE__ {
+   min() noexcept -> __INT8_TYPE__ {
       return -128;
    }
 
    static consteval auto
-   max() -> __INT8_TYPE__ {
+   max() noexcept -> __INT8_TYPE__ {
       return 127;
    }
 
@@ -131,12 +131,12 @@ struct limits<__UINT8_TYPE__> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __UINT8_TYPE__ {
+   min() noexcept -> __UINT8_TYPE__ {
       return 0u;
    }
 
    static consteval auto
-   max() -> __UINT8_TYPE__ {
+   max() noexcept -> __UINT8_TYPE__ {
       return 255u;
    }
 
@@ -154,12 +154,12 @@ struct limits<__INT16_TYPE__> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __INT16_TYPE__ {
+   min() noexcept -> __INT16_TYPE__ {
       return -32'768;
    }
 
    static consteval auto
-   max() -> __INT16_TYPE__ {
+   max() noexcept -> __INT16_TYPE__ {
       return 32'767;
    }
 
@@ -177,12 +177,12 @@ struct limits<__UINT16_TYPE__> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __UINT16_TYPE__ {
+   min() noexcept -> __UINT16_TYPE__ {
       return 0u;
    }
 
    static consteval auto
-   max() -> __UINT16_TYPE__ {
+   max() noexcept -> __UINT16_TYPE__ {
       return 65'535u;
    }
 
@@ -200,12 +200,12 @@ struct limits<__INT32_TYPE__> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __INT32_TYPE__ {
+   min() noexcept -> __INT32_TYPE__ {
       return -2'147'483'648;
    }
 
    static consteval auto
-   max() -> __INT32_TYPE__ {
+   max() noexcept -> __INT32_TYPE__ {
       return 2'147'483'647;
    }
 
@@ -222,12 +222,12 @@ struct limits<__UINT32_TYPE__> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __UINT32_TYPE__ {
+   min() noexcept -> __UINT32_TYPE__ {
       return 0u;
    }
 
    static consteval auto
-   max() -> __UINT32_TYPE__ {
+   max() noexcept -> __UINT32_TYPE__ {
       return 4'294'967'295;
    }
 
@@ -244,14 +244,14 @@ struct limits<__INT64_TYPE__> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __INT64_TYPE__ {
+   min() noexcept -> __INT64_TYPE__ {
       // 9223372036854775808 does not fit in signed 64-bit literals on this
       // model, so build `INT64_MIN` as `-INT64_MAX - 1` from literals that fit.
       return -9'223'372'036'854'775'807 - 1;
    }
 
    static consteval auto
-   max() -> __INT64_TYPE__ {
+   max() noexcept -> __INT64_TYPE__ {
       return 9'223'372'036'854'775'807;
    }
 
@@ -268,12 +268,12 @@ struct limits<__UINT64_TYPE__> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __UINT64_TYPE__ {
+   min() noexcept -> __UINT64_TYPE__ {
       return 0u;
    }
 
    static consteval auto
-   max() -> __UINT64_TYPE__ {
+   max() noexcept -> __UINT64_TYPE__ {
       return 18'446'744'073'709'551'615u;
    }
 
@@ -290,12 +290,12 @@ struct limits<__int128> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __int128 {
+   min() noexcept -> __int128 {
       return -max() - 1;
    }
 
    static consteval auto
-   max() -> __int128 {
+   max() noexcept -> __int128 {
       return ~__int128(0) >> 1;
    }
 
@@ -312,12 +312,12 @@ struct limits<unsigned __int128> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> unsigned __int128 {
+   min() noexcept -> unsigned __int128 {
       return 0u;
    }
 
    static consteval auto
-   max() -> unsigned __int128 {
+   max() noexcept -> unsigned __int128 {
       return ~__uint128_t(0);
    }
 
@@ -336,14 +336,14 @@ struct limits<T> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> long long {
+   min() noexcept -> long long {
       // 9223372036854775808 does not fit in signed 64-bit literals on this
       // model, so build `INT64_MIN` as `-INT64_MAX - 1` from literals that fit.
       return -9'223'372'036'854'775'807ll - 1;
    }
 
    static consteval auto
-   max() -> long long {
+   max() noexcept -> long long {
       return 9'223'372'036'854'775'807ll;
    }
 
@@ -362,12 +362,12 @@ struct limits<T> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> unsigned long long {
+   min() noexcept -> unsigned long long {
       return 0ull;
    }
 
    static consteval auto
-   max() -> unsigned long long {
+   max() noexcept -> unsigned long long {
       return 18'446'744'073'709'551'615ull;
    }
 
@@ -387,12 +387,12 @@ struct limits<basic_idx<policy>> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> __UINT64_TYPE__ {
+   min() noexcept -> __UINT64_TYPE__ {
       return 0u;
    }
 
    static consteval auto
-   max() -> __UINT64_TYPE__ {
+   max() noexcept -> __UINT64_TYPE__ {
       return 9'223'372'036'854'775'807ull;
    }
 
@@ -425,12 +425,12 @@ struct limits<float> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> float {
+   min() noexcept -> float {
       return __FLT_MIN__;
    }
 
    static consteval auto
-   max() -> float {
+   max() noexcept -> float {
       return __FLT_MAX__;
    }
 
@@ -443,7 +443,7 @@ struct limits<float> {
       2 + __FLT_MANT_DIG__ * 643L / 2'136;
 
    static constexpr auto
-   epsilon() -> float {
+   epsilon() noexcept -> float {
       return __FLT_EPSILON__;
    }
 
@@ -461,26 +461,26 @@ struct limits<float> {
       static_cast<float_denorm>(__FLT_HAS_DENORM__);
 
    static constexpr auto
-   infinity() -> float {
+   infinity() noexcept -> float {
       return __builtin_huge_valf();
    }
 
    static constexpr auto
    // NOLINTNEXTLINE Let this weird lettercase be used.
-   quiet_NaN() -> float {
+   quiet_NaN() noexcept -> float {
       return __builtin_nanf("");
    }
 
    static constexpr auto
    // NOLINTNEXTLINE Let this weird lettercase be used.
-   signaling_NaN() -> float {
+   signaling_NaN() noexcept -> float {
       return __builtin_nansf("");
    }
 
    // TODO: Use Clang's `__builtin_issignaling()`.
 
    static constexpr auto
-   denorm_min() -> float {
+   denorm_min() noexcept -> float {
       return __FLT_DENORM_MIN__;
    }
 
@@ -492,12 +492,12 @@ struct limits<double> {
    constexpr limits() = delete;
 
    static consteval auto
-   min() -> double {
+   min() noexcept -> double {
       return __DBL_MIN__;
    }
 
    static consteval auto
-   max() -> double {
+   max() noexcept -> double {
       return __DBL_MAX__;
    }
 
@@ -510,7 +510,7 @@ struct limits<double> {
       2 + __DBL_MANT_DIG__ * 643L / 2'136;
 
    static constexpr auto
-   epsilon() -> double {
+   epsilon() noexcept -> double {
       return __DBL_EPSILON__;
    }
 
@@ -528,24 +528,24 @@ struct limits<double> {
       static_cast<float_denorm>(__DBL_HAS_DENORM__);
 
    static constexpr auto
-   infinity() -> double {
+   infinity() noexcept -> double {
       return __builtin_huge_val();
    }
 
    static constexpr auto
    // NOLINTNEXTLINE Let this weird lettercase be used.
-   quiet_NaN() -> double {
+   quiet_NaN() noexcept -> double {
       return __builtin_nan("");
    }
 
    static constexpr auto
    // NOLINTNEXTLINE Let this weird lettercase be used.
-   signaling_NaN() -> double {
+   signaling_NaN() noexcept -> double {
       return __builtin_nans("");
    }
 
    static constexpr auto
-   denorm_min() -> double {
+   denorm_min() noexcept -> double {
       return __DBL_DENORM_MIN__;
    }
 

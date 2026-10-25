@@ -24,16 +24,16 @@ class [[clang::trivial_abi]] allocator_linear
 
    // Friend factory functions.
    friend constexpr auto
-   make_allocator_linear(uintptr<void> p_address, idx arena_bytes)
+   make_allocator_linear(uintptr<void> p_address, idx arena_bytes) noexcept
       -> allocator_linear;
 
    friend constexpr auto
-   make_allocator_linear(span<byte>& span [[clang::lifetimebound]])
+   make_allocator_linear(span<byte>& span [[clang::lifetimebound]]) noexcept
       -> allocator_linear;
 
    // Initialize a `allocator_linear`. This should only be called from
    // `cat::make_allocator_linear`.
-   constexpr allocator_linear(uintptr<void> p_address, idx arena_bytes)
+   constexpr allocator_linear(uintptr<void> p_address, idx arena_bytes) noexcept
        : m_p_arena_begin(p_address + arena_bytes), m_p_arena_end(p_address) {
       this->reset();
    }
@@ -49,7 +49,7 @@ class [[clang::trivial_abi]] allocator_linear
    // Reset the bumped pointer to the beginning of this arena.
    // NOLINTNEXTLINE
    constexpr void
-   reset() {
+   reset() noexcept {
       poison_memory_region(
          static_cast<void const*>(m_p_arena_end),
          m_p_arena_begin - m_p_arena_end
@@ -59,7 +59,7 @@ class [[clang::trivial_abi]] allocator_linear
 
  private:
    auto
-   allocation_bytes(ualign alignment, idx allocation_bytes)
+   allocation_bytes(ualign alignment, idx allocation_bytes) noexcept
       -> maybe_non_zero<idx> {
       uintptr<void> allocation =
          align_down(m_p_arena_current - allocation_bytes, alignment);
@@ -75,7 +75,7 @@ class [[clang::trivial_abi]] allocator_linear
    // Try to allocate memory and bump the pointer down.
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(idx allocation_bytes) -> void* _Nullable {
+   allocate(idx allocation_bytes) noexcept -> void* _Nullable {
       if (m_p_arena_current - allocation_bytes >= m_p_arena_end) {
          m_p_arena_current -= allocation_bytes;
          // Return a pointer that is then used to in-place construct a `T`.
@@ -87,7 +87,8 @@ class [[clang::trivial_abi]] allocator_linear
    // Try to allocate memory aligned to some boundary and bump the pointer down.
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   aligned_allocate(ualign alignment, idx allocation_bytes) -> void* _Nullable {
+   aligned_allocate(ualign alignment, idx allocation_bytes) noexcept
+      -> void* _Nullable {
       uintptr<void> allocation =
          align_down(m_p_arena_current - allocation_bytes, alignment);
 
@@ -102,8 +103,9 @@ class [[clang::trivial_abi]] allocator_linear
    // Try to allocate memory and bump the pointer down, and return the memory
    // with size allocated.
    auto
-   aligned_allocate_feedback(ualign alignment, idx allocation_bytes)
-      -> maybe_sized_allocation<void*> {
+   aligned_allocate_feedback(ualign alignment, idx allocation_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe_sized_allocation<void*> {
       uintptr<void> allocation =
          align_down(m_p_arena_current - allocation_bytes, alignment);
 
@@ -127,7 +129,7 @@ class [[clang::trivial_abi]] allocator_linear
    // function is no-op.
    [[clang::ownership_takes(libcat, 2)]]
    void
-   deallocate(void const* _Nonnull /*unused*/, uword /*unused*/) {
+   deallocate(void const* _Nonnull /*unused*/, uword /*unused*/) noexcept {
    }
 
    // Address-stable in-place grow. `allocation` is the existing block (pointer
@@ -142,7 +144,7 @@ class [[clang::trivial_abi]] allocator_linear
    // until `reset()`. The allocation and its first `new_bytes` bytes remain
    // valid.
    auto
-   grow(span<byte> allocation, idx new_bytes) -> maybe<void> {
+   grow(span<byte> allocation, idx new_bytes) noexcept -> maybe<void> {
       if (new_bytes <= allocation.size()) {
          return monostate;
       }
@@ -152,7 +154,8 @@ class [[clang::trivial_abi]] allocator_linear
    // Feedback variant of `grow`. Mirrors `grow` but reports the exact number
    // of bytes the request settled on.
    auto
-   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx> {
+   grow_feedback(span<byte> allocation, idx new_bytes) noexcept
+      -> maybe_non_zero<idx> {
       if (this->grow(allocation, new_bytes).is_empty()) {
          return nullopt;
       }
@@ -167,14 +170,14 @@ class [[clang::trivial_abi]] allocator_linear
    // NOLINTNEXTLINE
    [[nodiscard]]
    auto
-   bytes_used() const -> idx {
+   bytes_used() const noexcept -> idx {
       return idx(m_p_arena_begin - m_p_arena_current);
    }
 
    // NOLINTNEXTLINE
    [[nodiscard]]
    auto
-   bytes_capacity() const -> idx {
+   bytes_capacity() const noexcept -> idx {
       return idx(m_p_arena_begin - m_p_arena_end);
    }
 
@@ -182,7 +185,7 @@ class [[clang::trivial_abi]] allocator_linear
    // NOLINTNEXTLINE
    [[nodiscard]]
    auto
-   is_equivalent(allocator_linear const& other) const -> bool {
+   is_equivalent(allocator_linear const& other) const noexcept -> bool {
       return m_p_arena_begin == other.m_p_arena_begin
              && m_p_arena_end == other.m_p_arena_end;
    }
@@ -195,14 +198,14 @@ class [[clang::trivial_abi]] allocator_linear
 
 [[nodiscard]]
 constexpr auto
-make_allocator_linear(uintptr<void> p_address, idx arena_bytes)
+make_allocator_linear(uintptr<void> p_address, idx arena_bytes) noexcept
    -> allocator_linear {
    return {p_address, arena_bytes};
 }
 
 [[nodiscard]]
 constexpr auto
-make_allocator_linear(span<byte>& span [[clang::lifetimebound]])
+make_allocator_linear(span<byte>& span [[clang::lifetimebound]]) noexcept
    -> allocator_linear {
    return {span.data(), span.size()};
 }
@@ -213,7 +216,7 @@ make_allocator_linear(span<byte>& span [[clang::lifetimebound]])
      "unintentionally leak memory. Copy an l-value `cat::span` instead."
   )]]
 constexpr auto
-make_allocator_linear(span<byte>&& span) -> allocator_linear {
+make_allocator_linear(span<byte>&& span) noexcept -> allocator_linear {
    return make_allocator_linear(span);
 }
 

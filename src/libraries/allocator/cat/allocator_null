@@ -34,26 +34,26 @@ class [[clang::trivial_abi]] allocator_null
    // This allocation always fails.
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    static auto
-   allocate(idx /*unused*/) -> void* _Nullable {
+   allocate(idx /*unused*/) noexcept -> void* _Nullable {
       return nullptr;
    }
 
    // Deallocation is no-op.
    [[clang::ownership_takes(libcat, 1)]]
    static void
-   deallocate(void const* _Nullable /*unused*/, idx /*unused*/) {
+   deallocate(void const* _Nullable /*unused*/, idx /*unused*/) noexcept {
    }
 
    // `allocator_null` never hands out memory, so it holds and manages nothing.
    [[nodiscard]]
    static auto
-   bytes_used() -> idx {
+   bytes_used() noexcept -> idx {
       return 0u;
    }
 
    [[nodiscard]]
    static auto
-   bytes_capacity() -> idx {
+   bytes_capacity() noexcept -> idx {
       return 0u;
    }
 
@@ -62,7 +62,7 @@ class [[clang::trivial_abi]] allocator_null
 
 [[nodiscard]]
 constexpr auto
-make_allocator_null() -> allocator_null {
+make_allocator_null() noexcept -> allocator_null {
    return {};
 }
 

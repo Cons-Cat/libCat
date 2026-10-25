@@ -9,7 +9,7 @@ namespace x64 {
 // https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_rdtsc
 [[nodiscard, gnu::always_inline]]
 inline auto
-read_timestamp_counter() -> cat::uint8 {
+read_timestamp_counter() noexcept -> cat::uint8 {
    return __builtin_ia32_rdtsc();
 }
 
@@ -21,7 +21,8 @@ struct timestamp_counter_and_processor {
 // https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_rdtscp
 [[nodiscard, gnu::always_inline]]
 inline auto
-read_timestamp_counter_and_processor() -> timestamp_counter_and_processor {
+read_timestamp_counter_and_processor() noexcept
+   -> timestamp_counter_and_processor {
    cat::uint4 low;
    cat::uint4 high;
    cat::uint4 processor;

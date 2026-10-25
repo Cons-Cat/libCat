@@ -53,7 +53,8 @@ class file_handle {
 
    file_handle(file_handle const&) = delete;
 
-   constexpr file_handle(file_handle&& other) : m_handle(other.release()) {
+   constexpr file_handle(file_handle&& other) noexcept
+       : m_handle(other.release()) {
    }
 
    auto
@@ -81,7 +82,7 @@ class file_handle {
                                      | file_permissions::user_write
                                      | file_permissions::group_read
                                      | file_permissions::other_read
-   ) -> scaredy<file_handle, io_error>;
+   ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy<file_handle, io_error>;
 
    [[nodiscard]]
    static auto
@@ -94,17 +95,17 @@ class file_handle {
                                      | file_permissions::user_write
                                      | file_permissions::group_read
                                      | file_permissions::other_read
-   ) -> scaredy<file_handle, io_error>;
+   ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy<file_handle, io_error>;
 
    [[nodiscard]]
    constexpr auto
-   native_handle() const -> cat::native_handle {
+   native_handle() const noexcept -> cat::native_handle {
       return m_handle;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_open() const -> bool {
+   is_open() const noexcept -> bool {
       return m_handle.is_valid();
    }
 
@@ -115,39 +116,50 @@ class file_handle {
    }
 
    auto
-   close() -> scaredy<void, io_error>;
+   close() noexcept(!__has_feature(cxx_exceptions)) -> scaredy<void, io_error>;
 
    [[nodiscard]]
    auto
-   read(span<char> buffer) const -> scaredy<idx, io_error>;
+   read(span<char> buffer) const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
-   write(str_view buffer) const -> scaredy<idx, io_error>;
+   write(str_view buffer) const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
-   read_at(span<char> buffer, iword offset) const -> scaredy<idx, io_error>;
+   read_at(span<char> buffer, iword offset) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
-   write_at(str_view buffer, iword offset) const -> scaredy<idx, io_error>;
+   write_at(str_view buffer, iword offset) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
-   seek(iword offset, seek_origin origin) const -> scaredy<idx, io_error>;
+   seek(iword offset, seek_origin origin) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<idx, io_error>;
 
    auto
-   truncate(iword size) const -> scaredy<void, io_error>;
+   truncate(iword size) const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<void, io_error>;
 
    auto
-   sync() const -> scaredy<void, io_error>;
+   sync() const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<void, io_error>;
 
    auto
-   data_sync() const -> scaredy<void, io_error>;
+   data_sync() const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<void, io_error>;
 
  private:
-   explicit constexpr file_handle(cat::native_handle handle)
+   explicit constexpr file_handle(cat::native_handle handle) noexcept
        : m_handle(move(handle)) {
    }
 
@@ -168,7 +180,7 @@ class mapped_file_handle {
 
    mapped_file_handle(mapped_file_handle const&) = delete;
 
-   constexpr mapped_file_handle(mapped_file_handle&& other)
+   constexpr mapped_file_handle(mapped_file_handle&& other) noexcept
        : m_file(move(other).m_file),
          m_p_mapping(other.m_p_mapping),
          m_mapping_length(other.m_mapping_length) {
@@ -177,11 +189,14 @@ class mapped_file_handle {
    }
 
    auto
-   operator=(mapped_file_handle const&) -> mapped_file_handle& = delete;
+   operator=(mapped_file_handle const&) noexcept
+      -> mapped_file_handle& = delete;
 
    [[clang::reinitializes]]
    auto
-   operator=(mapped_file_handle&& other) -> mapped_file_handle&;
+   operator=(mapped_file_handle&& other) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> mapped_file_handle&;
 
    ~mapped_file_handle();
 
@@ -216,31 +231,31 @@ class mapped_file_handle {
 
    [[nodiscard]]
    constexpr auto
-   native_handle() const -> cat::native_handle {
+   native_handle() const noexcept -> cat::native_handle {
       return m_file.native_handle();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_open() const -> bool {
+   is_open() const noexcept -> bool {
       return m_file.is_open();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_mapped() const -> bool {
+   is_mapped() const noexcept -> bool {
       return m_p_mapping != nullptr;
    }
 
    [[nodiscard]]
    constexpr auto
-   address() const -> byte const* _Nullable {
+   address() const noexcept -> byte const* _Nullable {
       return m_p_mapping;
    }
 
    [[nodiscard]]
    constexpr auto
-   mutable_address() -> scaredy<byte* _Nullable, io_error> {
+   mutable_address() noexcept -> scaredy<byte* _Nullable, io_error> {
       if (!native_handle().is_writable()) {
          return io_error::permission_denied;
       }
@@ -249,7 +264,7 @@ class mapped_file_handle {
 
    [[nodiscard]]
    constexpr auto
-   view() const -> span<byte const> {
+   view() const noexcept -> span<byte const> {
       if (!is_mapped()) {
          return nullptr;
       }
@@ -258,7 +273,7 @@ class mapped_file_handle {
 
    [[nodiscard]]
    constexpr auto
-   mutable_view() -> scaredy<span<byte>, io_error> {
+   mutable_view() noexcept -> scaredy<span<byte>, io_error> {
       if (!native_handle().is_writable()) {
          return io_error::permission_denied;
       }
@@ -270,21 +285,22 @@ class mapped_file_handle {
 
    [[nodiscard]]
    constexpr auto
-   mapping_length() const -> idx {
+   mapping_length() const noexcept -> idx {
       return m_mapping_length;
    }
 
    [[nodiscard]]
    auto
-   release() -> scaredy<cat::native_handle, io_error>;
+   release() noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<cat::native_handle, io_error>;
 
    auto
-   close() -> scaredy<void, io_error>;
+   close() noexcept(!__has_feature(cxx_exceptions)) -> scaredy<void, io_error>;
 
  private:
    constexpr mapped_file_handle(
       file_handle&& file, byte* _Nullable p_mapping, idx mapping_length
-   )
+   ) noexcept
        : m_file(move(file)),
          m_p_mapping(p_mapping),
          m_mapping_length(mapping_length) {

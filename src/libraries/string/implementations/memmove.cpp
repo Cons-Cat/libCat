@@ -9,7 +9,7 @@ extern "C"
    std::memmove(
       void* _Nonnull p_destination, void const* _Nonnull p_source,
       __SIZE_TYPE__ bytes
-   ) -> void* _Nonnull {
+   ) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nonnull {
    cat::copy_memory_backward(p_source, p_destination, bytes);
    return p_destination;
 }

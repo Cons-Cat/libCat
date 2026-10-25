@@ -19,16 +19,17 @@ struct thread {
 
       constexpr id() = default;
 
-      constexpr explicit id(native_handle_type native) : m_native(native) {
+      constexpr explicit id(native_handle_type native) noexcept
+          : m_native(native) {
       }
 
       [[nodiscard]]
       constexpr auto
-      operator==(id const&) const -> bool = default;
+      operator==(id const&) const noexcept -> bool = default;
 
       [[nodiscard]]
       constexpr auto
-      native_handle() const -> native_handle_type {
+      native_handle() const noexcept -> native_handle_type {
          return m_native;
       }
 
@@ -38,7 +39,7 @@ struct thread {
 
    using native_handle_type = nix::process;
 
-   thread() {
+   thread() noexcept {
       m_handle.add_clone_flag(nix::clone_flags::thread);
       // `clone_flags::child_set_tid` pairs with `clone_flags::child_clear_tid`
       // (already in `nix::process::default_flags`) so the kernel publishes the
@@ -67,31 +68,31 @@ struct thread {
 
    [[nodiscard]]
    auto
-   join() const -> maybe<void> {
+   join() const noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
       return $prop_as_or(m_handle.wait(), nullopt, monostate);
    }
 
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return m_handle.is_empty();
    }
 
    [[nodiscard]]
    auto
-   native_handle() -> native_handle_type& {
+   native_handle() noexcept -> native_handle_type& {
       return m_handle;
    }
 
    [[nodiscard]]
    auto
-   native_handle() const -> native_handle_type const& {
+   native_handle() const noexcept -> native_handle_type const& {
       return m_handle;
    }
 
    [[nodiscard]]
    constexpr auto
-   get_id() const -> id {
+   get_id() const noexcept -> id {
       if (m_handle.is_empty()) {
          return {};
       }
@@ -102,14 +103,16 @@ struct thread {
    template <is_allocator Allocator>
    [[clang::reinitializes]]
    void
-   free(allocator_ref<Allocator> allocator) {
+   free(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       m_handle.free(allocator);
    }
 
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    void
-   free(allocator_dyn allocator) {
+   free(allocator_dyn allocator) noexcept {
       free<allocator_dyn>(allocator);
    }
 
@@ -117,14 +120,16 @@ struct thread {
    template <is_allocator Allocator>
    [[clang::reinitializes]]
    void
-   cfree(allocator_ref<Allocator> allocator) {
+   cfree(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       m_handle.cfree(allocator);
    }
 
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    void
-   cfree(allocator_dyn allocator) {
+   cfree(allocator_dyn allocator) noexcept {
       cfree<allocator_dyn>(allocator);
    }
 
@@ -138,19 +143,20 @@ struct thread {
 namespace this_thread {
 [[nodiscard]]
 inline auto
-get_id() -> thread::id {
+get_id() noexcept(!__has_feature(cxx_exceptions)) -> thread::id {
    return thread::id(nix::sys_gettid());
 }
 
 inline void
-yield() {
+yield() noexcept(!__has_feature(cxx_exceptions)) {
    nix::sys_sched_yield().verify();
 }
 
 template <is_duration Duration>
 [[nodiscard]]
 inline auto
-sleep_for(Duration elapsed) -> maybe<void> {
+sleep_for(Duration elapsed) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<void> {
    // TODO: Generalize this to other platforms.
    nix::timespec remaining = nix::make_timespec(elapsed);
    while (true) {
@@ -168,7 +174,9 @@ sleep_for(Duration elapsed) -> maybe<void> {
 template <is_duration Duration>
 [[nodiscard]]
 auto
-sleep_until(time_point<clock_system, Duration> const& point) -> maybe<void> {
+sleep_until(time_point<clock_system, Duration> const& point) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<void> {
    // Unwrap a `cat::clock_system` to use the optimized native implementation.
    using timer = clock_system::native_handle_type;
    return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
@@ -177,7 +185,9 @@ sleep_until(time_point<clock_system, Duration> const& point) -> maybe<void> {
 template <is_duration Duration>
 [[nodiscard]]
 auto
-sleep_until(time_point<clock_steady, Duration> const& point) -> maybe<void> {
+sleep_until(time_point<clock_steady, Duration> const& point) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<void> {
    // Unwrap a `cat::clock_steady` to use the optimized native implementation.
    using timer = clock_steady::native_handle_type;
    return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
@@ -186,7 +196,9 @@ sleep_until(time_point<clock_steady, Duration> const& point) -> maybe<void> {
 template <is_duration Duration>
 [[nodiscard]]
 auto
-sleep_until(time_point<clock_unix, Duration> const& point) -> maybe<void> {
+sleep_until(time_point<clock_unix, Duration> const& point) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<void> {
    // Unwrap a `cat::clock_unix` to use the optimized native implementation.
    using timer = clock_unix::native_handle_type;
    return sleep_until(time_point<timer, Duration>(point.time_since_epoch()));
@@ -195,7 +207,9 @@ sleep_until(time_point<clock_unix, Duration> const& point) -> maybe<void> {
 template <is_clock Clock, is_duration Duration>
 [[nodiscard]]
 auto
-sleep_until(time_point<Clock, Duration> const& point) -> maybe<void> {
+sleep_until(time_point<Clock, Duration> const& point) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<void> {
    using duration = Clock::duration;
    duration const deadline = point.time_since_epoch();
    duration elapsed = $prop(Clock::now()).time_since_epoch();
@@ -220,8 +234,9 @@ sleep_until(time_point<Clock, Duration> const& point) -> maybe<void> {
 template <typename CharT>
 struct formatter<thread::id, CharT> : formatter_base<CharT> {
    auto
-   format(thread::id const& value, format_context& context) const
-      -> scaredy_format<void> {
+   format(thread::id const& value, format_context& context) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy_format<void> {
       return formatter<uint4, CharT>{}.format(
          value.native_handle().value, context
       );
@@ -231,7 +246,7 @@ struct formatter<thread::id, CharT> : formatter_base<CharT> {
 template <typename CharT>
 struct formatter<manual::thread, CharT> : formatter_base<CharT> {
    auto
-   format(manual::thread const& value, format_context& context) const
+   format(manual::thread const& value, format_context& context) const noexcept
       -> scaredy_format<void> {
       return formatter<thread::id, CharT>{}.format(value.get_id(), context);
    }

@@ -10,7 +10,7 @@ namespace detail {
 
 template <typename T>
 constexpr auto
-random_batch_fill_enabled() -> bool {
+random_batch_fill_enabled() noexcept -> bool {
    if constexpr (requires { T::enable_batch_fill; }) {
       return T::enable_batch_fill;
    } else {
@@ -20,7 +20,7 @@ random_batch_fill_enabled() -> bool {
 
 template <typename T>
 constexpr auto
-random_relaxed_bulk_fill_enabled() -> bool {
+random_relaxed_bulk_fill_enabled() noexcept -> bool {
    if constexpr (requires { T::enable_relaxed_bulk_fill; }) {
       return T::enable_relaxed_bulk_fill;
    } else {
@@ -30,7 +30,7 @@ random_relaxed_bulk_fill_enabled() -> bool {
 
 template <typename T>
 constexpr auto
-random_exact_bulk_fill_enabled() -> bool {
+random_exact_bulk_fill_enabled() noexcept -> bool {
    if constexpr (requires { T::enable_exact_bulk_fill; }) {
       return T::enable_exact_bulk_fill;
    } else {
@@ -40,7 +40,7 @@ random_exact_bulk_fill_enabled() -> bool {
 
 template <typename T>
 constexpr auto
-random_relaxed_distribution_fill_enabled() -> bool {
+random_relaxed_distribution_fill_enabled() noexcept -> bool {
    if constexpr (requires { T::enable_relaxed_distribution_fill; }) {
       return T::enable_relaxed_distribution_fill;
    } else {
@@ -52,7 +52,7 @@ template <is_simd Simd, typename Element, typename Generator>
 constexpr void
 fill_random_batch_contiguous(
    Element* _Nonnull p_data, idx size, Generator& generator
-) {
+) noexcept {
    using memory_lane = Simd::value_type;
    memory_lane* _Nonnull p_lanes = __builtin_bit_cast(memory_lane*, p_data);
    idx index = 0u;
@@ -70,7 +70,7 @@ fill_random_batch_contiguous(
 
 template <typename Abi, typename Generator>
 consteval auto
-exact_random_bulk_chain_count() -> idx {
+exact_random_bulk_chain_count() noexcept -> idx {
    if constexpr (Abi::size >= 64u) {
       return 2u;
    } else {
@@ -80,7 +80,7 @@ exact_random_bulk_chain_count() -> idx {
 
 template <typename Abi, typename Generator>
 consteval auto
-exact_random_bulk_threshold() -> idx {
+exact_random_bulk_threshold() noexcept -> idx {
    return Abi::size >= 64u ? 256u : 128u;
 }
 
@@ -88,7 +88,7 @@ template <is_simd Simd, idx chain_count, typename Element, typename Generator>
 constexpr void
 fill_random_exact_bulk_contiguous(
    Element* _Nonnull p_data, idx size, Generator& generator
-) {
+) noexcept {
    auto session =
       make_exact_random_bulk_session<typename Simd::abi_type, chain_count>(
          generator
@@ -143,8 +143,9 @@ fill_random_exact_bulk_contiguous(
 
 template <typename Element, typename Generator>
 constexpr auto
-fill_random_exact_bulk(Element* _Nonnull p_data, idx size, Generator& generator)
-   -> bool {
+fill_random_exact_bulk(
+   Element* _Nonnull p_data, idx size, Generator& generator
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    if constexpr (random_exact_bulk_fill_enabled<Generator>()) {
       if !consteval {
          if (size < 128u) {
@@ -235,7 +236,7 @@ template <typename Batch, typename Element, typename Generate>
 constexpr void
 fill_random_distribution_batch_contiguous(
    Element* _Nonnull p_data, idx size, Generate&& generate
-) {
+) noexcept {
    idx index = 0u;
    if constexpr (
       is_simd<Batch> && is_same<Element, typename Batch::value_type>
@@ -271,7 +272,7 @@ constexpr void
 fill_random_relaxed_distribution_contiguous(
    Element* _Nonnull p_data, idx size, Generator& generator,
    Distribution& distribution
-) {
+) noexcept {
    auto session = make_relaxed_random_bulk_session<Abi>(generator);
    fill_random_distribution_batch_contiguous<Batch>(p_data, size, [&] {
       return generate_random_distribution_batch<Abi>(distribution, session);
@@ -281,7 +282,9 @@ fill_random_relaxed_distribution_contiguous(
 
 template <is_iterable Range, typename Generator>
 constexpr auto
-fill_random_scalar_batch(Range&& range, Generator& generator) -> bool {
+fill_random_scalar_batch(Range&& range, Generator& generator) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bool {
    auto&& unwrapped = unwrap_ref(range);
    if constexpr (
       is_random_access_collection<decltype(unwrapped)> && requires {
@@ -380,7 +383,7 @@ template <is_iterable Range, typename Generator, typename Distribution>
 constexpr auto
 fill_random_scalar_distribution_batch(
    Range&& range, Generator& generator, Distribution& distribution
-) -> bool {
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    auto&& unwrapped = unwrap_ref(range);
    if constexpr (
       is_random_access_collection<decltype(unwrapped)> && requires {
@@ -547,7 +550,7 @@ fill_random_scalar_distribution_batch(
 
 template <typename Simd, is_iterable Range>
 constexpr void
-fill_random_simd_scattered(Range&& range, auto&& generate) {
+fill_random_simd_scattered(Range&& range, auto&& generate) noexcept {
    Simd values;
    idx lane = Simd::abi_type::lanes;
    iterate(range).run_while([&](auto&& value) -> bool {
@@ -565,7 +568,7 @@ template <typename Simd, typename Element>
 constexpr void
 fill_random_simd_contiguous(
    Element* _Nonnull p_data, idx size, auto&& generate
-) {
+) noexcept {
    using simd_result = __typeof_unqual(generate());
    simd_result source_values;
    idx source_lane = simd_result::abi_type::lanes;

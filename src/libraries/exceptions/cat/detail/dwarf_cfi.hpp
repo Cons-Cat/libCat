@@ -100,7 +100,7 @@ struct byte_cursor {
 
    [[nodiscard]]
    constexpr auto
-   remaining() const -> idx {
+   remaining() const noexcept(!__has_feature(cxx_exceptions)) -> idx {
       return narrow_cast<idx>(limit - position).assert();
    }
 
@@ -184,7 +184,7 @@ struct byte_cursor {
 
    [[nodiscard]]
    auto
-   read_string() -> zstr_view {
+   read_string() noexcept(!__has_feature(cxx_exceptions)) -> zstr_view {
       idx const start = position;
       while (position < limit && p_data[position].value != 0u) {
          ++position;
@@ -214,7 +214,7 @@ auto
 decode_eh_pointer(
    byte_cursor& cursor, dw_eh_pe encoding, uword program_counter,
    eh_pointer_bases eh_pointer_bases
-) -> uword;
+) noexcept(!__has_feature(cxx_exceptions)) -> uword;
 
 // Byte size with no effect on the cursor. FDE parsers use this to skip
 // an initial-location field before deciding whether to decode it.

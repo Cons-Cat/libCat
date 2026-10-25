@@ -35,11 +35,13 @@ using list = basic_list<T, Allocator>;
 namespace cat::detail {
 template <typename T>
 constexpr auto
-raii_list_has_value(raii::basic_list<T, allocator_dyn> const& value) -> bool;
+raii_list_has_value(raii::basic_list<T, allocator_dyn> const& value) noexcept(
+   false
+) -> bool;
 
 template <typename T>
 constexpr auto
-raii_list_nullopt() -> raii::basic_list<T, allocator_dyn>;
+raii_list_nullopt() noexcept(false) -> raii::basic_list<T, allocator_dyn>;
 }  // namespace cat::detail
 
 namespace cat::raii {
@@ -105,14 +107,14 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
               "`.clone()` or move instead!");
 
    auto
-   operator=(basic_list const&)
+   operator=(basic_list const&) noexcept(false)
       -> basic_list& = delete ("Implicit copying of `cat::raii::basic_list` is "
                                "forbidden. Call `.clone()` or move instead!");
 
    // Move assign by transferring core when allocators match.
    [[clang::reinitializes]]
    constexpr auto
-   operator=(basic_list&& other) -> basic_list& {
+   operator=(basic_list&& other) noexcept(false) -> basic_list& {
       if (this == __builtin_addressof(other)) {
          return *this;
       }
@@ -137,7 +139,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
 
    // Swap contents; requires matching allocators.
    constexpr void
-   swap(basic_list& other) {
+   swap(basic_list& other) noexcept(!__has_feature(cxx_exceptions)) {
       cat::assert(m_allocator == other.m_allocator);
       m_core.swap(other.m_core);
    }
@@ -145,21 +147,21 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Return number of elements.
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_core.size();
    }
 
    // Return capacity in elements.
    [[nodiscard]]
    constexpr auto
-   capacity() const -> idx {
+   capacity() const noexcept -> idx {
       return m_core.capacity();
    }
 
    // Return the maximum number of elements supported.
    [[nodiscard]]
    static constexpr auto
-   max_size() -> idx {
+   max_size() noexcept -> idx {
       return manual::basic_list<T>::max_size();
    }
 
@@ -194,7 +196,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Reset the `cat::raii::basic_list` and free resources.
    [[clang::reinitializes]]
    constexpr void
-   reset() {
+   reset() noexcept(!__has_feature(cxx_exceptions)) {
       this->free();
    }
 

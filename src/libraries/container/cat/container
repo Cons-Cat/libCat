@@ -2,6 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/exception_defer.hpp>
 #include <cat/detail/initializer_list.hpp>
 #include <cat/detail/iterable_interface.hpp>
 
@@ -259,7 +260,7 @@ class random_access_stepanov_iterable_interface
 
    [[nodiscard]]
    constexpr auto
-   rbegin(this auto&& container) {
+   rbegin(this auto&& container) noexcept(false) {
       // `cat::forward` must be called on last use, and because argument
       // evaluation order is unspecified, it cannot be called inside an argument
       // list. `rbegin` is only valid on non-empty containers. `assert` enforces
@@ -306,7 +307,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    // If `.size()` is not, provided and `.capacity()` is, generate `.size()`.
    [[nodiscard]]
    constexpr auto
-   size(this Derived const& self) -> idx
+   size(this Derived const& self) noexcept -> idx
       requires(detail::has_capacity<Derived> && !has_size<Derived>)
    {
       return self.capacity();
@@ -315,7 +316,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    // If `.size()` is provided and `.capacity()` is not, generate `.capacity()`.
    [[nodiscard]]
    constexpr auto
-   capacity(this Derived const& self) -> idx
+   capacity(this Derived const& self) noexcept -> idx
       requires(has_size<Derived>)
    {
       return self.size();
@@ -325,7 +326,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    // container.
    [[nodiscard]]
    constexpr auto
-   is_empty(this Derived const& self) -> bool
+   is_empty(this Derived const& self) noexcept -> bool
       requires(has_size<Derived>)
    {
       return self.size() == 0;
@@ -393,7 +394,8 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   front() & [[clang::lifetimebound]] -> T&
+   front() & noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> T&
       requires(is_array_like)
    {
       Derived& self = static_cast<Derived&>(*this);
@@ -403,7 +405,8 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   front() const& [[clang::lifetimebound]] -> T const&
+   front() const& noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> T const&
       requires(is_array_like)
    {
       Derived const& self = static_cast<Derived const&>(*this);
@@ -413,7 +416,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   front() && -> T
+   front() && noexcept(false) -> T
       requires(is_array_like)
    {
       Derived& self = static_cast<Derived&>(*this);
@@ -423,7 +426,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   front() const&& -> T
+   front() const&& noexcept(!__has_feature(cxx_exceptions)) -> T
       requires(is_array_like)
    {
       Derived const& self = static_cast<Derived const&>(*this);
@@ -433,7 +436,8 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   back() & [[clang::lifetimebound]] -> T&
+   back() & noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> T&
       requires(is_array_like)
    {
       Derived& self = static_cast<Derived&>(*this);
@@ -443,7 +447,8 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   back() const& [[clang::lifetimebound]] -> T const&
+   back() const& noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> T const&
       requires(is_array_like)
    {
       Derived const& self = static_cast<Derived const&>(*this);
@@ -453,7 +458,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   back() && -> T
+   back() && noexcept(false) -> T
       requires(is_array_like)
    {
       Derived& self = static_cast<Derived&>(*this);
@@ -463,7 +468,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   back() const&& -> T
+   back() const&& noexcept(!__has_feature(cxx_exceptions)) -> T
       requires(is_array_like)
    {
       Derived const& self = static_cast<Derived const&>(*this);
@@ -478,12 +483,16 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   subspan(idx start_index, idx end_index) &
+   subspan(idx start_index, idx end_index) & noexcept(
+      !__has_feature(cxx_exceptions)
+   )
       requires(is_array_like);
 
    [[nodiscard]]
    constexpr auto
-   subspan(idx start_index, idx end_index) const&
+   subspan(idx start_index, idx end_index) const& noexcept(
+      !__has_feature(cxx_exceptions)
+   )
       requires(is_array_like);
 
    constexpr auto
@@ -496,12 +505,12 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   first(idx count) &
+   first(idx count) & noexcept(!__has_feature(cxx_exceptions))
       requires(is_array_like);
 
    [[nodiscard]]
    constexpr auto
-   first(idx count) const&
+   first(idx count) const& noexcept(!__has_feature(cxx_exceptions))
       requires(is_array_like);
 
    constexpr auto
@@ -514,12 +523,12 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   last(idx count) &
+   last(idx count) & noexcept(!__has_feature(cxx_exceptions))
       requires(is_array_like);
 
    [[nodiscard]]
    constexpr auto
-   last(idx count) const&
+   last(idx count) const& noexcept(!__has_feature(cxx_exceptions))
       requires(is_array_like);
 
    constexpr auto
@@ -533,7 +542,8 @@ class container_interface : public contiguous_collection_interface<Derived> {
    template <typename Self = Derived>
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) & [[clang::lifetimebound]] -> T&
+   operator[](idx index) & noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> T&
       requires(is_array_like)
    {
       Derived& self = static_cast<Derived&>(*this);
@@ -544,7 +554,8 @@ class container_interface : public contiguous_collection_interface<Derived> {
    template <typename Self = Derived>
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) const& [[clang::lifetimebound]] -> T const&
+   operator[](idx index) const& noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> T const&
       requires(is_array_like)
    {
       Derived const& self = static_cast<Derived const&>(*this);
@@ -555,7 +566,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    template <typename Self = Derived>
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) && -> T
+   operator[](idx index) && noexcept(false) -> T
       requires(is_array_like)
    {
       Derived& self = static_cast<Derived&>(*this);
@@ -566,7 +577,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    template <typename Self = Derived>
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) const&& -> T
+   operator[](idx index) const&& noexcept(!__has_feature(cxx_exceptions)) -> T
       requires(is_array_like)
    {
       Derived const& self = static_cast<Derived const&>(*this);
@@ -614,7 +625,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    template <is_stepanov_container Other>
    auto
-   copy_to(Other& destination) const {
+   copy_to(Other& destination) const noexcept(!__has_feature(cxx_exceptions)) {
       Derived const& self = static_cast<Derived const&>(*this);
       assert(destination.capacity() >= self.capacity());
       return cat::copy(self.begin(), self.end(), destination.begin());
@@ -622,7 +633,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    template <is_stepanov_container Other>
    auto
-   move_to(Other& destination) const {
+   move_to(Other& destination) const noexcept(false) {
       Derived const& self = static_cast<Derived const&>(*this);
       assert(destination.capacity() >= self.capacity());
       return move(self.begin(), self.end(), destination.begin());
@@ -630,7 +641,9 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    template <is_stepanov_container Other>
    auto
-   relocate_to(Other& destination) const {
+   relocate_to(Other& destination) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       Derived const& self = static_cast<Derived const&>(*this);
       assert(destination.capacity() >= self.capacity());
       return cat::relocate(self.begin(), self.end(), destination.begin());

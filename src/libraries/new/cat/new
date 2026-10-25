@@ -12,23 +12,26 @@ enum class [[clang::enum_extensibility(open)]] align_val_t : __SIZE_TYPE__ {
 
 [[nodiscard, gnu::returns_nonnull]]
 auto
-operator new(unsigned long) -> void* _Nonnull;
+operator new(unsigned long) noexcept(false) -> void* _Nonnull;
 
 [[gnu::returns_nonnull]]
 auto
-operator new(unsigned long, void* _Nonnull p_address) -> void* _Nonnull;
+operator new(unsigned long, void* _Nonnull p_address) noexcept
+   -> void* _Nonnull;
 
 [[nodiscard, gnu::returns_nonnull]]
 auto
-operator new[](unsigned long) -> void* _Nonnull;
+operator new[](unsigned long) noexcept(false) -> void* _Nonnull;
 
 [[nodiscard, gnu::returns_nonnull]]
 auto
-operator new[](unsigned long, void* _Nonnull p_address) -> void* _Nonnull;
+operator new[](unsigned long, void* _Nonnull p_address) noexcept
+   -> void* _Nonnull;
 
 [[nodiscard, gnu::returns_nonnull]]
 auto
-operator new[](unsigned long, std::align_val_t align) -> void* _Nonnull;
+operator new[](unsigned long, std::align_val_t align) noexcept(false)
+   -> void* _Nonnull;
 
 void
 operator delete(void* _Nullable) noexcept;

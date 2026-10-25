@@ -85,13 +85,14 @@ _Unwind_SetIP(
 );
 
 auto
-_Unwind_GetGR(unwind_context* _Nonnull p_context, int4 register_number)
-   -> uword;
+_Unwind_GetGR(
+   unwind_context* _Nonnull p_context, int4 register_number
+) noexcept(!__has_feature(cxx_exceptions)) -> uword;
 
 void
 _Unwind_SetGR(
    unwind_context* _Nonnull p_context, int4 register_number, uword value
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 auto
 _Unwind_GetLanguageSpecificData(unwind_context* _Nonnull p_context) -> uword;

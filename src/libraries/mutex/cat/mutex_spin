@@ -21,10 +21,10 @@ class mutex_spin {
 
    mutex_spin(mutex_spin const&) = delete;
    auto
-   operator=(mutex_spin const&) -> mutex_spin& = delete;
+   operator=(mutex_spin const&) noexcept -> mutex_spin& = delete;
 
    void
-   lock() {
+   lock() noexcept(!__has_feature(cxx_exceptions)) {
       uint1 count = 1;
       while (m_flag.test(memory_order::relaxed)
              || m_flag.test_and_set(memory_order::acquire)) {
@@ -34,7 +34,7 @@ class mutex_spin {
 
    [[nodiscard]]
    auto
-   try_lock() -> bool {
+   try_lock() noexcept(!__has_feature(cxx_exceptions)) -> bool {
       return !m_flag.test(memory_order::relaxed)
              && !m_flag.test_and_set(memory_order::acquire);
    }
@@ -42,7 +42,8 @@ class mutex_spin {
    template <is_duration Duration>
    [[nodiscard]]
    auto
-   try_lock_for(Duration timeout) -> bool {
+   try_lock_for(Duration timeout) noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
       clock_steady::time_point const now = clock_steady::now().assert();
       return try_lock_until(now + clock_steady::duration(timeout));
    }
@@ -50,7 +51,9 @@ class mutex_spin {
    template <is_clock Clock, is_duration Duration>
    [[nodiscard]]
    auto
-   try_lock_until(time_point<Clock, Duration> timeout) -> bool {
+   try_lock_until(time_point<Clock, Duration> timeout) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       typename Clock::duration const deadline = timeout.time_since_epoch();
       uint1 count = 1;
       while (!try_lock()) {
@@ -65,13 +68,13 @@ class mutex_spin {
    }
 
    void
-   unlock() {
+   unlock() noexcept(!__has_feature(cxx_exceptions)) {
       m_flag.clear(memory_order::release);
    }
 
  private:
    static void
-   backoff(uint1& count) {
+   backoff(uint1& count) noexcept(!__has_feature(cxx_exceptions)) {
       // 16 spins is the limit used by Intel Thread Building Blocks.
       if (count <= 16u) {
          machine_pause(count);

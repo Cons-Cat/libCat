@@ -10,7 +10,9 @@ namespace cat {
 template <is_unsigned_integral T, is_unsigned_integral U>
 [[nodiscard]]
 constexpr auto
-round_up_to_multiple_of(T value, U multiple) -> common_type<T, U> {
+round_up_to_multiple_of(T value, U multiple) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> common_type<T, U> {
    using wide = common_type<T, U>;
    wide const wide_value = value;
    wide const wide_multiple = multiple;
@@ -38,7 +40,9 @@ round_up_to_multiple_of(T value, U multiple) -> common_type<T, U> {
 template <is_integral T, is_integral U>
 [[nodiscard]]
 constexpr auto
-round_down_to_multiple_of(T value, U multiple) -> common_type<T, U> {
+round_down_to_multiple_of(T value, U multiple) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> common_type<T, U> {
    using wide = common_type<T, U>;
    wide const wide_value = value;
    wide const wide_multiple = multiple;
@@ -72,7 +76,7 @@ round_down_to_multiple_of(T value, U multiple) -> common_type<T, U> {
 template <is_integral T, is_integral U>
 [[nodiscard]]
 constexpr auto
-round_to_multiple_of(T value, U multiple) -> common_type<T, U> {
+round_to_multiple_of(T value, U multiple) noexcept -> common_type<T, U> {
    using wide = common_type<T, U>;
    wide const wide_value = value;
    wide const wide_multiple = multiple;

@@ -48,22 +48,23 @@ class binomial_distribution {
 
       constexpr explicit param_type(
          result_type trials = 1, Float probability = 0.5
-      )
+      ) noexcept
           : m_trials(trials), m_probability(probability) {
       }
 
       constexpr auto
-      t() const -> result_type {
+      t() const noexcept -> result_type {
          return m_trials;
       }
 
       constexpr auto
-      p() const -> Float {
+      p() const noexcept -> Float {
          return m_probability;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       result_type m_trials;
@@ -72,45 +73,45 @@ class binomial_distribution {
 
    constexpr explicit binomial_distribution(
       result_type trials = 1, Float probability = 0.5
-   )
+   ) noexcept
        : m_parameters(trials, probability) {
    }
 
-   constexpr explicit binomial_distribution(param_type parameters)
+   constexpr explicit binomial_distribution(param_type parameters) noexcept
        : m_parameters(parameters) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    constexpr auto
-   t() const -> result_type {
+   t() const noexcept -> result_type {
       return m_parameters.t();
    }
 
    constexpr auto
-   p() const -> Float {
+   p() const noexcept -> Float {
       return m_parameters.p();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameters;
    }
 
    constexpr void
-   param(param_type parameters) {
+   param(param_type parameters) noexcept {
       m_parameters = parameters;
    }
 
    constexpr auto
-   min() const -> result_type {
+   min() const noexcept -> result_type {
       return 0u;
    }
 
    constexpr auto
-   max() const -> result_type {
+   max() const noexcept -> result_type {
       return t();
    }
 

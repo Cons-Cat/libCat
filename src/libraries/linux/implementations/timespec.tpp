@@ -8,13 +8,13 @@
 // Add `seconds` and `nanoseconds` as a quantity of
 // `cat::units::nanoseconds`.
 constexpr auto
-nix::timespec::to_nanoseconds() const -> cat::units::nanosecond_int8 {
+nix::timespec::to_nanoseconds() const noexcept -> cat::units::nanosecond_int8 {
    return cat::units::nanosecond_int8(seconds) + nanoseconds;
 }
 
 template <cat::is_duration Duration>
 constexpr auto
-nix::make_timespec(Duration elapsed) -> nix::timespec {
+nix::make_timespec(Duration elapsed) noexcept -> nix::timespec {
    cat::units::nanosecond_int8 const ns(elapsed);
    cat::int8 const total = ns.raw;
    cat::int8 const billion = 1'000'000'000;

@@ -19,7 +19,7 @@ extern "C"
    memcpy(
       void* _Nonnull __restrict p_destination,
       void const* _Nonnull __restrict p_source, __SIZE_TYPE__ bytes
-   ) -> void* _Nonnull;
+   ) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nonnull;
 
 // Deprecated call to `memmove()`. Consider using
 // `cat::copy_memory_backward()` instead.
@@ -33,7 +33,7 @@ extern "C"
    memmove(
       void* _Nonnull p_destination, void const* _Nonnull p_source,
       __SIZE_TYPE__ bytes
-   ) -> void* _Nonnull;
+   ) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nonnull;
 
 // Deprecated call to `memset()`. Consider using `cat::fill_memory() or
 // cat::zero_memory()` instead. `memset()` exists to enable some Clang
@@ -46,8 +46,9 @@ extern "C"
      ),
      gnu::returns_nonnull]]
    auto
-   memset(void* _Nonnull p_source, int byte_value, __SIZE_TYPE__ bytes)
-      -> void* _Nonnull;
+   memset(
+      void* _Nonnull p_source, int byte_value, __SIZE_TYPE__ bytes
+   ) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nonnull;
 
 // Deprecated call to `memcmp()`. Consider using `cat::compare_memory()` or a
 // `span` comparison instead. `memcmp()` exists because Clang lowers
@@ -59,7 +60,7 @@ extern "C" [[deprecated(
 auto
 memcmp(
    void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, __SIZE_TYPE__ bytes
-) -> int;
+) noexcept -> int;
 
 // Deprecated call to `memchr()`. Consider using `cat::str_view::find()`
 // instead. `memchr()` exists because Clang lowers `__builtin_memchr()` into a
@@ -69,8 +70,9 @@ extern "C" [[deprecated(
    "or `cat::str_view::find()` instead."
 )]]
 auto
-memchr(void const* _Nonnull p_haystack, int needle, __SIZE_TYPE__ bytes)
-   -> void const* _Nonnull;
+memchr(
+   void const* _Nonnull p_haystack, int needle, __SIZE_TYPE__ bytes
+) noexcept(!__has_feature(cxx_exceptions)) -> void const* _Nonnull;
 
 }  // namespace std
 
@@ -83,14 +85,15 @@ extern "C" [[deprecated(
 auto
 bcmp(
    void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, __SIZE_TYPE__ bytes
-) -> int;
+) noexcept -> int;
 
 namespace cat {
 
 [[nodiscard, clang::no_builtin]]
 constexpr auto
-compare_strings_scalar(str_view const string_1, str_view const string_2)
-   -> bool {
+compare_strings_scalar(
+   str_view const string_1, str_view const string_2
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    if (string_1.size() != string_2.size()) {
       return false;
    }
@@ -107,12 +110,16 @@ compare_strings_scalar(str_view const string_1, str_view const string_2)
 namespace detail {
 [[nodiscard]]
 auto
-compare_strings_detail(str_view string_1, str_view string_2) -> bool;
+compare_strings_detail(str_view string_1, str_view string_2) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bool;
 }
 
 [[nodiscard]]
 constexpr auto
-compare_strings(str_view string_1, str_view string_2) -> bool {
+compare_strings(str_view string_1, str_view string_2) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bool {
    if consteval {
       return compare_strings_scalar(string_1, string_2);
    } else {

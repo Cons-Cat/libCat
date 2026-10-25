@@ -46,28 +46,28 @@ class partial_ordering {
    static partial_ordering const unordered;
 
    friend constexpr auto
-   operator==(partial_ordering, partial_ordering) -> bool = default;
+   operator==(partial_ordering, partial_ordering) noexcept -> bool = default;
 
    friend constexpr auto
-   operator<(partial_ordering lhs, partial_ordering rhs) -> bool {
+   operator<(partial_ordering lhs, partial_ordering rhs) noexcept -> bool {
       return static_cast<signed char>(lhs.m_value)
              < static_cast<signed char>(rhs.m_value);
    }
 
    friend constexpr auto
-   operator<=(partial_ordering lhs, partial_ordering rhs) -> bool {
+   operator<=(partial_ordering lhs, partial_ordering rhs) noexcept -> bool {
       return static_cast<signed char>(lhs.m_value)
              <= static_cast<signed char>(rhs.m_value);
    }
 
    friend constexpr auto
-   operator>(partial_ordering lhs, partial_ordering rhs) -> bool {
+   operator>(partial_ordering lhs, partial_ordering rhs) noexcept -> bool {
       return static_cast<signed char>(lhs.m_value)
              > static_cast<signed char>(rhs.m_value);
    }
 
    friend constexpr auto
-   operator>=(partial_ordering lhs, partial_ordering rhs) -> bool {
+   operator>=(partial_ordering lhs, partial_ordering rhs) noexcept -> bool {
       return static_cast<signed char>(lhs.m_value)
              >= static_cast<signed char>(rhs.m_value);
    }
@@ -75,76 +75,78 @@ class partial_ordering {
    // 0 is the only integer literal which can implicitly convert to `nullptr`.
 
    friend constexpr auto
-   operator==(partial_ordering partial, decltype(nullptr)) -> bool {
+   operator==(partial_ordering partial, decltype(nullptr)) noexcept -> bool {
       return partial.m_value == detail::partial_order::equivalent;
    }
 
    friend constexpr auto
-   operator==(decltype(nullptr), partial_ordering partial) -> bool {
+   operator==(decltype(nullptr), partial_ordering partial) noexcept -> bool {
       return partial.m_value == detail::partial_order::equivalent;
    }
 
    friend constexpr auto
-   operator!=(partial_ordering partial, decltype(nullptr)) -> bool {
+   operator!=(partial_ordering partial, decltype(nullptr)) noexcept -> bool {
       return partial.m_value != detail::partial_order::equivalent;
    }
 
    friend constexpr auto
-   operator!=(decltype(nullptr), partial_ordering partial) -> bool {
+   operator!=(decltype(nullptr), partial_ordering partial) noexcept -> bool {
       return partial.m_value != detail::partial_order::equivalent;
    }
 
    friend constexpr auto
-   operator<(partial_ordering partial, decltype(nullptr)) -> bool {
+   operator<(partial_ordering partial, decltype(nullptr)) noexcept -> bool {
       return partial.m_value == detail::partial_order::less;
    }
 
    friend constexpr auto
-   operator<(decltype(nullptr), partial_ordering partial) -> bool {
+   operator<(decltype(nullptr), partial_ordering partial) noexcept -> bool {
       return partial.m_value == detail::partial_order::greater;
    }
 
    friend constexpr auto
-   operator<=(partial_ordering partial, decltype(nullptr)) -> bool {
+   operator<=(partial_ordering partial, decltype(nullptr)) noexcept -> bool {
       return partial.m_value == detail::partial_order::equivalent
              || partial.m_value == detail::partial_order::less;
    }
 
    friend constexpr auto
-   operator<=(decltype(nullptr), partial_ordering partial) -> bool {
+   operator<=(decltype(nullptr), partial_ordering partial) noexcept -> bool {
       return partial.m_value == detail::partial_order::equivalent
              || partial.m_value == detail::partial_order::greater;
    }
 
    friend constexpr auto
-   operator>(partial_ordering partial, decltype(nullptr)) -> bool {
+   operator>(partial_ordering partial, decltype(nullptr)) noexcept -> bool {
       return partial.m_value == detail::partial_order::greater;
    }
 
    friend constexpr auto
-   operator>(decltype(nullptr), partial_ordering partial) -> bool {
+   operator>(decltype(nullptr), partial_ordering partial) noexcept -> bool {
       return partial.m_value == detail::partial_order::less;
    }
 
    friend constexpr auto
-   operator>=(partial_ordering partial, decltype(nullptr)) -> bool {
+   operator>=(partial_ordering partial, decltype(nullptr)) noexcept -> bool {
       return partial.m_value == detail::partial_order::equivalent
              || partial.m_value == detail::partial_order::greater;
    }
 
    friend constexpr auto
-   operator>=(decltype(nullptr), partial_ordering partial) -> bool {
+   operator>=(decltype(nullptr), partial_ordering partial) noexcept -> bool {
       return partial.m_value == detail::partial_order::equivalent
              || partial.m_value == detail::partial_order::less;
    }
 
    friend constexpr auto
-   operator<=>(partial_ordering lhs, decltype(nullptr)) -> partial_ordering {
+   operator<=>(partial_ordering lhs, decltype(nullptr)) noexcept
+      -> partial_ordering {
       return lhs;
    }
 
    friend constexpr auto
-   operator<=>(decltype(nullptr), partial_ordering rhs) -> partial_ordering {
+   operator<=>(decltype(nullptr), partial_ordering rhs) noexcept
+      -> partial_ordering {
       return rhs.m_value == detail::partial_order::less
                 ? partial_ordering::greater
                 : (rhs.m_value == detail::partial_order::greater
@@ -181,78 +183,78 @@ class weak_ordering {
    static weak_ordering const greater;
 
    constexpr
-   operator partial_ordering() const {
+   operator partial_ordering() const noexcept {
       return m_value == 0 ? partial_ordering::equivalent
                           : (m_value < 0 ? partial_ordering::less
                                          : partial_ordering::greater);
    }
 
    friend constexpr auto
-   operator==(weak_ordering, weak_ordering) -> bool = default;
+   operator==(weak_ordering, weak_ordering) noexcept -> bool = default;
 
    friend constexpr auto
-   operator<(weak_ordering lhs, weak_ordering rhs) -> bool {
+   operator<(weak_ordering lhs, weak_ordering rhs) noexcept -> bool {
       return lhs.m_value < rhs.m_value;
    }
 
    friend constexpr auto
-   operator<=(weak_ordering lhs, weak_ordering rhs) -> bool {
+   operator<=(weak_ordering lhs, weak_ordering rhs) noexcept -> bool {
       return lhs.m_value <= rhs.m_value;
    }
 
    friend constexpr auto
-   operator>(weak_ordering lhs, weak_ordering rhs) -> bool {
+   operator>(weak_ordering lhs, weak_ordering rhs) noexcept -> bool {
       return lhs.m_value > rhs.m_value;
    }
 
    friend constexpr auto
-   operator>=(weak_ordering lhs, weak_ordering rhs) -> bool {
+   operator>=(weak_ordering lhs, weak_ordering rhs) noexcept -> bool {
       return lhs.m_value >= rhs.m_value;
    }
 
    friend constexpr auto
-   operator==(weak_ordering value, decltype(nullptr)) -> bool {
+   operator==(weak_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value
              == static_cast<signed char>(detail::order::equivalent);
    }
 
    friend constexpr auto
-   operator==(decltype(nullptr), weak_ordering value) -> bool {
+   operator==(decltype(nullptr), weak_ordering value) noexcept -> bool {
       return value.m_value
              == static_cast<signed char>(detail::order::equivalent);
    }
 
    friend constexpr auto
-   operator!=(weak_ordering value, decltype(nullptr)) -> bool {
+   operator!=(weak_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value
              != static_cast<signed char>(detail::order::equivalent);
    }
 
    friend constexpr auto
-   operator!=(decltype(nullptr), weak_ordering value) -> bool {
+   operator!=(decltype(nullptr), weak_ordering value) noexcept -> bool {
       return value.m_value
              != static_cast<signed char>(detail::order::equivalent);
    }
 
    friend constexpr auto
-   operator<(weak_ordering value, decltype(nullptr)) -> bool {
+   operator<(weak_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value == static_cast<signed char>(detail::order::less);
    }
 
    friend constexpr auto
-   operator<(decltype(nullptr), weak_ordering value) -> bool {
+   operator<(decltype(nullptr), weak_ordering value) noexcept -> bool {
       return value.m_value == static_cast<signed char>(detail::order::greater);
    }
 
    friend constexpr auto
-   operator<=(weak_ordering value, decltype(nullptr)) -> bool {
+   operator<=(weak_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value
                 == static_cast<signed char>(detail::order::equivalent)
              || value.m_value == static_cast<signed char>(detail::order::less);
    }
 
    friend constexpr auto
-   operator<=(decltype(nullptr), weak_ordering value) -> bool {
+   operator<=(decltype(nullptr), weak_ordering value) noexcept -> bool {
       return value.m_value
                 == static_cast<signed char>(detail::order::equivalent)
              || value.m_value
@@ -260,17 +262,17 @@ class weak_ordering {
    }
 
    friend constexpr auto
-   operator>(weak_ordering value, decltype(nullptr)) -> bool {
+   operator>(weak_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value == static_cast<signed char>(detail::order::greater);
    }
 
    friend constexpr auto
-   operator>(decltype(nullptr), weak_ordering value) -> bool {
+   operator>(decltype(nullptr), weak_ordering value) noexcept -> bool {
       return value.m_value == static_cast<signed char>(detail::order::less);
    }
 
    friend constexpr auto
-   operator>=(weak_ordering value, decltype(nullptr)) -> bool {
+   operator>=(weak_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value
                 == static_cast<signed char>(detail::order::equivalent)
              || value.m_value
@@ -278,19 +280,19 @@ class weak_ordering {
    }
 
    friend constexpr auto
-   operator>=(decltype(nullptr), weak_ordering value) -> bool {
+   operator>=(decltype(nullptr), weak_ordering value) noexcept -> bool {
       return value.m_value
                 == static_cast<signed char>(detail::order::equivalent)
              || value.m_value == static_cast<signed char>(detail::order::less);
    }
 
    friend constexpr auto
-   operator<=>(weak_ordering lhs, decltype(nullptr)) -> weak_ordering {
+   operator<=>(weak_ordering lhs, decltype(nullptr)) noexcept -> weak_ordering {
       return lhs;
    }
 
    friend constexpr auto
-   operator<=>(decltype(nullptr), weak_ordering rhs) -> weak_ordering {
+   operator<=>(decltype(nullptr), weak_ordering rhs) noexcept -> weak_ordering {
       return rhs.m_value < 0 ? weak_ordering::greater
                              : (rhs.m_value > 0 ? weak_ordering::less : rhs);
    }
@@ -320,7 +322,7 @@ class strong_ordering {
 
    [[gnu::always_inline]]
    constexpr
-   operator partial_ordering() const {
+   operator partial_ordering() const noexcept {
       return m_value == 0 ? partial_ordering::equivalent
                           : (m_value < 0 ? partial_ordering::less
                                          : partial_ordering::greater);
@@ -328,7 +330,7 @@ class strong_ordering {
 
    [[gnu::always_inline]]
    constexpr
-   operator weak_ordering() const {
+   operator weak_ordering() const noexcept {
       return m_value == 0
                 ? weak_ordering::equivalent
                 : (m_value < 0 ? weak_ordering::less : weak_ordering::greater);
@@ -336,74 +338,74 @@ class strong_ordering {
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator==(strong_ordering, strong_ordering) -> bool = default;
+   operator==(strong_ordering, strong_ordering) noexcept -> bool = default;
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator<(strong_ordering lhs, strong_ordering rhs) -> bool {
+   operator<(strong_ordering lhs, strong_ordering rhs) noexcept -> bool {
       return lhs.m_value < rhs.m_value;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator<=(strong_ordering lhs, strong_ordering rhs) -> bool {
+   operator<=(strong_ordering lhs, strong_ordering rhs) noexcept -> bool {
       return lhs.m_value <= rhs.m_value;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator>(strong_ordering lhs, strong_ordering rhs) -> bool {
+   operator>(strong_ordering lhs, strong_ordering rhs) noexcept -> bool {
       return lhs.m_value > rhs.m_value;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator>=(strong_ordering lhs, strong_ordering rhs) -> bool {
+   operator>=(strong_ordering lhs, strong_ordering rhs) noexcept -> bool {
       return lhs.m_value >= rhs.m_value;
    }
 
    friend constexpr auto
-   operator==(strong_ordering value, decltype(nullptr)) -> bool {
+   operator==(strong_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value
              == static_cast<signed char>(detail::order::equivalent);
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator==(decltype(nullptr), strong_ordering value) -> bool {
+   operator==(decltype(nullptr), strong_ordering value) noexcept -> bool {
       return value.m_value
              == static_cast<signed char>(detail::order::equivalent);
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator!=(strong_ordering value, decltype(nullptr)) -> bool {
+   operator!=(strong_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value
              != static_cast<signed char>(detail::order::equivalent);
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator!=(decltype(nullptr), strong_ordering value) -> bool {
+   operator!=(decltype(nullptr), strong_ordering value) noexcept -> bool {
       return value.m_value
              != static_cast<signed char>(detail::order::equivalent);
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator<(strong_ordering value, decltype(nullptr)) -> bool {
+   operator<(strong_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value == static_cast<signed char>(detail::order::less);
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator<(decltype(nullptr), strong_ordering value) -> bool {
+   operator<(decltype(nullptr), strong_ordering value) noexcept -> bool {
       return value.m_value == static_cast<signed char>(detail::order::greater);
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator<=(strong_ordering value, decltype(nullptr)) -> bool {
+   operator<=(strong_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value
                 == static_cast<signed char>(detail::order::equivalent)
              || value.m_value == static_cast<signed char>(detail::order::less);
@@ -411,7 +413,7 @@ class strong_ordering {
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator<=(decltype(nullptr), strong_ordering value) -> bool {
+   operator<=(decltype(nullptr), strong_ordering value) noexcept -> bool {
       return value.m_value
                 == static_cast<signed char>(detail::order::equivalent)
              || value.m_value
@@ -420,19 +422,19 @@ class strong_ordering {
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator>(strong_ordering value, decltype(nullptr)) -> bool {
+   operator>(strong_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value == static_cast<signed char>(detail::order::greater);
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator>(decltype(nullptr), strong_ordering value) -> bool {
+   operator>(decltype(nullptr), strong_ordering value) noexcept -> bool {
       return value.m_value == static_cast<signed char>(detail::order::less);
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator>=(strong_ordering value, decltype(nullptr)) -> bool {
+   operator>=(strong_ordering value, decltype(nullptr)) noexcept -> bool {
       return value.m_value
                 == static_cast<signed char>(detail::order::equivalent)
              || value.m_value
@@ -441,7 +443,7 @@ class strong_ordering {
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator>=(decltype(nullptr), strong_ordering value) -> bool {
+   operator>=(decltype(nullptr), strong_ordering value) noexcept -> bool {
       return value.m_value
                 == static_cast<signed char>(detail::order::equivalent)
              || value.m_value == static_cast<signed char>(detail::order::less);
@@ -449,13 +451,15 @@ class strong_ordering {
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator<=>(strong_ordering lhs, decltype(nullptr)) -> strong_ordering {
+   operator<=>(strong_ordering lhs, decltype(nullptr)) noexcept
+      -> strong_ordering {
       return lhs;
    }
 
    [[gnu::always_inline]]
    friend constexpr auto
-   operator<=>(decltype(nullptr), strong_ordering rhs) -> strong_ordering {
+   operator<=>(decltype(nullptr), strong_ordering rhs) noexcept
+      -> strong_ordering {
       return rhs.m_value < 0 ? strong_ordering::greater
                              : (rhs.m_value > 0 ? strong_ordering::less : rhs);
    }
@@ -486,7 +490,7 @@ enum class [[clang::enum_extensibility(
 
 template <typename T>
 consteval auto
-classify_comp_category() -> comp_category_kind {
+classify_comp_category() noexcept -> comp_category_kind {
    if constexpr (cat::is_same<T, partial_ordering>) {
       return comp_category_kind::partial;
    } else if constexpr (cat::is_same<T, weak_ordering>) {
@@ -500,7 +504,7 @@ classify_comp_category() -> comp_category_kind {
 
 template <__SIZE_TYPE__ size>
 consteval auto
-fold_comp_category(comp_category_kind const (&kinds)[size])
+fold_comp_category(comp_category_kind const (&kinds)[size]) noexcept
    -> comp_category_kind {
    comp_category_kind result = comp_category_kind::strong;
    for (comp_category_kind k : kinds) {
@@ -521,7 +525,7 @@ fold_comp_category(comp_category_kind const (&kinds)[size])
 // here by prepending it to the classification array.
 template <typename... Ts>
 consteval auto
-common_comp_value() {
+common_comp_value() noexcept {
    constexpr comp_category_kind kinds[] = {
       comp_category_kind::strong, classify_comp_category<Ts>()...
    };

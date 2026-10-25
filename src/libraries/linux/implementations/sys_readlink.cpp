@@ -1,7 +1,7 @@
 #include <cat/linux>
 
 auto
-nix::sys_readlink(cat::zstr_view file_path, cat::span<char> buffer)
+nix::sys_readlink(cat::zstr_view file_path, cat::span<char> buffer) noexcept
    -> nix::scaredy_nix<cat::idx> {
    // https://filippo.io/linux-syscall-table/
    return nix::syscall<cat::idx>(

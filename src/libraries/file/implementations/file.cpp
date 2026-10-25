@@ -88,7 +88,7 @@ auto
 file_handle::open(
    file_path const& file_path, file_access access, file_creation creation,
    file_flags flags, file_permissions permissions
-) -> scaredy<file_handle, io_error> {
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy<file_handle, io_error> {
    return open_from({}, file_path, access, creation, flags, permissions);
 }
 
@@ -96,14 +96,15 @@ auto
 file_handle::open_at(
    file_handle const& directory, file_path const& file_path, file_access access,
    file_creation creation, file_flags flags, file_permissions permissions
-) -> scaredy<file_handle, io_error> {
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy<file_handle, io_error> {
    return open_from(
       directory.native_handle(), file_path, access, creation, flags, permissions
    );
 }
 
 auto
-file_handle::close() -> scaredy<void, io_error> {
+file_handle::close() noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy<void, io_error> {
    if (!is_open()) {
       return {};
    }
@@ -116,7 +117,9 @@ file_handle::close() -> scaredy<void, io_error> {
 }
 
 auto
-file_handle::read(span<char> buffer) const -> scaredy<idx, io_error> {
+file_handle::read(span<char> buffer) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<idx, io_error> {
    iword const value = detail::native_handle_access::value(m_handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor
@@ -125,7 +128,9 @@ file_handle::read(span<char> buffer) const -> scaredy<idx, io_error> {
 }
 
 auto
-file_handle::write(str_view buffer) const -> scaredy<idx, io_error> {
+file_handle::write(str_view buffer) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<idx, io_error> {
    iword const value = detail::native_handle_access::value(m_handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor
@@ -134,8 +139,9 @@ file_handle::write(str_view buffer) const -> scaredy<idx, io_error> {
 }
 
 auto
-file_handle::read_at(span<char> buffer, iword offset) const
-   -> scaredy<idx, io_error> {
+file_handle::read_at(span<char> buffer, iword offset) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<idx, io_error> {
    iword const value = detail::native_handle_access::value(m_handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor
@@ -144,8 +150,9 @@ file_handle::read_at(span<char> buffer, iword offset) const
 }
 
 auto
-file_handle::write_at(str_view buffer, iword offset) const
-   -> scaredy<idx, io_error> {
+file_handle::write_at(str_view buffer, iword offset) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<idx, io_error> {
    iword const value = detail::native_handle_access::value(m_handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor
@@ -156,8 +163,9 @@ file_handle::write_at(str_view buffer, iword offset) const
 }
 
 auto
-file_handle::seek(iword offset, seek_origin origin) const
-   -> scaredy<idx, io_error> {
+file_handle::seek(iword offset, seek_origin origin) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<idx, io_error> {
    iword const value = detail::native_handle_access::value(m_handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor
@@ -168,7 +176,8 @@ file_handle::seek(iword offset, seek_origin origin) const
 }
 
 auto
-file_handle::truncate(iword size) const -> scaredy<void, io_error> {
+file_handle::truncate(iword size) const noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy<void, io_error> {
    iword const value = detail::native_handle_access::value(m_handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor
@@ -177,7 +186,8 @@ file_handle::truncate(iword size) const -> scaredy<void, io_error> {
 }
 
 auto
-file_handle::sync() const -> scaredy<void, io_error> {
+file_handle::sync() const noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy<void, io_error> {
    iword const value = detail::native_handle_access::value(m_handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor
@@ -186,7 +196,8 @@ file_handle::sync() const -> scaredy<void, io_error> {
 }
 
 auto
-file_handle::data_sync() const -> scaredy<void, io_error> {
+file_handle::data_sync() const noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy<void, io_error> {
    iword const value = detail::native_handle_access::value(m_handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor

@@ -16,7 +16,7 @@ inline void
 copy_memory_medium(
    byte const* _Nonnull __restrict p_source,
    byte* _Nonnull __restrict p_destination, idx bytes
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    char* p_dest = reinterpret_cast<char*>(p_destination);
    char const* p_src = reinterpret_cast<char const*>(p_source);
    idx const byte_count = bytes;

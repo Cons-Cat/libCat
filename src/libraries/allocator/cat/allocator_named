@@ -22,14 +22,14 @@ allocator_named : public allocator_ref<Allocator> {
    constexpr allocator_named(
       Allocator& inner [[clang::lifetimebound]],
       str_view debug_name [[clang::lifetimebound]]
-   )
+   ) noexcept
        : base(inner), m_name(debug_name) {
    }
 
    // Override the `.name()` method to return the debug label.
    [[nodiscard]]
    auto
-   name() const -> str_view {
+   name() const noexcept -> str_view {
       return m_name;
    }
 
@@ -38,7 +38,7 @@ allocator_named : public allocator_ref<Allocator> {
    // doesn't necessarily differentiate two equivalent allocators.
    [[nodiscard]]
    auto
-   is_equivalent(allocator_named const& other) const -> bool {
+   is_equivalent(allocator_named const& other) const noexcept -> bool {
       return base::is_equivalent(other);
    }
 };

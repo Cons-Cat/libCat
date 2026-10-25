@@ -23,7 +23,7 @@ initialize_vdso(void const* _Nullable p_elf_header);
 auto
 lookup_vdso_symbol(
    char const* _Nonnull p_vdso_name, char const* _Nonnull p_alias
-) -> void* _Nullable;
+) noexcept -> void* _Nullable;
 
 template <typename Hook>
 [[nodiscard]]
@@ -31,7 +31,7 @@ auto
 resolve_vdso_hook(
    Hook& p_hook, bool& resolved, char const* _Nonnull p_vdso_name,
    char const* _Nonnull p_alias
-) -> Hook {
+) noexcept -> Hook {
    if (!__atomic_load_n(&resolved, __ATOMIC_ACQUIRE)) {
       Hook const result =
          __builtin_bit_cast(Hook, lookup_vdso_symbol(p_vdso_name, p_alias));
@@ -44,7 +44,7 @@ resolve_vdso_hook(
 template <typename Hook, typename... Args>
 [[nodiscard]]
 auto
-call_vdso_hook(Hook p_hook, Args... arguments)
+call_vdso_hook(Hook p_hook, Args... arguments) noexcept
    -> cat::maybe<decltype(p_hook(arguments...))> {
    if (p_hook == nullptr) {
       return cat::nullopt;

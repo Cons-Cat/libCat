@@ -2,7 +2,7 @@
 
 // Control the settings of special files, such as stdin or stdout.
 auto
-nix::sys_ioctl(file_descriptor io_descriptor, io_requests request)
+nix::sys_ioctl(file_descriptor io_descriptor, io_requests request) noexcept
    -> scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/
    // TODO: This is the wrong syscall number, ioctl is 16. Preserved
@@ -16,7 +16,7 @@ auto
 nix::sys_ioctl(
    file_descriptor io_descriptor, io_requests request,
    cat::no_type_ptr p_argument
-) -> scaredy_nix<void> {
+) noexcept -> scaredy_nix<void> {
    // https://filippo.io/linux-syscall-table/
    return syscall_volatile<void>(16, io_descriptor, request, p_argument);
 }

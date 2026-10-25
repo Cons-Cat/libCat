@@ -48,57 +48,59 @@ class poisson_distribution {
     public:
       using distribution_type = poisson_distribution;
 
-      constexpr explicit param_type(Float mean = Float(1)) : m_mean(mean) {
+      constexpr explicit param_type(Float mean = Float(1)) noexcept
+          : m_mean(mean) {
       }
 
       [[nodiscard]]
       constexpr auto
-      mean() const -> Float {
+      mean() const noexcept -> Float {
          return m_mean;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       Float m_mean;
    };
 
-   constexpr explicit poisson_distribution(Float mean = Float(1))
+   constexpr explicit poisson_distribution(Float mean = Float(1)) noexcept
        : m_parameters(mean) {
    }
 
-   constexpr explicit poisson_distribution(param_type parameters)
+   constexpr explicit poisson_distribution(param_type parameters) noexcept
        : m_parameters(parameters) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    [[nodiscard]]
    constexpr auto
-   mean() const -> Float {
+   mean() const noexcept -> Float {
       return m_parameters.mean();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameters;
    }
 
    constexpr void
-   param(param_type parameters) {
+   param(param_type parameters) noexcept {
       m_parameters = parameters;
    }
 
    constexpr auto
-   min() const -> result_type {
+   min() const noexcept -> result_type {
       return 0u;
    }
 
    constexpr auto
-   max() const -> result_type {
+   max() const noexcept -> result_type {
       return limits<result_type>::max();
    }
 
@@ -129,7 +131,7 @@ class poisson_distribution {
    }
 
    friend constexpr auto
-   operator==(poisson_distribution const&, poisson_distribution const&)
+   operator==(poisson_distribution const&, poisson_distribution const&) noexcept
       -> bool = default;
 
  private:
@@ -138,7 +140,8 @@ class poisson_distribution {
    template <is_uniform_random_bit_generator Generator, typename Sample>
       requires(is_floating_point<Sample> || is_simd_floating_point<Sample>)
    static constexpr auto
-   vector_sample(Generator& generator, Sample mean_value) -> result_type {
+   vector_sample(Generator& generator, Sample mean_value) noexcept
+      -> result_type {
       Sample output{};
       auto const small = mean_value < Sample(10.f);
       auto pending = small;
@@ -240,7 +243,7 @@ class poisson_distribution {
 
    template <is_uniform_random_bit_generator Generator>
    static constexpr auto
-   small_mean(Generator& generator, Float mean_value) -> result_type {
+   small_mean(Generator& generator, Float mean_value) noexcept -> result_type {
       Float const limit = exp(-mean_value);
       Float product = detail::distribution_float<Float>(1);
       result_type result = 0u;
@@ -258,7 +261,7 @@ class poisson_distribution {
 
    template <is_uniform_random_bit_generator Generator>
    static constexpr auto
-   transformed_rejection(Generator& generator, Float mean_value)
+   transformed_rejection(Generator& generator, Float mean_value) noexcept
       -> result_type {
       auto const f = [](auto value) {
          return detail::distribution_float<Float>(value);

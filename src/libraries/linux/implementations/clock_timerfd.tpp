@@ -8,7 +8,7 @@
 #include <cat/propagate>
 
 consteval auto
-nix::is_steady_clock_id(clock_id clock) -> bool {
+nix::is_steady_clock_id(clock_id clock) noexcept -> bool {
    return clock == clock_id::monotonic || clock == clock_id::monotonic_raw
           || clock == clock_id::monotonic_coarse || clock == clock_id::boottime
           || clock == clock_id::boottime_alarm
@@ -18,14 +18,16 @@ nix::is_steady_clock_id(clock_id clock) -> bool {
 
 template <nix::clock_id clock>
 auto
-nix::create_clock_timerfd(timerfd_flags flags)
-   -> nix::scaredy_nix<nix::clock_timerfd<clock>> {
+nix::create_clock_timerfd(timerfd_flags flags) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> nix::scaredy_nix<nix::clock_timerfd<clock>> {
    return clock_timerfd<clock>($prop(sys_timerfd_create(clock, flags)));
 }
 
 template <nix::clock_id clock>
 auto
-nix::clock_timerfd<clock>::now() -> cat::maybe<time_point> {
+nix::clock_timerfd<clock>::now() noexcept(!__has_feature(cxx_exceptions))
+   -> cat::maybe<time_point> {
    timespec value;
    return $prop_as_or(
       sys_clock_gettime(id, value), cat::nullopt,
@@ -37,20 +39,21 @@ template <nix::clock_id clock>
 auto
 nix::clock_timerfd<clock>::set(
    itimerspec const& value, timerfd_set_flags flags, itimerspec* _Nullable p_old
-) -> nix::scaredy_nix<void> {
+) noexcept -> nix::scaredy_nix<void> {
    return sys_timerfd_settime(m_descriptor, flags, value, p_old);
 }
 
 template <nix::clock_id clock>
 auto
-nix::clock_timerfd<clock>::get(itimerspec& out) const
+nix::clock_timerfd<clock>::get(itimerspec& out) const noexcept
    -> nix::scaredy_nix<void> {
    return sys_timerfd_gettime(m_descriptor, out);
 }
 
 template <nix::clock_id clock>
 auto
-nix::clock_timerfd<clock>::wait() const -> nix::scaredy_nix<cat::uint8> {
+nix::clock_timerfd<clock>::wait() const noexcept(!__has_feature(cxx_exceptions))
+   -> nix::scaredy_nix<cat::uint8> {
    cat::uint8 expirations;
    cat::idx const read = $prop(sys_read(
       m_descriptor, __builtin_bit_cast(char* _Nonnull, &expirations),
@@ -62,7 +65,7 @@ nix::clock_timerfd<clock>::wait() const -> nix::scaredy_nix<cat::uint8> {
 
 template <nix::clock_id clock>
 auto
-nix::clock_timerfd<clock>::close() -> nix::scaredy_nix<void> {
+nix::clock_timerfd<clock>::close() noexcept -> nix::scaredy_nix<void> {
    return sys_close(m_descriptor);
 }
 

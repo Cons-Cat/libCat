@@ -10,7 +10,7 @@ template <x64::is_avx_abi<float> Abi>
 struct unary_full<op_rsqrt, float, Abi> {
    [[nodiscard, gnu::target("avx"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd<float, Abi> input) -> simd<float, Abi> {
+   invoke(simd<float, Abi> input) noexcept -> simd<float, Abi> {
       using simd_type = simd<float, Abi>;
       // Hardware `rsqrt` is very imprecise. We correct error with
       // Newton-Raphson, which is still faster than a precise 1/`sqrt(x)`

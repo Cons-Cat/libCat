@@ -8,7 +8,9 @@
 namespace cat {
 
 constexpr void
-assert(bool invariant_expression, source_location const& callsite) {
+assert(bool invariant_expression, source_location const& callsite) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    if consteval {
       [[assume(invariant_expression)]];
    }
@@ -23,7 +25,7 @@ constexpr void
 assert(
    bool invariant_expression, assert_handler p_assert_handler,
    source_location const& callsite
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    if consteval {
       [[assume(invariant_expression)]];
    }
@@ -38,7 +40,7 @@ constexpr void
 assert(
    bool invariant_expression, str_view const& error_string,
    source_location const& callsite
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    if consteval {
       [[assume(invariant_expression)]];
    }
@@ -53,7 +55,7 @@ constexpr void
 assert(
    bool invariant_expression, str_view const& error_string,
    assert_handler p_assert_handler, source_location const& callsite
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    if consteval {
       [[assume(invariant_expression)]];
    }

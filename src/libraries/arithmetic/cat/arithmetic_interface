@@ -282,7 +282,7 @@ struct plus_interface {
    // Same-type + where the RHS may implicitly construct `decay_derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator+(this Derived const& self, decay_derived const& other)
+   operator+(this Derived const& self, decay_derived const& other) noexcept
       -> decltype(auto)
       requires(
          detail::has_binary_plus<Derived, decay_derived const&>
@@ -349,7 +349,7 @@ struct plus_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+=(Derived& self, decay_derived const& rhs) -> Derived&
+   operator+=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
       requires(
          detail::has_plus_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -413,7 +413,7 @@ struct plus_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+=(T& other, Derived const& self) -> T& {
+   operator+=(T& other, Derived const& self) noexcept -> T& {
       other = self.add(other);
       return other;
    }
@@ -439,7 +439,7 @@ struct plus_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator++(Derived& self) -> Derived&
+   operator++(Derived& self) noexcept -> Derived&
       requires(detail::has_unary_increment<Derived>)
    {
       self = self.add(Derived(1));
@@ -448,7 +448,7 @@ struct plus_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator++(Derived& self, int) -> Derived
+   operator++(Derived& self, int) noexcept -> Derived
       requires(detail::has_unary_increment<Derived>)
    {
       Derived const old = self;
@@ -471,7 +471,7 @@ struct minus_interface {
    // Same-type - where the RHS may implicitly construct `decay_derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator-(this Derived const& lhs, decay_derived const& other)
+   operator-(this Derived const& lhs, decay_derived const& other) noexcept
       -> decltype(auto)
       requires(
          detail::has_binary_subtract_by<Derived, decay_derived const&>
@@ -539,7 +539,7 @@ struct minus_interface {
    // Same-type compound assignment when `subtract_by(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-=(Derived& self, decay_derived const& rhs) -> Derived&
+   operator-=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
       requires(
          detail::has_minus_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -604,7 +604,7 @@ struct minus_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-=(T& other, Derived const& self) -> T& {
+   operator-=(T& other, Derived const& self) noexcept -> T& {
       other = self.subtract_from(other);
       return other;
    }
@@ -629,7 +629,7 @@ struct minus_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator--(Derived& self) -> Derived&
+   operator--(Derived& self) noexcept -> Derived&
       requires(detail::has_unary_decrement<Derived>)
    {
       self = self.subtract_by(static_cast<decay_derived::raw_type>(1));
@@ -638,7 +638,7 @@ struct minus_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator--(Derived& self, int) -> Derived
+   operator--(Derived& self, int) noexcept -> Derived
       requires(detail::has_unary_decrement<Derived>)
    {
       Derived const old = self;
@@ -661,7 +661,7 @@ struct multiply_interface {
    // Same-type * where the RHS may implicitly construct `decay_derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator*(this Derived const& self, decay_derived const& other)
+   operator*(this Derived const& self, decay_derived const& other) noexcept
       -> decltype(auto)
       requires(
          detail::has_binary_multiply<Derived, decay_derived const&>
@@ -729,7 +729,7 @@ struct multiply_interface {
    // Same-type compound assignment when `multiply(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*=(Derived& self, decay_derived const& rhs) -> Derived&
+   operator*=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
       requires(
          detail::has_multiply_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -794,7 +794,7 @@ struct multiply_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*=(T& other, Derived const& self) -> T& {
+   operator*=(T& other, Derived const& self) noexcept -> T& {
       other = self.multiply(other);
       return other;
    }
@@ -829,7 +829,7 @@ struct divide_interface {
    // Same-type / where the RHS may implicitly construct `decay_derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator/(this Derived const& self, decay_derived const& other)
+   operator/(this Derived const& self, decay_derived const& other) noexcept
       -> decltype(auto)
       requires(
          detail::has_binary_divide_by<Derived, decay_derived const&>
@@ -897,7 +897,7 @@ struct divide_interface {
    // Same-type compound assignment when `divide_by(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/=(Derived& self, decay_derived const& rhs) -> Derived&
+   operator/=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
       requires(
          detail::has_divide_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -962,7 +962,7 @@ struct divide_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/=(T& other, Derived const& self) -> T& {
+   operator/=(T& other, Derived const& self) noexcept -> T& {
       other = self.divide_into(other);
       return other;
    }
@@ -997,7 +997,7 @@ struct bit_and_interface {
    // Same-type & where the RHS may implicitly construct `decay_derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator&(this Derived const& self, decay_derived const& other)
+   operator&(this Derived const& self, decay_derived const& other) noexcept
       -> decltype(auto)
       requires(
          detail::has_binary_bit_and<Derived, decay_derived const&>
@@ -1065,7 +1065,7 @@ struct bit_and_interface {
    // Same-type compound assignment when `bit_and(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator&=(Derived& self, decay_derived const& rhs) -> Derived&
+   operator&=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
       requires(
          detail::has_bit_and_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -1130,7 +1130,7 @@ struct bit_and_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator&=(T& other, Derived const& self) -> T& {
+   operator&=(T& other, Derived const& self) noexcept -> T& {
       other = self.bit_and(other);
       return other;
    }
@@ -1165,7 +1165,7 @@ struct bit_or_interface {
    // Same-type | where the RHS may implicitly construct `decay_derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator|(this Derived const& self, decay_derived const& other)
+   operator|(this Derived const& self, decay_derived const& other) noexcept
       -> decltype(auto)
       requires(
          detail::has_binary_bit_or<Derived, decay_derived const&>
@@ -1233,7 +1233,7 @@ struct bit_or_interface {
    // Same-type compound assignment when `bit_or(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator|=(Derived& self, decay_derived const& rhs) -> Derived&
+   operator|=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
       requires(
          detail::has_bit_or_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -1297,7 +1297,7 @@ struct bit_or_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator|=(T& other, Derived const& self) -> T& {
+   operator|=(T& other, Derived const& self) noexcept -> T& {
       other = self.bit_or(other);
       return other;
    }
@@ -1332,7 +1332,7 @@ struct bit_xor_interface {
    // Same-type ^ where the RHS may implicitly construct `decay_derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator^(this Derived const& self, decay_derived const& other)
+   operator^(this Derived const& self, decay_derived const& other) noexcept
       -> decltype(auto)
       requires(
          detail::has_binary_bit_xor<Derived, decay_derived const&>
@@ -1400,7 +1400,7 @@ struct bit_xor_interface {
    // Same-type compound assignment when `bit_xor(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator^=(Derived& self, decay_derived const& rhs) -> Derived&
+   operator^=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
       requires(
          detail::has_bit_xor_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -1465,7 +1465,7 @@ struct bit_xor_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator^=(T& other, Derived const& self) -> T& {
+   operator^=(T& other, Derived const& self) noexcept -> T& {
       other = self.bit_xor(other);
       return other;
    }
@@ -1500,7 +1500,7 @@ struct modulo_interface {
    // Same-type % where the RHS may implicitly construct `decay_derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator%(this Derived const& self, decay_derived const& other)
+   operator%(this Derived const& self, decay_derived const& other) noexcept
       -> decltype(auto)
       requires(
          detail::has_binary_modulo_by<Derived, decay_derived const&>
@@ -1568,7 +1568,7 @@ struct modulo_interface {
    // Same-type compound assignment when `modulo_by(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator%=(Derived& self, decay_derived const& rhs) -> Derived&
+   operator%=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
       requires(
          detail::has_modulo_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -1633,7 +1633,7 @@ struct modulo_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator%=(T& other, Derived const& self) -> T& {
+   operator%=(T& other, Derived const& self) noexcept -> T& {
       other = self.modulo_into(other);
       return other;
    }
@@ -1668,7 +1668,7 @@ struct shift_left_interface {
    // Same-type << where the RHS may implicitly construct `decay_derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator<<(this Derived const& self, decay_derived const& other)
+   operator<<(this Derived const& self, decay_derived const& other) noexcept
       -> decltype(auto)
       requires(
          detail::has_shift_left_by<Derived, decay_derived const&>
@@ -1737,7 +1737,7 @@ struct shift_left_interface {
    // `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<<=(Derived& self, decay_derived const& rhs) -> Derived&
+   operator<<=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
       requires(
          detail::has_shift_left_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -1802,7 +1802,7 @@ struct shift_left_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<<=(T& other, Derived const& self) -> T& {
+   operator<<=(T& other, Derived const& self) noexcept -> T& {
       other = self.shift_left_into(other);
       return other;
    }
@@ -1837,7 +1837,7 @@ struct shift_right_interface {
    // Same-type >> where the RHS may implicitly construct `decay_derived`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator>>(this Derived const& self, decay_derived const& other)
+   operator>>(this Derived const& self, decay_derived const& other) noexcept
       -> decltype(auto)
       requires(
          detail::has_shift_right_by<Derived, decay_derived const&>
@@ -1906,7 +1906,7 @@ struct shift_right_interface {
    // `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator>>=(Derived& self, decay_derived const& rhs) -> Derived&
+   operator>>=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
       requires(
          detail::has_shift_right_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -1971,7 +1971,7 @@ struct shift_right_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator>>=(T& other, Derived const& self) -> T& {
+   operator>>=(T& other, Derived const& self) noexcept -> T& {
       other = self.shift_right_into(other);
       return other;
    }
@@ -2008,7 +2008,7 @@ struct bitwise_interface : bit_and_interface<Derived>,
    // `.bit_complement()` member.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator~(Derived const& self)
+   operator~(Derived const& self) noexcept
       requires(detail::has_bit_complement<Derived>)
    {
       return self.bit_complement();
@@ -2038,19 +2038,19 @@ struct arithmetic_interface : plus_interface<Derived>,
    // No-op unary + operator for operand.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+(Derived const& self) {
+   operator+(Derived const& self) noexcept {
       return self;
    }
 
    friend constexpr auto
-   operator+(Derived&& self) {
+   operator+(Derived&& self) noexcept {
       return self;
    }
 
    // Unary - operator for operand.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-(Derived const& self)
+   operator-(Derived const& self) noexcept
       requires(is_signed<Derived>)
    {
       if constexpr (detail::has_negate_interface<Derived>) {
@@ -2077,13 +2077,13 @@ struct arithmetic_interface : plus_interface<Derived>,
  private:
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   self() {
+   self() noexcept {
       return static_cast<Derived>(*this);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   self() const {
+   self() const noexcept {
       return static_cast<Derived>(*this);
    }
 };

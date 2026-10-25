@@ -9,7 +9,7 @@ namespace cat {
 
 template <typename T>
 consteval auto
-type_name() -> cat::str_view {
+type_name() noexcept -> cat::str_view {
    char const* _Nonnull p_string = __PRETTY_FUNCTION__;
    iword size = iword(sizeof(__PRETTY_FUNCTION__) - 2);
 
@@ -28,14 +28,14 @@ type_name() -> cat::str_view {
 }
 
 consteval auto
-nameof(auto&& value) -> cat::str_view {
+nameof(auto&& value) noexcept -> cat::str_view {
    return type_name<typeof(value)>();
 }
 
 template <auto enum_value>
    requires(cat::is_enum<decltype(enum_value)>)
 consteval auto
-enum_name_from_nttp() -> cat::str_view {
+enum_name_from_nttp() noexcept -> cat::str_view {
    char const* _Nonnull p_string = __PRETTY_FUNCTION__ + 34u;
    iword size = iword(sizeof(__PRETTY_FUNCTION__) - 38u);
    // Scan backwards from the function signature to find `enum_value`'s word

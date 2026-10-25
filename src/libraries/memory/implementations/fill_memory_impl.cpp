@@ -14,7 +14,9 @@ namespace cat::detail {
 
 template <typename Simd>
 void
-fill_memory_large(byte* _Nonnull p_destination, byte byte_value, idx bytes) {
+fill_memory_large(
+   byte* _Nonnull p_destination, byte byte_value, idx bytes
+) noexcept(!__has_feature(cxx_exceptions)) {
    iword bytes_remaining = bytes;
    // TODO: `cat::simd` should support `cat::byte` better.
 

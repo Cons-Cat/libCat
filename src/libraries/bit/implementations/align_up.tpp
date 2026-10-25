@@ -11,7 +11,7 @@ namespace cat {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-align_up(T* _Nullable p_value, ualign alignment) -> T* _Nullable {
+align_up(T* _Nullable p_value, ualign alignment) noexcept -> T* _Nullable {
    if (p_value == nullptr) {
       return nullptr;
    }
@@ -23,7 +23,7 @@ align_up(T* _Nullable p_value, ualign alignment) -> T* _Nullable {
 template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-align_up(T value, ualign alignment) -> T {
+align_up(T value, ualign alignment) noexcept -> T {
    return __builtin_align_up(make_raw_arithmetic(value), alignment.raw);
 }
 

@@ -53,13 +53,13 @@ class simd_precision_reference
    template <typename Result, typename Value>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   make_simd_value(Value const& value) -> Result {
+   make_simd_value(Value const& value) noexcept -> Result {
       return Result(__builtin_bit_cast(typename Result::raw_type, value.raw));
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   assign_result(result_type value) -> void
+   assign_result(result_type value) noexcept -> void
       requires(!is_const<Simd>)
    {
       m_wrapped->raw =
@@ -67,7 +67,7 @@ class simd_precision_reference
    }
 
  public:
-   constexpr explicit simd_precision_reference(Simd& w)
+   constexpr explicit simd_precision_reference(Simd& w) noexcept
        : m_wrapped(addressof(w)) {
    }
 
@@ -80,7 +80,7 @@ class simd_precision_reference
    operator&(simd_precision_reference const volatile&&) = delete;
 
    constexpr void
-   rebind(Simd& w [[clang::lifetime_capture_by_this]]) {
+   rebind(Simd& w [[clang::lifetime_capture_by_this]]) noexcept {
       m_wrapped = addressof(w);
    }
 
@@ -92,7 +92,8 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   equal_lanes(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
+   equal_lanes(cat::simd<OtherT, OtherAbi> const& rhs) const noexcept
+      -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(left.raw == right.raw);
@@ -106,7 +107,8 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   unequal_lanes(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
+   unequal_lanes(cat::simd<OtherT, OtherAbi> const& rhs) const noexcept
+      -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(left.raw != right.raw);
@@ -120,7 +122,7 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   less(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
+   less(cat::simd<OtherT, OtherAbi> const& rhs) const noexcept -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(left.raw < right.raw);
@@ -134,7 +136,8 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   less_equal(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
+   less_equal(cat::simd<OtherT, OtherAbi> const& rhs) const noexcept
+      -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(left.raw <= right.raw);
@@ -148,7 +151,8 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   greater(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
+   greater(cat::simd<OtherT, OtherAbi> const& rhs) const noexcept
+      -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(left.raw > right.raw);
@@ -162,37 +166,40 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   greater_equal(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_mask {
+   greater_equal(cat::simd<OtherT, OtherAbi> const& rhs) const noexcept
+      -> result_mask {
       result_type const left = make_simd_value<result_type>(*m_wrapped);
       result_type const right = make_simd_value<result_type>(rhs);
       return result_mask(left.raw >= right.raw);
    }
 
    constexpr auto
-   precise() & -> simd_precision_reference<Simd, precision_policies::precise> {
+   precise() & noexcept
+      -> simd_precision_reference<Simd, precision_policies::precise> {
       return simd_precision_reference<Simd, precision_policies::precise>(
          *m_wrapped
       );
    }
 
    constexpr auto
-   precise() const& -> simd_precision_reference<
-      Simd const, precision_policies::precise> {
+   precise() const& noexcept
+      -> simd_precision_reference<Simd const, precision_policies::precise> {
       return simd_precision_reference<Simd const, precision_policies::precise>(
          *m_wrapped
       );
    }
 
    constexpr auto
-   fast() & -> simd_precision_reference<Simd, precision_policies::fast> {
+   fast() & noexcept
+      -> simd_precision_reference<Simd, precision_policies::fast> {
       return simd_precision_reference<Simd, precision_policies::fast>(
          *m_wrapped
       );
    }
 
    constexpr auto
-   fast() const& -> simd_precision_reference<
-      Simd const, precision_policies::fast> {
+   fast() const& noexcept
+      -> simd_precision_reference<Simd const, precision_policies::fast> {
       return simd_precision_reference<Simd const, precision_policies::fast>(
          *m_wrapped
       );
@@ -206,7 +213,7 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
+   add(cat::simd<OtherT, OtherAbi> const& rhs) const noexcept -> result_type {
       return simd_floating_add_policy(
          make_simd_value<result_type>(*m_wrapped),
          make_simd_value<result_type>(rhs)
@@ -229,7 +236,8 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
+   subtract_by(cat::simd<OtherT, OtherAbi> const& rhs) const noexcept
+      -> result_type {
       return simd_floating_sub_policy(
          make_simd_value<result_type>(*m_wrapped),
          make_simd_value<result_type>(rhs)
@@ -252,7 +260,7 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(cat::simd<OtherT, OtherAbi> const& lhs) const
+   subtract_from(cat::simd<OtherT, OtherAbi> const& lhs) const noexcept
       -> left_result_type<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       return simd_floating_sub_policy(
@@ -278,7 +286,8 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
+   multiply(cat::simd<OtherT, OtherAbi> const& rhs) const noexcept
+      -> result_type {
       return simd_floating_mul_policy(
          make_simd_value<result_type>(*m_wrapped),
          make_simd_value<result_type>(rhs)
@@ -309,7 +318,7 @@ class simd_precision_reference
    fma(
       cat::simd<FactorT, FactorAbi> const& factor,
       cat::simd<AddendT, AddendAbi> const& addend
-   ) const -> result_type {
+   ) const noexcept -> result_type {
       return simd_floating_fma_policy(
          make_simd_value<result_type>(*m_wrapped),
          make_simd_value<result_type>(factor),
@@ -339,7 +348,8 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(cat::simd<OtherT, OtherAbi> const& rhs) const -> result_type {
+   divide_by(cat::simd<OtherT, OtherAbi> const& rhs) const noexcept
+      -> result_type {
       return simd_floating_div_policy(
          make_simd_value<result_type>(*m_wrapped),
          make_simd_value<result_type>(rhs)
@@ -362,7 +372,7 @@ class simd_precision_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(cat::simd<OtherT, OtherAbi> const& lhs) const
+   divide_into(cat::simd<OtherT, OtherAbi> const& lhs) const noexcept
       -> left_result_type<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       return simd_floating_div_policy(
@@ -390,7 +400,7 @@ class simd_precision_reference
    friend constexpr auto
    operator<(
       simd_precision_reference lhs, cat::simd<OtherT, OtherAbi> const& rhs
-   ) -> result_mask {
+   ) noexcept -> result_mask {
       return lhs.less(rhs);
    }
 
@@ -404,7 +414,7 @@ class simd_precision_reference
    friend constexpr auto
    operator<=(
       simd_precision_reference lhs, cat::simd<OtherT, OtherAbi> const& rhs
-   ) -> result_mask {
+   ) noexcept -> result_mask {
       return lhs.less_equal(rhs);
    }
 
@@ -418,7 +428,7 @@ class simd_precision_reference
    friend constexpr auto
    operator>(
       simd_precision_reference lhs, cat::simd<OtherT, OtherAbi> const& rhs
-   ) -> result_mask {
+   ) noexcept -> result_mask {
       return lhs.greater(rhs);
    }
 
@@ -432,7 +442,7 @@ class simd_precision_reference
    friend constexpr auto
    operator>=(
       simd_precision_reference lhs, cat::simd<OtherT, OtherAbi> const& rhs
-   ) -> result_mask {
+   ) noexcept -> result_mask {
       return lhs.greater_equal(rhs);
    }
 
@@ -446,7 +456,7 @@ class simd_precision_reference
    friend constexpr auto
    operator<(
       cat::simd<OtherT, OtherAbi> const& lhs, simd_precision_reference rhs
-   ) -> left_result_mask<OtherT, OtherAbi> {
+   ) noexcept -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
       left_type const left = make_simd_value<left_type>(lhs);
@@ -464,7 +474,7 @@ class simd_precision_reference
    friend constexpr auto
    operator<=(
       cat::simd<OtherT, OtherAbi> const& lhs, simd_precision_reference rhs
-   ) -> left_result_mask<OtherT, OtherAbi> {
+   ) noexcept -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
       left_type const left = make_simd_value<left_type>(lhs);
@@ -482,7 +492,7 @@ class simd_precision_reference
    friend constexpr auto
    operator>(
       cat::simd<OtherT, OtherAbi> const& lhs, simd_precision_reference rhs
-   ) -> left_result_mask<OtherT, OtherAbi> {
+   ) noexcept -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
       left_type const left = make_simd_value<left_type>(lhs);
@@ -500,7 +510,7 @@ class simd_precision_reference
    friend constexpr auto
    operator>=(
       cat::simd<OtherT, OtherAbi> const& lhs, simd_precision_reference rhs
-   ) -> left_result_mask<OtherT, OtherAbi> {
+   ) noexcept -> left_result_mask<OtherT, OtherAbi> {
       using left_type = left_result_type<OtherT, OtherAbi>;
       using mask_type = left_result_mask<OtherT, OtherAbi>;
       left_type const left = make_simd_value<left_type>(lhs);

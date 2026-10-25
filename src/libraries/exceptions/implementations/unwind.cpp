@@ -248,8 +248,9 @@ _Unwind_SetIP(
 }
 
 extern "C" auto
-_Unwind_GetGR(unwind_context* _Nonnull p_context, int4 register_number)
-   -> uword {
+_Unwind_GetGR(
+   unwind_context* _Nonnull p_context, int4 register_number
+) noexcept(!__has_feature(cxx_exceptions)) -> uword {
    if (register_number < 0 || register_number >= register_count) {
       return 0u;
    }
@@ -260,7 +261,7 @@ _Unwind_GetGR(unwind_context* _Nonnull p_context, int4 register_number)
 extern "C" void
 _Unwind_SetGR(
    unwind_context* _Nonnull p_context, int4 register_number, uword value
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    if (register_number < 0 || register_number >= register_count) {
       return;
    }

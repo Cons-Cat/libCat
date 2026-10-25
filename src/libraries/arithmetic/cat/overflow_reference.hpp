@@ -25,7 +25,8 @@ template <typename Int, overflow_policies overflow_policy>
 class overflow_reference
     : public arithmetic_interface<overflow_reference<Int, overflow_policy>> {
  public:
-   constexpr explicit overflow_reference(Int& w) : m_wrapped(addressof(w)) {
+   constexpr explicit overflow_reference(Int& w) noexcept
+       : m_wrapped(addressof(w)) {
    }
 
    using raw_type = __typeof_unqual(declval<Int>().raw);
@@ -41,7 +42,7 @@ class overflow_reference
 
    // Rebind this reference wrapper to a different address.
    constexpr void
-   rebind(Int& w [[clang::lifetime_capture_by_this]]) {
+   rebind(Int& w [[clang::lifetime_capture_by_this]]) noexcept {
       m_wrapped = addressof(w);
    }
 
@@ -67,7 +68,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   view() const {
+   view() const noexcept {
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policy>(
@@ -84,7 +85,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   view_undef_cmp() const {
+   view_undef_cmp() const noexcept {
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::undefined>(
@@ -102,35 +103,37 @@ class overflow_reference
 
  public:
    constexpr auto
-   undef() & -> overflow_reference<Int, overflow_policies::undefined> {
+   undef() & noexcept -> overflow_reference<Int, overflow_policies::undefined> {
       return overflow_reference<Int, overflow_policies::undefined>(*m_wrapped);
    }
 
    constexpr auto
-   undef() const& -> overflow_reference<
-      Int const, overflow_policies::undefined> {
+   undef() const& noexcept
+      -> overflow_reference<Int const, overflow_policies::undefined> {
       return overflow_reference<Int const, overflow_policies::undefined>(
          *m_wrapped
       );
    }
 
    constexpr auto
-   wrap() & -> overflow_reference<Int, overflow_policies::wrap> {
+   wrap() & noexcept -> overflow_reference<Int, overflow_policies::wrap> {
       return overflow_reference<Int, overflow_policies::wrap>(*m_wrapped);
    }
 
    constexpr auto
-   wrap() const& -> overflow_reference<Int const, overflow_policies::wrap> {
+   wrap() const& noexcept
+      -> overflow_reference<Int const, overflow_policies::wrap> {
       return overflow_reference<Int const, overflow_policies::wrap>(*m_wrapped);
    }
 
    constexpr auto
-   sat() & -> overflow_reference<Int, overflow_policies::saturate> {
+   sat() & noexcept -> overflow_reference<Int, overflow_policies::saturate> {
       return overflow_reference<Int, overflow_policies::saturate>(*m_wrapped);
    }
 
    constexpr auto
-   sat() const& -> overflow_reference<Int const, overflow_policies::saturate> {
+   sat() const& noexcept
+      -> overflow_reference<Int const, overflow_policies::saturate> {
       return overflow_reference<Int const, overflow_policies::saturate>(
          *m_wrapped
       );
@@ -138,7 +141,7 @@ class overflow_reference
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && {
+   undef() && noexcept {
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::undefined>(
@@ -156,7 +159,7 @@ class overflow_reference
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && {
+   wrap() && noexcept {
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::wrap>(
@@ -174,7 +177,7 @@ class overflow_reference
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && {
+   sat() && noexcept {
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::saturate>(
@@ -192,7 +195,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   countl_zero() const -> uint1
+   countl_zero() const noexcept -> uint1
       requires(supports_unsigned_bit_members)
    {
       return view().countl_zero();
@@ -200,7 +203,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   countl_one() const -> uint1
+   countl_one() const noexcept -> uint1
       requires(supports_unsigned_bit_members)
    {
       return view().countl_one();
@@ -208,7 +211,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   countr_zero() const -> uint1
+   countr_zero() const noexcept -> uint1
       requires(supports_unsigned_bit_members)
    {
       return view().countr_zero();
@@ -216,7 +219,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   countr_one() const -> uint1
+   countr_one() const noexcept -> uint1
       requires(supports_unsigned_bit_members)
    {
       return view().countr_one();
@@ -224,7 +227,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   popcount() const -> uint1
+   popcount() const noexcept -> uint1
       requires(supports_unsigned_bit_members)
    {
       return view().popcount();
@@ -232,7 +235,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   has_single_bit() const -> bool
+   has_single_bit() const noexcept -> bool
       requires(supports_unsigned_bit_members)
    {
       return view().has_single_bit();
@@ -240,7 +243,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_floor() const
+   bit_floor() const noexcept
       requires(supports_unsigned_bit_members)
    {
       return view().bit_floor();
@@ -248,7 +251,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_ceil() const
+   bit_ceil() const noexcept
       requires(supports_unsigned_bit_members)
    {
       return view().bit_ceil();
@@ -256,7 +259,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_width() const -> uint1
+   bit_width() const noexcept -> uint1
       requires(supports_unsigned_bit_members)
    {
       return view().bit_width();
@@ -264,7 +267,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   byteswap() const
+   byteswap() const noexcept
       requires(supports_unsigned_bit_members)
    {
       return view().byteswap();
@@ -272,7 +275,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left(uword count) const
+   shift_left(uword count) const noexcept
       requires(supports_unsigned_bit_members)
    {
       return view().shift_left(count);
@@ -280,7 +283,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right(uword count) const
+   shift_right(uword count) const noexcept
       requires(supports_unsigned_bit_members)
    {
       return view().shift_right(count);
@@ -288,7 +291,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   rotate_left(uword count) const
+   rotate_left(uword count) const noexcept
       requires(supports_unsigned_bit_members)
    {
       return view().rotate_left(count);
@@ -296,7 +299,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   rotate_right(uword count) const
+   rotate_right(uword count) const noexcept
       requires(supports_unsigned_bit_members)
    {
       return view().rotate_right(count);
@@ -304,7 +307,7 @@ class overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_reverse() const
+   bit_reverse() const noexcept
       requires(supports_unsigned_bit_members)
    {
       return view().bit_reverse();
@@ -313,7 +316,7 @@ class overflow_reference
    template <is_arithmetic PatternBits>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_repeat(PatternBits pattern_bits) const
+   bit_repeat(PatternBits pattern_bits) const noexcept
       requires(supports_unsigned_bit_members)
    {
       return view().bit_repeat(pattern_bits);
@@ -322,7 +325,7 @@ class overflow_reference
    template <typename Mask>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_compress(Mask mask) const
+   bit_compress(Mask mask) const noexcept
       requires(supports_unsigned_bit_members)
    {
       using view_type = decltype(view());
@@ -332,7 +335,7 @@ class overflow_reference
    template <typename Mask>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_expand(Mask mask) const
+   bit_expand(Mask mask) const noexcept
       requires(supports_unsigned_bit_members)
    {
       using view_type = decltype(view());
@@ -343,7 +346,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator U() const {
+   operator U() const noexcept {
       // The accessor's policy decides the cast: `.sat()` clamps to `U`'s
       // range regardless of the wrapped type's own policy.
       if constexpr (
@@ -361,7 +364,7 @@ class overflow_reference
       requires(is_signed<raw_arithmetic_type<U>> && is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit(sizeof(raw_type) > sizeof(U))
-   operator U() const {
+   operator U() const noexcept {
       return static_cast<U>(m_wrapped->raw);
    }
 
@@ -369,7 +372,7 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr
-   operator U() const {
+   operator U() const noexcept {
       return m_wrapped->raw;
    }
 
@@ -377,7 +380,7 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator<=>(U rhs) const {
+   operator<=>(U rhs) const noexcept {
       return view_undef_cmp() <=> rhs;
    }
 
@@ -385,7 +388,7 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(overflow_reference lhs, U rhs) -> bool {
+   operator==(overflow_reference lhs, U rhs) noexcept -> bool {
       return detail::raw_mixed_integral_equals(
          lhs.m_wrapped->raw, make_raw_arithmetic(rhs)
       );
@@ -399,7 +402,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<=>(overflow_reference lhs, U rhs) {
+   operator<=>(overflow_reference lhs, U rhs) noexcept {
       return lhs.m_wrapped->raw <=> make_raw_arithmetic(rhs);
    }
 
@@ -410,7 +413,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(overflow_reference lhs, U rhs) -> bool {
+   operator==(overflow_reference lhs, U rhs) noexcept -> bool {
       return lhs.m_wrapped->raw == make_raw_arithmetic(rhs);
    }
 
@@ -423,7 +426,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<=>(overflow_reference lhs, U rhs) {
+   operator<=>(overflow_reference lhs, U rhs) noexcept {
       return detail::raw_mixed_integral_spaceship(
          lhs.m_wrapped->raw, make_raw_arithmetic(rhs)
       );
@@ -437,7 +440,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(overflow_reference lhs, U rhs) -> bool {
+   operator==(overflow_reference lhs, U rhs) noexcept -> bool {
       return detail::raw_mixed_integral_equals(
          lhs.m_wrapped->raw, make_raw_arithmetic(rhs)
       );
@@ -450,7 +453,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator<=>(U rhs) const {
+   operator<=>(U rhs) const noexcept {
       return view_undef_cmp() <=> rhs;
    }
 
@@ -461,7 +464,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(overflow_reference lhs, U rhs) -> bool {
+   operator==(overflow_reference lhs, U rhs) noexcept -> bool {
       return *lhs.m_wrapped == make_raw_arithmetic(rhs);
    }
 
@@ -477,7 +480,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<=>(overflow_reference lhs, U rhs) {
+   operator<=>(overflow_reference lhs, U rhs) noexcept {
       return detail::raw_mixed_integral_spaceship(
          lhs.m_wrapped->raw, make_raw_arithmetic(rhs)
       );
@@ -492,7 +495,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(overflow_reference lhs, U rhs) -> bool {
+   operator==(overflow_reference lhs, U rhs) noexcept -> bool {
       return detail::raw_mixed_integral_equals(
          lhs.m_wrapped->raw, make_raw_arithmetic(rhs)
       );
@@ -507,7 +510,7 @@ class overflow_reference
       requires(!is_const<Int> && is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
-   operator=(U other) __attribute__((enable_if(
+   operator=(U other) noexcept __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<raw_type>(other),
       "value is out of range for assignment to cat::basic_idx"
    ))) {
@@ -526,7 +529,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> overflow_reference& {
+   operator=(U operand) noexcept -> overflow_reference& {
       *m_wrapped = operand;
       return *this;
    }
@@ -538,7 +541,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> overflow_reference& {
+   operator=(U operand) noexcept -> overflow_reference& {
       *m_wrapped = wrapper_type(operand);
       return *this;
    }
@@ -555,7 +558,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
-   operator=(U operand) __attribute__((enable_if(
+   operator=(U operand) noexcept __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<raw_type>(operand),
       "value is out of range for implicit assignment to this "
       "arithmetic type"
@@ -572,7 +575,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> overflow_reference& {
+   operator=(U operand) noexcept -> overflow_reference& {
       *m_wrapped = operand;
       return *this;
    }
@@ -590,7 +593,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
-   operator-=(U operand) __attribute__((enable_if(
+   operator-=(U operand) noexcept __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<raw_type>(operand),
       "value is out of range for implicit operation on this "
       "arithmetic type"
@@ -613,7 +616,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
-   operator+=(U operand) __attribute__((enable_if(
+   operator+=(U operand) noexcept __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<raw_type>(operand),
       "value is out of range for implicit operation on this "
       "arithmetic type"
@@ -630,7 +633,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator+=(U operand) -> overflow_reference& {
+   operator+=(U operand) noexcept -> overflow_reference& {
       *this = add(operand);
       return *this;
    }
@@ -642,7 +645,7 @@ class overflow_reference
       requires(!is_const<Int> && is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr overflow_reference&
-   operator+=(U operand) __attribute__((enable_if(
+   operator+=(U operand) noexcept __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<raw_type>(operand),
       "value is out of range for `+=` to cat::basic_idx"
    ))) {
@@ -666,7 +669,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U other) const {
+   add(U other) const noexcept {
       return view().add(other);
    }
 
@@ -682,7 +685,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int<raw_type, overflow_policy, quantity_reference>
-   operator+(overflow_reference const& self, U operand)
+   operator+(overflow_reference const& self, U operand) noexcept
       __attribute__((enable_if(
          detail::raw_source_fits_implicit_storage<raw_type>(operand),
          "value is out of range for implicit operation on this "
@@ -701,7 +704,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int<raw_type, overflow_policy, quantity_reference>
-   operator+(U operand, overflow_reference const& self)
+   operator+(U operand, overflow_reference const& self) noexcept
       __attribute__((enable_if(
          detail::raw_source_fits_implicit_storage<raw_type>(operand),
          "value is out of range for implicit operation on this "
@@ -716,7 +719,7 @@ class overflow_reference
       requires(detail::is_basic_intptr<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U operand) const {
+   add(U operand) const noexcept {
       return view().add(operand);
    }
 
@@ -724,7 +727,7 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U other) const -> detail::promoted_type<wrapper_type, U> {
+   add(U other) const noexcept -> detail::promoted_type<wrapper_type, U> {
       return view().add(other);
    }
 
@@ -732,7 +735,7 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U other) const
+   add(U other) const noexcept
       -> basic_int<make_signed_type<__SIZE_TYPE__>, overflow_policy> {
       return view().add(other);
    }
@@ -740,7 +743,7 @@ class overflow_reference
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U* _Nullable p_operand) const -> U* _Nullable {
+   add(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return view().add(p_operand);
    }
 
@@ -751,7 +754,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const {
+   subtract_by(U operand) const noexcept {
       return view().subtract_by(operand);
    }
 
@@ -759,7 +762,7 @@ class overflow_reference
       requires(detail::is_basic_intptr<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const {
+   subtract_by(U operand) const noexcept {
       return view().subtract_by(operand);
    }
 
@@ -770,14 +773,14 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U other) const
+   subtract_by(U other) const noexcept
       -> basic_int<make_signed_type<__SIZE_TYPE__>, overflow_policy> {
       return view().subtract_by(other);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(basic_idx<overflow_policy> other) const
+   subtract_by(basic_idx<overflow_policy> other) const noexcept
       -> basic_int<make_signed_type<__SIZE_TYPE__>, overflow_policy>
       requires(is_idx<wrapper_type>)
    {
@@ -787,7 +790,7 @@ class overflow_reference
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U* _Nullable p_operand) -> U* _Nullable {
+   subtract_by(U* _Nullable p_operand) noexcept -> U* _Nullable {
       return view().subtract_by(p_operand);
    }
 
@@ -795,7 +798,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U operand) const {
+   subtract_from(U operand) const noexcept {
       return view().subtract_from(operand);
    }
 
@@ -803,7 +806,7 @@ class overflow_reference
       requires(detail::is_basic_intptr<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U operand) const {
+   subtract_from(U operand) const noexcept {
       return view().subtract_from(operand);
    }
 
@@ -811,14 +814,14 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U other) const {
+   subtract_from(U other) const noexcept {
       return view().subtract_from(other);
    }
 
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U* _Nullable p_operand) -> U* _Nullable {
+   subtract_from(U* _Nullable p_operand) noexcept -> U* _Nullable {
       return view().subtract_from(p_operand);
    }
 
@@ -826,7 +829,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const {
+   multiply(U operand) const noexcept {
       return view().multiply(operand);
    }
 
@@ -834,7 +837,7 @@ class overflow_reference
       requires(detail::is_basic_intptr<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const {
+   multiply(U operand) const noexcept {
       return view().multiply(operand);
    }
 
@@ -842,14 +845,14 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U other) const -> basic_idx<overflow_policy> {
+   multiply(U other) const noexcept -> basic_idx<overflow_policy> {
       return view().multiply(other);
    }
 
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U* _Nullable p_operand) const -> U* _Nullable {
+   multiply(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return view().multiply(p_operand);
    }
 
@@ -857,7 +860,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const {
+   divide_by(U operand) const noexcept {
       return view().divide_by(operand);
    }
 
@@ -865,7 +868,7 @@ class overflow_reference
       requires(detail::is_basic_intptr<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const {
+   divide_by(U operand) const noexcept {
       return view().divide_by(operand);
    }
 
@@ -873,14 +876,14 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U other) const {
+   divide_by(U other) const noexcept {
       return view().divide_by(other);
    }
 
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U* _Nullable p_operand) const -> U* _Nullable {
+   divide_by(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return view().divide_by(p_operand);
    }
 
@@ -891,7 +894,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U operand) const -> remove_constref<U> {
+   divide_into(U operand) const noexcept -> remove_constref<U> {
       return view().divide_into(operand);
    }
 
@@ -899,7 +902,7 @@ class overflow_reference
       requires(detail::is_basic_intptr<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U operand) const {
+   divide_into(U operand) const noexcept {
       return view().divide_into(operand);
    }
 
@@ -907,14 +910,14 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U other) const {
+   divide_into(U other) const noexcept {
       return view().divide_into(other);
    }
 
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U* _Nullable p_operand) const -> U* _Nullable {
+   divide_into(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return view().divide_into(p_operand);
    }
 
@@ -923,7 +926,7 @@ class overflow_reference
    // `basic_int<T>` / `intptr<T>` are all disabled.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_complement() const
+   bit_complement() const noexcept
       requires(!is_idx<wrapper_type> && is_unsigned_integral<raw_type>)
    {
       return view().bit_complement();
@@ -933,7 +936,7 @@ class overflow_reference
       requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U operand) const {
+   modulo_by(U operand) const noexcept {
       return view().modulo_by(operand);
    }
 
@@ -941,7 +944,7 @@ class overflow_reference
       requires(detail::is_basic_intptr<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U operand) const {
+   modulo_by(U operand) const noexcept {
       return view().modulo_by(operand);
    }
 
@@ -949,14 +952,14 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U other) const -> basic_idx<overflow_policy> {
+   modulo_by(U other) const noexcept -> basic_idx<overflow_policy> {
       return view().modulo_by(other);
    }
 
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U* _Nullable p_operand) const -> U* _Nullable {
+   modulo_by(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return view().modulo_by(p_operand);
    }
 
@@ -964,7 +967,7 @@ class overflow_reference
       requires(detail::is_basic_intptr<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_into(U operand) const {
+   modulo_into(U operand) const noexcept {
       return view().modulo_into(operand);
    }
 
@@ -972,7 +975,7 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_into(U operand) const -> basic_idx<overflow_policy> {
+   modulo_into(U operand) const noexcept -> basic_idx<overflow_policy> {
       return view().modulo_into(operand);
    }
 
@@ -985,7 +988,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U operand) const
+   bit_and(U operand) const noexcept
       -> basic_int<raw_type, overflow_policy, quantity_reference> {
       return view().bit_and(operand);
    }
@@ -996,7 +999,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U other) const {
+   bit_and(U other) const noexcept {
       return view().bit_and(other);
    }
 
@@ -1004,7 +1007,7 @@ class overflow_reference
       requires(!is_idx<wrapper_type> && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U* _Nullable p_operand) const -> U* _Nullable {
+   bit_and(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return view().bit_and(p_operand);
    }
 
@@ -1016,7 +1019,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U operand) const
+   bit_or(U operand) const noexcept
       -> basic_int<raw_type, overflow_policy, quantity_reference> {
       return view().bit_or(operand);
    }
@@ -1027,7 +1030,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(Self self, U operand) const {
+   bit_or(Self self, U operand) const noexcept {
       return view().bit_or(self, operand);
    }
 
@@ -1035,7 +1038,7 @@ class overflow_reference
       requires(!is_idx<wrapper_type> && is_unsigned_integral<raw_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U* _Nullable p_operand) const -> U* _Nullable {
+   bit_or(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return view().bit_or(p_operand);
    }
 
@@ -1047,7 +1050,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_xor(U operand) const
+   bit_xor(U operand) const noexcept
       -> basic_int<raw_type, overflow_policy, quantity_reference> {
       return view().bit_xor(operand);
    }
@@ -1063,7 +1066,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const
+   shift_left_by(U operand) const noexcept
       -> basic_int<raw_type, overflow_policy, quantity_reference> {
       return view().shift_left_by(operand);
    }
@@ -1072,7 +1075,7 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> basic_idx<overflow_policy> {
+   shift_left_by(U operand) const noexcept -> basic_idx<overflow_policy> {
       return view().shift_left_by(operand);
    }
 
@@ -1082,7 +1085,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const {
+   shift_left_by(U operand) const noexcept {
       return view().shift_left_by(operand);
    }
 
@@ -1095,7 +1098,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_into(U other) const -> U {
+   shift_left_into(U other) const noexcept -> U {
       return view().shift_left_into(other);
    }
 
@@ -1103,7 +1106,7 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_into(U other) const -> U {
+   shift_left_into(U other) const noexcept -> U {
       return view().shift_left_into(other);
    }
 
@@ -1113,7 +1116,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_into(U other) const -> U {
+   shift_left_into(U other) const noexcept -> U {
       return view().shift_left_into(other);
    }
 
@@ -1125,7 +1128,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const
+   shift_right_by(U operand) const noexcept
       -> basic_int<raw_type, overflow_policy, quantity_reference> {
       return view().shift_right_by(operand);
    }
@@ -1134,7 +1137,7 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> basic_idx<overflow_policy> {
+   shift_right_by(U operand) const noexcept -> basic_idx<overflow_policy> {
       return view().shift_right_by(operand);
    }
 
@@ -1144,7 +1147,7 @@ class overflow_reference
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const {
+   shift_right_by(U operand) const noexcept {
       return view().shift_right_by(operand);
    }
 
@@ -1157,7 +1160,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_into(U other) const -> U {
+   shift_right_into(U other) const noexcept -> U {
       return view().shift_right_into(other);
    }
 
@@ -1165,7 +1168,7 @@ class overflow_reference
       requires(is_idx<wrapper_type>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_into(U other) const -> U {
+   shift_right_into(U other) const noexcept -> U {
       return view().shift_right_into(other);
    }
 
@@ -1175,7 +1178,7 @@ class overflow_reference
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_into(U other) const -> U {
+   shift_right_into(U other) const noexcept -> U {
       return view().shift_right_into(other);
    }
 };

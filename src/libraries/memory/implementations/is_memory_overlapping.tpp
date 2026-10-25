@@ -15,7 +15,7 @@ constexpr auto
 is_memory_overlapping(
    void const* _Nonnull p_first, idx first_bytes, void const* _Nonnull p_second,
    idx second_bytes
-) -> bool {
+) noexcept -> bool {
    if (first_bytes == 0u || second_bytes == 0u) {
       return false;
    }

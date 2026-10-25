@@ -249,7 +249,7 @@ struct error_code {
 struct window_resource {
    window_resource() = default;
 
-   window_resource(cat::uint4 input) : value(input) {
+   window_resource(cat::uint4 input) noexcept : value(input) {
    }
 
    cat::uint4 value;

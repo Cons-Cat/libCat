@@ -39,18 +39,21 @@ class basic_allocator_musl
    friend allocator_interface<self_type>;
    friend struct allocator_dyn_friend;
    friend auto
-   make_allocator_musl() -> basic_allocator_musl<false>;
+   make_allocator_musl() noexcept -> basic_allocator_musl<false>;
    friend auto
-   make_allocator_musl_shared() -> basic_allocator_musl<true>;
+   make_allocator_musl_shared() noexcept -> basic_allocator_musl<true>;
 
    template <is_uniform_random_bit_generator Generator>
    friend auto
-   make_allocator_musl(Generator& generator) -> basic_allocator_musl<false>;
+   make_allocator_musl(Generator& generator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> basic_allocator_musl<false>;
 
    template <is_uniform_random_bit_generator Generator>
    friend auto
-   make_allocator_musl_shared(Generator& generator)
-      -> basic_allocator_musl<true>;
+   make_allocator_musl_shared(Generator& generator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> basic_allocator_musl<true>;
 
    template <typename>
    friend class allocator_ref;
@@ -59,35 +62,46 @@ class basic_allocator_musl
    atomic<context*> m_p_context{nullptr};
    uint8 m_secret = 0u;
 
-   explicit basic_allocator_musl(uint8 secret) : m_secret(secret) {
+   explicit basic_allocator_musl(uint8 secret) noexcept(
+      !__has_feature(cxx_exceptions)
+   )
+       : m_secret(secret) {
       verify(secret != 0u);
    }
 
    auto
-   ensure_context() -> context* _Nullable;
+   ensure_context() noexcept(!__has_feature(cxx_exceptions))
+      -> context* _Nullable;
 
    auto
-   allocation_bytes(ualign alignment, idx requested_bytes)
+   allocation_bytes(ualign alignment, idx requested_bytes) noexcept
       -> maybe_non_zero<idx>;
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(idx requested_bytes) -> void* _Nullable;
+   allocate(idx requested_bytes) noexcept(!__has_feature(cxx_exceptions))
+      -> void* _Nullable;
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   aligned_allocate(ualign alignment, idx requested_bytes) -> void* _Nullable;
+   aligned_allocate(ualign alignment, idx requested_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> void* _Nullable;
 
    auto
-   allocate_feedback(idx requested_bytes) -> maybe_sized_allocation<void*>;
+   allocate_feedback(idx requested_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe_sized_allocation<void*>;
 
    auto
-   aligned_allocate_feedback(ualign alignment, idx requested_bytes)
-      -> maybe_sized_allocation<void*>;
+   aligned_allocate_feedback(ualign alignment, idx requested_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe_sized_allocation<void*>;
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate_zeroed(idx requested_bytes) -> void* _Nullable;
+   allocate_zeroed(idx requested_bytes) noexcept(!__has_feature(cxx_exceptions))
+      -> void* _Nullable;
 
    auto
    allocate_zeroed_feedback(idx requested_bytes)
@@ -95,8 +109,9 @@ class basic_allocator_musl
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   aligned_allocate_zeroed(ualign alignment, idx requested_bytes)
-      -> void* _Nullable;
+   aligned_allocate_zeroed(ualign alignment, idx requested_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> void* _Nullable;
 
    auto
    aligned_allocate_zeroed_feedback(ualign alignment, idx requested_bytes)
@@ -114,7 +129,7 @@ class basic_allocator_musl
    deallocate_release_customization(
       [[maybe_unused]] detail::allocator_release_tag release_tag,
       self_type& allocator, void const* _Nonnull p_storage, idx allocation_bytes
-   ) {
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       if constexpr (is_shared) {
          allocator.deallocate(
             p_storage, allocator.recorded_allocation_bytes(p_storage)
@@ -136,11 +151,14 @@ class basic_allocator_musl
    ) -> void* _Nullable;
 
    auto
-   reallocate(span<byte> allocation, idx new_bytes) -> void* _Nullable;
+   reallocate(span<byte> allocation, idx new_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> void* _Nullable;
 
    auto
-   reallocate_feedback(span<byte> allocation, idx new_bytes)
-      -> maybe_sized_allocation<void*>;
+   reallocate_feedback(span<byte> allocation, idx new_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe_sized_allocation<void*>;
 
  public:
    static constexpr ualign min_alignment = 16u;
@@ -150,27 +168,32 @@ class basic_allocator_musl
    basic_allocator_musl(basic_allocator_musl const&) =
       delete ("`basic_allocator_musl` owns an independent mallocng context.");
    auto
-   operator=(basic_allocator_musl const&) -> basic_allocator_musl& = delete;
+   operator=(basic_allocator_musl const&) noexcept
+      -> basic_allocator_musl& = delete;
 
-   basic_allocator_musl(basic_allocator_musl&& other) noexcept;
+   basic_allocator_musl(basic_allocator_musl&& other) noexcept(
+      !__has_feature(cxx_exceptions)
+   );
    auto
-   operator=(basic_allocator_musl&& other) noexcept -> basic_allocator_musl&;
-   ~basic_allocator_musl();
+   operator=(basic_allocator_musl&& other) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> basic_allocator_musl&;
+   ~basic_allocator_musl() noexcept(!__has_feature(cxx_exceptions));
 
    void
    reset();
 
    [[nodiscard]]
    auto
-   bytes_used() const -> idx;
+   bytes_used() const noexcept(!__has_feature(cxx_exceptions)) -> idx;
 
    [[nodiscard]]
    auto
-   bytes_capacity() const -> idx;
+   bytes_capacity() const noexcept(!__has_feature(cxx_exceptions)) -> idx;
 
    [[nodiscard]]
    auto
-   is_equivalent(basic_allocator_musl const& other) const -> bool;
+   is_equivalent(basic_allocator_musl const& other) const noexcept -> bool;
 };
 
 using allocator_musl = basic_allocator_musl<false>;
@@ -179,7 +202,9 @@ using allocator_musl_shared = basic_allocator_musl<true>;
 template <is_uniform_random_bit_generator Generator>
 [[nodiscard]]
 inline auto
-make_allocator_musl(Generator& generator) -> allocator_musl {
+make_allocator_musl(Generator& generator) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> allocator_musl {
    while (true) {
       uint8 const secret = uniform_int_distribution<uint8>{}(generator);
       if (secret != 0u) {
@@ -191,7 +216,9 @@ make_allocator_musl(Generator& generator) -> allocator_musl {
 template <is_uniform_random_bit_generator Generator>
 [[nodiscard]]
 inline auto
-make_allocator_musl_shared(Generator& generator) -> allocator_musl_shared {
+make_allocator_musl_shared(Generator& generator) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> allocator_musl_shared {
    while (true) {
       uint8 const secret = uniform_int_distribution<uint8>{}(generator);
       if (secret != 0u) {
@@ -202,14 +229,14 @@ make_allocator_musl_shared(Generator& generator) -> allocator_musl_shared {
 
 [[nodiscard]]
 inline auto
-make_allocator_musl() -> allocator_musl {
+make_allocator_musl() noexcept -> allocator_musl {
    nix::sys_urandom_engine generator;
    return make_allocator_musl(generator);
 }
 
 [[nodiscard]]
 inline auto
-make_allocator_musl_shared() -> allocator_musl_shared {
+make_allocator_musl_shared() noexcept -> allocator_musl_shared {
    nix::sys_urandom_engine generator;
    return make_allocator_musl_shared(generator);
 }

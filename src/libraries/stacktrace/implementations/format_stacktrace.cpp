@@ -908,7 +908,7 @@ unload_symbolizer(symbolizer* _Nullable p_symbolizer) {
 auto
 resolve_stacktrace_frame(
    symbolizer const* _Nullable p_symbolizer, stacktrace_entry entry
-) -> frame_origin {
+) noexcept(!__has_feature(cxx_exceptions)) -> frame_origin {
    if (p_symbolizer == nullptr) {
       return {};
    }
@@ -932,7 +932,7 @@ auto
 format_stacktrace_frame(
    symbolizer const* _Nullable p_symbolizer, idx number, stacktrace_entry entry,
    format_context& context, bool debug
-) -> scaredy_format<void> {
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
    symbolizer const unloaded{};
    symbolizer const& symbols =
       p_symbolizer != nullptr ? *p_symbolizer : unloaded;
@@ -944,8 +944,9 @@ format_stacktrace_frame(
 }
 
 auto
-format_stacktrace_entry_context(stacktrace_entry entry, format_context& context)
-   -> scaredy_format<void> {
+format_stacktrace_entry_context(
+   stacktrace_entry entry, format_context& context
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
    symbolizer* _Nullable const p_symbolizer = load_symbolizer();
    scaredy_format<void> const result =
       format_stacktrace_frame(p_symbolizer, 1u, entry, context, true);

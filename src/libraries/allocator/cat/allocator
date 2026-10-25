@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/detail/compact.hpp>
+#include <cat/detail/exception_defer.hpp>
 #include <cat/detail/str_span.hpp>
 
 #include <cat/debug>
@@ -35,21 +36,21 @@ struct mem_handle {
    // by a `multi_memory_handle`.
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return 1u;
    }
 
    // If `.set_count()` is no-op if it is not intercepted by a
    // `multi_memory_handle`.
    constexpr void
-   set_count(iword /*unused*/) {
+   set_count(iword /*unused*/) noexcept {
    }
 
    // Number of bytes allocated. This is always the size of `T` if the call is
    // not intercepted by a `multi_memory_handle`.
    [[nodiscard]]
    constexpr auto
-   raw_size() const -> idx {
+   raw_size() const noexcept -> idx {
       return sizeof(T);
    }
 
@@ -57,7 +58,7 @@ struct mem_handle {
    // `inline_memory_handle`.
    [[nodiscard]]
    constexpr auto
-   is_inline() const -> bool {
+   is_inline() const noexcept -> bool {
       return false;
    }
 
@@ -103,18 +104,18 @@ struct multi_memory_handle {
    }
 
    constexpr void
-   set_inlined(bool inlined) {
+   set_inlined(bool inlined) noexcept {
       this->handle.set_inlined(inlined);
    }
 
    constexpr void
-   set_inline_objects_live() {
+   set_inline_objects_live() noexcept {
       this->handle.set_inline_objects_live();
    }
 
    // Intercept a propagating call to `.set_count()`.
    constexpr void
-   set_count(idx count) {
+   set_count(idx count) noexcept {
       // This conversion to `idx` is safe, because `count` is always positive.
       this->array_length = count;
    }
@@ -122,20 +123,20 @@ struct multi_memory_handle {
    // Intercept a propagating call to `.size()`.
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return this->array_length;
    }
 
    // Intercept a propagating call to `.raw_size()`.
    [[nodiscard]]
    constexpr auto
-   raw_size() const -> idx {
+   raw_size() const noexcept -> idx {
       return this->array_length * sizeof(value_type);
    }
 
    [[nodiscard]]
    constexpr auto
-   is_inline() const -> bool {
+   is_inline() const noexcept -> bool {
       return this->handle.is_inline();
    }
 
@@ -152,22 +153,22 @@ struct multi_memory_handle {
    }
 
    constexpr auto
-   get_inline() & -> value_type& {
+   get_inline() & noexcept -> value_type& {
       return this->handle.get_inline();
    }
 
    constexpr auto
-   get_inline() const& -> value_type const& {
+   get_inline() const& noexcept -> value_type const& {
       return this->handle.get_inline();
    }
 
    constexpr auto
-   get_inline_ptr() -> value_type* _Nonnull {
+   get_inline_ptr() noexcept -> value_type* _Nonnull {
       return this->handle.get_inline_ptr();
    }
 
    constexpr auto
-   get_inline_ptr() const -> value_type const* _Nonnull {
+   get_inline_ptr() const noexcept -> value_type const* _Nonnull {
       return this->handle.get_inline_ptr();
    }
 };
@@ -194,15 +195,23 @@ struct inline_memory_handle {
 
    // Value-initialize `handle` so the union has an active member before
    // `set_count` / other mutators run. Required for constant evaluation.
-   constexpr inline_memory_handle() : handle(), storage_state(0u) {
+   constexpr inline_memory_handle() noexcept(
+      is_nothrow_default_constructible<Handle>
+   )
+       : handle(), storage_state(0u) {
    }
 
-   constexpr inline_memory_handle(Handle input_handle)
+   constexpr inline_memory_handle(
+      Handle input_handle
+   ) noexcept(is_nothrow_move_constructible<Handle>)
        : handle(move(input_handle)),
          storage_state(handle.is_inline() ? 2u : 0u) {
    }
 
-   constexpr inline_memory_handle(inline_memory_handle const& other)
+   constexpr inline_memory_handle(inline_memory_handle const& other) noexcept(
+      is_nothrow_copy_constructible<Handle>
+      && is_nothrow_copy_constructible<value_type>
+   )
        : storage_state(other.storage_state) {
       if (storage_state != 0u) {
          if (storage_state == 1u) {
@@ -218,7 +227,10 @@ struct inline_memory_handle {
       }
    }
 
-   constexpr inline_memory_handle(inline_memory_handle&& other)
+   constexpr inline_memory_handle(inline_memory_handle&& other) noexcept(
+      is_nothrow_move_constructible<Handle>
+      && is_nothrow_move_constructible<value_type>
+   )
        : storage_state(other.storage_state) {
       if (storage_state != 0u) {
          if (storage_state == 1u) {
@@ -238,7 +250,10 @@ struct inline_memory_handle {
    }
 
    constexpr auto
-   operator=(inline_memory_handle const& other) -> inline_memory_handle& {
+   operator=(inline_memory_handle const& other) noexcept(
+      is_nothrow_copy_constructible<Handle>
+      && is_nothrow_copy_constructible<value_type>
+   ) -> inline_memory_handle& {
       if (this == __builtin_addressof(other)) {
          return *this;
       }
@@ -264,7 +279,10 @@ struct inline_memory_handle {
    }
 
    constexpr auto
-   operator=(inline_memory_handle&& other) -> inline_memory_handle& {
+   operator=(inline_memory_handle&& other) noexcept(
+      is_nothrow_move_constructible<Handle>
+      && is_nothrow_move_constructible<value_type>
+   ) -> inline_memory_handle& {
       if (this == __builtin_addressof(other)) {
          return *this;
       }
@@ -308,35 +326,35 @@ struct inline_memory_handle {
 
    // Intercept a propagating call to `.set_inlined()`.
    constexpr void
-   set_inlined(bool inlined) {
+   set_inlined(bool inlined) noexcept {
       storage_state = inlined ? 2u : 0u;
    }
 
    constexpr void
-   set_inline_objects_live() {
+   set_inline_objects_live() noexcept {
       storage_state = 1u;
    }
 
    constexpr void
-   set_count(idx count) {
+   set_count(idx count) noexcept {
       this->handle.set_count(count);
    }
 
    [[nodiscard]]
    auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return handle.size();
    }
 
    [[nodiscard]]
    auto
-   raw_size() const -> idx {
+   raw_size() const noexcept -> idx {
       return handle.raw_size();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_inline() const -> bool {
+   is_inline() const noexcept -> bool {
       return storage_state != 0u;
    }
 
@@ -354,23 +372,23 @@ struct inline_memory_handle {
 
    // Intercept calls to `.get_inline()`.
    constexpr auto
-   get_inline() & -> value_type& {
+   get_inline() & noexcept -> value_type& {
       return *get_inline_ptr();
    }
 
    // Intercept calls to `.get_inline()`.
    constexpr auto
-   get_inline() const& -> value_type const& {
+   get_inline() const& noexcept -> value_type const& {
       return *get_inline_ptr();
    }
 
    constexpr auto
-   get_inline_ptr() -> value_type* _Nonnull {
+   get_inline_ptr() noexcept -> value_type* _Nonnull {
       return __builtin_addressof(inline_storage);
    }
 
    constexpr auto
-   get_inline_ptr() const -> value_type const* _Nonnull {
+   get_inline_ptr() const noexcept -> value_type const* _Nonnull {
       return __builtin_addressof(inline_storage);
    }
 };
@@ -606,8 +624,9 @@ class allocator_interface {
 
    [[gnu::no_sanitize_address]]
    constexpr auto
-   meta_alloc_aligned(ualign allocation_alignment, idx allocation_bytes)
-      -> maybe_ptr<void>;
+   meta_alloc_aligned(
+      ualign allocation_alignment, idx allocation_bytes
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe_ptr<void>;
 
    [[gnu::no_sanitize_address]]
    constexpr auto
@@ -5724,13 +5743,13 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   get_ptr(T& memory) -> auto;
+   get_ptr(T& memory) noexcept -> auto;
 
    // Get a `const` pointer to an allocated memory handle.
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   get_ptr(T const& memory) -> auto;
+   get_ptr(T const& memory) noexcept -> auto;
 
    // If the allocator does not override a `.reset()` method, produce a no-op.
    constexpr void
@@ -5809,12 +5828,12 @@ class allocator_interface {
 
  private:
    constexpr auto
-   self() -> Derived& {
+   self() noexcept -> Derived& {
       return static_cast<Derived&>(*this);
    }
 
    constexpr auto
-   self() const -> Derived const& {
+   self() const noexcept -> Derived const& {
       return static_cast<Derived const&>(*this);
    }
 
@@ -5823,7 +5842,9 @@ class allocator_interface {
    // on move-assignment into live storage.
    template <typename T>
    constexpr void
-   relocate_disjoint_reserved_storage(T* _Nonnull p_destination, T& source) {
+   relocate_disjoint_reserved_storage(
+      T* _Nonnull p_destination, T& source
+   ) noexcept(false) {
       uword const extent = sizeof(T);
       assert(!is_memory_overlapping(
          __builtin_addressof(source), extent, p_destination, extent
@@ -5911,7 +5932,7 @@ class allocator_interface {
    // Move data from `handle` into `allocation`. Allocators used with this
    // interface supply non-overlapping destination storage for this transfer.
    constexpr void
-   relocate_inline_handle(auto& handle, auto& allocation) {
+   relocate_inline_handle(auto& handle, auto& allocation) noexcept(false) {
       using value_type = remove_cvref<decltype(handle)>::value_type;
       if !consteval {
          assert(!is_memory_overlapping(
@@ -5936,7 +5957,7 @@ class allocator_interface {
    constexpr void
    relocate_ptr_handle(
       T* _Nonnull p_old_handle, T* _Nonnull p_new_handle, idx old_count
-   ) {
+   ) noexcept(false) {
       // TODO: Use a `relocate()` function to streamline this.
       assert(p_new_handle != nullptr);
       if !consteval {
@@ -5961,7 +5982,7 @@ class allocator_interface {
    constexpr void
    relocate_ptr_handle(
       auto* _Nonnull p_old_handle, span<T> new_handle, idx old_count
-   ) {
+   ) noexcept(false) {
       // TODO: Use a `relocate()` function to streamline this.
       if !consteval {
          // TODO: Remove the `consteval` requirement here.

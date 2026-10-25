@@ -38,26 +38,32 @@ class unique {
 
    template <typename U>
       requires(is_implicitly_convertible<U, T>)
-   constexpr unique(unique<U>&& raii) : storage(static_cast<T>(raii.borrow())) {
+   constexpr unique(unique<U>&& raii) noexcept(is_nothrow_constructible<T, U&&>)
+       : storage(static_cast<T>(raii.borrow())) {
    }
 
    // Copy-construct from any type convertible into `T`.
    template <typename U>
       requires(is_implicitly_convertible<U, T>)
-   constexpr unique(U const& value) : storage(static_cast<T>(value)) {
+   constexpr unique(
+      U const& value
+   ) noexcept(is_nothrow_constructible<T, U const&>)
+       : storage(static_cast<T>(value)) {
    }
 
    // Move-construct from any type convertible into `T`.
    template <is_forwarding_move U>
       requires(is_implicitly_convertible<U, T>)
    // NOLINTNEXTLINE
-   constexpr unique(U&& value) : storage($fwd(value)) {
+   constexpr unique(U&& value) noexcept(is_nothrow_constructible<T, U&&>)
+       : storage($fwd(value)) {
    }
 
    // Forward any possible constructor into `storage`.
    template <typename... Args>
       requires(sizeof...(Args) > 1)
-   unique(Args&&... arguments) : storage($fwd(arguments)...) {
+   unique(Args&&... arguments) noexcept(is_nothrow_constructible<T, Args...>)
+       : storage($fwd(arguments)...) {
    }
 
    // Allow move-assignment.
@@ -95,12 +101,12 @@ class unique {
    }
 
    constexpr auto
-   borrow() -> T&& {
+   borrow() noexcept -> T&& {
       return $fwd(this->storage);
    }
 
    constexpr void
-   swap(unique& other) {
+   swap(unique& other) noexcept(noexcept(cat::swap(storage, other.storage))) {
       cat::swap(storage, other.storage);
    }
 

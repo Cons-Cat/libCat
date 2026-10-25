@@ -36,7 +36,7 @@ namespace cat {
 template <typename CharT>
 [[clang::no_builtin("strlen")]]
 constexpr auto
-string_length(CharT const* _Nonnull p_string) -> idx {
+string_length(CharT const* _Nonnull p_string) noexcept -> idx {
    idx result;
    while (true) {
       if (p_string[result.raw] == CharT{'\0'}) {
@@ -84,7 +84,7 @@ template <typename CharT>
 constexpr auto
 compare_strings_scalar(
    basic_str_span<CharT const> string_1, basic_str_span<CharT const> string_2
-) -> bool {
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    if (string_1.size() != string_2.size()) {
       return false;
    }
@@ -103,13 +103,15 @@ template <typename CharT>
 constexpr auto
 compare_strings(
    basic_str_span<CharT const> string_1, basic_str_span<CharT const> string_2
-) -> bool {
+) noexcept -> bool {
    return compare_strings_scalar(string_1, string_2);
 }
 
 [[nodiscard]]
 constexpr auto
-compare_strings(str_view string_1, str_view string_2) -> bool;
+compare_strings(str_view string_1, str_view string_2) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bool;
 
 template <typename CharT, str_flags flags>
 class
@@ -126,12 +128,12 @@ class
      gsl::Pointer(CharT)]]
    basic_str_span : public span<CharT> {
  public:
-   constexpr basic_str_span() : span<CharT>(nullptr) {
+   constexpr basic_str_span() noexcept : span<CharT>(nullptr) {
    }
 
    constexpr basic_str_span(basic_str_span const& string) = default;
 
-   constexpr basic_str_span(CharT* _Nonnull p_string, idx in_length)
+   constexpr basic_str_span(CharT* _Nonnull p_string, idx in_length) noexcept
        : span<CharT>(p_string, in_length) {
    }
 
@@ -142,7 +144,7 @@ class
       )
    constexpr basic_str_span(
       basic_str_span<T> string [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = reinterpret_cast<char const*>(string.data());
       this->m_size = string.size();
    }
@@ -155,7 +157,7 @@ class
       )
    constexpr basic_str_span(
       T _Nonnull p_string [[clang::lifetimebound]]
-   )
+   ) noexcept
        : span<CharT>(
             p_string, string_length(p_string) + flags.is_null_terminated
          ) {
@@ -177,7 +179,7 @@ class
 
    // Zero-overhead string literal constructor.
    template <idx other_length>
-   consteval basic_str_span(CharT (&string)[other_length]) {
+   consteval basic_str_span(CharT (&string)[other_length]) noexcept {
       // Verify that the final character is null terminator. This is necessary
       // if `constexpr char` arrays are passed in rather than string literals.
       [[assume(string[other_length.raw - 1uz] == remove_const<CharT>{'\0'})]];
@@ -200,7 +202,7 @@ class
    constexpr basic_str_span(
       basic_str_inplace<CharT, other_capacity, other_flags>& other_string
       [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = other_string.data();
       this->m_size =
          other_string.size() + static_cast<unsigned>(flags.is_null_terminated);
@@ -215,7 +217,7 @@ class
    constexpr basic_str_span(
       basic_str_inplace<remove_const<CharT>, other_capacity, other_flags> const&
          other_string [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = other_string.data();
       this->m_size =
          other_string.size() + static_cast<unsigned>(flags.is_null_terminated);
@@ -230,7 +232,7 @@ class
    constexpr basic_str_span(
       basic_str_inplace<T, other_capacity, other_flags>& other_string
       [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = other_string.data();
       this->m_size = other_string.size();
    }
@@ -245,7 +247,7 @@ class
    constexpr basic_str_span(
       basic_str_inplace<T, other_capacity, other_flags> const& other_string
       [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = other_string.data();
       this->m_size = other_string.size();
    }
@@ -266,7 +268,7 @@ class
       )
    constexpr basic_str_span(
       basic_str_vec<CharT, other_flags>& other_string [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = other_string.data();
       this->m_size =
          other_string.size() + static_cast<unsigned>(flags.is_null_terminated);
@@ -280,7 +282,7 @@ class
    constexpr basic_str_span(
       basic_str_vec<remove_const<CharT>, other_flags> const& other_string
       [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = other_string.data();
       this->m_size =
          other_string.size() + static_cast<unsigned>(flags.is_null_terminated);
@@ -293,7 +295,7 @@ class
       )
    constexpr basic_str_span(
       basic_str_vec<CharT, other_flags>& other_string [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = other_string.data();
       this->m_size = other_string.size();
    }
@@ -306,7 +308,7 @@ class
    constexpr basic_str_span(
       basic_str_vec<remove_const<CharT>, other_flags> const& other_string
       [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = other_string.data();
       this->m_size = other_string.size();
    }
@@ -316,7 +318,7 @@ class
       requires(is_same<CharT, add_const<T>>)
    constexpr basic_str_span(
       basic_str_span<T, flags> in_span [[clang::lifetimebound]]
-   )
+   ) noexcept
        : span<CharT>(in_span) {
    }
 
@@ -328,7 +330,7 @@ class
    constexpr basic_str_span(
       basic_str_span<T, str_flags::null_terminated> in_span
       [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = in_span.data();
       // `zstr_span` size counts the trailing null, so it is never zero here.
       this->m_size = idx(in_span.size() - 1u);
@@ -340,20 +342,22 @@ class
    constexpr basic_str_span(
       basic_str_span<T, str_flags::null_terminated> in_span
       [[clang::lifetimebound]]
-   ) {
+   ) noexcept {
       this->m_p_data = in_span.data();
       // Same as the non-`const` promotion above.
       this->m_size = idx(in_span.size() - 1u);
    }
 
    // Prevent binding a `zstr_span` over a `str_span`.
-   constexpr basic_str_span(basic_str_span<CharT> const&)
+   constexpr basic_str_span(basic_str_span<CharT> const&) noexcept
       requires(flags.is_null_terminated)
    = delete ("Cannot bind a null-terminated `zstr_span` over a "
              "non null-terminated `str_span`!");
 
    // Promote `span<char>` to `basic_str_span<char>`.
-   constexpr basic_str_span(span<CharT> in_span [[clang::lifetimebound]])
+   constexpr basic_str_span(
+      span<CharT> in_span [[clang::lifetimebound]]
+   ) noexcept
        : span<CharT>(in_span) {
    }
 
@@ -368,7 +372,7 @@ class
       )
    constexpr basic_str_span(
       String& string [[clang::lifetimebound]]
-   ) {
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       this->m_p_data = string.data();
       this->m_size =
          string.size() + static_cast<unsigned>(flags.is_null_terminated);
@@ -390,7 +394,7 @@ class
       )
    constexpr basic_str_span(
       String const& string [[clang::lifetimebound]]
-   ) {
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       this->m_p_data = string.data();
       this->m_size =
          string.size() + static_cast<unsigned>(flags.is_null_terminated);
@@ -404,7 +408,7 @@ class
    constexpr basic_str_span(decltype(nullptr)) = delete;
 
    constexpr auto
-   operator=(basic_str_span const& other_string) -> basic_str_span& {
+   operator=(basic_str_span const& other_string) noexcept -> basic_str_span& {
       // Omitting `[[clang::lifetimebound]]` on the RHS avoids Clang 23
       // `-Wdangling-assignment` false positives on assigns from pointers or
       // arrays whose storage still outlives this view.
@@ -415,7 +419,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   is_null_terminated() const -> bool {
+   is_null_terminated() const noexcept -> bool {
       if constexpr (flags.is_null_terminated) {
          return true;
       } else {
@@ -428,7 +432,7 @@ class
    friend constexpr auto
    operator==(
       basic_str_span const& this_string, basic_str_span const& other_string
-   ) {
+   ) noexcept {
       using char_type = remove_const<CharT>;
       using view_type = basic_str_span<char_type const>;
       return compare_strings(view_type(this_string), view_type(other_string));
@@ -450,7 +454,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   substring(idx position, idx count) -> basic_str_span<CharT> {
+   substring(idx position, idx count) noexcept -> basic_str_span<CharT> {
       // Omitting `[[clang::lifetimebound]]` avoids Clang 23
       // `-Wdangling-assignment` false positives when slicing still aliases the
       // same backing buffer.
@@ -459,7 +463,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   remove_prefix(idx offset) -> basic_str_span {
+   remove_prefix(idx offset) noexcept -> basic_str_span {
       // Omitting `[[clang::lifetimebound]]` avoids Clang 23
       // `-Wdangling-assignment` false positives when slicing still aliases the
       // same backing buffer.
@@ -468,7 +472,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   remove_suffix(idx offset) -> basic_str_span<CharT> {
+   remove_suffix(idx offset) noexcept -> basic_str_span<CharT> {
       // Omitting `[[clang::lifetimebound]]` avoids Clang 23
       // `-Wdangling-assignment` false positives when slicing still aliases the
       // same backing buffer.
@@ -477,8 +481,9 @@ class
 
    [[nodiscard]]
    constexpr auto
-   find(remove_const<CharT> character, idx from_position = 0u) const
-      -> maybe<idx> {
+   find(remove_const<CharT> character, idx from_position = 0u) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<idx> {
       if (from_position >= this->m_size) {
          return nullopt;
       }
@@ -492,8 +497,9 @@ class
 
    [[nodiscard]]
    constexpr auto
-   find(basic_str_span<CharT const> needle, idx from_position = 0u) const
-      -> maybe<idx> {
+   find(
+      basic_str_span<CharT const> needle, idx from_position = 0u
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> maybe<idx> {
       if (from_position > this->m_size) {
          return nullopt;
       }
@@ -513,19 +519,19 @@ class
 };
 
 template <typename CharT, idx inline_capacity, str_vec_flags flags>
-basic_str_span(basic_str_inplace<CharT, inline_capacity, flags>&)
+basic_str_span(basic_str_inplace<CharT, inline_capacity, flags>&) noexcept
    -> basic_str_span<CharT, flags.str>;
 
 template <typename CharT, idx inline_capacity, str_vec_flags flags>
-basic_str_span(basic_str_inplace<CharT, inline_capacity, flags> const&)
+basic_str_span(basic_str_inplace<CharT, inline_capacity, flags> const&) noexcept
    -> basic_str_span<CharT const, flags.str>;
 
 template <typename CharT, str_vec_flags flags>
-basic_str_span(basic_str_vec<CharT, flags>&)
+basic_str_span(basic_str_vec<CharT, flags>&) noexcept
    -> basic_str_span<CharT, flags.str>;
 
 template <typename CharT, str_vec_flags flags>
-basic_str_span(basic_str_vec<CharT, flags> const&)
+basic_str_span(basic_str_vec<CharT, flags> const&) noexcept
    -> basic_str_span<CharT const, flags.str>;
 
 template <typename String>
@@ -550,7 +556,7 @@ template <is_safe_string Left, is_safe_string Right>
    )
 [[nodiscard]]
 constexpr auto
-operator==(Left const& left, Right const& right) -> bool {
+operator==(Left const& left, Right const& right) noexcept -> bool {
    using char_type = remove_const<typename remove_cvref<Left>::value_type>;
    using view_type = basic_str_span<char_type const>;
    return compare_strings(view_type(left), view_type(right));
@@ -565,7 +571,7 @@ template <typename String, typename CharT, idx extent>
    )
 [[nodiscard]]
 constexpr auto
-operator==(String const& left, CharT const (&right)[extent]) -> bool {
+operator==(String const& left, CharT const (&right)[extent]) noexcept -> bool {
    using char_type = remove_const<CharT>;
    using view_type = basic_str_span<char_type const>;
    return compare_strings(view_type(left), view_type(right, extent - 1u));

@@ -1,8 +1,9 @@
 #include <cat/linux>
 
 auto
-nix::tty_get_attributes(file_descriptor tty)
-   -> cat::scaredy<tty_io_serial, linux_error> {
+nix::tty_get_attributes(file_descriptor tty) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> cat::scaredy<tty_io_serial, linux_error> {
    // `&configuration` is an output parameter.
    // TODO: Syscalls should be consistent on whether they do or don't have
    // output parameters.

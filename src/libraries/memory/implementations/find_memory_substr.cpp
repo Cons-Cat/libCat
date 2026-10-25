@@ -310,7 +310,7 @@ auto
 detail::find_subspan_memory_impl(
    byte const* _Nonnull p_haystack, byte const* _Nonnull p_needle,
    idx element_bytes, idx size, idx needle_size
-) -> maybe<idx> {
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<idx> {
    if (needle_size == 1u) {
       return detail::find_memory_impl(
          p_haystack, p_needle, element_bytes, size

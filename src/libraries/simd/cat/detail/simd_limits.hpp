@@ -16,24 +16,24 @@ struct limits<simd<T, Abi>> : limits<T> {
    constexpr limits() = delete;
 
    static constexpr auto
-   min() -> vector_type {
+   min() noexcept -> vector_type {
       return scalar_limits::min();
    }
 
    static constexpr auto
-   max() -> vector_type {
+   max() noexcept -> vector_type {
       return scalar_limits::max();
    }
 
    static constexpr auto
-   epsilon() -> vector_type
+   epsilon() noexcept -> vector_type
       requires requires { scalar_limits::epsilon(); }
    {
       return scalar_limits::epsilon();
    }
 
    static constexpr auto
-   infinity() -> vector_type
+   infinity() noexcept -> vector_type
       requires requires { scalar_limits::infinity(); }
    {
       return scalar_limits::infinity();
@@ -41,7 +41,7 @@ struct limits<simd<T, Abi>> : limits<T> {
 
    static constexpr auto
    // NOLINTNEXTLINE Let this weird lettercase be used.
-   quiet_NaN() -> vector_type
+   quiet_NaN() noexcept -> vector_type
       requires requires { scalar_limits::quiet_NaN(); }
    {
       return scalar_limits::quiet_NaN();
@@ -49,14 +49,14 @@ struct limits<simd<T, Abi>> : limits<T> {
 
    static constexpr auto
    // NOLINTNEXTLINE Let this weird lettercase be used.
-   signaling_NaN() -> vector_type
+   signaling_NaN() noexcept -> vector_type
       requires requires { scalar_limits::signaling_NaN(); }
    {
       return scalar_limits::signaling_NaN();
    }
 
    static constexpr auto
-   denorm_min() -> vector_type
+   denorm_min() noexcept -> vector_type
       requires requires { scalar_limits::denorm_min(); }
    {
       return scalar_limits::denorm_min();

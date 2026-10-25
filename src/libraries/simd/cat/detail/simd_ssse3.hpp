@@ -19,7 +19,7 @@ template <typename T, is_sse_abi<T> Abi>
    requires(cat::is_integral<T> && !cat::is_bool<T> && sizeof(T) == 1)
 [[gnu::target("ssse3")]]
 constexpr auto
-ssse3_shuffle_bytes(cat::simd<T, Abi> input, cat::simd<T, Abi> mask)
+ssse3_shuffle_bytes(cat::simd<T, Abi> input, cat::simd<T, Abi> mask) noexcept
    -> cat::simd<T, Abi> {
    return cat::simd<T, Abi>(__builtin_ia32_pshufb128(input.raw, mask.raw));
 }
@@ -34,8 +34,9 @@ template <typename T1, is_sse_abi<T1> A1, typename T2, is_sse_abi<T2> A2>
    )
 [[gnu::target("ssse3")]]
 constexpr auto
-ssse3_multiply_add_bytes(cat::simd<T1, A1> left, cat::simd<T2, A2> right)
-   -> sse_simd<cat::int2> {
+ssse3_multiply_add_bytes(
+   cat::simd<T1, A1> left, cat::simd<T2, A2> right
+) noexcept -> sse_simd<cat::int2> {
    return __builtin_ia32_pmaddubsw128(left.raw, right.raw);
 }
 
@@ -45,8 +46,9 @@ template <typename T, is_sse_abi<T> Abi>
    requires(cat::is_integral<T> && !cat::is_bool<T> && sizeof(T) == 2)
 [[gnu::target("ssse3")]]
 constexpr auto
-ssse3_multiply_round_scale(cat::simd<T, Abi> left, cat::simd<T, Abi> right)
-   -> cat::simd<T, Abi> {
+ssse3_multiply_round_scale(
+   cat::simd<T, Abi> left, cat::simd<T, Abi> right
+) noexcept -> cat::simd<T, Abi> {
    return cat::simd<T, Abi>(__builtin_ia32_pmulhrsw128(left.raw, right.raw));
 }
 
@@ -57,7 +59,7 @@ template <typename T, is_sse_abi<T> Abi>
    requires(cat::is_integral<T> && !cat::is_bool<T> && sizeof(T) <= 4)
 [[gnu::target("ssse3")]]
 constexpr auto
-ssse3_sign(cat::simd<T, Abi> input, cat::simd<T, Abi> sign)
+ssse3_sign(cat::simd<T, Abi> input, cat::simd<T, Abi> sign) noexcept
    -> cat::simd<T, Abi> {
    if constexpr (sizeof(T) == 1) {
       return cat::simd<T, Abi>(__builtin_ia32_psignb128(input.raw, sign.raw));
@@ -75,7 +77,7 @@ template <cat::idx byte_count, typename T, is_sse_abi<T> Abi>
    requires(byte_count < 32u)
 [[gnu::target("ssse3")]]
 constexpr auto
-ssse3_align_right(cat::simd<T, Abi> high, cat::simd<T, Abi> low)
+ssse3_align_right(cat::simd<T, Abi> high, cat::simd<T, Abi> low) noexcept
    -> cat::simd<T, Abi> {
    return cat::simd<T, Abi>(__builtin_ia32_palignr128(
       // TODO: `.raw` shouldn't be needed here to cast to `unsigned`.
@@ -92,7 +94,7 @@ template <typename T, is_sse_abi<T> Abi>
    )
 [[gnu::target("ssse3")]]
 constexpr auto
-ssse3_horizontal_add(cat::simd<T, Abi> left, cat::simd<T, Abi> right)
+ssse3_horizontal_add(cat::simd<T, Abi> left, cat::simd<T, Abi> right) noexcept
    -> cat::simd<T, Abi> {
    if constexpr (sizeof(T) == 2) {
       return cat::simd<T, Abi>(__builtin_ia32_phaddw128(left.raw, right.raw));
@@ -110,7 +112,7 @@ template <typename T, is_sse_abi<T> Abi>
    )
 [[gnu::target("ssse3")]]
 constexpr auto
-ssse3_horizontal_sub(cat::simd<T, Abi> left, cat::simd<T, Abi> right)
+ssse3_horizontal_sub(cat::simd<T, Abi> left, cat::simd<T, Abi> right) noexcept
    -> cat::simd<T, Abi> {
    if constexpr (sizeof(T) == 2) {
       return cat::simd<T, Abi>(__builtin_ia32_phsubw128(left.raw, right.raw));
@@ -125,8 +127,9 @@ template <typename T, is_sse_abi<T> Abi>
    requires(cat::is_integral<T> && !cat::is_bool<T> && sizeof(T) == 2)
 [[gnu::target("ssse3")]]
 constexpr auto
-ssse3_horizontal_add_saturating(cat::simd<T, Abi> left, cat::simd<T, Abi> right)
-   -> cat::simd<T, Abi> {
+ssse3_horizontal_add_saturating(
+   cat::simd<T, Abi> left, cat::simd<T, Abi> right
+) noexcept -> cat::simd<T, Abi> {
    return cat::simd<T, Abi>(__builtin_ia32_phaddsw128(left.raw, right.raw));
 }
 
@@ -136,8 +139,9 @@ template <typename T, is_sse_abi<T> Abi>
    requires(cat::is_integral<T> && !cat::is_bool<T> && sizeof(T) == 2)
 [[gnu::target("ssse3")]]
 constexpr auto
-ssse3_horizontal_sub_saturating(cat::simd<T, Abi> left, cat::simd<T, Abi> right)
-   -> cat::simd<T, Abi> {
+ssse3_horizontal_sub_saturating(
+   cat::simd<T, Abi> left, cat::simd<T, Abi> right
+) noexcept -> cat::simd<T, Abi> {
    return cat::simd<T, Abi>(__builtin_ia32_phsubsw128(left.raw, right.raw));
 }
 

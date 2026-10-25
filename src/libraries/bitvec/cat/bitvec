@@ -66,11 +66,12 @@ class basic_bitvec;
 namespace detail {
 template <vec_flags flags>
 constexpr auto
-maybe_bitvec_has_value(basic_bitvec<flags> const& value) -> bool;
+maybe_bitvec_has_value(basic_bitvec<flags> const& value) noexcept(false)
+   -> bool;
 
 template <vec_flags flags>
 constexpr auto
-maybe_bitvec_nullopt() -> basic_bitvec<flags>;
+maybe_bitvec_nullopt() noexcept(false) -> basic_bitvec<flags>;
 }  // namespace detail
 
 inline namespace manual {
@@ -128,9 +129,10 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    );
 
    constexpr auto
-   operator=(basic_bitvec&&) -> basic_bitvec& = default;
+   operator=(basic_bitvec&&) noexcept(!__has_feature(cxx_exceptions))
+      -> basic_bitvec& = default;
    auto
-   operator=(basic_bitvec const&) -> basic_bitvec& =
+   operator=(basic_bitvec const&) noexcept -> basic_bitvec& =
       delete ("Implicit copying of `cat::basic_bitvec` is forbidden. "
               "Call `.clone()` or move instead!");
 
@@ -138,9 +140,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   clone(
-      allocator_ref<Allocator> allocator
-   ) const& -> maybe<basic_bitvec<flags>> {
+   clone(allocator_ref<Allocator> allocator) const& noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<basic_bitvec<flags>> {
       basic_bitvec<flags> result;
       if constexpr (flags.is_fixed_size) {
          $prop(result.initialize_fixed(allocator, size()));
@@ -157,7 +159,8 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Deep-copy the contents of this bit vector.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(allocator_dyn allocator) const& -> maybe<basic_bitvec<flags>> {
+   clone(allocator_dyn allocator) const& noexcept
+      -> maybe<basic_bitvec<flags>> {
       return clone<allocator_dyn>(allocator);
    }
 
@@ -179,145 +182,147 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Return the number of logical bits.
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_bit_size;
    }
 
    // Return the number of bits that fit in allocated storage.
    [[nodiscard]]
    constexpr auto
-   capacity() const -> idx {
+   capacity() const noexcept -> idx {
       return m_words.capacity() * word_bits;
    }
 
    // Return the number of storage words that hold logical bits.
    [[nodiscard]]
    constexpr auto
-   word_count() const -> idx {
+   word_count() const noexcept -> idx {
       return words_for_bits(m_bit_size);
    }
 
    // Return mutable access to the backing words.
    [[nodiscard]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> uword* _Nullable {
+   data() noexcept [[clang::lifetimebound]] -> uword* _Nullable {
       return m_words.data();
    }
 
    // Return const access to the backing words.
    [[nodiscard]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> uword const* _Nullable {
+   data() const noexcept [[clang::lifetimebound]] -> uword const* _Nullable {
       return m_words.data();
    }
 
    // Return a bit iterator to the first logical bit.
    [[nodiscard]]
    constexpr auto
-   begin() [[clang::lifetimebound]] {
+   begin() noexcept [[clang::lifetimebound]] {
       return bit_span(*this).begin();
    }
 
    // Return a bit iterator past the last logical bit.
    [[nodiscard]]
    constexpr auto
-   end() [[clang::lifetimebound]] {
+   end() noexcept [[clang::lifetimebound]] {
       return bit_span(*this).end();
    }
 
    // Return a const bit iterator to the first logical bit.
    [[nodiscard]]
    constexpr auto
-   begin() const [[clang::lifetimebound]] {
+   begin() const noexcept [[clang::lifetimebound]] {
       return bit_span<uword const>(data(), 0u, m_bit_size).begin();
    }
 
    // Return a const bit iterator past the last logical bit.
    [[nodiscard]]
    constexpr auto
-   end() const [[clang::lifetimebound]] {
+   end() const noexcept [[clang::lifetimebound]] {
       return bit_span<uword const>(data(), 0u, m_bit_size).end();
    }
 
    // Return a const bit iterator to the first logical bit.
    [[nodiscard]]
    constexpr auto
-   cbegin() const [[clang::lifetimebound]] {
+   cbegin() const noexcept [[clang::lifetimebound]] {
       return begin();
    }
 
    // Return a const bit iterator past the last logical bit.
    [[nodiscard]]
    constexpr auto
-   cend() const [[clang::lifetimebound]] {
+   cend() const noexcept [[clang::lifetimebound]] {
       return end();
    }
 
    // Return a reverse bit iterator to the last logical bit.
    [[nodiscard]]
    constexpr auto
-   rbegin() [[clang::lifetimebound]] {
+   rbegin() noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]] {
       return bit_span(*this).rbegin();
    }
 
    // Return a reverse bit iterator before the first logical bit.
    [[nodiscard]]
    constexpr auto
-   rend() [[clang::lifetimebound]] {
+   rend() noexcept [[clang::lifetimebound]] {
       return bit_span(*this).rend();
    }
 
    // Return a const reverse bit iterator to the last logical bit.
    [[nodiscard]]
    constexpr auto
-   rbegin() const [[clang::lifetimebound]] {
+   rbegin() const noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] {
       return bit_span<uword const>(data(), 0u, m_bit_size).rbegin();
    }
 
    // Return a const reverse bit iterator before the first logical bit.
    [[nodiscard]]
    constexpr auto
-   rend() const [[clang::lifetimebound]] {
+   rend() const noexcept [[clang::lifetimebound]] {
       return bit_span<uword const>(data(), 0u, m_bit_size).rend();
    }
 
    // Return a const reverse bit iterator to the last logical bit.
    [[nodiscard]]
    constexpr auto
-   crbegin() const [[clang::lifetimebound]] {
+   crbegin() const noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] {
       return bit_span<uword const>(data(), 0u, m_bit_size).crbegin();
    }
 
    // Return a const reverse bit iterator before the first logical bit.
    [[nodiscard]]
    constexpr auto
-   crend() const [[clang::lifetimebound]] {
+   crend() const noexcept [[clang::lifetimebound]] {
       return bit_span<uword const>(data(), 0u, m_bit_size).crend();
    }
 
    constexpr void
-   reverse_inplace() {
+   reverse_inplace() noexcept {
       bit_span(*this).reverse_inplace();
    }
 
    // Count the set bits in the vector.
    [[nodiscard]]
    constexpr auto
-   popcount() const -> idx {
+   popcount() const noexcept -> idx {
       return cat::popcount(bit_span<uword const>(data(), 0u, m_bit_size));
    }
 
    // Return whether exactly one logical bit is set.
    [[nodiscard]]
    constexpr auto
-   has_single_bit() const -> bool {
+   has_single_bit() const noexcept -> bool {
       return popcount() == 1u;
    }
 
    // Return the number of bits needed to represent the vector.
    [[nodiscard]]
    constexpr auto
-   bit_width() const -> idx {
+   bit_width() const noexcept -> idx {
       return idx(m_bit_size - countl_zero());
    }
 
@@ -382,28 +387,29 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Return whether any logical bit is set.
    [[nodiscard]]
    constexpr auto
-   any() const -> bool {
+   any() const noexcept -> bool {
       return popcount() != 0u;
    }
 
    // Return whether no logical bits are set.
    [[nodiscard]]
    constexpr auto
-   none() const -> bool {
+   none() const noexcept -> bool {
       return !any();
    }
 
    // Return whether every logical bit is set.
    [[nodiscard]]
    constexpr auto
-   all() const -> bool {
+   all() const noexcept -> bool {
       return popcount() == m_bit_size;
    }
 
    // Return a mutable proxy reference to one bit.
    [[nodiscard]]
    constexpr auto
-   operator[](idx bit_index) [[clang::lifetimebound]] -> bit_reference<uword> {
+   operator[](idx bit_index) noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> bit_reference<uword> {
       assert(bit_index < m_bit_size);
       return make_bit_reference_from_offset(
          m_words[bit_index / word_bits], bit_index % word_bits
@@ -413,8 +419,8 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Return a const proxy reference to one bit.
    [[nodiscard]]
    constexpr auto
-   operator[](idx bit_index) const [[clang::lifetimebound]]
-   -> bit_reference<uword> {
+   operator[](idx bit_index) const noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> bit_reference<uword> {
       return (*unconst(this))[bit_index];
    }
 
@@ -423,7 +429,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    initialize_fixed(
       allocator_ref<Allocator> allocator, idx bit_count, bit_value value = false
-   ) -> maybe<void>
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void>
       requires(flags.is_fixed_size)
    {
       $prop(m_words.initialize_fixed(allocator, words_for_bits(bit_count)));
@@ -436,7 +442,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    initialize_fixed(
       allocator_dyn allocator, idx bit_count, bit_value value = false
-   ) -> maybe<void>
+   ) noexcept -> maybe<void>
       requires(flags.is_fixed_size)
    {
       return initialize_fixed<allocator_dyn>(allocator, bit_count, value);
@@ -446,7 +452,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   reserve(allocator_ref<Allocator> allocator, idx bit_capacity) -> maybe<void>
+   reserve(allocator_ref<Allocator> allocator, idx bit_capacity) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
       return m_words.reserve(allocator, words_for_bits(bit_capacity));
@@ -455,7 +463,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Reserve storage through a type-erased allocator.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   reserve(allocator_dyn allocator, idx bit_capacity) -> maybe<void>
+   reserve(allocator_dyn allocator, idx bit_capacity) noexcept -> maybe<void>
       requires(!flags.is_fixed_size)
    {
       return reserve<allocator_dyn>(allocator, bit_capacity);
@@ -494,8 +502,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Resize the vector through a type-erased allocator.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   resize(allocator_dyn allocator, idx bit_count, bit_value value = false)
-      -> maybe<void>
+   resize(
+      allocator_dyn allocator, idx bit_count, bit_value value = false
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
       return resize<allocator_dyn>(allocator, bit_count, value);
@@ -517,7 +526,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Append one bit through a type-erased allocator.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   push_back(allocator_dyn allocator, bit_value value) -> maybe<void>
+   push_back(allocator_dyn allocator, bit_value value) noexcept -> maybe<void>
       requires(!flags.is_fixed_size)
    {
       return push_back<allocator_dyn>(allocator, value);
@@ -643,8 +652,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
       )
    [[nodiscard]]
    constexpr auto
-   insert_range(allocator_ref<Allocator> allocator, idx position, Range&& range)
-      -> maybe<void> {
+   insert_range(
+      allocator_ref<Allocator> allocator, idx position, Range&& range
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
       assert(position <= m_bit_size);
 
       idx const count = idx(range.size());
@@ -679,7 +689,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    insert_range(
       allocator_ref<Allocator> allocator, idx position, Iterable&& range
-   ) -> maybe<void> {
+   ) noexcept(false) -> maybe<void> {
       assert(position <= m_bit_size);
 
       idx const count = idx(range.size());
@@ -720,7 +730,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    insert_range(
       allocator_ref<Allocator> allocator, idx position, Iterable&& range
-   ) -> maybe<void> {
+   ) noexcept(false) -> maybe<void> {
       assert(position <= m_bit_size);
       idx insertion_position = position;
       maybe<void> result = monostate;
@@ -771,7 +781,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    replace_with_range(
       allocator_ref<Allocator> allocator, idx first, idx last, Range&& range
-   ) -> maybe<void> {
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
       assert(first <= last);
       assert(last <= m_bit_size);
       idx const count = idx(range.size());
@@ -815,7 +825,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    constexpr auto
    replace_with_range(
       allocator_ref<Allocator> allocator, idx first, idx last, Iterable&& range
-   ) -> maybe<void> {
+   ) noexcept(false) -> maybe<void> {
       assert(first <= last);
       assert(last <= m_bit_size);
 
@@ -865,7 +875,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    template <is_allocator Allocator>
    [[clang::reinitializes]]
    constexpr void
-   free(allocator_ref<Allocator> allocator) {
+   free(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       m_words.free(allocator);
       m_bit_size = 0u;
    }
@@ -873,13 +885,13 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Free all storage through a type-erased allocator.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(allocator_dyn allocator) {
+   free(allocator_dyn allocator) noexcept {
       free<allocator_dyn>(allocator);
    }
 
    // Clear all logical bits while keeping storage.
    constexpr void
-   clear() {
+   clear() noexcept {
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          m_words[word_index] = 0u;
       }
@@ -887,7 +899,8 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 
    // Set every logical bit to the requested value.
    constexpr auto
-   fill(bit_value value = true) -> basic_bitvec& {
+   fill(bit_value value = true) noexcept(!__has_feature(cxx_exceptions))
+      -> basic_bitvec& {
       uword const word_value = value ? uword::max() : 0u;
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          m_words[word_index] = word_value;
@@ -920,7 +933,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Return whether every set bit is also set in `other`.
    [[nodiscard]]
    constexpr auto
-   is_subset_of(basic_bitvec const& other) const -> bool {
+   is_subset_of(basic_bitvec const& other) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       assert(m_bit_size == other.m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          uword const extra_bits =
@@ -935,7 +950,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Return whether this vector shares any set bit with `other`.
    [[nodiscard]]
    constexpr auto
-   intersects(basic_bitvec const& other) const -> bool {
+   intersects(basic_bitvec const& other) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       assert(m_bit_size == other.m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          if ((m_words[word_index] & other.m_words[word_index]) != 0u) {
@@ -948,23 +965,28 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Return whether this vector shares no set bits with `other`.
    [[nodiscard]]
    constexpr auto
-   disjoint(basic_bitvec const& other) const -> bool {
+   disjoint(basic_bitvec const& other) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       return !intersects(other);
    }
 
  private:
    template <vec_flags other_flags>
    friend constexpr auto
-   detail::maybe_bitvec_has_value(basic_bitvec<other_flags> const&) -> bool;
+   detail::maybe_bitvec_has_value(basic_bitvec<other_flags> const&) noexcept(
+      false
+   ) -> bool;
 
    template <vec_flags other_flags>
    friend constexpr auto
-   detail::maybe_bitvec_nullopt() -> basic_bitvec<other_flags>;
+   detail::maybe_bitvec_nullopt() noexcept(false) -> basic_bitvec<other_flags>;
 
    // Store the bitwise and of two vectors in `result`.
    constexpr auto
-   bit_and_into(basic_bitvec const& other, basic_bitvec& result) const
-      -> basic_bitvec& {
+   bit_and_into(basic_bitvec const& other, basic_bitvec& result) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> basic_bitvec& {
       assert(m_bit_size == other.m_bit_size);
       assert(result.m_bit_size == m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
@@ -976,8 +998,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 
    // Store the bitwise or of two vectors in `result`.
    constexpr auto
-   bit_or_into(basic_bitvec const& other, basic_bitvec& result) const
-      -> basic_bitvec& {
+   bit_or_into(basic_bitvec const& other, basic_bitvec& result) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> basic_bitvec& {
       assert(m_bit_size == other.m_bit_size);
       assert(result.m_bit_size == m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
@@ -990,8 +1013,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 
    // Store the bitwise xor of two vectors in `result`.
    constexpr auto
-   bit_xor_into(basic_bitvec const& other, basic_bitvec& result) const
-      -> basic_bitvec& {
+   bit_xor_into(basic_bitvec const& other, basic_bitvec& result) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> basic_bitvec& {
       assert(m_bit_size == other.m_bit_size);
       assert(result.m_bit_size == m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
@@ -1004,7 +1028,9 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
 
    // Store the bitwise complement of this vector in `result`.
    constexpr auto
-   bit_complement_into(basic_bitvec& result) const -> basic_bitvec& {
+   bit_complement_into(basic_bitvec& result) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> basic_bitvec& {
       assert(result.m_bit_size == m_bit_size);
       for (idx word_index = 0u; word_index < word_count(); ++word_index) {
          result.m_words[word_index] = ~m_words[word_index];
@@ -1016,13 +1042,13 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Return the number of words needed for a bit count.
    [[nodiscard]]
    static constexpr auto
-   words_for_bits(idx bit_count) -> idx {
+   words_for_bits(idx bit_count) noexcept -> idx {
       return div_ceil(bit_count, word_bits);
    }
 
    // Clear unused bits in the final storage word.
    constexpr void
-   clear_tail_bits() {
+   clear_tail_bits() noexcept(!__has_feature(cxx_exceptions)) {
       idx const words = word_count();
       if (words != 0u) {
          idx const used_bits = m_bit_size % word_bits;
@@ -1051,7 +1077,9 @@ template <is_allocator Allocator, vec_flags flags = {}>
 
 template <vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_bitvec_filled(allocator_dyn allocator, idx count, bit_value value)
+   make_bitvec_filled(
+      allocator_dyn allocator, idx count, bit_value value
+   ) noexcept(!__has_feature(cxx_exceptions))
       -> maybe<basic_bitvec<vec_flags::inline_storage(1u) | flags>> {
    return make_bitvec_filled<allocator_dyn, flags>(allocator, count, value);
 }
@@ -1067,8 +1095,9 @@ template <idx inline_count, is_allocator Allocator, vec_flags flags = {}>
 
 template <idx inline_count, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_bitvec_small_filled(allocator_dyn allocator, idx count, bit_value value)
-      -> maybe<bitvec_small<inline_count, flags>> {
+   make_bitvec_small_filled(
+      allocator_dyn allocator, idx count, bit_value value
+   ) noexcept -> maybe<bitvec_small<inline_count, flags>> {
    return make_bitvec_small_filled<inline_count, allocator_dyn, flags>(
       allocator, count, value
    );
@@ -1085,8 +1114,9 @@ template <is_allocator Allocator, vec_flags flags = {}>
 
 template <vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_bitvec_big_filled(allocator_dyn allocator, idx count, bit_value value)
-      -> maybe<bitvec_big<flags>> {
+   make_bitvec_big_filled(
+      allocator_dyn allocator, idx count, bit_value value
+   ) noexcept -> maybe<bitvec_big<flags>> {
    return make_bitvec_big_filled<allocator_dyn, flags>(allocator, count, value);
 }
 
@@ -1101,8 +1131,9 @@ template <is_allocator Allocator, vec_flags flags = {}>
 
 template <vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_bitvec_fixed_filled(allocator_dyn allocator, idx count, bit_value value)
-      -> maybe<bitvec_fixed<flags>> {
+   make_bitvec_fixed_filled(
+      allocator_dyn allocator, idx count, bit_value value
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<bitvec_fixed<flags>> {
    return make_bitvec_fixed_filled<allocator_dyn, flags>(
       allocator, count, value
    );
@@ -1122,7 +1153,7 @@ template <idx inline_count, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_fixed_filled(
       allocator_dyn allocator, idx count, bit_value value
-   ) -> maybe<bitvec_small_fixed<inline_count, flags>> {
+   ) noexcept -> maybe<bitvec_small_fixed<inline_count, flags>> {
    return make_bitvec_small_fixed_filled<inline_count, allocator_dyn, flags>(
       allocator, count, value
    );
@@ -1141,7 +1172,7 @@ template <vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_fixed_filled(
       allocator_dyn allocator, idx count, bit_value value
-   ) -> maybe<bitvec_big_fixed<flags>> {
+   ) noexcept -> maybe<bitvec_big_fixed<flags>> {
    return make_bitvec_big_fixed_filled<allocator_dyn, flags>(
       allocator, count, value
    );
@@ -1488,13 +1519,14 @@ namespace detail {
 
 template <vec_flags flags>
 constexpr auto
-maybe_bitvec_has_value(basic_bitvec<flags> const& value) -> bool {
+maybe_bitvec_has_value(basic_bitvec<flags> const& value) noexcept(false)
+   -> bool {
    return maybe_vec_has_value<uword, flags>(value.m_words);
 }
 
 template <vec_flags flags>
 constexpr auto
-maybe_bitvec_nullopt() -> basic_bitvec<flags> {
+maybe_bitvec_nullopt() noexcept(false) -> basic_bitvec<flags> {
    basic_bitvec<flags> value;
    value.m_words = maybe_vec_nullopt<uword, flags>();
    return value;

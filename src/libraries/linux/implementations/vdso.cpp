@@ -295,7 +295,7 @@ nix::detail::initialize_vdso(void const* _Nullable p_elf_header_value) {
 auto
 nix::detail::lookup_vdso_symbol(
    char const* _Nonnull p_vdso_name, char const* _Nonnull p_alias
-) -> void* _Nullable {
+) noexcept -> void* _Nullable {
    void* p_symbol = lookup(vdso_symbols, p_vdso_name);
    if (p_symbol == nullptr) {
       p_symbol = lookup(vdso_symbols, p_alias);

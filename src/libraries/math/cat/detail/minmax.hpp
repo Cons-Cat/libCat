@@ -10,7 +10,7 @@ template <is_less_than_comparable T, typename... Remaining>
    requires((is_implicitly_convertible<Remaining, T> && ...))
 [[nodiscard]]
 constexpr auto
-min(T value, Remaining... remaining) -> T {
+min(T value, Remaining... remaining) noexcept -> T {
    ((value = value < remaining ? value : T(remaining)), ...);
    return value;
 }
@@ -19,7 +19,7 @@ template <is_greater_than_comparable T, typename... Remaining>
    requires((is_implicitly_convertible<Remaining, T> && ...))
 [[nodiscard]]
 constexpr auto
-max(T value, Remaining... remaining) -> T {
+max(T value, Remaining... remaining) noexcept -> T {
    ((value = value > remaining ? value : T(remaining)), ...);
    return value;
 }

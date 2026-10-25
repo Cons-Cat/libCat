@@ -36,19 +36,19 @@ class bit_stepanov_iterator
 
    constexpr explicit bit_stepanov_iterator(
       Iterator const& other, idx current_bit = 0u
-   )
+   ) noexcept
        : m_internal_iterator(other), m_bit_position(current_bit) {
    }
 
    constexpr auto
-   dereference() -> reference {
+   dereference() noexcept(!__has_feature(cxx_exceptions)) -> reference {
       return make_bit_reference_from_offset(
          *m_internal_iterator, m_bit_position
       );
    }
 
    constexpr auto
-   dereference() const -> const_reference {
+   dereference() const noexcept -> const_reference {
       return make_bit_reference_from_offset(
          *m_internal_iterator, m_bit_position
       );
@@ -56,18 +56,18 @@ class bit_stepanov_iterator
 
    [[nodiscard]]
    constexpr auto
-   base() const -> Iterator {
+   base() const noexcept -> Iterator {
       return m_internal_iterator;
    }
 
    [[nodiscard]]
    constexpr auto
-   position() const -> idx {
+   position() const noexcept -> idx {
       return m_bit_position;
    }
 
    constexpr void
-   advance(iword offset) {
+   advance(iword offset) noexcept {
       iword advance_bits = m_bit_position + offset;
       iword bytes_overflow = advance_bits / word_bits;
       if (advance_bits < 0 && ((bytes_overflow * word_bits) != advance_bits)) {
@@ -78,7 +78,7 @@ class bit_stepanov_iterator
    }
 
    constexpr auto
-   distance_to(bit_stepanov_iterator const& other) const -> iword {
+   distance_to(bit_stepanov_iterator const& other) const noexcept -> iword {
       iword const word_difference =
          other.m_internal_iterator - m_internal_iterator;
       return (word_difference * word_bits) + other.m_bit_position
@@ -94,7 +94,7 @@ namespace detail {
 template <is_unsigned_integral Word>
 [[nodiscard]]
 constexpr auto
-bit_low_mask(idx bit_count) -> Word {
+bit_low_mask(idx bit_count) noexcept -> Word {
    if (bit_count == 0u) {
       return Word(0u);
    }
@@ -107,14 +107,15 @@ bit_low_mask(idx bit_count) -> Word {
 template <is_unsigned_integral Word>
 [[nodiscard]]
 constexpr auto
-bit_blend(Word old_word, Word new_word, idx bit_offset, idx bit_count) -> Word {
+bit_blend(Word old_word, Word new_word, idx bit_offset, idx bit_count) noexcept
+   -> Word {
    Word const mask = bit_low_mask<Word>(bit_count) << bit_offset;
    return (old_word & ~mask) | (new_word & mask);
 }
 
 template <typename Iterator>
 constexpr void
-reverse_bit_words(Iterator const& first_word, idx word_count) {
+reverse_bit_words(Iterator const& first_word, idx word_count) noexcept {
    idx left = 0u;
    idx right = word_count;
    while (left < right) {
@@ -132,7 +133,9 @@ reverse_bit_words(Iterator const& first_word, idx word_count) {
 
 template <typename Iterator>
 constexpr void
-shift_bit_words_left(Iterator first_word, idx word_count, idx bit_count) {
+shift_bit_words_left(
+   Iterator first_word, idx word_count, idx bit_count
+) noexcept {
    using word_type = Iterator::value_type;
    iword word_index = word_count;
    while (word_index > 0u) {
@@ -148,7 +151,9 @@ shift_bit_words_left(Iterator first_word, idx word_count, idx bit_count) {
 
 template <typename Iterator>
 constexpr void
-shift_bit_words_right(Iterator first_word, idx word_count, idx bit_count) {
+shift_bit_words_right(
+   Iterator first_word, idx word_count, idx bit_count
+) noexcept {
    using word_type = Iterator::value_type;
    for (idx word_index = 0u; word_index < word_count; ++word_index) {
       word_type shifted = first_word[word_index] >> bit_count;
@@ -165,7 +170,7 @@ constexpr void
 shift_left(
    bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last,
    idx bit_count
-) {
+) noexcept {
    iword const range_bits = last - first;
    if (bit_count == 0u || range_bits <= 0) {
       return;
@@ -191,7 +196,7 @@ constexpr void
 shift_right(
    bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last,
    idx bit_count
-) {
+) noexcept {
    iword const range_bits = last - first;
    if (bit_count == 0u || range_bits <= 0) {
       return;
@@ -216,7 +221,7 @@ template <typename Iterator>
 constexpr void
 reverse_bits_inplace(
    bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last
-) {
+) noexcept {
    iword const range_bits = last - first;
    if (range_bits <= 1) {
       return;
@@ -266,20 +271,23 @@ class bit_iteration_context {
  public:
    using element_type = decltype(declval<Bits&>()[idx{}]);
 
-   constexpr bit_iteration_context(Bits& bits, idx begin, idx end)
+   constexpr bit_iteration_context(Bits& bits, idx begin, idx end) noexcept
        : m_p_bits(__builtin_addressof(bits)), m_position(begin), m_stop(end) {
    }
 
    bit_iteration_context(bit_iteration_context const&) = delete;
    bit_iteration_context(bit_iteration_context&&) = delete;
    auto
-   operator=(bit_iteration_context const&) -> bit_iteration_context& = delete;
+   operator=(bit_iteration_context const&) noexcept
+      -> bit_iteration_context& = delete;
    auto
-   operator=(bit_iteration_context&&) -> bit_iteration_context& = delete;
+   operator=(bit_iteration_context&&) noexcept
+      -> bit_iteration_context& = delete;
 
    template <is_predicate<element_type> LoopBody>
    constexpr auto
-   run_while(LoopBody&& loop_body) -> iteration_result {
+   run_while(LoopBody&& loop_body) noexcept(!__has_feature(cxx_exceptions))
+      -> iteration_result {
       while (m_position < m_stop) {
          idx const position = m_position;
          ++m_position;
@@ -301,22 +309,25 @@ class bit_reverse_iteration_context {
  public:
    using element_type = decltype(declval<Bits&>()[idx{}]);
 
-   constexpr bit_reverse_iteration_context(Bits& bits, idx begin, idx end)
+   constexpr bit_reverse_iteration_context(
+      Bits& bits, idx begin, idx end
+   ) noexcept
        : m_p_bits(__builtin_addressof(bits)), m_position(begin), m_stop(end) {
    }
 
    bit_reverse_iteration_context(bit_reverse_iteration_context const&) = delete;
    bit_reverse_iteration_context(bit_reverse_iteration_context&&) = delete;
    auto
-   operator=(bit_reverse_iteration_context const&)
+   operator=(bit_reverse_iteration_context const&) noexcept
       -> bit_reverse_iteration_context& = delete;
    auto
-   operator=(bit_reverse_iteration_context&&)
+   operator=(bit_reverse_iteration_context&&) noexcept
       -> bit_reverse_iteration_context& = delete;
 
    template <is_predicate<element_type> LoopBody>
    constexpr auto
-   run_while(LoopBody&& loop_body) -> iteration_result {
+   run_while(LoopBody&& loop_body) noexcept(!__has_feature(cxx_exceptions))
+      -> iteration_result {
       while (m_stop < m_position) {
          m_position = idx(m_position - 1u);
          if (!loop_body((*m_p_bits)[m_position])) {
@@ -332,7 +343,7 @@ template <typename Iterator>
 constexpr void
 stepanov_reverse_inplace(
    bit_stepanov_iterator<Iterator> first, bit_stepanov_iterator<Iterator> last
-) {
+) noexcept {
    detail::reverse_bits_inplace(first, last);
 }
 
@@ -340,34 +351,34 @@ template <typename Derived>
 struct bit_collection_interface : iterable_interface<Derived> {
    [[nodiscard]]
    constexpr auto
-   begin_pos(this Derived const&) -> idx {
+   begin_pos(this Derived const&) noexcept -> idx {
       return 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   end_pos(this Derived const& self) -> idx {
+   end_pos(this Derived const& self) noexcept -> idx {
       return self.size();
    }
 
    constexpr void
-   inc_pos(idx& position) const {
+   inc_pos(idx& position) const noexcept {
       ++position;
    }
 
    constexpr void
-   dec_pos(idx& position) const {
+   dec_pos(idx& position) const noexcept {
       position = idx(position - 1u);
    }
 
    constexpr void
-   offset_pos(idx& position, iword offset) const {
+   offset_pos(idx& position, iword offset) const noexcept {
       position = idx(position + offset);
    }
 
    [[nodiscard]]
    constexpr auto
-   distance(idx left, idx right) const -> iword {
+   distance(idx left, idx right) const noexcept -> iword {
       return right - left;
    }
 
@@ -380,13 +391,13 @@ struct bit_collection_interface : iterable_interface<Derived> {
    }
 
    constexpr auto
-   iterate(this auto& self) {
+   iterate(this auto& self) noexcept {
       using self_type = typeof(self);
       return detail::bit_iteration_context<self_type>{self, 0u, self.size()};
    }
 
    constexpr auto
-   reverse_iterate(this auto& self) {
+   reverse_iterate(this auto& self) noexcept {
       using self_type = typeof(self);
       return detail::bit_reverse_iteration_context<self_type>{
          self,

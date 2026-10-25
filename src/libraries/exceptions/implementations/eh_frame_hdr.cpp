@@ -18,7 +18,7 @@ extern char __cat_eh_except_table_end[];
 
 namespace cat::detail {
 auto
-eh_frame_span() -> span<byte const> {
+eh_frame_span() noexcept(!__has_feature(cxx_exceptions)) -> span<byte const> {
    return {
       __builtin_bit_cast(byte const*, &__cat_eh_frame_start),
       narrow_cast<idx>(__cat_eh_frame_end - __cat_eh_frame_start).assert()
@@ -26,7 +26,8 @@ eh_frame_span() -> span<byte const> {
 }
 
 auto
-eh_except_table_span() -> span<byte const> {
+eh_except_table_span() noexcept(!__has_feature(cxx_exceptions))
+   -> span<byte const> {
    return {
       __builtin_bit_cast(byte const*, &__cat_eh_except_table_start),
       narrow_cast<idx>(__cat_eh_except_table_end - __cat_eh_except_table_start)
@@ -35,7 +36,9 @@ eh_except_table_span() -> span<byte const> {
 }
 
 auto
-find_fde_for_ip(uword instruction_pointer) -> fde_lookup_result {
+find_fde_for_ip(uword instruction_pointer) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> fde_lookup_result {
    // lld writes sorted pairs of signed 4-byte offsets from `.eh_frame_hdr`.
    // The linker script supplies the table and its count. No ELF or header scan.
    struct table_entry {

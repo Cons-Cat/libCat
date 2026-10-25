@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/exception_defer.hpp>
+
 #include <cat/allocator>
 #include <cat/maybe>
 #include <cat/memory>
@@ -483,7 +485,7 @@ class [[gsl::Pointer]] dyn_ref {
 
    [[nodiscard]]
    constexpr auto
-   type_id() const -> dyn_type_id_ptr {
+   type_id() const noexcept -> dyn_type_id_ptr {
       return m_p_type_id;
    }
 
@@ -597,7 +599,8 @@ class [[gsl::Pointer]] const_dyn_ref {
 
    [[nodiscard]]
    constexpr auto
-   operator&() const -> const_dyn_ptr<Methods...>;
+   operator&() const noexcept(!__has_feature(cxx_exceptions))
+      -> const_dyn_ptr<Methods...>;
 };
 
 // `dyn_ptr<Methods...>` is a nullable, non-owning, trivially-copyable pointer
@@ -692,19 +695,19 @@ class [[gsl::Pointer]] dyn_ptr {
    // Returns `nullptr` when this `dyn_ptr` is empty.
    [[nodiscard]]
    constexpr auto
-   get() const -> void* _Nullable {
+   get() const noexcept -> void* _Nullable {
       return m_p_value;
    }
 
    [[nodiscard]]
    constexpr auto
-   has_value() const -> bool {
+   has_value() const noexcept -> bool {
       return m_p_value != nullptr;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return !this->has_value();
    }
 
@@ -723,7 +726,8 @@ class [[gsl::Pointer]] dyn_ptr {
 
    [[nodiscard]]
    constexpr auto
-   operator*() const -> dyn_ref<Methods...> {
+   operator*() const noexcept(!__has_feature(cxx_exceptions))
+      -> dyn_ref<Methods...> {
       cat::assert(this->has_value());
       return dyn_ref<Methods...>{m_p_vtable, m_p_type_id, m_p_value};
    }
@@ -842,13 +846,13 @@ class [[gsl::Pointer]] const_dyn_ptr {
 
    [[nodiscard]]
    constexpr auto
-   has_value() const -> bool {
+   has_value() const noexcept -> bool {
       return m_p_value != nullptr;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return !this->has_value();
    }
 
@@ -866,7 +870,8 @@ class [[gsl::Pointer]] const_dyn_ptr {
 
    [[nodiscard]]
    constexpr auto
-   operator*() const -> const_dyn_ref<Methods...> {
+   operator*() const noexcept(!__has_feature(cxx_exceptions))
+      -> const_dyn_ref<Methods...> {
       cat::assert(has_value());
       return const_dyn_ref<Methods...>{
          m_p_vtable,
@@ -884,7 +889,9 @@ dyn_ref<Methods...>::operator&() const -> dyn_ptr<Methods...> {
 
 template <typename... Methods>
 constexpr auto
-const_dyn_ref<Methods...>::operator&() const -> const_dyn_ptr<Methods...> {
+const_dyn_ref<Methods...>::operator&() const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> const_dyn_ptr<Methods...> {
    return const_dyn_ptr<Methods...>{m_p_vtable, m_p_type_id, m_p_value};
 }
 
@@ -990,7 +997,7 @@ basic_dyn {
    // `T` into it.
    template <typename T, typename... Args>
    void
-   construct_in_empty(Args&&... arguments) {
+   construct_in_empty(Args&&... arguments) noexcept(false) {
       static_assert(
          alignof(T) <= storage_alignment,
          "`T`'s alignment exceeds this `basic_dyn`'s inline storage buffer "
@@ -1004,7 +1011,13 @@ basic_dyn {
       cat::assert(allocation.has_value(), "`basic_dyn` allocation failed!");
       m_handle = move(allocation).value();
       m_p_value = static_cast<void*>(m_allocator.get(m_handle).data());
+      // Constructors of `basic_dyn` call this, and their destructor would not
+      // release the storage.
+      detail::exception_defer guard([&] {
+         release_storage();
+      });
       new (m_p_value) T($fwd(arguments)...);
+      guard.commit();
       m_p_vtable = p_vtable_for<T, Methods...>;
       m_type_descriptor = p_dyn_type_id_for<T>;
    }
@@ -1016,7 +1029,7 @@ basic_dyn {
    // value's actual alignment is no longer visible here, and the original
    // emplacement guaranteed it does not exceed `storage_alignment`.
    void
-   adopt_from(basic_dyn& other) {
+   adopt_from(basic_dyn& other) noexcept(false) {
       if (other.m_handle.is_inline()) {
          auto allocation =
             m_allocator
@@ -1089,7 +1102,7 @@ basic_dyn {
       }
    }
 
-   basic_dyn(basic_dyn const& other)
+   basic_dyn(basic_dyn const& other) noexcept(false)
       requires(has_copyable)
        : m_allocator(other.m_allocator) {
       if (other.m_p_vtable == nullptr) {
@@ -1118,7 +1131,7 @@ basic_dyn {
    }
 
    constexpr auto
-   operator=(basic_dyn&& other) -> basic_dyn&
+   operator=(basic_dyn&& other) noexcept(false) -> basic_dyn&
       requires(has_movable)
    {
       if (this == __builtin_addressof(other)) {
@@ -1177,13 +1190,13 @@ basic_dyn {
 
    [[nodiscard]]
    constexpr auto
-   has_value() const -> bool {
+   has_value() const noexcept -> bool {
       return m_p_vtable != nullptr;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return !this->has_value();
    }
 
@@ -1466,13 +1479,13 @@ class [[gsl::Owner]] dyn_inplace {
 
    [[nodiscard]]
    constexpr auto
-   has_value() const -> bool {
+   has_value() const noexcept -> bool {
       return m_p_value != nullptr;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return !this->has_value();
    }
 

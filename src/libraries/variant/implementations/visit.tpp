@@ -141,7 +141,7 @@ struct visit_value_adapter {
 template <typename Callback, is_variant_like Variant>
 [[gnu::always_inline]]
 constexpr auto
-visit(Callback&& callback, Variant&& v) -> decltype(auto) {
+visit(Callback&& callback, Variant&& v) noexcept(false) -> decltype(auto) {
    cat::assert(v.has_value());
    using result_type =
       decltype(invoke($fwd(callback), $fwd(v).template get<0u>()));
@@ -180,7 +180,8 @@ visit(Callback&& callback, First&& first, Rest&&... rest) -> decltype(auto) {
 template <typename Callback, is_variant_like Variant>
 [[gnu::always_inline]]
 constexpr auto
-visit_indexed(Callback&& callback, Variant&& v) -> decltype(auto) {
+visit_indexed(Callback&& callback, Variant&& v) noexcept(false)
+   -> decltype(auto) {
    cat::assert(v.has_value());
    using result_type = decltype($fwd(callback).template operator()<idx{0u}>(
       $fwd(v).template get<0u>()

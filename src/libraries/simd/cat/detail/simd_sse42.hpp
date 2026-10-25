@@ -27,7 +27,8 @@ enum class [[clang::enum_extensibility(
 
 // TODO: Generalize this.
 constexpr auto
-operator|(string_control flag_1, string_control flag_2) -> string_control {
+operator|(string_control flag_1, string_control flag_2) noexcept
+   -> string_control {
    return static_cast<string_control>(
       static_cast<unsigned char>(flag_1) | static_cast<unsigned char>(flag_2)
    );
@@ -40,7 +41,7 @@ template <string_control control_mask, typename T, is_sse_abi<T> Abi>
 constexpr auto
 compare_implicit_length_strings(
    cat::simd<T, Abi> const& vector_1, cat::simd<T, Abi> const& vector_2
-) -> bool {
+) noexcept -> bool {
    return __builtin_ia32_pcmpistric128(
       vector_1.raw, vector_2.raw, static_cast<unsigned char>(control_mask)
    );
@@ -51,7 +52,7 @@ template <string_control control_mask, typename T, is_sse_abi<T> Abi>
 constexpr auto
 compare_implicit_length_strings_return_index(
    cat::simd<T, Abi> const& vector_1, cat::simd<T, Abi> const& vector_2
-) -> cat::uint4 {
+) noexcept -> cat::uint4 {
    return cat::uint4(
       static_cast<unsigned>(__builtin_ia32_pcmpistri128(
          vector_1.raw, vector_2.raw, static_cast<unsigned char>(control_mask)

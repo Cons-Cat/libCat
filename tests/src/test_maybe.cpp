@@ -6,6 +6,7 @@
 #include <cat/unique>
 #include <cat/utility>
 
+#include "../fragile.hpp"
 #include "../unit_tests.hpp"
 
 struct movable {
@@ -1639,3 +1640,6 @@ $test(maybe_void_comparison) {
    cat::verify((empty <=> cat::nullopt) == 0);
    cat::verify((engaged <=> cat::nullopt) > 0);
 }
+
+static_assert(cat::is_nothrow_default_constructible<cat::maybe<int4>>);
+static_assert(cat::is_nothrow_default_constructible<cat::maybe<void>>);

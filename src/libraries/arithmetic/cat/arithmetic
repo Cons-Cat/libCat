@@ -37,7 +37,8 @@ struct raw_arithmetic_type_trait<T> {
 template <typename T>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_raw_arithmetic(T value) -> detail::raw_arithmetic_type_trait<T>::type {
+make_raw_arithmetic(T value) noexcept
+   -> detail::raw_arithmetic_type_trait<T>::type {
    if constexpr (requires { value.raw; }) {
       return value.raw;
    } else if constexpr (__is_pointer(T)) {
@@ -292,14 +293,14 @@ using sat_uint8 = basic_int<__UINT64_TYPE__, overflow_policies::saturate>;
 template <is_floating_point Float>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-is_nan(Float value) -> bool {
+is_nan(Float value) noexcept -> bool {
    return __builtin_isnan(make_raw_arithmetic(value)) != 0;
 }
 
 template <is_floating_point Float>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-is_finite(Float value) -> bool {
+is_finite(Float value) noexcept -> bool {
    return __builtin_isfinite(make_raw_arithmetic(value)) != 0;
 }
 
@@ -319,7 +320,7 @@ concept is_idx = detail::is_idx_trait<remove_cvref<T>>::value;
 
 template <is_integral T>
 constexpr auto
-make_signed(T value) -> make_signed_type<T> {
+make_signed(T value) noexcept -> make_signed_type<T> {
    // return __builtin_bit_cast(make_signed_type<T>, value);
    return static_cast<make_signed_type<T>>(value);
 }
@@ -329,25 +330,25 @@ make_signed(T value) -> make_signed_type<T> {
 template <is_floating_point T>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_signed(T value) -> T {
+make_signed(T value) noexcept -> T {
    return value;
 }
 
 template <is_integral T>
 constexpr auto
-make_unsigned(T value) -> make_unsigned_type<T> {
+make_unsigned(T value) noexcept -> make_unsigned_type<T> {
    return static_cast<make_unsigned_type<T>>(value);
 }
 
 template <is_integral Sign, is_integral T>
 constexpr auto
-make_sign_from(T value) -> copy_sign_from<Sign, T> {
+make_sign_from(T value) noexcept -> copy_sign_from<Sign, T> {
    return static_cast<copy_sign_from<Sign, T>>(value);
 }
 
 template <is_integral Sign, is_integral T>
 constexpr auto
-make_sign_from(Sign, T value) -> copy_sign_from<Sign, T> {
+make_sign_from(Sign, T value) noexcept -> copy_sign_from<Sign, T> {
    return static_cast<copy_sign_from<Sign, T>>(value);
 }
 
@@ -493,7 +494,7 @@ struct rebind_overflow_policy<
 // truncating direction outright).
 template <typename Left, typename Right>
 consteval auto
-promoted_arithmetic() {
+promoted_arithmetic() noexcept {
    constexpr overflow_policies policy = make_overflow_policy<Left>;
 
    if constexpr (policy != overflow_policies::undefined) {
@@ -586,7 +587,7 @@ using implicit_raw_compare_wide = conditional<
 // `constexpr` rather than `consteval`.
 template <typename Dest, typename U>
 constexpr auto
-raw_source_fits_implicit_storage(U const& other) -> bool {
+raw_source_fits_implicit_storage(U const& other) noexcept -> bool {
    auto const raw = make_raw_arithmetic(other);
    using raw_value = __typeof_unqual(raw);
    if constexpr (is_floating_point<Dest>) {
@@ -631,7 +632,7 @@ raw_source_fits_implicit_storage(U const& other) -> bool {
 template <is_integral U>
 [[nodiscard]]
 constexpr auto
-positive_power_of_two(U const& value) -> bool {
+positive_power_of_two(U const& value) noexcept -> bool {
    auto const raw = make_raw_arithmetic(value);
    if constexpr (is_signed_integral<__typeof_unqual(raw)>) {
       if (raw <= 0) {
@@ -647,17 +648,19 @@ positive_power_of_two(U const& value) -> bool {
 template <typename Dest, is_integral U>
 [[nodiscard]]
 constexpr auto
-valid_ualign_source(U const& value) -> bool {
+valid_ualign_source(U const& value) noexcept -> bool {
    return raw_source_fits_implicit_storage<Dest>(value)
           && positive_power_of_two(value);
 }
 
 void
-ualign_consteval_failure();
+ualign_consteval_failure() noexcept;
 
 template <typename Dest, is_integral U>
 constexpr void
-assert_valid_ualign_source(U const& value) {
+assert_valid_ualign_source(U const& value) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    bool const valid = valid_ualign_source<Dest>(value);
    if consteval {
       if (!valid) {
@@ -670,7 +673,9 @@ assert_valid_ualign_source(U const& value) {
 
 template <is_integral U>
 constexpr void
-assert_positive_power_of_two(U const& value) {
+assert_positive_power_of_two(U const& value) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    bool const valid = positive_power_of_two(value);
    if consteval {
       if (!valid) {
@@ -695,7 +700,7 @@ concept is_basic_float_widening =
 template <typename RawL, typename RawR>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-raw_mixed_integral_spaceship(RawL const lhs, RawR const rhs) {
+raw_mixed_integral_spaceship(RawL const lhs, RawR const rhs) noexcept {
    if constexpr (is_signed_integral<RawL> && is_unsigned_integral<RawR>) {
       if (lhs < 0) {
          return std::strong_ordering::less;
@@ -716,7 +721,7 @@ raw_mixed_integral_spaceship(RawL const lhs, RawR const rhs) {
 template <typename RawL, typename RawR>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-raw_mixed_integral_equals(RawL const lhs, RawR const rhs) -> bool {
+raw_mixed_integral_equals(RawL const lhs, RawR const rhs) noexcept -> bool {
    if constexpr (is_signed_integral<RawL> && is_unsigned_integral<RawR>) {
       if (lhs < 0) {
          return false;
@@ -738,7 +743,7 @@ raw_mixed_integral_equals(RawL const lhs, RawR const rhs) -> bool {
 template <is_raw_integral T>
 [[nodiscard]]
 constexpr auto
-sat_add(T lhs, T rhs) -> T {
+sat_add(T lhs, T rhs) noexcept -> T {
    return __builtin_elementwise_add_sat(lhs, rhs);
 }
 
@@ -747,7 +752,7 @@ template <is_integral T, is_integral U>
    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_add(T lhs, U rhs) -> detail::promoted_type<T, U> {
+sat_add(T lhs, U rhs) noexcept -> detail::promoted_type<T, U> {
    // Saturating `is_arithmetic` inputs must be raw and cast to the same size.
    using type = raw_arithmetic_type<larger_type<T, U>>;
    return sat_add(static_cast<type>(lhs), static_cast<type>(rhs));
@@ -758,7 +763,7 @@ template <is_integral T, is_integral U>
    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-wrap_add(T lhs, U rhs) -> detail::promoted_type<T, U> {
+wrap_add(T lhs, U rhs) noexcept -> detail::promoted_type<T, U> {
    // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
    using type = raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
    return detail::promoted_type<T, U>(
@@ -771,13 +776,13 @@ wrap_add(T lhs, U rhs) -> detail::promoted_type<T, U> {
 template <is_raw_integral T, is_raw_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_cast(U value) -> T;
+sat_cast(U value) noexcept -> T;
 
 // Subtract two integers with saturating overflow.
 template <is_raw_integral T>
 [[nodiscard]]
 constexpr auto
-sat_sub(T lhs, T rhs) -> T {
+sat_sub(T lhs, T rhs) noexcept -> T {
    return __builtin_elementwise_sub_sat(lhs, rhs);
 }
 
@@ -788,7 +793,7 @@ template <is_integral T, is_integral U>
    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_sub(T lhs, U rhs) -> remove_constref<T> {
+sat_sub(T lhs, U rhs) noexcept -> remove_constref<T> {
    using wide = raw_arithmetic_type<larger_type<T, U>>;
    using lhs_raw = raw_arithmetic_type<T>;
    return remove_constref<T>(cat::sat_cast<lhs_raw>(
@@ -801,7 +806,7 @@ template <is_integral T, is_integral U>
    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-wrap_sub(T lhs, U rhs) -> remove_constref<T> {
+wrap_sub(T lhs, U rhs) noexcept -> remove_constref<T> {
    // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
    // Two's-complement truncation back to the LHS width preserves wrap.
    using wide = raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
@@ -815,7 +820,7 @@ wrap_sub(T lhs, U rhs) -> remove_constref<T> {
 template <is_raw_integral T>
 [[nodiscard]]
 constexpr auto
-sat_mul(T lhs, T rhs) -> T {
+sat_mul(T lhs, T rhs) noexcept -> T {
    T sum;
    bool overflow = __builtin_mul_overflow(lhs, rhs, &sum);
    if (overflow) {
@@ -838,7 +843,7 @@ template <is_integral T, is_integral U>
    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_mul(T lhs, U rhs) -> detail::promoted_type<T, U> {
+sat_mul(T lhs, U rhs) noexcept -> detail::promoted_type<T, U> {
    // Saturating `is_arithmetic` inputs must be raw and cast to the same size.
    using type = raw_arithmetic_type<larger_type<T, U>>;
    return sat_mul(static_cast<type>(lhs), static_cast<type>(rhs));
@@ -849,7 +854,7 @@ template <is_integral T, is_integral U>
    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-wrap_mul(T lhs, U rhs) -> detail::promoted_type<T, U> {
+wrap_mul(T lhs, U rhs) noexcept -> detail::promoted_type<T, U> {
    // Cast to a raw, unsigned, integer to guarantee wrapping semantics.
    using type = raw_arithmetic_type<make_unsigned_type<larger_type<T, U>>>;
    return detail::promoted_type<T, U>(
@@ -861,7 +866,7 @@ wrap_mul(T lhs, U rhs) -> detail::promoted_type<T, U> {
 template <is_raw_integral T>
 [[nodiscard]]
 constexpr auto
-sat_div(T lhs, T rhs) -> T {
+sat_div(T lhs, T rhs) noexcept -> T {
    if constexpr (is_signed<T>) {
       // The only signed division that overflows is `min() / -1`, whose
       // mathematical result is `-min() == max() + 1`. Saturate to `max()` and
@@ -882,7 +887,7 @@ template <is_integral T, is_integral U>
    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_div(T lhs, U rhs) -> remove_constref<T> {
+sat_div(T lhs, U rhs) noexcept -> remove_constref<T> {
    using wide = raw_arithmetic_type<larger_type<T, U>>;
    using lhs_raw = raw_arithmetic_type<T>;
    return remove_constref<T>(cat::sat_cast<lhs_raw>(
@@ -901,7 +906,7 @@ template <is_integral T, is_integral U>
    requires(is_safe_arithmetic_comparison<T, U>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-wrap_div(T lhs, U rhs) -> remove_constref<T> {
+wrap_div(T lhs, U rhs) noexcept -> remove_constref<T> {
    using wide = raw_arithmetic_type<larger_type<T, U>>;
    using lhs_raw = raw_arithmetic_type<T>;
    wide const wide_lhs = static_cast<wide>(lhs);
@@ -921,7 +926,7 @@ template <is_raw_integral T, is_raw_integral U>
    requires(is_unsigned<T>)
 [[nodiscard]]
 constexpr auto
-sat_shl(T value, U bits) -> T {
+sat_shl(T value, U bits) noexcept -> T {
    if (value == 0u) {
       return 0u;
    }
@@ -943,7 +948,7 @@ template <is_raw_integral T, is_raw_integral U>
    requires(is_signed<T>)
 [[nodiscard]]
 constexpr auto
-sat_shl(T value, U bits) -> T {
+sat_shl(T value, U bits) noexcept -> T {
    if (value == 0) {
       return T(0);
    }
@@ -965,7 +970,7 @@ sat_shl(T value, U bits) -> T {
 template <is_integral T, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_shl(T value, U bits) -> remove_constref<T> {
+sat_shl(T value, U bits) noexcept -> remove_constref<T> {
    using lhs_raw = raw_arithmetic_type<T>;
    using bits_raw = raw_arithmetic_type<U>;
    return remove_constref<T>(
@@ -977,7 +982,7 @@ template <is_raw_integral T, is_raw_integral U>
    requires(is_unsigned<T>)
 [[nodiscard]]
 constexpr auto
-sat_shr(T value, U bits) -> T {
+sat_shr(T value, U bits) noexcept -> T {
    // `cat/bit` is an extremely difficult circular include for `cat/arithmetic`.
    if (
       bits >= static_cast<U>(limits<T>::bits)
@@ -998,7 +1003,7 @@ template <is_raw_integral T, is_raw_integral U>
    requires(is_signed<T>)
 [[nodiscard]]
 constexpr auto
-sat_shr(T value, U bits) -> T {
+sat_shr(T value, U bits) noexcept -> T {
    if (bits >= static_cast<U>(limits<T>::bits)) {
       return value < 0 ? T(-1) : T(0);
    }
@@ -1010,7 +1015,7 @@ sat_shr(T value, U bits) -> T {
 template <is_integral T, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_shr(T value, U bits) -> remove_constref<T> {
+sat_shr(T value, U bits) noexcept -> remove_constref<T> {
    using lhs_raw = raw_arithmetic_type<T>;
    using bits_raw = raw_arithmetic_type<U>;
    return remove_constref<T>(
@@ -1028,7 +1033,7 @@ template <is_raw_integral T, is_raw_integral U>
    requires(is_unsigned<T>)
 [[nodiscard]]
 constexpr auto
-wrap_shl(T value, U bits) -> T {
+wrap_shl(T value, U bits) noexcept -> T {
    constexpr unsigned width = static_cast<unsigned>(sizeof(T) * 8u);
    unsigned const norm = static_cast<unsigned>(bits) % width;
    if (norm == 0) {
@@ -1045,7 +1050,7 @@ template <is_raw_integral T, is_raw_integral U>
    requires(is_signed<T>)
 [[nodiscard]]
 constexpr auto
-wrap_shl(T value, U bits) -> T {
+wrap_shl(T value, U bits) noexcept -> T {
    using utype = make_unsigned_type<T>;
    return __builtin_bit_cast(
       T, wrap_shl(__builtin_bit_cast(utype, value), bits)
@@ -1057,7 +1062,7 @@ wrap_shl(T value, U bits) -> T {
 template <is_integral T, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-wrap_shl(T value, U bits) -> remove_constref<T> {
+wrap_shl(T value, U bits) noexcept -> remove_constref<T> {
    using lhs_raw = raw_arithmetic_type<T>;
    using bits_raw = raw_arithmetic_type<U>;
    return remove_constref<T>(
@@ -1072,7 +1077,7 @@ template <is_raw_integral T, is_raw_integral U>
    requires(is_unsigned<T>)
 [[nodiscard]]
 constexpr auto
-wrap_shr(T value, U bits) -> T {
+wrap_shr(T value, U bits) noexcept -> T {
    constexpr unsigned width = static_cast<unsigned>(sizeof(T) * 8u);
    unsigned const norm = static_cast<unsigned>(bits) % width;
    if (norm == 0) {
@@ -1088,7 +1093,7 @@ template <is_raw_integral T, is_raw_integral U>
    requires(is_signed<T>)
 [[nodiscard]]
 constexpr auto
-wrap_shr(T value, U bits) -> T {
+wrap_shr(T value, U bits) noexcept -> T {
    using utype = make_unsigned_type<T>;
    return __builtin_bit_cast(
       T, wrap_shr(__builtin_bit_cast(utype, value), bits)
@@ -1099,7 +1104,7 @@ wrap_shr(T value, U bits) -> T {
 template <is_integral T, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-wrap_shr(T value, U bits) -> remove_constref<T> {
+wrap_shr(T value, U bits) noexcept -> remove_constref<T> {
    using lhs_raw = raw_arithmetic_type<T>;
    using bits_raw = raw_arithmetic_type<U>;
    return remove_constref<T>(
@@ -1113,7 +1118,7 @@ wrap_shr(T value, U bits) -> remove_constref<T> {
 template <is_raw_integral T, is_raw_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_cast(U value) -> T {
+sat_cast(U value) noexcept -> T {
    if constexpr (is_signed<T> == is_signed<U>) {
       if constexpr (sizeof(T) >= sizeof(U)) {
          // Widening or same-width within the same signedness fits exactly,
@@ -1171,7 +1176,7 @@ template <
    overflow_policies src_policy = make_overflow_policy<U>>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-policy_cast(U value) -> T {
+policy_cast(U value) noexcept -> T {
    if constexpr (
       (dest_policy == overflow_policies::saturate
        || src_policy == overflow_policies::saturate)
@@ -1209,7 +1214,7 @@ class
    template <is_integral U>
       requires(detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
-   consteval basic_float(U other) __attribute__((enable_if(
+   consteval basic_float(U other) noexcept __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<T>(other),
       "value is out of range for implicit conversion to this "
       "basic_float type"
@@ -1220,7 +1225,7 @@ class
    template <is_integral U>
       requires(detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
-   consteval basic_float(U other) __attribute__((enable_if(
+   consteval basic_float(U other) noexcept __attribute__((enable_if(
       !detail::raw_source_fits_implicit_storage<T>(other),
       "value is out of range for implicit conversion to this "
       "basic_float type"
@@ -1229,7 +1234,7 @@ class
    template <is_integral U>
       requires(detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr explicit basic_float(U other) __attribute__((enable_if(
+   constexpr explicit basic_float(U other) noexcept __attribute__((enable_if(
       !__builtin_constant_p(other),
       "runtime integer conversion to basic_float is explicit"
    )))
@@ -1242,7 +1247,7 @@ class
          && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_float(U other) __attribute__((enable_if(
+   constexpr basic_float(U other) noexcept __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<T>(other),
       "value is out of range for implicit conversion to this "
       "basic_float type"
@@ -1254,7 +1259,7 @@ class
       requires(is_floating_point<U> && !is_safe_arithmetic_conversion<U, T>
                && detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
-   consteval basic_float(U other) __attribute__((enable_if(
+   consteval basic_float(U other) noexcept __attribute__((enable_if(
       !detail::raw_source_fits_implicit_storage<T>(other),
       "value is out of range for implicit conversion to this "
       "basic_float type"
@@ -1267,7 +1272,7 @@ class
          && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_float(U other)
+   constexpr basic_float(U other) noexcept
        : raw(make_raw_arithmetic(other)) {
    }
 
@@ -1278,7 +1283,7 @@ class
          && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr explicit basic_float(U other)
+   constexpr explicit basic_float(U other) noexcept
        : raw(make_raw_arithmetic(other)) {
    }
 
@@ -1291,7 +1296,7 @@ class
          && !detail::is_basic_float_widening<U, T>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_float(U other)
+   constexpr basic_float(U other) noexcept
        : raw(detail::quantity_value_in<quantity_type>(other)) {
    }
 
@@ -1302,7 +1307,7 @@ class
          && (!is_safe_arithmetic_conversion<U, T> || detail::is_basic_float_widening<U, T>)
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr explicit basic_float(U other)
+   constexpr explicit basic_float(U other) noexcept
        : raw(detail::quantity_value_in<quantity_type>(other)) {
    }
 
@@ -1313,7 +1318,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator U() const {
+   operator U() const noexcept {
       return static_cast<U>(raw);
    }
 
@@ -1324,7 +1329,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator<=>(U rhs) const {
+   operator<=>(U rhs) const noexcept {
       using result_quantity = detail::add_quantity<basic_float, U>;
       using common = common_type<raw_type, raw_arithmetic_type<U>>;
       common const lhs_common =
@@ -1349,7 +1354,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(basic_float lhs, U rhs) -> bool {
+   operator==(basic_float lhs, U rhs) noexcept -> bool {
       using result_quantity = detail::add_quantity<basic_float, U>;
       using common = common_type<raw_type, raw_arithmetic_type<U>>;
       common const lhs_common =
@@ -1371,7 +1376,8 @@ class
       requires(has_quantity<basic_float>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr bool
-   operator==(basic_float lhs, U rhs) __attribute__((enable_if(rhs == 0, ""))) {
+   operator==(basic_float lhs, U rhs) noexcept
+      __attribute__((enable_if(rhs == 0, ""))) {
       return lhs.raw == 0;
    }
 
@@ -1379,14 +1385,15 @@ class
       requires(has_quantity<basic_float>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr bool
-   operator==(U lhs, basic_float rhs) __attribute__((enable_if(lhs == 0, ""))) {
+   operator==(U lhs, basic_float rhs) noexcept
+      __attribute__((enable_if(lhs == 0, ""))) {
       return 0 == rhs.raw;
    }
 
    constexpr auto
-   operator=(basic_float const&) -> basic_float& = default;
+   operator=(basic_float const&) noexcept -> basic_float& = default;
    constexpr auto
-   operator=(basic_float&&) -> basic_float& = default;
+   operator=(basic_float&&) noexcept -> basic_float& = default;
 
    template <is_arithmetic U>
       requires(
@@ -1395,7 +1402,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> basic_float& {
+   operator=(U operand) noexcept -> basic_float& {
       raw = make_raw_arithmetic(operand);
       return *this;
    }
@@ -1409,35 +1416,38 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> basic_float& {
+   operator=(U operand) noexcept -> basic_float& {
       raw = detail::quantity_value_in<quantity_type>(operand);
       return *this;
    }
 
    constexpr auto
-   precise() & -> precision_reference<basic_float, precision_policies::precise>;
+   precise() & noexcept
+      -> precision_reference<basic_float, precision_policies::precise>;
 
    constexpr auto
-   precise() const& -> precision_reference<
-      basic_float const, precision_policies::precise>;
+   precise() const& noexcept
+      -> precision_reference<basic_float const, precision_policies::precise>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   precise() && -> basic_float<
-      raw_type, precision_policies::precise, quantity> {
+   precise() && noexcept
+      -> basic_float<raw_type, precision_policies::precise, quantity> {
       return basic_float<raw_type, precision_policies::precise, quantity>(raw);
    }
 
    constexpr auto
-   fast() & -> precision_reference<basic_float, precision_policies::fast>;
+   fast() & noexcept
+      -> precision_reference<basic_float, precision_policies::fast>;
 
    constexpr auto
-   fast() const& -> precision_reference<
-      basic_float const, precision_policies::fast>;
+   fast() const& noexcept
+      -> precision_reference<basic_float const, precision_policies::fast>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fast() && -> basic_float<raw_type, precision_policies::fast, quantity> {
+   fast() && noexcept
+      -> basic_float<raw_type, precision_policies::fast, quantity> {
       return basic_float<raw_type, precision_policies::fast, quantity>(raw);
    }
 
@@ -1447,7 +1457,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U other) const -> basic_float<
+   add(U other) const noexcept -> basic_float<
       common_type<T, raw_arithmetic_type<U>>, precision,
       detail::add_quantity<basic_float, U>{}> {
       using result_quantity = detail::add_quantity<basic_float, U>;
@@ -1476,7 +1486,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const
+   subtract_by(U operand) const noexcept
       -> basic_float<T, precision, detail::add_quantity<basic_float, U>{}> {
       using result_quantity = detail::add_quantity<basic_float, U>;
       using result_type = basic_float<T, precision, result_quantity{}>;
@@ -1503,7 +1513,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U operand) const {
+   subtract_from(U operand) const noexcept {
       using result_quantity = detail::add_quantity<U, basic_float>;
       using result_type = detail::rebind_quantity_type<U, result_quantity{}>;
       // NOLINTBEGIN(bugprone-branch-clone)
@@ -1527,7 +1537,7 @@ class
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const -> basic_float<
+   multiply(U operand) const noexcept -> basic_float<
       common_type<T, raw_arithmetic_type<U>>, precision,
       detail::multiply_quantity<basic_float, U>{}> {
       using result_type = basic_float<
@@ -1548,7 +1558,7 @@ class
       requires(is_floating_point<U>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const
+   divide_by(U operand) const noexcept
       -> basic_float<T, precision, detail::divide_quantity<basic_float, U>{}> {
       using result_type =
          basic_float<T, precision, detail::divide_quantity<basic_float, U>{}>;
@@ -1567,7 +1577,7 @@ class
       requires(is_floating_point<U>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U operand) const {
+   divide_into(U operand) const noexcept {
       using result_type = basic_float<
          common_type<raw_arithmetic_type<U>, T>, make_precision_policy<U>,
          detail::divide_quantity<U, basic_float>{}>;
@@ -1590,7 +1600,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fma(U multiplier, V addend) const
+   fma(U multiplier, V addend) const noexcept
       -> basic_float<T, precision, detail::multiply_quantity<basic_float, U>{}>
       requires(detail::is_quantity_addable<
                basic_float<
@@ -1619,35 +1629,37 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   is_nan() const -> bool {
+   is_nan() const noexcept -> bool {
       return cat::is_nan(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   is_finite() const -> bool {
+   is_finite() const noexcept -> bool {
       return cat::is_finite(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   min() -> basic_float<raw_type, precision, quantity> {
+   min() noexcept -> basic_float<raw_type, precision, quantity> {
       return limits<raw_type>::min();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   max() -> basic_float<raw_type, precision, quantity> {
+   max() noexcept -> basic_float<raw_type, precision, quantity> {
       return limits<raw_type>::max();
    }
 };
 
 template <typename T, precision_policies policy, auto quantity>
-basic_float(basic_float<T, policy, quantity>)
+basic_float(basic_float<T, policy, quantity>) noexcept(false)
    -> basic_float<T, policy, quantity>;
 
-basic_float(float) -> basic_float<float, precision_policies::precise>;
-basic_float(double) -> basic_float<double, precision_policies::precise>;
+basic_float(float) noexcept(false)
+   ->basic_float<float, precision_policies::precise>;
+basic_float(double) noexcept(false)
+   ->basic_float<double, precision_policies::precise>;
 
 }  // namespace cat
 
@@ -1657,16 +1669,18 @@ namespace cat {
 
 template <typename T, precision_policies precision, auto quantity>
 constexpr auto
-basic_float<T, precision, quantity>::precise() & -> precision_reference<
-   basic_float<T, precision, quantity>, precision_policies::precise> {
+basic_float<T, precision, quantity>::precise() & noexcept
+   -> precision_reference<
+      basic_float<T, precision, quantity>, precision_policies::precise> {
    return precision_reference<
       basic_float<T, precision, quantity>, precision_policies::precise>{*this};
 }
 
 template <typename T, precision_policies precision, auto quantity>
 constexpr auto
-basic_float<T, precision, quantity>::precise() const& -> precision_reference<
-   basic_float<T, precision, quantity> const, precision_policies::precise> {
+basic_float<T, precision, quantity>::precise() const& noexcept
+   -> precision_reference<
+      basic_float<T, precision, quantity> const, precision_policies::precise> {
    return precision_reference<
       basic_float<T, precision, quantity> const, precision_policies::precise>{
       *this
@@ -1675,7 +1689,7 @@ basic_float<T, precision, quantity>::precise() const& -> precision_reference<
 
 template <typename T, precision_policies precision, auto quantity>
 constexpr auto
-basic_float<T, precision, quantity>::fast() & -> precision_reference<
+basic_float<T, precision, quantity>::fast() & noexcept -> precision_reference<
    basic_float<T, precision, quantity>, precision_policies::fast> {
    return precision_reference<
       basic_float<T, precision, quantity>, precision_policies::fast>{*this};
@@ -1683,8 +1697,9 @@ basic_float<T, precision, quantity>::fast() & -> precision_reference<
 
 template <typename T, precision_policies precision, auto quantity>
 constexpr auto
-basic_float<T, precision, quantity>::fast() const& -> precision_reference<
-   basic_float<T, precision, quantity> const, precision_policies::fast> {
+basic_float<T, precision, quantity>::fast() const& noexcept
+   -> precision_reference<
+      basic_float<T, precision, quantity> const, precision_policies::fast> {
    return precision_reference<
       basic_float<T, precision, quantity> const, precision_policies::fast>{
       *this
@@ -1741,7 +1756,7 @@ class
          && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_int(U other) __attribute__((enable_if(
+   constexpr basic_int(U other) noexcept __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<T>(other),
       "value is out of range for implicit conversion to this basic_int type"
    )))
@@ -1762,7 +1777,7 @@ class
                && make_overflow_policy<U> != overflow_policies::saturate
                && detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
-   consteval basic_int(U other) __attribute__((enable_if(
+   consteval basic_int(U other) noexcept __attribute__((enable_if(
       !detail::raw_source_fits_implicit_storage<T>(other),
       "value is out of range for implicit conversion to this "
       "basic_int type"
@@ -1776,7 +1791,7 @@ class
          && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_int(U other)
+   constexpr basic_int(U other) noexcept
        : raw(make_raw_arithmetic(other)) {
    }
 
@@ -1792,7 +1807,7 @@ class
          && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr explicit basic_int(U other)
+   constexpr explicit basic_int(U other) noexcept
        : raw(detail::policy_cast<T, overflow_policies::undefined>(other)) {
    }
 
@@ -1812,7 +1827,7 @@ class
          && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_int(U other)
+   constexpr basic_int(U other) noexcept
        : raw(detail::policy_cast<T, overflow_policy>(other)) {
    }
 
@@ -1825,7 +1840,7 @@ class
          && overflow_policy == overflow_policies::undefined
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_int(U other)
+   constexpr basic_int(U other) noexcept
        : raw(
             detail::policy_cast<T, overflow_policy>(
                detail::quantity_value_in<quantity_type>(other)
@@ -1842,7 +1857,7 @@ class
          && overflow_policy != overflow_policies::undefined
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_int(U other)
+   constexpr basic_int(U other) noexcept
        : raw(
             detail::policy_cast<T, overflow_policy>(
                detail::quantity_value_in<quantity_type>(other)
@@ -1857,7 +1872,7 @@ class
          && (!is_integral<U> || !is_safe_arithmetic_conversion<U, T> || !detail::is_integral_quantity_conversion<U, quantity_type>)
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr explicit basic_int(U other)
+   constexpr explicit basic_int(U other) noexcept
        : raw(
             detail::policy_cast<T, overflow_policy>(
                detail::quantity_value_in<quantity_type>(other)
@@ -1872,7 +1887,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator U() const {
+   operator U() const noexcept {
       // When this integer is saturating, a narrow cast saturates.
       if constexpr (
          overflow_policy == overflow_policies::saturate && is_integral<U>
@@ -1890,7 +1905,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator<=>(U rhs) const {
+   operator<=>(U rhs) const noexcept {
       using result_quantity = detail::add_quantity<basic_int, U>;
       using common = common_type<raw_type, raw_arithmetic_type<U>>;
       return common(detail::quantity_value_in<result_quantity>(*this))
@@ -1904,7 +1919,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(basic_int lhs, U rhs) -> bool {
+   operator==(basic_int lhs, U rhs) noexcept -> bool {
       using result_quantity = detail::add_quantity<basic_int, U>;
       return detail::quantity_value_in<result_quantity>(lhs)
              == detail::quantity_value_in<result_quantity>(rhs);
@@ -1914,7 +1929,8 @@ class
       requires(has_quantity<basic_int>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr bool
-   operator==(basic_int lhs, U rhs) __attribute__((enable_if(rhs == 0, ""))) {
+   operator==(basic_int lhs, U rhs) noexcept
+      __attribute__((enable_if(rhs == 0, ""))) {
       return lhs.raw == 0;
    }
 
@@ -1922,7 +1938,8 @@ class
       requires(has_quantity<basic_int>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr bool
-   operator==(U lhs, basic_int rhs) __attribute__((enable_if(lhs == 0, ""))) {
+   operator==(U lhs, basic_int rhs) noexcept
+      __attribute__((enable_if(lhs == 0, ""))) {
       return 0 == rhs.raw;
    }
 
@@ -1937,7 +1954,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<=>(basic_int lhs, U rhs) {
+   operator<=>(basic_int lhs, U rhs) noexcept {
       using result_quantity = detail::add_quantity<basic_int, U>;
       return detail::raw_mixed_integral_spaceship(
          detail::quantity_value_in<result_quantity>(lhs),
@@ -1953,7 +1970,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(basic_int lhs, U rhs) -> bool {
+   operator==(basic_int lhs, U rhs) noexcept -> bool {
       using result_quantity = detail::add_quantity<basic_int, U>;
       return detail::raw_mixed_integral_equals(
          detail::quantity_value_in<result_quantity>(lhs),
@@ -1962,9 +1979,9 @@ class
    }
 
    constexpr auto
-   operator=(basic_int const&) -> basic_int& = default;
+   operator=(basic_int const&) noexcept -> basic_int& = default;
    constexpr auto
-   operator=(basic_int&&) -> basic_int& = default;
+   operator=(basic_int&&) noexcept -> basic_int& = default;
 
    template <is_arithmetic U>
       requires(
@@ -1973,7 +1990,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> basic_int& {
+   operator=(U operand) noexcept -> basic_int& {
       raw = make_raw_arithmetic(operand);
       return *this;
    }
@@ -1986,7 +2003,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> basic_int& {
+   operator=(U operand) noexcept -> basic_int& {
       raw = detail::policy_cast<T, overflow_policy>(
          detail::quantity_value_in<quantity_type>(operand)
       );
@@ -2007,7 +2024,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U other) const -> detail::rebind_quantity_type<
+   add(U other) const noexcept -> detail::rebind_quantity_type<
       detail::promoted_type<basic_int, U>,
       detail::add_quantity<basic_int, U>{}> {
       using enum overflow_policies;
@@ -2035,7 +2052,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int
-   operator+(basic_int self, Signed other)
+   operator+(basic_int self, Signed other) noexcept
       __attribute__((enable_if(other >= 0, ""))) {
       return basic_int(self.raw + make_raw_arithmetic(other));
    }
@@ -2043,7 +2060,7 @@ class
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U* _Nullable p_operand) const -> U* _Nullable {
+   add(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return raw + p_operand;
    }
 
@@ -2055,7 +2072,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const
+   subtract_by(U operand) const noexcept
       -> basic_int<T, overflow_policy, detail::add_quantity<basic_int, U>{}> {
       using enum overflow_policies;
       using result_quantity = detail::add_quantity<basic_int, U>;
@@ -2088,7 +2105,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const -> detail::rebind_quantity_type<
+   subtract_by(U operand) const noexcept -> detail::rebind_quantity_type<
       conditional<
          (sizeof(raw_arithmetic_type<U>) > sizeof(T)),
          detail::promoted_type<basic_int, U>, basic_int>,
@@ -2130,7 +2147,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const
+   subtract_by(U operand) const noexcept
       -> basic_int<T, overflow_policy, detail::add_quantity<basic_int, U>{}> {
       using enum overflow_policies;
       using result_quantity = detail::add_quantity<basic_int, U>;
@@ -2162,7 +2179,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int
-   operator-(basic_int self, Signed other)
+   operator-(basic_int self, Signed other) noexcept
       __attribute__((enable_if(other < 0, ""))) {
       return basic_int(self.raw - make_raw_arithmetic(other));
    }
@@ -2170,7 +2187,7 @@ class
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U* _Nullable p_operand) -> U* _Nullable {
+   subtract_by(U* _Nullable p_operand) noexcept -> U* _Nullable {
       return raw - p_operand;
    }
 
@@ -2178,7 +2195,7 @@ class
       requires(detail::is_quantity_addable<U, basic_int>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U operand) const {
+   subtract_from(U operand) const noexcept {
       using result_quantity = detail::add_quantity<U, basic_int>;
       using result_type = detail::rebind_quantity_type<U, result_quantity{}>;
       return result_type(
@@ -2190,7 +2207,7 @@ class
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U* _Nullable p_operand) -> U* _Nullable {
+   subtract_from(U* _Nullable p_operand) noexcept -> U* _Nullable {
       return p_operand - raw;
    }
 
@@ -2202,7 +2219,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const -> detail::rebind_quantity_type<
+   multiply(U operand) const noexcept -> detail::rebind_quantity_type<
       detail::promoted_type<basic_int, U>,
       detail::multiply_quantity<basic_int, U>{}> {
       using enum overflow_policies;
@@ -2238,7 +2255,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int
-   operator*(basic_int self, Signed other)
+   operator*(basic_int self, Signed other) noexcept
       __attribute__((enable_if(other >= 0, ""))) {
       return basic_int(self.raw * make_raw_arithmetic(other));
    }
@@ -2246,14 +2263,14 @@ class
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U* _Nullable p_operand) const -> U* _Nullable {
+   multiply(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return raw * p_operand;
    }
 
    template <is_integral U, is_integral V>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fma(U multiplier, V addend) const {
+   fma(U multiplier, V addend) const noexcept {
       return multiply(multiplier).add(addend);
    }
 
@@ -2265,7 +2282,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const -> basic_int<
+   divide_by(U operand) const noexcept -> basic_int<
       T, overflow_policy, detail::divide_quantity<basic_int, U>{}> {
       using enum overflow_policies;
       using result_type =
@@ -2292,7 +2309,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int
-   operator/(basic_int self, Signed other)
+   operator/(basic_int self, Signed other) noexcept
       __attribute__((enable_if(other >= 0, ""))) {
       return basic_int(self.raw / make_raw_arithmetic(other));
    }
@@ -2300,7 +2317,7 @@ class
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U* _Nullable p_operand) const -> U* _Nullable {
+   divide_by(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return raw / p_operand;
    }
 
@@ -2309,7 +2326,7 @@ class
       requires(is_safe_arithmetic_comparison<T, U>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U operand) const {
+   divide_into(U operand) const noexcept {
       using result_type = detail::rebind_quantity_type<
          detail::promoted_type<U, basic_int>,
          detail::divide_quantity<U, basic_int>{}>;
@@ -2322,14 +2339,14 @@ class
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U* _Nullable p_operand) const -> U* _Nullable {
+   divide_into(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return p_operand / raw;
    }
 
    // Generate `operator~`. Only available for unsigned integral storage.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_complement() const -> basic_int
+   bit_complement() const noexcept -> basic_int
       requires(is_unsigned_integral<T>)
    {
       return basic_int(~(raw));
@@ -2354,7 +2371,7 @@ class
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U operand) const
+   modulo_by(U operand) const noexcept
       -> basic_int<T, overflow_policy, detail::add_quantity<basic_int, U>{}> {
       using result_quantity = detail::add_quantity<basic_int, U>;
       using result_type = basic_int<T, overflow_policy, result_quantity{}>;
@@ -2380,7 +2397,7 @@ class
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_int
-   operator%(basic_int self, Signed other)
+   operator%(basic_int self, Signed other) noexcept
       __attribute__((enable_if(other >= 0, ""))) {
       return basic_int(self.raw % make_raw_arithmetic(other));
    }
@@ -2388,7 +2405,7 @@ class
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U* _Nullable p_operand) const -> U* _Nullable {
+   modulo_by(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return raw % p_operand;
    }
 
@@ -2400,7 +2417,7 @@ class
       requires(is_unsigned_integral<T> && sizeof(T) >= sizeof(U))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U operand) const -> basic_int {
+   bit_and(U operand) const noexcept -> basic_int {
       return basic_int(raw & static_cast<T>(make_raw_arithmetic(operand)));
    }
 
@@ -2408,7 +2425,7 @@ class
       requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U* _Nullable p_operand) const -> U* _Nullable {
+   bit_and(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return p_operand & raw;
    }
 
@@ -2417,7 +2434,7 @@ class
       requires(is_unsigned_integral<T> && sizeof(T) >= sizeof(U))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U operand) const -> basic_int {
+   bit_or(U operand) const noexcept -> basic_int {
       return basic_int(raw | static_cast<T>(make_raw_arithmetic(operand)));
    }
 
@@ -2426,123 +2443,124 @@ class
       requires(is_unsigned_integral<T> && sizeof(T) >= sizeof(U))
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_xor(U operand) const -> basic_int {
+   bit_xor(U operand) const noexcept -> basic_int {
       return basic_int(raw ^ static_cast<T>(make_raw_arithmetic(operand)));
    }
 
    // Count zero bits from the most significant bit.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   countl_zero() const -> uint1
+   countl_zero() const noexcept -> uint1
       requires(is_unsigned_integral<T>);
 
    // Count one bits from the most significant bit.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   countl_one() const -> uint1
+   countl_one() const noexcept -> uint1
       requires(is_unsigned_integral<T>);
 
    // Count zero bits from the least significant bit.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   countr_zero() const -> uint1
+   countr_zero() const noexcept -> uint1
       requires(is_unsigned_integral<T>);
 
    // Count one bits from the least significant bit.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   countr_one() const -> uint1
+   countr_one() const noexcept -> uint1
       requires(is_unsigned_integral<T>);
 
    // Count all one bits.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   popcount() const -> uint1
+   popcount() const noexcept -> uint1
       requires(is_unsigned_integral<T>);
 
    // Return true when exactly one bit is set.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   has_single_bit() const -> bool
+   has_single_bit() const noexcept -> bool
       requires(is_unsigned_integral<T>);
 
    // Return the largest power of two not greater than this value.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_floor() const -> basic_int
+   bit_floor() const noexcept -> basic_int
       requires(is_unsigned_integral<T>);
 
    // Return the smallest power of two not less than this value.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_ceil() const -> basic_int
+   bit_ceil() const noexcept -> basic_int
       requires(is_unsigned_integral<T>);
 
    // Return the number of bits needed to represent this value.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_width() const -> uint1
+   bit_width() const noexcept -> uint1
       requires(is_unsigned_integral<T>);
 
    // Reverse the byte order.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   byteswap() const -> basic_int
+   byteswap() const noexcept -> basic_int
       requires(is_unsigned_integral<T>);
 
    // Shift left and return zero when the count reaches the width.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left(uword count) const -> basic_int
+   shift_left(uword count) const noexcept -> basic_int
       requires(is_unsigned_integral<T>);
 
    // Shift right and return zero when the count reaches the width.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right(uword count) const -> basic_int
+   shift_right(uword count) const noexcept -> basic_int
       requires(is_unsigned_integral<T>);
 
    // Rotate bits left by the count.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   rotate_left(uword count) const -> basic_int
+   rotate_left(uword count) const noexcept -> basic_int
       requires(is_unsigned_integral<T>);
 
    // Rotate bits right by the count.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   rotate_right(uword count) const -> basic_int
+   rotate_right(uword count) const noexcept -> basic_int
       requires(is_unsigned_integral<T>);
 
    // Reverse all bits.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_reverse() const -> basic_int
+   bit_reverse() const noexcept -> basic_int
       requires(is_unsigned_integral<T>);
 
    // Repeat the low bit pattern across the value.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_repeat(idx pattern_bits) const -> basic_int
+   bit_repeat(idx pattern_bits) const noexcept(!__has_feature(cxx_exceptions))
+      -> basic_int
       requires(is_unsigned_integral<T>);
 
    // Pack source bits selected by the mask toward the low bit.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_compress(basic_int mask) const -> basic_int
+   bit_compress(basic_int mask) const noexcept -> basic_int
       requires(is_unsigned_integral<T>);
 
    // Scatter low source bits into the mask positions.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_expand(basic_int mask) const -> basic_int
+   bit_expand(basic_int mask) const noexcept -> basic_int
       requires(is_unsigned_integral<T>);
 
    template <typename U>
       requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U* _Nullable p_operand) const -> U* _Nullable {
+   bit_or(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return p_operand | raw;
    }
 
@@ -2560,7 +2578,7 @@ class
       requires(is_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> basic_int {
+   shift_left_by(U operand) const noexcept -> basic_int {
       auto raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == overflow_policies::saturate) {
          return basic_int(sat_shl(raw, raw_operand));
@@ -2575,7 +2593,7 @@ class
       requires(is_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_into(U other) const -> U {
+   shift_left_into(U other) const noexcept -> U {
       return other << raw;
    }
 
@@ -2591,7 +2609,7 @@ class
       requires(is_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> basic_int {
+   shift_right_by(U operand) const noexcept -> basic_int {
       auto raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == overflow_policies::saturate) {
          return basic_int(sat_shr(raw, raw_operand));
@@ -2606,61 +2624,62 @@ class
       requires(is_integral<T>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_into(U other) const -> U {
+   shift_right_into(U other) const noexcept -> U {
       return other >> raw;
    }
 
    constexpr auto
-   undef() & -> overflow_reference<basic_int, overflow_policies::undefined>;
+   undef() & noexcept
+      -> overflow_reference<basic_int, overflow_policies::undefined>;
 
    constexpr auto
-   undef() const& -> overflow_reference<
-      basic_int const, overflow_policies::undefined>;
+   undef() const& noexcept
+      -> overflow_reference<basic_int const, overflow_policies::undefined>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && -> basic_int<T, overflow_policies::undefined, quantity> {
+   undef() && noexcept -> basic_int<T, overflow_policies::undefined, quantity> {
       return basic_int<T, overflow_policies::undefined, quantity>(raw);
    }
 
    constexpr auto
-   wrap() & -> overflow_reference<
+   wrap() & noexcept -> overflow_reference<
       basic_int<T, overflow_policy, quantity>, overflow_policies::wrap>;
 
    constexpr auto
-   wrap() const& -> overflow_reference<
+   wrap() const& noexcept -> overflow_reference<
       basic_int<T, overflow_policy, quantity> const, overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && -> basic_int<T, overflow_policies::wrap, quantity> {
+   wrap() && noexcept -> basic_int<T, overflow_policies::wrap, quantity> {
       return basic_int<T, overflow_policies::wrap, quantity>(raw);
    }
 
    constexpr auto
-   sat() & -> overflow_reference<
+   sat() & noexcept -> overflow_reference<
       basic_int<T, overflow_policy, quantity>, overflow_policies::saturate>;
 
    constexpr auto
-   sat() const& -> overflow_reference<
+   sat() const& noexcept -> overflow_reference<
       basic_int<T, overflow_policy, quantity> const,
       overflow_policies::saturate>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && -> basic_int<T, overflow_policies::saturate, quantity> {
+   sat() && noexcept -> basic_int<T, overflow_policies::saturate, quantity> {
       return basic_int<T, overflow_policies::saturate, quantity>(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   min() -> basic_int<raw_type, overflow_policy, quantity> {
+   min() noexcept -> basic_int<raw_type, overflow_policy, quantity> {
       return limits<raw_type>::min();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   max() -> basic_int<raw_type, overflow_policy, quantity> {
+   max() noexcept -> basic_int<raw_type, overflow_policy, quantity> {
       return limits<raw_type>::max();
    }
 
@@ -2670,7 +2689,7 @@ class
    // declaration does not need to name `maybe<idx>`.
    [[nodiscard]]
    constexpr auto
-   to_idx() const
+   to_idx() const noexcept
       requires(
          is_integral<T> && overflow_policy == overflow_policies::undefined
          && is_either<T, __SIZE_TYPE__, make_signed_type<__SIZE_TYPE__>>
@@ -2680,10 +2699,13 @@ class
 };
 
 template <typename T, overflow_policies policy, auto quantity>
-basic_int(basic_int<T, policy, quantity>) -> basic_int<T, policy, quantity>;
+basic_int(basic_int<T, policy, quantity>) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> basic_int<T, policy, quantity>;
 
 template <is_raw_integral T>
-basic_int(T) -> basic_int<T, overflow_policies::undefined>;
+basic_int(T) noexcept(!__has_feature(cxx_exceptions))
+   ->basic_int<T, overflow_policies::undefined>;
 
 template <typename Storage>
 class [[clang::preferred_name(ualign)]] basic_ualign {
@@ -2700,13 +2722,13 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    constexpr basic_ualign(basic_ualign&&) = default;
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_ualign(detail::unchecked_ualign, raw_type value)
+   constexpr basic_ualign(detail::unchecked_ualign, raw_type value) noexcept
        : raw(value) {
    }
 
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
-   consteval basic_ualign(U value) __attribute__((enable_if(
+   consteval basic_ualign(U value) noexcept __attribute__((enable_if(
       detail::valid_ualign_source<raw_type>(value),
       "alignment must fit storage and be a power of two"
    )))
@@ -2728,16 +2750,16 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    }
 
    constexpr auto
-   operator=(basic_ualign const&) -> basic_ualign& = default;
+   operator=(basic_ualign const&) noexcept -> basic_ualign& = default;
 
    constexpr auto
-   operator=(basic_ualign&&) -> basic_ualign& = default;
+   operator=(basic_ualign&&) noexcept -> basic_ualign& = default;
 
    template <is_raw_integral U>
       requires(is_safe_arithmetic_conversion<raw_type, U>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr
-   operator U() const {
+   operator U() const noexcept {
       return U(raw);
    }
 
@@ -2747,14 +2769,14 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator U() const {
+   operator U() const noexcept {
       return U(raw);
    }
 
    template <is_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<=>(basic_ualign lhs, U rhs) {
+   operator<=>(basic_ualign lhs, U rhs) noexcept {
       using raw_rhs = raw_arithmetic_type<U>;
       if constexpr (is_signed_integral<raw_rhs>) {
          return detail::raw_mixed_integral_spaceship(
@@ -2769,7 +2791,7 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    template <is_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(basic_ualign lhs, U rhs) -> bool {
+   operator==(basic_ualign lhs, U rhs) noexcept -> bool {
       using raw_rhs = raw_arithmetic_type<U>;
       if constexpr (is_signed_integral<raw_rhs>) {
          return detail::raw_mixed_integral_equals(
@@ -2801,14 +2823,17 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    template <is_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr basic_ualign
-   multiply(U value) const __attribute__((enable_if(
-      !detail::positive_power_of_two(value), "multiplier must be a power of two"
-   ))) = delete;
+   multiply(U value) const noexcept(!__has_feature(cxx_exceptions))
+      __attribute__((enable_if(
+         !detail::positive_power_of_two(value),
+         "multiplier must be a power of two"
+      ))) = delete;
 
    template <is_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U value) const -> basic_ualign {
+   multiply(U value) const noexcept(!__has_feature(cxx_exceptions))
+      -> basic_ualign {
       detail::assert_positive_power_of_two(value);
       auto const result = raw * make_raw_arithmetic(value);
       detail::assert_valid_ualign_source<raw_type>(result);
@@ -2818,14 +2843,16 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    template <is_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr basic_ualign
-   divide_by(U value) const __attribute__((enable_if(
-      !detail::positive_power_of_two(value), "divisor must be a power of two"
-   ))) = delete;
+   divide_by(U value) const noexcept(!__has_feature(cxx_exceptions))
+      __attribute__((enable_if(
+         !detail::positive_power_of_two(value), "divisor must be a power of two"
+      ))) = delete;
 
    template <is_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U value) const -> basic_ualign {
+   divide_by(U value) const noexcept(!__has_feature(cxx_exceptions))
+      -> basic_ualign {
       detail::assert_positive_power_of_two(value);
       auto const result = raw / make_raw_arithmetic(value);
       detail::assert_valid_ualign_source<raw_type>(result);
@@ -2835,21 +2862,22 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    template <is_unsigned_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+(basic_ualign lhs, U rhs) -> basic_ualign {
+   operator+(basic_ualign lhs, U rhs) noexcept -> basic_ualign {
       return lhs.add(rhs);
    }
 
    template <is_unsigned_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+(U lhs, basic_ualign rhs) -> basic_ualign {
+   operator+(U lhs, basic_ualign rhs) noexcept(!__has_feature(cxx_exceptions))
+      -> basic_ualign {
       return rhs.add(lhs);
    }
 
    template <is_unsigned_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+=(basic_ualign& lhs, U rhs) -> basic_ualign& {
+   operator+=(basic_ualign& lhs, U rhs) noexcept -> basic_ualign& {
       lhs = lhs.add(rhs);
       return lhs;
    }
@@ -2857,14 +2885,15 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    template <is_unsigned_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-(basic_ualign lhs, U rhs) -> basic_ualign {
+   operator-(basic_ualign lhs, U rhs) noexcept(!__has_feature(cxx_exceptions))
+      -> basic_ualign {
       return lhs.subtract_by(rhs);
    }
 
    template <is_unsigned_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-=(basic_ualign& lhs, U rhs) -> basic_ualign& {
+   operator-=(basic_ualign& lhs, U rhs) noexcept -> basic_ualign& {
       lhs = lhs.subtract_by(rhs);
       return lhs;
    }
@@ -2872,21 +2901,22 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    template <is_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*(basic_ualign lhs, U rhs) -> basic_ualign {
+   operator*(basic_ualign lhs, U rhs) noexcept(!__has_feature(cxx_exceptions))
+      -> basic_ualign {
       return lhs.multiply(rhs);
    }
 
    template <is_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*(U lhs, basic_ualign rhs) -> basic_ualign {
+   operator*(U lhs, basic_ualign rhs) noexcept -> basic_ualign {
       return rhs.multiply(lhs);
    }
 
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*=(basic_ualign& lhs, U rhs) -> basic_ualign& {
+   operator*=(basic_ualign& lhs, U rhs) noexcept -> basic_ualign& {
       lhs = lhs.multiply(rhs);
       return lhs;
    }
@@ -2894,14 +2924,16 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    template <is_integral U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/(basic_ualign lhs, U rhs) -> basic_ualign {
+   operator/(basic_ualign lhs, U rhs) noexcept(!__has_feature(cxx_exceptions))
+      -> basic_ualign {
       return lhs.divide_by(rhs);
    }
 
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/=(basic_ualign& lhs, U rhs) -> basic_ualign& {
+   operator/=(basic_ualign& lhs, U rhs) noexcept(!__has_feature(cxx_exceptions))
+      -> basic_ualign& {
       lhs = lhs.divide_by(rhs);
       return lhs;
    }
@@ -2921,8 +2953,9 @@ namespace cat {
 
 template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy, quantity>::undef() & -> overflow_reference<
-   basic_int<T, overflow_policy, quantity>, overflow_policies::undefined> {
+basic_int<T, overflow_policy, quantity>::undef() & noexcept
+   -> overflow_reference<
+      basic_int<T, overflow_policy, quantity>, overflow_policies::undefined> {
    return overflow_reference<
       basic_int<T, overflow_policy, quantity>, overflow_policies::undefined>{
       *this
@@ -2931,9 +2964,10 @@ basic_int<T, overflow_policy, quantity>::undef() & -> overflow_reference<
 
 template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy, quantity>::undef() const& -> overflow_reference<
-   basic_int<T, overflow_policy, quantity> const,
-   overflow_policies::undefined> {
+basic_int<T, overflow_policy, quantity>::undef() const& noexcept
+   -> overflow_reference<
+      basic_int<T, overflow_policy, quantity> const,
+      overflow_policies::undefined> {
    return overflow_reference<
       basic_int<T, overflow_policy, quantity> const,
       overflow_policies::undefined>{*this};
@@ -2941,16 +2975,18 @@ basic_int<T, overflow_policy, quantity>::undef() const& -> overflow_reference<
 
 template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy, quantity>::wrap() & -> overflow_reference<
-   basic_int<T, overflow_policy, quantity>, overflow_policies::wrap> {
+basic_int<T, overflow_policy, quantity>::wrap() & noexcept
+   -> overflow_reference<
+      basic_int<T, overflow_policy, quantity>, overflow_policies::wrap> {
    return overflow_reference<
       basic_int<T, overflow_policy, quantity>, overflow_policies::wrap>{*this};
 }
 
 template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy, quantity>::wrap() const& -> overflow_reference<
-   basic_int<T, overflow_policy, quantity> const, overflow_policies::wrap> {
+basic_int<T, overflow_policy, quantity>::wrap() const& noexcept
+   -> overflow_reference<
+      basic_int<T, overflow_policy, quantity> const, overflow_policies::wrap> {
    return overflow_reference<
       basic_int<T, overflow_policy, quantity> const, overflow_policies::wrap>{
       *this
@@ -2959,7 +2995,7 @@ basic_int<T, overflow_policy, quantity>::wrap() const& -> overflow_reference<
 
 template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy, quantity>::sat() & -> overflow_reference<
+basic_int<T, overflow_policy, quantity>::sat() & noexcept -> overflow_reference<
    basic_int<T, overflow_policy, quantity>, overflow_policies::saturate> {
    return overflow_reference<
       basic_int<T, overflow_policy, quantity>, overflow_policies::saturate>{
@@ -2969,8 +3005,10 @@ basic_int<T, overflow_policy, quantity>::sat() & -> overflow_reference<
 
 template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
-basic_int<T, overflow_policy, quantity>::sat() const& -> overflow_reference<
-   basic_int<T, overflow_policy, quantity> const, overflow_policies::saturate> {
+basic_int<T, overflow_policy, quantity>::sat() const& noexcept
+   -> overflow_reference<
+      basic_int<T, overflow_policy, quantity> const,
+      overflow_policies::saturate> {
    return overflow_reference<
       basic_int<T, overflow_policy, quantity> const,
       overflow_policies::saturate>{*this};
@@ -3008,7 +3046,7 @@ basic_intptr :
    template <is_integral U>
       requires(is_integral<Storage>)
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_intptr(U other) __attribute__((enable_if(
+   constexpr basic_intptr(U other) noexcept __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<Storage>(other),
       "value is out of range for implicit conversion to this pointer "
       "integer"
@@ -3019,7 +3057,7 @@ basic_intptr :
    template <is_integral U>
       requires(is_integral<Storage> && policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
-   consteval basic_intptr(U other) __attribute__((enable_if(
+   consteval basic_intptr(U other) noexcept __attribute__((enable_if(
       !detail::raw_source_fits_implicit_storage<Storage>(other),
       "Value is out of range for conversion to this pointer "
       "integer!"
@@ -3031,12 +3069,12 @@ basic_intptr :
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit(!is_safe_arithmetic_conversion<U, Storage>) basic_intptr(
       U other
-   )
+   ) noexcept
        : raw(make_raw_arithmetic(other)) {
    }
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_intptr(T* _Nullable p_input)
+   constexpr basic_intptr(T* _Nullable p_input) noexcept
        : raw(__builtin_bit_cast(Storage, p_input)) {
    }
 
@@ -3046,21 +3084,21 @@ basic_intptr :
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit(policy != other_policy) basic_intptr(
       basic_intptr<T, U, other_policy> other
-   )
+   ) noexcept
        : raw(other.raw) {
    }
 
    // Only allow casting back into the original pointer type.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator T* _Nullable() {
+   operator T* _Nullable() noexcept {
       return __builtin_bit_cast(T*, raw);
    }
 
    // Only allow casting back into the original pointer type.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator T* _Nullable() const {
+   operator T* _Nullable() const noexcept {
       return __builtin_bit_cast(T const*, raw);
    }
 
@@ -3069,7 +3107,7 @@ basic_intptr :
    // disable this to disambiguate.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator T const* _Nullable() const
+   operator T const* _Nullable() const noexcept
       requires(!is_same<T*, T const*>)
    {
       return __builtin_bit_cast(T const*, raw);
@@ -3077,21 +3115,22 @@ basic_intptr :
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator Storage() const {
+   operator Storage() const noexcept {
       return raw;
    }
 
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit(!is_safe_arithmetic_conversion<Storage, U>)
-   operator U() const {
+   operator U() const noexcept {
       return static_cast<U>(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator*() const -> decltype(auto)  // T& errors even when `T` is void, even
-                                        // with the constraint. Deduce instead.
+   operator*() const noexcept
+      -> decltype(auto)  // T& errors even when `T` is void, even
+                         // with the constraint. Deduce instead.
       requires(!is_void<T>)
    {
       return *get();
@@ -3099,18 +3138,19 @@ basic_intptr :
 
    [[nodiscard, gnu::always_inline, gnu::nodebug, gnu::returns_nonnull]]
    constexpr auto
-   operator->() const -> T* _Nonnull requires(!is_void<T>) { return get(); }
+   operator->() const noexcept
+      -> T* _Nonnull requires(!is_void<T>) { return get(); }
 
    constexpr auto operator=(basic_intptr const&) -> basic_intptr& = default;
 
    constexpr auto
-   operator=(basic_intptr&&) -> basic_intptr& = default;
+   operator=(basic_intptr&&) noexcept -> basic_intptr& = default;
 
    template <is_integral U>
       requires(is_safe_arithmetic_conversion<U, Storage>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> basic_intptr& {
+   operator=(U operand) noexcept -> basic_intptr& {
       raw = make_raw_arithmetic(operand);
       return *this;
    }
@@ -3121,7 +3161,7 @@ basic_intptr :
       requires(is_safe_arithmetic_comparison<Storage, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<=>(basic_intptr lhs, U rhs) {
+   operator<=>(basic_intptr lhs, U rhs) noexcept {
       return lhs.raw <=> make_raw_arithmetic(rhs);
    }
 
@@ -3129,7 +3169,7 @@ basic_intptr :
       requires(is_safe_arithmetic_comparison<Storage, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(basic_intptr lhs, U rhs) -> bool {
+   operator==(basic_intptr lhs, U rhs) noexcept -> bool {
       return lhs.raw == make_raw_arithmetic(rhs);
    }
 
@@ -3143,7 +3183,7 @@ basic_intptr :
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<=>(basic_intptr lhs, U rhs) {
+   operator<=>(basic_intptr lhs, U rhs) noexcept {
       return detail::raw_mixed_integral_spaceship(
          lhs.raw, make_raw_arithmetic(rhs)
       );
@@ -3156,28 +3196,28 @@ basic_intptr :
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(basic_intptr lhs, U rhs) -> bool {
+   operator==(basic_intptr lhs, U rhs) noexcept -> bool {
       return detail::raw_mixed_integral_equals(
          lhs.raw, make_raw_arithmetic(rhs)
       );
    }
 
    constexpr auto
-   get() const -> T* _Nullable {
+   get() const noexcept -> T* _Nullable {
       return __builtin_bit_cast(T*, raw);
    }
 
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U operand) const -> basic_intptr {
+   add(U operand) const noexcept -> basic_intptr {
       return basic_intptr(raw + make_raw_arithmetic(operand));
    }
 
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U* _Nullable p_operand) const -> U* _Nullable {
+   add(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return basic_intptr<U, Storage, overflow_policy>(p_operand)
          .add(*this)
          .get();
@@ -3190,7 +3230,8 @@ basic_intptr :
    // this is `uintptr`, perform a simple subtraction.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(basic_intptr rhs) const -> basic_int<Storage, overflow_policy>
+   subtract_by(basic_intptr rhs) const noexcept
+      -> basic_int<Storage, overflow_policy>
       requires(is_unsigned_integral<Storage>)
    {
       return basic_int<Storage, overflow_policy>(raw - rhs.raw);
@@ -3200,7 +3241,8 @@ basic_intptr :
    // `Storage`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(basic_intptr rhs) const -> basic_int<Storage, overflow_policy>
+   subtract_by(basic_intptr rhs) const noexcept
+      -> basic_int<Storage, overflow_policy>
       requires(is_signed_integral<Storage>)
    {
       return basic_int<Storage, overflow_policy>(raw - rhs.raw);
@@ -3210,7 +3252,7 @@ basic_intptr :
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const -> basic_intptr {
+   subtract_by(U operand) const noexcept -> basic_intptr {
       return basic_intptr(raw - make_raw_arithmetic(operand));
    }
 
@@ -3219,7 +3261,7 @@ basic_intptr :
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U* _Nullable p_operand) const -> U* _Nullable {
+   subtract_by(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return basic_intptr<U, Storage, overflow_policy>(p_operand)
          .subtract_by(*this)
          .get();
@@ -3228,7 +3270,7 @@ basic_intptr :
    template <is_arithmetic U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U operand) const {
+   subtract_from(U operand) const noexcept {
       return operand - raw;
    }
 
@@ -3237,7 +3279,7 @@ basic_intptr :
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U* _Nullable p_operand) const -> U* _Nullable {
+   subtract_from(U* _Nullable p_operand) const noexcept -> U* _Nullable {
       return basic_intptr<U, Storage, overflow_policy>(p_operand)
          .subtract_by(raw)
          .get();
@@ -3251,14 +3293,14 @@ basic_intptr :
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const -> basic_intptr {
+   multiply(U operand) const noexcept -> basic_intptr {
       return basic_intptr(raw * make_raw_arithmetic(operand));
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U* _Nullable p_operand) const -> basic_intptr {
+   multiply(U* _Nullable p_operand) const noexcept -> basic_intptr {
       return basic_intptr(
          raw * basic_intptr<U, Storage, overflow_policy>(p_operand).raw
       );
@@ -3267,14 +3309,14 @@ basic_intptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const -> basic_intptr {
+   divide_by(U operand) const noexcept -> basic_intptr {
       return basic_intptr(raw / make_raw_arithmetic(operand));
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U* _Nullable p_operand) const -> basic_intptr {
+   divide_by(U* _Nullable p_operand) const noexcept -> basic_intptr {
       return this->divide_by(
          basic_intptr<U, Storage, overflow_policy>(p_operand)
       );
@@ -3283,14 +3325,14 @@ basic_intptr :
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U operand) const -> basic_intptr {
+   divide_into(U operand) const noexcept -> basic_intptr {
       return basic_intptr(make_raw_arithmetic(operand).divide_into(raw));
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U* _Nullable p_operand) const -> basic_intptr {
+   divide_into(U* _Nullable p_operand) const noexcept -> basic_intptr {
       return basic_intptr<U, Storage, overflow_policy>(p_operand).divide_into(
          raw
       );
@@ -3302,7 +3344,7 @@ basic_intptr :
       requires(is_unsigned_integral<Storage>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U other) const -> basic_intptr {
+   bit_and(U other) const noexcept -> basic_intptr {
       return basic_intptr(raw & make_raw_arithmetic(other));
    }
 
@@ -3310,7 +3352,7 @@ basic_intptr :
       requires(is_unsigned_integral<Storage>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(U* _Nullable p_operand) const -> basic_intptr {
+   bit_and(U* _Nullable p_operand) const noexcept -> basic_intptr {
       return this->bit_and(
          basic_intptr<U, Storage, overflow_policy>(p_operand)
       );
@@ -3321,7 +3363,7 @@ basic_intptr :
       requires(is_unsigned_integral<Storage>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(basic_intptr self, U operand) const -> basic_intptr {
+   bit_or(basic_intptr self, U operand) const noexcept -> basic_intptr {
       return basic_intptr(self.raw | make_raw_arithmetic(operand));
    }
 
@@ -3329,21 +3371,21 @@ basic_intptr :
       requires(is_unsigned_integral<Storage>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(U* _Nullable p_operand) const -> basic_intptr {
+   bit_or(U* _Nullable p_operand) const noexcept -> basic_intptr {
       return this->bit_or(basic_intptr<U, Storage, overflow_policy>(p_operand));
    }
 
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U operand) const -> basic_intptr {
+   modulo_by(U operand) const noexcept -> basic_intptr {
       return raw % make_raw_arithmetic(operand);
    }
 
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(U* _Nullable p_operand) const -> basic_intptr {
+   modulo_by(U* _Nullable p_operand) const noexcept -> basic_intptr {
       return this->modulo_by(
          basic_intptr<U, Storage, overflow_policy>(p_operand)
       );
@@ -3352,7 +3394,7 @@ basic_intptr :
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_into(U operand) const -> basic_intptr {
+   modulo_into(U operand) const noexcept -> basic_intptr {
       return make_raw_arithmetic(operand) % raw;
    }
 
@@ -3361,7 +3403,7 @@ basic_intptr :
       requires(is_unsigned_integral<Storage>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> basic_intptr {
+   shift_left_by(U operand) const noexcept -> basic_intptr {
       return static_cast<Storage>(raw << make_raw_arithmetic(operand));
    }
 
@@ -3369,7 +3411,7 @@ basic_intptr :
       requires(is_unsigned_integral<Storage> && is_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_into(U other) const -> U {
+   shift_left_into(U other) const noexcept -> U {
       return other << raw;
    }
 
@@ -3378,7 +3420,7 @@ basic_intptr :
       requires(is_unsigned_integral<Storage>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> basic_intptr {
+   shift_right_by(U operand) const noexcept -> basic_intptr {
       return static_cast<Storage>(raw >> make_raw_arithmetic(operand));
    }
 
@@ -3386,72 +3428,73 @@ basic_intptr :
       requires(is_unsigned_integral<Storage> && is_integral<T>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_into(U other) const -> U {
+   shift_right_into(U other) const noexcept -> U {
       return other >> raw;
    }
 
    // Generate `operator~`. Only available for unsigned pointer storage.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_complement() const -> basic_intptr
+   bit_complement() const noexcept -> basic_intptr
       requires(is_unsigned_integral<Storage>)
    {
       return ~(raw);
    }
 
    constexpr auto
-   undef() & -> overflow_reference<
+   undef() & noexcept -> overflow_reference<
       basic_intptr<T, Storage, overflow_policy>, overflow_policies::undefined>;
 
    constexpr auto
-   undef() const& -> overflow_reference<
+   undef() const& noexcept -> overflow_reference<
       basic_intptr<T, Storage, overflow_policy> const,
       overflow_policies::undefined>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && -> basic_intptr<T, Storage, overflow_policies::undefined> {
+   undef() && noexcept
+      -> basic_intptr<T, Storage, overflow_policies::undefined> {
       return basic_intptr<T, Storage, overflow_policies::undefined>(raw);
    }
 
    constexpr auto
-   wrap() & -> overflow_reference<
+   wrap() & noexcept -> overflow_reference<
       basic_intptr<T, Storage, overflow_policy>, overflow_policies::wrap>;
 
    constexpr auto
-   wrap() const& -> overflow_reference<
+   wrap() const& noexcept -> overflow_reference<
       basic_intptr<T, Storage, overflow_policy> const, overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && -> basic_intptr<T, Storage, overflow_policies::wrap> {
+   wrap() && noexcept -> basic_intptr<T, Storage, overflow_policies::wrap> {
       return basic_intptr<T, Storage, overflow_policies::wrap>(raw);
    }
 
    constexpr auto
-   sat() & -> overflow_reference<
+   sat() & noexcept -> overflow_reference<
       basic_intptr<T, Storage, overflow_policy>, overflow_policies::saturate>;
 
    constexpr auto
-   sat() const& -> overflow_reference<
+   sat() const& noexcept -> overflow_reference<
       basic_intptr<T, Storage, overflow_policy> const,
       overflow_policies::saturate>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && -> basic_intptr<T, Storage, overflow_policies::saturate> {
+   sat() && noexcept -> basic_intptr<T, Storage, overflow_policies::saturate> {
       return basic_intptr<T, Storage, overflow_policies::saturate>(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   min() -> basic_intptr {
+   min() noexcept -> basic_intptr {
       return limits<basic_intptr<T, Storage, overflow_policy>>::min();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   max() -> basic_intptr {
+   max() noexcept -> basic_intptr {
       return limits<basic_intptr<T, Storage, overflow_policy>>::max();
    }
 };
@@ -3468,8 +3511,9 @@ basic_intptr(T* _Nonnull) -> basic_intptr<T, __UINTPTR_TYPE__>;
 template <typename T, typename Storage, overflow_policies overflow_policy>
    requires(sizeof(Storage) == sizeof(void*))
 constexpr auto
-basic_intptr<T, Storage, overflow_policy>::undef() & -> overflow_reference<
-   basic_intptr<T, Storage, overflow_policy>, overflow_policies::undefined> {
+basic_intptr<T, Storage, overflow_policy>::undef() & noexcept
+   -> overflow_reference<
+      basic_intptr<T, Storage, overflow_policy>, overflow_policies::undefined> {
    return overflow_reference<
       basic_intptr<T, Storage, overflow_policy>, overflow_policies::undefined>{
       *this
@@ -3479,9 +3523,10 @@ basic_intptr<T, Storage, overflow_policy>::undef() & -> overflow_reference<
 template <typename T, typename Storage, overflow_policies overflow_policy>
    requires(sizeof(Storage) == sizeof(void*))
 constexpr auto
-basic_intptr<T, Storage, overflow_policy>::undef() const& -> overflow_reference<
-   basic_intptr<T, Storage, overflow_policy> const,
-   overflow_policies::undefined> {
+basic_intptr<T, Storage, overflow_policy>::undef() const& noexcept
+   -> overflow_reference<
+      basic_intptr<T, Storage, overflow_policy> const,
+      overflow_policies::undefined> {
    return overflow_reference<
       basic_intptr<T, Storage, overflow_policy> const,
       overflow_policies::undefined>{*this};
@@ -3490,8 +3535,9 @@ basic_intptr<T, Storage, overflow_policy>::undef() const& -> overflow_reference<
 template <typename T, typename Storage, overflow_policies overflow_policy>
    requires(sizeof(Storage) == sizeof(void*))
 constexpr auto
-basic_intptr<T, Storage, overflow_policy>::wrap() & -> overflow_reference<
-   basic_intptr<T, Storage, overflow_policy>, overflow_policies::wrap> {
+basic_intptr<T, Storage, overflow_policy>::wrap() & noexcept
+   -> overflow_reference<
+      basic_intptr<T, Storage, overflow_policy>, overflow_policies::wrap> {
    return overflow_reference<
       basic_intptr<T, Storage, overflow_policy>, overflow_policies::wrap>{
       *this
@@ -3501,8 +3547,10 @@ basic_intptr<T, Storage, overflow_policy>::wrap() & -> overflow_reference<
 template <typename T, typename Storage, overflow_policies overflow_policy>
    requires(sizeof(Storage) == sizeof(void*))
 constexpr auto
-basic_intptr<T, Storage, overflow_policy>::wrap() const& -> overflow_reference<
-   basic_intptr<T, Storage, overflow_policy> const, overflow_policies::wrap> {
+basic_intptr<T, Storage, overflow_policy>::wrap() const& noexcept
+   -> overflow_reference<
+      basic_intptr<T, Storage, overflow_policy> const,
+      overflow_policies::wrap> {
    return overflow_reference<
       basic_intptr<T, Storage, overflow_policy> const, overflow_policies::wrap>{
       *this
@@ -3512,8 +3560,9 @@ basic_intptr<T, Storage, overflow_policy>::wrap() const& -> overflow_reference<
 template <typename T, typename Storage, overflow_policies overflow_policy>
    requires(sizeof(Storage) == sizeof(void*))
 constexpr auto
-basic_intptr<T, Storage, overflow_policy>::sat() & -> overflow_reference<
-   basic_intptr<T, Storage, overflow_policy>, overflow_policies::saturate> {
+basic_intptr<T, Storage, overflow_policy>::sat() & noexcept
+   -> overflow_reference<
+      basic_intptr<T, Storage, overflow_policy>, overflow_policies::saturate> {
    return overflow_reference<
       basic_intptr<T, Storage, overflow_policy>, overflow_policies::saturate>{
       *this
@@ -3523,9 +3572,10 @@ basic_intptr<T, Storage, overflow_policy>::sat() & -> overflow_reference<
 template <typename T, typename Storage, overflow_policies overflow_policy>
    requires(sizeof(Storage) == sizeof(void*))
 constexpr auto
-basic_intptr<T, Storage, overflow_policy>::sat() const& -> overflow_reference<
-   basic_intptr<T, Storage, overflow_policy> const,
-   overflow_policies::saturate> {
+basic_intptr<T, Storage, overflow_policy>::sat() const& noexcept
+   -> overflow_reference<
+      basic_intptr<T, Storage, overflow_policy> const,
+      overflow_policies::saturate> {
    return overflow_reference<
       basic_intptr<T, Storage, overflow_policy> const,
       overflow_policies::saturate>{*this};
@@ -3574,7 +3624,7 @@ basic_idx :
    // `explicit_word_for_index_ctor` types `explicit`.
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr basic_idx(U other) __attribute__((enable_if(
+   constexpr basic_idx(U other) noexcept __attribute__((enable_if(
       detail::raw_source_fits_implicit_storage<raw_type>(other),
       "Value is out of range for conversion to `cat::idx`!"
    )))
@@ -3584,7 +3634,7 @@ basic_idx :
    template <is_integral U>
       requires(policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
-   consteval basic_idx(U other) __attribute__((enable_if(
+   consteval basic_idx(U other) noexcept __attribute__((enable_if(
       !detail::raw_source_fits_implicit_storage<raw_type>(other),
       "Value is out of range for conversion to `cat::idx`!"
    ))) = delete;
@@ -3597,7 +3647,7 @@ basic_idx :
    constexpr explicit(
       !is_safe_arithmetic_conversion<U, raw_type>
       || detail::explicit_word_for_index_ctor<remove_cvref<U>>
-   ) basic_idx(U other)
+   ) basic_idx(U other) noexcept
        : raw(static_cast<__SIZE_TYPE__>(make_raw_arithmetic(other))) {
    }
 
@@ -3611,7 +3661,7 @@ basic_idx :
    // Conversions to signed integers smaller than `basic_idx` are explicit.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit(sizeof(raw_type) > sizeof(U))
-   operator U() const {
+   operator U() const noexcept {
       return static_cast<U>(raw);
    }
 
@@ -3619,14 +3669,14 @@ basic_idx :
    template <is_same<__SIZE_TYPE__> U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr
-   operator U() const {
+   operator U() const noexcept {
       return raw;
    }
 
    constexpr auto
-   operator=(basic_idx const&) -> basic_idx& = default;
+   operator=(basic_idx const&) noexcept -> basic_idx& = default;
    constexpr auto
-   operator=(basic_idx&&) -> basic_idx& = default;
+   operator=(basic_idx&&) noexcept -> basic_idx& = default;
 
    // `basic_idx` can safely compare against any other integer type, including
    // `iword`. Negative right-hand operands compare strictly less than any
@@ -3634,7 +3684,7 @@ basic_idx :
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator<=>(U rhs) const {
+   operator<=>(U rhs) const noexcept {
       return detail::raw_mixed_integral_spaceship(
          raw, make_raw_arithmetic(rhs)
       );
@@ -3643,7 +3693,7 @@ basic_idx :
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(basic_idx lhs, U rhs) -> bool {
+   operator==(basic_idx lhs, U rhs) noexcept -> bool {
       return detail::raw_mixed_integral_equals(
          lhs.raw, make_raw_arithmetic(rhs)
       );
@@ -3653,7 +3703,7 @@ basic_idx :
    template <is_unsigned_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(T other) const -> detail::promoted_type<basic_idx<policy>, T> {
+   add(T other) const noexcept -> detail::promoted_type<basic_idx<policy>, T> {
       using result = detail::promoted_type<basic_idx<policy>, T>;
       using raw_result = raw_arithmetic_type<result>;
       return result(
@@ -3667,7 +3717,7 @@ basic_idx :
    template <is_signed_integral Signed>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_int<make_signed_type<__SIZE_TYPE__>, policy>
-   add(Signed other) const {
+   add(Signed other) const noexcept {
       // Return an `iword`.
       return basic_int<make_signed_type<__SIZE_TYPE__>, policy>(
          raw + make_raw_arithmetic(other)
@@ -3678,7 +3728,7 @@ basic_idx :
       requires(policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_idx
-   operator+(basic_idx self, Signed other)
+   operator+(basic_idx self, Signed other) noexcept
       __attribute__((enable_if(other >= 0, ""))) {
       return basic_idx(self.raw + make_raw_arithmetic(other));
    }
@@ -3687,7 +3737,7 @@ basic_idx :
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(T* _Nullable p_other) const -> T* _Nullable {
+   add(T* _Nullable p_other) const noexcept -> T* _Nullable {
       return p_other + raw;
    }
 
@@ -3699,7 +3749,7 @@ basic_idx :
       requires(!is_same<remove_cvref<T>, basic_idx>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(T other) const -> conditional<
+   subtract_by(T other) const noexcept -> conditional<
       policy == overflow_policies::undefined, signed_distance, basic_idx> {
       using enum overflow_policies;
       auto const rhs_raw = make_raw_arithmetic(other);
@@ -3717,7 +3767,7 @@ basic_idx :
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(basic_idx other) const -> conditional<
+   subtract_by(basic_idx other) const noexcept -> conditional<
       policy == overflow_policies::undefined, signed_distance, basic_idx> {
       using enum overflow_policies;
       if constexpr (policy == undefined) {
@@ -3738,7 +3788,7 @@ basic_idx :
    template <is_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_idx
-   operator-(basic_idx self, T other) __attribute__((enable_if(
+   operator-(basic_idx self, T other) noexcept __attribute__((enable_if(
       policy == overflow_policies::undefined && other >= 0 && self.raw >= other,
       ""
    ))) {
@@ -3749,7 +3799,7 @@ basic_idx :
       requires(policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_idx
-   operator-(basic_idx self, Signed other)
+   operator-(basic_idx self, Signed other) noexcept
       __attribute__((enable_if(other < 0, ""))) {
       return basic_idx(self.raw - make_raw_arithmetic(other));
    }
@@ -3757,7 +3807,7 @@ basic_idx :
    template <is_arithmetic U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U other) const {
+   subtract_from(U other) const noexcept {
       return other - raw;
    }
 
@@ -3765,7 +3815,7 @@ basic_idx :
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(T* _Nullable p_other) const -> T* _Nullable {
+   subtract_from(T* _Nullable p_other) const noexcept -> T* _Nullable {
       return p_other - raw;
    }
 
@@ -3795,7 +3845,7 @@ basic_idx :
    template <is_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(T other) const -> basic_idx {
+   multiply(T other) const noexcept -> basic_idx {
       return basic_idx(
          static_cast<signed long long>(raw)
          * static_cast<signed long long>(make_raw_arithmetic(other))
@@ -3806,7 +3856,7 @@ basic_idx :
       requires(policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_idx
-   operator*(basic_idx self, Signed other)
+   operator*(basic_idx self, Signed other) noexcept
       __attribute__((enable_if(other >= 0, ""))) {
       return basic_idx(self.raw * make_raw_arithmetic(other));
    }
@@ -3815,7 +3865,7 @@ basic_idx :
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(T* _Nullable p_other) const -> T* _Nullable {
+   multiply(T* _Nullable p_other) const noexcept -> T* _Nullable {
       return p_other * raw;
    }
 
@@ -3830,14 +3880,14 @@ basic_idx :
    template <is_unsigned_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(T other) const -> basic_idx {
+   divide_by(T other) const noexcept -> basic_idx {
       return basic_idx(raw / make_raw_arithmetic(other));
    }
 
    template <is_signed_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(T other) const -> signed_distance {
+   divide_by(T other) const noexcept -> signed_distance {
       return signed_distance(
          static_cast<signed long long>(raw)
          / static_cast<signed long long>(make_raw_arithmetic(other))
@@ -3848,7 +3898,7 @@ basic_idx :
       requires(policy == overflow_policies::undefined)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_idx
-   operator/(basic_idx self, Signed other)
+   operator/(basic_idx self, Signed other) noexcept
       __attribute__((enable_if(other >= 0, ""))) {
       return basic_idx(self.raw / make_raw_arithmetic(other));
    }
@@ -3863,14 +3913,14 @@ basic_idx :
    template <is_unsigned_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(T other) const -> T {
+   divide_into(T other) const noexcept -> T {
       return static_cast<T>(make_raw_arithmetic(other) / raw);
    }
 
    template <is_signed_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(T other) const -> signed_distance {
+   divide_into(T other) const noexcept -> signed_distance {
       return signed_distance(
          static_cast<signed long long>(make_raw_arithmetic(other))
          / static_cast<signed long long>(raw)
@@ -3881,7 +3931,7 @@ basic_idx :
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(T* _Nullable p_other) const -> T* _Nullable {
+   divide_into(T* _Nullable p_other) const noexcept -> T* _Nullable {
       return p_other / raw;
    }
 
@@ -3889,14 +3939,14 @@ basic_idx :
    template <is_unsigned_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(T other) const -> basic_idx {
+   modulo_by(T other) const noexcept -> basic_idx {
       return basic_idx(raw % make_raw_arithmetic(other));
    }
 
    template <is_signed_integral T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(T other) const -> basic_idx {
+   modulo_by(T other) const noexcept -> basic_idx {
       auto const rhs_raw = make_raw_arithmetic(other);
       auto const rhs_unsigned = static_cast<raw_type>(rhs_raw);
       auto const rhs_abs = (rhs_raw < 0) ? (-rhs_unsigned) : rhs_unsigned;
@@ -3906,7 +3956,7 @@ basic_idx :
    template <is_integral T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_into(T operand) const -> basic_idx {
+   modulo_into(T operand) const noexcept -> basic_idx {
       return make_raw_arithmetic(operand) % raw;
    }
 
@@ -3937,7 +3987,7 @@ basic_idx :
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> basic_idx {
+   shift_left_by(U operand) const noexcept -> basic_idx {
       auto const raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == overflow_policies::saturate) {
          return sat_shl(*this, raw_operand);
@@ -3955,7 +4005,7 @@ basic_idx :
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_into(U other) const -> U {
+   shift_left_into(U other) const noexcept -> U {
       return other << raw;
    }
 
@@ -3969,7 +4019,7 @@ basic_idx :
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> basic_idx {
+   shift_right_by(U operand) const noexcept -> basic_idx {
       auto const raw_operand = make_raw_arithmetic(operand);
       if constexpr (overflow_policy == overflow_policies::saturate) {
          return sat_shr(*this, raw_operand);
@@ -3987,61 +4037,61 @@ basic_idx :
    template <is_arithmetic U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_into(U other) const -> U {
+   shift_right_into(U other) const noexcept -> U {
       return other >> raw;
    }
 
    constexpr auto
-   undef() & -> overflow_reference<
+   undef() & noexcept -> overflow_reference<
       basic_idx<overflow_policy>, overflow_policies::undefined>;
 
    constexpr auto
-   undef() const& -> overflow_reference<
+   undef() const& noexcept -> overflow_reference<
       basic_idx<overflow_policy> const, overflow_policies::undefined>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && -> basic_idx<overflow_policies::undefined> {
+   undef() && noexcept -> basic_idx<overflow_policies::undefined> {
       return basic_idx<overflow_policies::undefined>(raw);
    }
 
    constexpr auto
-   wrap() & -> overflow_reference<
+   wrap() & noexcept -> overflow_reference<
       basic_idx<overflow_policy>, overflow_policies::wrap>;
 
    constexpr auto
-   wrap() const& -> overflow_reference<
+   wrap() const& noexcept -> overflow_reference<
       basic_idx<overflow_policy> const, overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && -> basic_idx<overflow_policies::wrap> {
+   wrap() && noexcept -> basic_idx<overflow_policies::wrap> {
       return basic_idx<overflow_policies::wrap>(raw);
    }
 
    constexpr auto
-   sat() & -> overflow_reference<
+   sat() & noexcept -> overflow_reference<
       basic_idx<overflow_policy>, overflow_policies::saturate>;
 
    constexpr auto
-   sat() const& -> overflow_reference<
+   sat() const& noexcept -> overflow_reference<
       basic_idx<overflow_policy> const, overflow_policies::saturate>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && -> basic_idx<overflow_policies::saturate> {
+   sat() && noexcept -> basic_idx<overflow_policies::saturate> {
       return basic_idx<overflow_policies::saturate>(raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   min() -> basic_idx {
+   min() noexcept -> basic_idx {
       return limits<basic_idx<overflow_policy>>::min();
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   max() -> basic_idx {
+   max() noexcept -> basic_idx {
       return limits<basic_idx<overflow_policy>>::max();
    }
 };
@@ -4050,7 +4100,7 @@ basic_idx :
 // niche value.
 template <overflow_policies overflow_policy>
 constexpr auto
-basic_idx_maybe_has_value(iword value) -> bool {
+basic_idx_maybe_has_value(iword value) noexcept -> bool {
    return (value.raw & limits<__SIZE_TYPE__>::high_bit) == 0u;
 }
 
@@ -4082,7 +4132,7 @@ struct default_compact_trait<basic_ualign<Storage>>
 
 template <overflow_policies overflow_policy>
 constexpr auto
-basic_idx<overflow_policy>::undef() & -> overflow_reference<
+basic_idx<overflow_policy>::undef() & noexcept -> overflow_reference<
    basic_idx<overflow_policy>, overflow_policies::undefined> {
    return overflow_reference<
       basic_idx<overflow_policy>, overflow_policies::undefined>{*this};
@@ -4090,7 +4140,7 @@ basic_idx<overflow_policy>::undef() & -> overflow_reference<
 
 template <overflow_policies overflow_policy>
 constexpr auto
-basic_idx<overflow_policy>::undef() const& -> overflow_reference<
+basic_idx<overflow_policy>::undef() const& noexcept -> overflow_reference<
    basic_idx<overflow_policy> const, overflow_policies::undefined> {
    return overflow_reference<
       basic_idx<overflow_policy> const, overflow_policies::undefined>{*this};
@@ -4098,15 +4148,15 @@ basic_idx<overflow_policy>::undef() const& -> overflow_reference<
 
 template <overflow_policies overflow_policy>
 constexpr auto
-basic_idx<overflow_policy>::wrap() & -> overflow_reference<
-   basic_idx<overflow_policy>, overflow_policies::wrap> {
+basic_idx<overflow_policy>::wrap() & noexcept
+   -> overflow_reference<basic_idx<overflow_policy>, overflow_policies::wrap> {
    return overflow_reference<
       basic_idx<overflow_policy>, overflow_policies::wrap>{*this};
 }
 
 template <overflow_policies overflow_policy>
 constexpr auto
-basic_idx<overflow_policy>::wrap() const& -> overflow_reference<
+basic_idx<overflow_policy>::wrap() const& noexcept -> overflow_reference<
    basic_idx<overflow_policy> const, overflow_policies::wrap> {
    return overflow_reference<
       basic_idx<overflow_policy> const, overflow_policies::wrap>{*this};
@@ -4114,7 +4164,7 @@ basic_idx<overflow_policy>::wrap() const& -> overflow_reference<
 
 template <overflow_policies overflow_policy>
 constexpr auto
-basic_idx<overflow_policy>::sat() & -> overflow_reference<
+basic_idx<overflow_policy>::sat() & noexcept -> overflow_reference<
    basic_idx<overflow_policy>, overflow_policies::saturate> {
    return overflow_reference<
       basic_idx<overflow_policy>, overflow_policies::saturate>{*this};
@@ -4122,7 +4172,7 @@ basic_idx<overflow_policy>::sat() & -> overflow_reference<
 
 template <overflow_policies overflow_policy>
 constexpr auto
-basic_idx<overflow_policy>::sat() const& -> overflow_reference<
+basic_idx<overflow_policy>::sat() const& noexcept -> overflow_reference<
    basic_idx<overflow_policy> const, overflow_policies::saturate> {
    return overflow_reference<
       basic_idx<overflow_policy> const, overflow_policies::saturate>{*this};
@@ -4140,7 +4190,7 @@ inline constexpr bool is_integral_detail<basic_idx<policy>> = true;
 template <overflow_policies policy, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_shl(basic_idx<policy> value, U bits) -> basic_idx<policy> {
+sat_shl(basic_idx<policy> value, U bits) noexcept -> basic_idx<policy> {
    using signed_size = make_signed_type<__SIZE_TYPE__>;
    auto const raw_bits = make_raw_arithmetic(bits);
    auto const signed_value = __builtin_bit_cast(signed_size, value.raw);
@@ -4155,7 +4205,7 @@ sat_shl(basic_idx<policy> value, U bits) -> basic_idx<policy> {
 template <overflow_policies policy, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-sat_shr(basic_idx<policy> value, U bits) -> basic_idx<policy> {
+sat_shr(basic_idx<policy> value, U bits) noexcept -> basic_idx<policy> {
    using signed_size = make_signed_type<__SIZE_TYPE__>;
    auto const raw_bits = make_raw_arithmetic(bits);
    auto const signed_value = __builtin_bit_cast(signed_size, value.raw);
@@ -4171,7 +4221,7 @@ sat_shr(basic_idx<policy> value, U bits) -> basic_idx<policy> {
 template <overflow_policies policy, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-wrap_shl(basic_idx<policy> value, U bits) -> basic_idx<policy> {
+wrap_shl(basic_idx<policy> value, U bits) noexcept -> basic_idx<policy> {
    constexpr __SIZE_TYPE__ ring_bits = (sizeof(__SIZE_TYPE__) * 8u) - 1u;
    constexpr __SIZE_TYPE__ ring_mask =
       (static_cast<__SIZE_TYPE__>(1) << ring_bits) - 1u;
@@ -4190,7 +4240,7 @@ wrap_shl(basic_idx<policy> value, U bits) -> basic_idx<policy> {
 template <overflow_policies policy, is_integral U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-wrap_shr(basic_idx<policy> value, U bits) -> basic_idx<policy> {
+wrap_shr(basic_idx<policy> value, U bits) noexcept -> basic_idx<policy> {
    constexpr __SIZE_TYPE__ ring_bits = (sizeof(__SIZE_TYPE__) * 8u) - 1u;
    constexpr __SIZE_TYPE__ ring_mask =
       (static_cast<__SIZE_TYPE__>(1) << ring_bits) - 1u;
@@ -4227,13 +4277,13 @@ struct bool2 {
    constexpr bool2() = default;
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr bool2(bool input)
+   constexpr bool2(bool input) noexcept
        : raw(static_cast<raw_type>(static_cast<unsigned char>(input))) {
    }
 
    template <is_arithmetic T>
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr explicit bool2(T input)
+   constexpr explicit bool2(T input) noexcept
        : raw(
             static_cast<raw_type>(
                make_raw_arithmetic(input) != raw_arithmetic_type<T>(0)
@@ -4245,7 +4295,7 @@ struct bool2 {
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr
-   operator bool() const {
+   operator bool() const noexcept {
       return raw != raw_type{0u};
    }
 };
@@ -4255,15 +4305,15 @@ struct bool4 {
    raw_type raw;
    constexpr bool4() = default;
 
-   constexpr bool4(bool input) : raw(input ? 1u : 0u) {
+   constexpr bool4(bool input) noexcept : raw(input ? 1u : 0u) {
    }
 
-   constexpr bool4(bool2 input) : raw(input.raw ? 1u : 0u) {
+   constexpr bool4(bool2 input) noexcept : raw(input.raw ? 1u : 0u) {
    }
 
    template <is_arithmetic T>
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr explicit bool4(T input)
+   constexpr explicit bool4(T input) noexcept
        : raw(
             static_cast<raw_type>(
                make_raw_arithmetic(input) != raw_arithmetic_type<T>(0)
@@ -4275,7 +4325,7 @@ struct bool4 {
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr
-   operator bool() const {
+   operator bool() const noexcept {
       return raw != raw_type{0u};
    }
 };
@@ -4310,20 +4360,22 @@ struct formatter<bool4, CharT>;
 
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_raw_arithmetic(bool2 value) -> bool2::raw_type {
+make_raw_arithmetic(bool2 value) noexcept -> bool2::raw_type {
    return value.raw;
 }
 
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_raw_arithmetic(bool4 value) -> bool4::raw_type {
+make_raw_arithmetic(bool4 value) noexcept -> bool4::raw_type {
    return value.raw;
 }
 
 template <is_arithmetic T, is_quantity_specifier QuantitySpecifier>
 [[nodiscard]]
 constexpr auto
-operator*(T value, [[maybe_unused]] QuantitySpecifier quantity_specifier) {
+operator*(
+   T value, [[maybe_unused]] QuantitySpecifier quantity_specifier
+) noexcept {
    if constexpr (has_quantity<T>) {
       using result_quantity = multiplied_quantity<
          arithmetic_quantity<T>, reference_quantity<QuantitySpecifier{}>>;
@@ -4336,14 +4388,16 @@ operator*(T value, [[maybe_unused]] QuantitySpecifier quantity_specifier) {
 template <is_quantity_specifier QuantitySpecifier, is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-operator*(QuantitySpecifier quantity_specifier, T value) {
+operator*(QuantitySpecifier quantity_specifier, T value) noexcept {
    return value * quantity_specifier;
 }
 
 template <is_arithmetic T, is_quantity_specifier QuantitySpecifier>
 [[nodiscard]]
 constexpr auto
-operator/(T value, [[maybe_unused]] QuantitySpecifier quantity_specifier) {
+operator/(
+   T value, [[maybe_unused]] QuantitySpecifier quantity_specifier
+) noexcept {
    using result_quantity = divided_quantity<
       arithmetic_quantity<T>, reference_quantity<QuantitySpecifier{}>>;
    return detail::attach_quantity<result_quantity{}>(value);
@@ -4352,77 +4406,77 @@ operator/(T value, [[maybe_unused]] QuantitySpecifier quantity_specifier) {
 inline namespace literals {
 inline namespace arithmetic_literals {
 consteval auto
-operator""_idx(unsigned long long input) -> cat::idx {
+operator""_idx(unsigned long long input) noexcept -> cat::idx {
    return cat::idx(input);
 }
 
 consteval auto
-operator""_i1(unsigned long long input) -> cat::int1 {
+operator""_i1(unsigned long long input) noexcept -> cat::int1 {
    return cat::int1(input);
 }
 
 consteval auto
-operator""_i2(unsigned long long input) -> cat::int2 {
+operator""_i2(unsigned long long input) noexcept -> cat::int2 {
    return cat::int2(input);
 }
 
 consteval auto
-operator""_i4(unsigned long long input) -> cat::int4 {
+operator""_i4(unsigned long long input) noexcept -> cat::int4 {
    return cat::int4(input);
 }
 
 consteval auto
-operator""_i8(unsigned long long input) -> cat::int8 {
+operator""_i8(unsigned long long input) noexcept -> cat::int8 {
    return cat::int8(input);
 }
 
 consteval auto
-operator""_sz(unsigned long long input) -> cat::iword {
+operator""_sz(unsigned long long input) noexcept -> cat::iword {
    return cat::iword(input);
 }
 
 consteval auto
-operator""_u1(unsigned long long input) -> cat::uint1 {
+operator""_u1(unsigned long long input) noexcept -> cat::uint1 {
    return cat::uint1(input);
 }
 
 consteval auto
-operator""_u2(unsigned long long input) -> cat::uint2 {
+operator""_u2(unsigned long long input) noexcept -> cat::uint2 {
    return cat::uint2(input);
 }
 
 consteval auto
-operator""_u4(unsigned long long input) -> cat::uint4 {
+operator""_u4(unsigned long long input) noexcept -> cat::uint4 {
    return cat::uint4(input);
 }
 
 consteval auto
-operator""_u8(unsigned long long input) -> cat::uint8 {
+operator""_u8(unsigned long long input) noexcept -> cat::uint8 {
    return input;
 }
 
 consteval auto
-operator""_uz(unsigned long long input) -> cat::uword {
+operator""_uz(unsigned long long input) noexcept -> cat::uword {
    return input;
 }
 
 consteval auto
-operator""_f4(unsigned long long input) -> cat::float4 {
+operator""_f4(unsigned long long input) noexcept -> cat::float4 {
    return cat::float4(input);
 }
 
 consteval auto
-operator""_f4(long double input) -> cat::float4 {
+operator""_f4(long double input) noexcept -> cat::float4 {
    return cat::float4(input);
 }
 
 consteval auto
-operator""_f8(unsigned long long input) -> cat::float8 {
+operator""_f8(unsigned long long input) noexcept -> cat::float8 {
    return cat::float8(input);
 }
 
 consteval auto
-operator""_f8(long double input) -> cat::float8 {
+operator""_f8(long double input) noexcept -> cat::float8 {
    return cat::float8(input);
 }
 

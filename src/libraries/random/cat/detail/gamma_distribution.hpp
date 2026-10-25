@@ -42,67 +42,72 @@ class gamma_distribution {
     public:
       using distribution_type = gamma_distribution;
 
-      constexpr explicit param_type(Float alpha = 1.f, Float beta = 1.f)
+      constexpr explicit param_type(
+         Float alpha = 1.f, Float beta = 1.f
+      ) noexcept
           : m_alpha(alpha), m_beta(beta) {
       }
 
       constexpr auto
-      alpha() const -> Float {
+      alpha() const noexcept -> Float {
          return m_alpha;
       }
 
       constexpr auto
-      beta() const -> Float {
+      beta() const noexcept -> Float {
          return m_beta;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       Float m_alpha;
       Float m_beta;
    };
 
-   constexpr explicit gamma_distribution(Float alpha = 1.f, Float beta = 1.f)
+   constexpr explicit gamma_distribution(
+      Float alpha = 1.f, Float beta = 1.f
+   ) noexcept
        : m_parameter(alpha, beta) {
    }
 
-   constexpr explicit gamma_distribution(param_type const& parameter)
+   constexpr explicit gamma_distribution(param_type const& parameter) noexcept
        : m_parameter(parameter) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    constexpr auto
-   alpha() const -> Float {
+   alpha() const noexcept -> Float {
       return m_parameter.alpha();
    }
 
    constexpr auto
-   beta() const -> Float {
+   beta() const noexcept -> Float {
       return m_parameter.beta();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameter;
    }
 
    constexpr void
-   param(param_type const& parameter) {
+   param(param_type const& parameter) noexcept {
       m_parameter = parameter;
    }
 
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0.f;
    }
 
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return limits<Float>::infinity();
    }
 

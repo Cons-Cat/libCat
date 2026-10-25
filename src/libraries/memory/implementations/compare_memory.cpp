@@ -82,7 +82,7 @@ template <typename Simd>
 auto
 compare_memory_large(
    byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
-) -> std::strong_ordering {
+) noexcept(!__has_feature(cxx_exceptions)) -> std::strong_ordering {
    char const* _Nonnull p_left = reinterpret_cast<char const* _Nonnull>(p_lhs);
    char const* _Nonnull p_right = reinterpret_cast<char const* _Nonnull>(p_rhs);
 
@@ -151,7 +151,7 @@ compare_memory_large(
 auto
 compare_memory_impl(
    byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
-) -> std::strong_ordering {
+) noexcept(!__has_feature(cxx_exceptions)) -> std::strong_ordering {
    if (p_lhs == p_rhs) {
       return std::strong_ordering::equal;
    }

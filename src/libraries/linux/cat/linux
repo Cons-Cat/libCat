@@ -299,7 +299,7 @@ using map_syscall_type =
 
 auto
 // NOLINTNEXTLINE This parameter is not always pointer.
-is_positive(auto input) -> bool {
+is_positive(auto input) noexcept -> bool {
    // TODO: Use intptr for the cast.
    return __builtin_bit_cast(cat::int_fixed<sizeof(input)>, input) >= 0;
 }
@@ -323,10 +323,10 @@ struct file_descriptor {
 
    constexpr file_descriptor() = default;
 
-   constexpr file_descriptor(cat::uint4 input) : value(input) {
+   constexpr file_descriptor(cat::uint4 input) noexcept : value(input) {
    }
 
-   explicit constexpr file_descriptor(cat::int4 input) __attribute__((
+   explicit constexpr file_descriptor(cat::int4 input) noexcept __attribute__((
       enable_if(input == -1, "Only -1 is a valid negative file descriptor!")
    ))
        : value(__builtin_bit_cast(cat::uint4, input)) {
@@ -353,10 +353,10 @@ struct process_id {
 
    constexpr process_id() = default;
 
-   constexpr process_id(cat::uint4 input) : value(input) {
+   constexpr process_id(cat::uint4 input) noexcept : value(input) {
    }
 
-   constexpr process_id(cat::int4 input) __attribute__((
+   constexpr process_id(cat::int4 input) noexcept __attribute__((
       enable_if(input == -1, "only -1 is a valid negative process ID")
    ))
        : value(__builtin_bit_cast(cat::uint4, input)) {
@@ -364,7 +364,7 @@ struct process_id {
 
    [[nodiscard]]
    constexpr auto
-   operator==(process_id const&) const -> bool = default;
+   operator==(process_id const&) const noexcept -> bool = default;
 };
 
 static_assert(sizeof(process_id) == sizeof(cat::uint4));
@@ -464,68 +464,74 @@ enum class
 // reorder, hoist, and combine these calls. Use only for syscalls that have no
 // caller-observable side effects.
 [[gnu::no_sanitize_address]]
-auto syscall0(cat::iword) -> cat::iword;
+auto syscall0(cat::iword) noexcept -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto syscall1(cat::iword, cat::no_type) -> cat::iword;
+auto syscall1(cat::iword, cat::no_type) noexcept -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto syscall2(cat::iword, cat::no_type, cat::no_type) -> cat::iword;
+auto syscall2(cat::iword, cat::no_type, cat::no_type) noexcept -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto
-   syscall3(cat::iword, cat::no_type, cat::no_type, cat::no_type) -> cat::iword;
+auto syscall3(cat::iword, cat::no_type, cat::no_type, cat::no_type) noexcept
+   -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto
-   syscall4(cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type)
-      -> cat::iword;
+auto syscall4(
+   cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type
+) noexcept -> cat::iword;
 [[gnu::no_sanitize_address]]
 auto syscall5(
    cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
    cat::no_type
-) -> cat::iword;
+) noexcept -> cat::iword;
 [[gnu::no_sanitize_address]]
 auto syscall6(
    cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
    cat::no_type, cat::no_type
-) -> cat::iword;
+) noexcept -> cat::iword;
 
 // Volatile counterparts of `syscall0..6`. The compiler must emit each call
 // exactly once at its source position. Required for syscalls with externally
 // observable side effects (`write`, `mmap`, `futex`, signal delivery, etc.).
 [[gnu::no_sanitize_address]]
-auto syscall0_volatile(cat::iword) -> cat::iword;
+auto syscall0_volatile(cat::iword) noexcept -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto syscall1_volatile(cat::iword, cat::no_type) -> cat::iword;
+auto syscall1_volatile(cat::iword, cat::no_type) noexcept -> cat::iword;
 [[gnu::no_sanitize_address]]
-auto syscall2_volatile(cat::iword, cat::no_type, cat::no_type) -> cat::iword;
-[[gnu::no_sanitize_address]]
-auto syscall3_volatile(cat::iword, cat::no_type, cat::no_type, cat::no_type)
+auto syscall2_volatile(cat::iword, cat::no_type, cat::no_type) noexcept
    -> cat::iword;
+[[gnu::no_sanitize_address]]
+auto syscall3_volatile(
+   cat::iword, cat::no_type, cat::no_type, cat::no_type
+) noexcept -> cat::iword;
 [[gnu::no_sanitize_address]]
 auto syscall4_volatile(
    cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type
-) -> cat::iword;
+) noexcept -> cat::iword;
 [[gnu::no_sanitize_address]]
 auto syscall5_volatile(
    cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
    cat::no_type
-) -> cat::iword;
+) noexcept -> cat::iword;
 [[gnu::no_sanitize_address]]
 auto syscall6_volatile(
    cat::iword, cat::no_type, cat::no_type, cat::no_type, cat::no_type,
    cat::no_type, cat::no_type
-) -> cat::iword;
+) noexcept -> cat::iword;
 
 // `syscall<T>` is the default syscall wrapper. Use it for syscalls without
 // externally observable side effects.
 template <typename T, typename... Args>
 auto
-syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
+syscall(cat::iword call, Args... parameters) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> nix::scaredy_nix<T>
    requires(sizeof...(Args) < 7);
 
 // `syscall_volatile<T>` mirrors `syscall<T>` but uses the volatile asm
 // helpers. Required for side-effectful syscalls.
 template <typename T, typename... Args>
 auto
-syscall_volatile(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
+syscall_volatile(cat::iword call, Args... parameters) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> nix::scaredy_nix<T>
    requires(sizeof...(Args) < 7);
 
 [[nodiscard]]

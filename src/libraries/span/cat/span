@@ -67,7 +67,9 @@ span
    constexpr span(span<T, fixed_extent>&&) = default;
 
    // Construct a `span` as `{address, length}`.
-   constexpr span(T* _Nonnull p_in_data [[clang::lifetimebound]], idx in_length)
+   constexpr span(
+      T* _Nonnull p_in_data [[clang::lifetimebound]], idx in_length
+   ) noexcept(!__has_feature(cxx_exceptions))
        : m_p_data(p_in_data), m_size(in_length) {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(in_length == fixed_extent);
@@ -75,7 +77,8 @@ span
    }
 
    // Construct an empty `span` with `nullptr`.
-   constexpr span(decltype(nullptr)) : m_p_data(nullptr), m_size(0) {
+   constexpr span(decltype(nullptr)) noexcept(!__has_feature(cxx_exceptions))
+       : m_p_data(nullptr), m_size(0) {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(fixed_extent == 0u);
       }
@@ -86,7 +89,7 @@ span
       requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
    constexpr span(
       initializer_list<InitListValueType> initializers [[clang::lifetimebound]]
-   )
+   ) noexcept(!__has_feature(cxx_exceptions))
        : m_p_data(initializers.begin()), m_size(initializers.size()) {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(initializers.size() == fixed_extent);
@@ -102,7 +105,9 @@ span
    // Implicitly convert a contiguous container into a span. `const`-correctness
    // is managed by the deduction guides below.
    template <is_random_access U>
-   constexpr span(U& container [[clang::lifetimebound]])
+   constexpr span(U& container [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   )
       requires(is_convertible<
                  typename U::value_type (*_Nonnull)[], T (*_Nonnull)[]>)
        : m_p_data(container.data()), m_size(container.size()) {
@@ -125,9 +130,11 @@ span
               "immediately dangle!");
 
    constexpr auto
-   operator=(span<T, fixed_extent> const&) -> span<T, fixed_extent>& = default;
+   operator=(span<T, fixed_extent> const&) noexcept
+      -> span<T, fixed_extent>& = default;
    constexpr auto
-   operator=(span<T, fixed_extent>&&) -> span<T, fixed_extent>& = default;
+   operator=(span<T, fixed_extent>&&) noexcept
+      -> span<T, fixed_extent>& = default;
 
    template <is_random_access R>
       requires(
@@ -152,8 +159,9 @@ span
    template <typename InitListValueType>
       requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
    constexpr auto
-   operator=(initializer_list<InitListValueType> initializers)
-      -> span<T, fixed_extent>& {
+   operator=(initializer_list<InitListValueType> initializers) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> span<T, fixed_extent>& {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(initializers.size() == fixed_extent);
       }
@@ -166,7 +174,9 @@ span
    // is managed by the deduction guides below.
    template <is_random_access U>
    auto
-   operator=(U& container [[clang::lifetimebound]]) -> span<T, fixed_extent>&
+   operator=(U& container
+             [[clang::lifetimebound]]) noexcept(!__has_feature(cxx_exceptions))
+      -> span<T, fixed_extent>&
       requires(
          is_convertible<typename U::value_type (*_Nonnull)[], T (*_Nonnull)[]>
       )
@@ -194,21 +204,21 @@ span
    // Returns `nullptr` when this `span` is default-constructed (empty).
    [[nodiscard]]
    constexpr auto
-   data() -> T* _Nullable {
+   data() noexcept -> T* _Nullable {
       return m_p_data;
    }
 
    // Returns `nullptr` when this `span` is default-constructed (empty).
    [[nodiscard]]
    constexpr auto
-   data() const -> T const* _Nullable {
+   data() const noexcept -> T const* _Nullable {
       return m_p_data;
    }
 
    // Get the number of elements owned by this `span`.
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       if constexpr (fixed_extent == dynamic_extent) {
          return m_size;
       } else {
@@ -219,7 +229,7 @@ span
    // Get the size of the `span` in bytes.
    [[nodiscard]]
    constexpr auto
-   size_bytes() const -> idx {
+   size_bytes() const noexcept -> idx {
       return size() * sizeof(T);
    }
 
@@ -243,14 +253,15 @@ span
    // dynamic-extent span. Mirrors `std::span::last(size_type)`.
    [[nodiscard]]
    constexpr auto
-   last(idx count) -> span<T> {
+   last(idx count) noexcept(!__has_feature(cxx_exceptions)) -> span<T> {
       assert(count <= size());
       return subspan(idx(size() - count), count);
    }
 
    [[nodiscard]]
    constexpr auto
-   last(idx count) const -> span<T const> {
+   last(idx count) const noexcept(!__has_feature(cxx_exceptions))
+      -> span<T const> {
       assert(count <= size());
       return subspan(idx(size() - count), count);
    }
@@ -259,7 +270,9 @@ span
    // `dynamic_extent` the resulting span extends to the end of this one.
    [[nodiscard]]
    constexpr auto
-   subspan(idx offset, idx count = dynamic_extent) -> span<T> {
+   subspan(idx offset, idx count = dynamic_extent) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> span<T> {
       assert(offset <= size());
       if (count != dynamic_extent) {
          assert(count <= size() - offset);
@@ -271,7 +284,9 @@ span
 
    [[nodiscard]]
    constexpr auto
-   subspan(idx offset, idx count = dynamic_extent) const -> span<T const> {
+   subspan(idx offset, idx count = dynamic_extent) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> span<T const> {
       assert(offset <= size());
       if (count != dynamic_extent) {
          assert(count <= size() - offset);
@@ -287,7 +302,7 @@ span
       requires(fixed_extent == dynamic_extent || count <= fixed_extent)
    [[nodiscard]]
    constexpr auto
-   first() -> span<T, count> {
+   first() noexcept(!__has_feature(cxx_exceptions)) -> span<T, count> {
       if constexpr (fixed_extent == dynamic_extent) {
          assert(count <= size());
       }
@@ -298,7 +313,8 @@ span
       requires(fixed_extent == dynamic_extent || count <= fixed_extent)
    [[nodiscard]]
    constexpr auto
-   first() const -> span<T const, count> {
+   first() const noexcept(!__has_feature(cxx_exceptions))
+      -> span<T const, count> {
       if constexpr (fixed_extent == dynamic_extent) {
          assert(count <= size());
       }
@@ -311,7 +327,7 @@ span
       requires(fixed_extent == dynamic_extent || count <= fixed_extent)
    [[nodiscard]]
    constexpr auto
-   last() -> span<T, count> {
+   last() noexcept(!__has_feature(cxx_exceptions)) -> span<T, count> {
       if constexpr (fixed_extent == dynamic_extent) {
          assert(count <= size());
       }
@@ -322,7 +338,8 @@ span
       requires(fixed_extent == dynamic_extent || count <= fixed_extent)
    [[nodiscard]]
    constexpr auto
-   last() const -> span<T const, count> {
+   last() const noexcept(!__has_feature(cxx_exceptions))
+      -> span<T const, count> {
       if constexpr (fixed_extent == dynamic_extent) {
          assert(count <= size());
       }
@@ -339,7 +356,7 @@ span
       )
    [[nodiscard]]
    constexpr auto
-   subspan() {
+   subspan() noexcept(!__has_feature(cxx_exceptions)) {
       constexpr idx result_extent = subspan_extent<offset, count>();
       if constexpr (fixed_extent == dynamic_extent) {
          assert(offset <= size());
@@ -359,7 +376,7 @@ span
       )
    [[nodiscard]]
    constexpr auto
-   subspan() const {
+   subspan() const noexcept(!__has_feature(cxx_exceptions)) {
       constexpr idx result_extent = subspan_extent<offset, count>();
       if constexpr (fixed_extent == dynamic_extent) {
          assert(offset <= size());
@@ -375,7 +392,7 @@ span
  private:
    template <idx offset, idx count>
    static consteval auto
-   subspan_extent() -> idx {
+   subspan_extent() noexcept -> idx {
       if constexpr (count != dynamic_extent) {
          return count;
       } else if constexpr (fixed_extent != dynamic_extent) {
@@ -416,7 +433,9 @@ span(T const&) -> span<typename T::value_type const>;
 template <typename T, idx fixed_extent>
 [[nodiscard]]
 auto
-as_bytes(span<T, fixed_extent> source) noexcept {
+as_bytes(span<T, fixed_extent> source) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    constexpr idx result_extent = (fixed_extent == dynamic_extent)
                                     ? dynamic_extent
                                     : fixed_extent * sizeof(T);
@@ -433,7 +452,9 @@ template <typename T, idx fixed_extent>
    requires(!is_const<T>)
 [[nodiscard]]
 auto
-as_writable_bytes(span<T, fixed_extent> source) noexcept {
+as_writable_bytes(span<T, fixed_extent> source) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    constexpr idx result_extent = (fixed_extent == dynamic_extent)
                                     ? dynamic_extent
                                     : fixed_extent * sizeof(T);
@@ -445,20 +466,20 @@ as_writable_bytes(span<T, fixed_extent> source) noexcept {
 // Create a span between two addresses.
 template <typename T>
 constexpr auto
-make_span_between(T* _Nonnull p_start, T* _Nonnull p_end) {
+make_span_between(T* _Nonnull p_start, T* _Nonnull p_end) noexcept {
    return span(p_start, p_end - p_start);
 }
 
 namespace detail {
 template <typename T>
 constexpr auto
-maybe_span_has_value(span<T> value) -> bool {
+maybe_span_has_value(span<T> value) noexcept -> bool {
    return value.data() != nullptr;
 }
 
 template <typename T>
 constexpr auto
-maybe_span_nullopt() -> span<T> {
+maybe_span_nullopt() noexcept -> span<T> {
    return span<T>(nullptr);
 }
 }  // namespace detail
@@ -472,7 +493,7 @@ template <idx index, typename T, idx fixed_extent>
    requires(fixed_extent != dynamic_extent && index < fixed_extent)
 [[nodiscard]]
 constexpr auto
-get(span<T, fixed_extent> in_span [[clang::lifetimebound]]) -> T& {
+get(span<T, fixed_extent> in_span [[clang::lifetimebound]]) noexcept -> T& {
    return in_span.data()[index.raw];
 }
 
@@ -533,8 +554,9 @@ namespace cat {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_pointer_in_range(T const* _Nullable p_pointer, span<T const> const range)
-   -> bool {
+is_pointer_in_range(
+   T const* _Nullable p_pointer, span<T const> const range
+) noexcept -> bool {
    static_assert(
       !is_function<T>, "`is_pointer_in_range` does not accept function types."
    );
@@ -564,8 +586,9 @@ is_pointer_in_range(T const* _Nullable p_pointer, span<T const> const range)
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_memory_overlapping(span<T const> const first, span<T const> const second)
-   -> bool {
+is_memory_overlapping(
+   span<T const> const first, span<T const> const second
+) noexcept -> bool {
    return is_memory_overlapping(
       first.data(), first.size() * sizeof(T), second.data(),
       second.size() * sizeof(T)
@@ -575,7 +598,9 @@ is_memory_overlapping(span<T const> const first, span<T const> const second)
 template <typename T>
    requires(is_implicit_lifetime<T>)
 constexpr void
-copy_memory(span<T const> const source, span<T> destination) {
+copy_memory(span<T const> const source, span<T> destination) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    copy_memory(
       source.data(), destination.data(),
       (source.size() * sizeof(T)).to_idx().assert()
@@ -585,7 +610,9 @@ copy_memory(span<T const> const source, span<T> destination) {
 template <typename T>
    requires(is_implicit_lifetime<T>)
 constexpr void
-copy_memory_backward(span<T const> const source, span<T> destination) {
+copy_memory_backward(span<T const> const source, span<T> destination) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    copy_memory_backward(
       source.data(), destination.data(),
       (source.size() * sizeof(T)).to_idx().assert()

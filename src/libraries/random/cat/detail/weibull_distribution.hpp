@@ -43,67 +43,72 @@ class weibull_distribution {
     public:
       using distribution_type = weibull_distribution;
 
-      constexpr explicit param_type(Float shape = 1.f, Float scale = 1.f)
+      constexpr explicit param_type(
+         Float shape = 1.f, Float scale = 1.f
+      ) noexcept
           : m_shape(shape), m_scale(scale) {
       }
 
       constexpr auto
-      a() const -> Float {
+      a() const noexcept -> Float {
          return m_shape;
       }
 
       constexpr auto
-      b() const -> Float {
+      b() const noexcept -> Float {
          return m_scale;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       Float m_shape;
       Float m_scale;
    };
 
-   constexpr explicit weibull_distribution(Float shape = 1.f, Float scale = 1.f)
+   constexpr explicit weibull_distribution(
+      Float shape = 1.f, Float scale = 1.f
+   ) noexcept
        : m_parameter(shape, scale) {
    }
 
-   constexpr explicit weibull_distribution(param_type const& parameter)
+   constexpr explicit weibull_distribution(param_type const& parameter) noexcept
        : m_parameter(parameter) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    constexpr auto
-   a() const -> Float {
+   a() const noexcept -> Float {
       return m_parameter.a();
    }
 
    constexpr auto
-   b() const -> Float {
+   b() const noexcept -> Float {
       return m_parameter.b();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameter;
    }
 
    constexpr void
-   param(param_type const& parameter) {
+   param(param_type const& parameter) noexcept {
       m_parameter = parameter;
    }
 
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0.f;
    }
 
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return limits<Float>::infinity();
    }
 

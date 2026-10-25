@@ -9,7 +9,7 @@ nix::sys_futex(
    futex_word& futex, futex_op operation, cat::uint4 value,
    futex_timespec const* _Nullable p_timeout,
    futex_word* _Nullable p_second_futex, cat::uint4 value3
-) -> nix::scaredy_nix<cat::idx> {
+) noexcept -> nix::scaredy_nix<cat::idx> {
    // https://filippo.io/linux-syscall-table/
    return nix::syscall_volatile<cat::idx>(
       202, &futex.m_value, operation.encoded, value, p_timeout,
@@ -21,7 +21,7 @@ auto
 nix::sys_futex(
    futex_word& futex, futex_op operation, cat::uint4 value, cat::uint4 value2,
    futex_word* _Nullable p_second_futex, cat::uint4 value3
-) -> nix::scaredy_nix<cat::idx> {
+) noexcept -> nix::scaredy_nix<cat::idx> {
    // https://filippo.io/linux-syscall-table/
    return nix::syscall_volatile<cat::idx>(
       202, &futex.m_value, operation.encoded, value, value2,

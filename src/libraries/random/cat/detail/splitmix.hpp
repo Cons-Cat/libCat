@@ -13,15 +13,15 @@ class splitmix64_engine {
 
    static constexpr random_seed default_seed = 1u;
 
-   constexpr splitmix64_engine() : m_state(result_type(default_seed)) {
+   constexpr splitmix64_engine() noexcept : m_state(result_type(default_seed)) {
    }
 
-   constexpr explicit splitmix64_engine(random_seed value)
+   constexpr explicit splitmix64_engine(random_seed value) noexcept
        : m_state(result_type(value)) {
    }
 
    constexpr void
-   seed(random_seed value = default_seed) {
+   seed(random_seed value = default_seed) noexcept {
       m_state = result_type(value);
    }
 
@@ -37,25 +37,25 @@ class splitmix64_engine {
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return result_type::min();
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 
    // Skip this many outputs.
    constexpr void
-   discard(uint8 count) {
+   discard(uint8 count) noexcept {
       m_state += increment * count;
    }
 
    // Skip this many outputs backwards.
    constexpr void
-   backstep(uint8 count) {
+   backstep(uint8 count) noexcept {
       m_state -= increment * count;
    }
 

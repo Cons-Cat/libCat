@@ -40,7 +40,7 @@ class type_list {
    // If the last element in this type list is `T`.
    template <typename T, typename U>
    static consteval auto
-   recurse_for_type() -> bool {
+   recurse_for_type() noexcept -> bool {
       return is_same<T, U>;
    }
 
@@ -48,21 +48,21 @@ class type_list {
    template <typename T, typename U, typename... Remaining>
       requires(sizeof...(Remaining) > 0)
    static consteval auto
-   recurse_for_type() -> bool {
+   recurse_for_type() noexcept -> bool {
       return is_same<T, U> ? true : recurse_for_type<T, Remaining...>();
    }
 
    // Propagate the final count of occurences of `T` in this type list.
    template <typename T, idx count>
    static consteval auto
-   recurse_for_count() -> idx {
+   recurse_for_count() noexcept -> idx {
       return count;
    }
 
    // Sum the number of occurences of `T` in this type list.
    template <typename T, idx count, typename U, typename... Remaining>
    static consteval auto
-   recurse_for_count() -> idx {
+   recurse_for_count() noexcept -> idx {
       return is_same<T, U> ? recurse_for_count<T, count + 1u, Remaining...>()
                            : recurse_for_count<T, count, Remaining...>();
    }
@@ -70,21 +70,21 @@ class type_list {
    template <typename... Empty>
       requires(sizeof...(Empty) == 0)
    static consteval auto
-   recurse_for_unique() -> bool {
+   recurse_for_unique() noexcept -> bool {
       // When the `type_list` is empty, short-circuit to `true`.
       return true;
    }
 
    template <typename U>
    static consteval auto
-   recurse_for_unique() -> bool {
+   recurse_for_unique() noexcept -> bool {
       return true;
    }
 
    template <typename U, typename... Remaining>
       requires(sizeof...(Remaining) > 0)
    static consteval auto
-   recurse_for_unique() -> bool {
+   recurse_for_unique() noexcept -> bool {
       return is_unique<U> ? recurse_for_unique<Remaining...>() : false;
    }
 
@@ -100,7 +100,7 @@ class type_list {
 
    template <typename... Remaining>
    static consteval auto
-   concat(type_list<Remaining...> /*other*/) {
+   concat(type_list<Remaining...> /*other*/) noexcept {
       return type_list<Types..., Remaining...>{};
    }
 
@@ -112,7 +112,9 @@ class type_list {
    // expressions.
    template <typename... Remaining>
    friend constexpr auto
-   operator+(type_list<Types...> /*self*/, type_list<Remaining...> /*other*/) {
+   operator+(
+      type_list<Types...> /*self*/, type_list<Remaining...> /*other*/
+   ) noexcept {
       return type_list<Types..., Remaining...>{};
    }
 
@@ -125,7 +127,7 @@ class type_list {
    // looking at a runtime container or its compile-time type list.
    [[nodiscard]]
    static consteval auto
-   size() -> idx {
+   size() noexcept -> idx {
       return sizeof...(Types);
    }
 
@@ -165,7 +167,7 @@ class type_list {
 namespace detail {
 template <typename T, idx count, idx index, typename... Remaining>
 consteval auto
-type_list_fill(type_list<Remaining...> type_list) {
+type_list_fill(type_list<Remaining...> type_list) noexcept {
    if constexpr (index == count) {
       return type_list;
    } else {

@@ -44,24 +44,37 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
  public:
    constexpr vec_inplace() = default;
 
-   constexpr vec_inplace(vec_inplace const& other)
+   constexpr vec_inplace(
+      vec_inplace const& other
+   ) noexcept(is_nothrow_copy_constructible<T>)
       requires(is_copy_constructible<T>)
    {
+      // The destructor does not run if this constructor throws.
+      detail::exception_defer guard([&] {
+         clear();
+      });
       for (T const& value : other) {
          construct_back(value);
       }
+      guard.commit();
    }
 
    constexpr vec_inplace(vec_inplace const&)
       requires(!is_copy_constructible<T>)
    = delete;
 
-   constexpr vec_inplace(vec_inplace&& other)
+   constexpr vec_inplace(
+      vec_inplace&& other
+   ) noexcept(is_nothrow_move_constructible<T>)
       requires(is_move_constructible<T>)
    {
+      detail::exception_defer guard([&] {
+         clear();
+      });
       for (T& value : other) {
          construct_back(move(value));
       }
+      guard.commit();
       other.clear();
    }
 
@@ -70,7 +83,9 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    = delete;
 
    constexpr auto
-   operator=(vec_inplace const& other) -> vec_inplace&
+   operator=(
+      vec_inplace const& other
+   ) noexcept(is_nothrow_copy_constructible<T>) -> vec_inplace&
       requires(is_copy_constructible<T>)
    {
       if (this == __builtin_addressof(other)) {
@@ -89,7 +104,8 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    = delete;
 
    constexpr auto
-   operator=(vec_inplace&& other) -> vec_inplace&
+   operator=(vec_inplace&& other) noexcept(is_nothrow_move_constructible<T>)
+      -> vec_inplace&
       requires(is_move_constructible<T>)
    {
       if (this == __builtin_addressof(other)) {
@@ -142,7 +158,7 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
 
    [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> T* _Nonnull {
+   data() noexcept [[clang::lifetimebound]] -> T* _Nonnull {
       if constexpr (uses_preconstructed_storage) {
          return m_storage;
       } else {
@@ -152,7 +168,7 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
 
    [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> T const* _Nonnull {
+   data() const noexcept [[clang::lifetimebound]] -> T const* _Nonnull {
       if constexpr (uses_preconstructed_storage) {
          return m_storage;
       } else {
@@ -162,19 +178,19 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_size;
    }
 
    [[nodiscard]]
    static constexpr auto
-   capacity() -> idx {
+   capacity() noexcept -> idx {
       return inline_capacity;
    }
 
    [[nodiscard]]
    static constexpr auto
-   max_size() -> idx {
+   max_size() noexcept -> idx {
       return inline_capacity;
    }
 
@@ -217,7 +233,8 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    template <typename... Args>
       requires(is_constructible<T, Args...>)
    constexpr auto
-   unchecked_emplace_back(Args&&... arguments) [[clang::lifetimebound]] -> T& {
+   unchecked_emplace_back(Args&&... arguments) noexcept(false)
+      [[clang::lifetimebound]] -> T& {
       cat::assert(!this->is_full());
       return construct_back($fwd(arguments)...);
    }
@@ -283,15 +300,15 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
       if (this->is_empty()) {
          return nullopt;
       }
+      T result = move(data()[idx(m_size - 1u)]);
       m_size = idx(m_size - 1u);
-      T result = move(data()[m_size]);
       destroy(m_size);
       return result;
    }
 
    [[clang::reinitializes]]
    constexpr void
-   clear() {
+   clear() noexcept {
       while (m_size != 0u) {
          m_size = idx(m_size - 1u);
          destroy(m_size);
@@ -299,7 +316,7 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    }
 
    constexpr void
-   erase(idx index)
+   erase(idx index) noexcept(false)
       requires(is_move_assignable<T>)
    {
       cat::assert(index < size());
@@ -311,7 +328,7 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    }
 
    constexpr void
-   erase(idx first, idx last)
+   erase(idx first, idx last) noexcept(false)
       requires(is_move_assignable<T>)
    {
       cat::assert(first <= last);
@@ -331,7 +348,7 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    }
 
    constexpr void
-   swap(vec_inplace& other)
+   swap(vec_inplace& other) noexcept(is_nothrow_move_constructible<T>)
       requires(is_move_constructible<T>)
    {
       if (this == __builtin_addressof(other)) {

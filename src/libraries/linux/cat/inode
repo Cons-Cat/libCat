@@ -58,7 +58,8 @@ inode_status(file_descriptor descriptor) -> cat::scaredy<inode, linux_error>;
 
 [[nodiscard]]
 auto
-inode_status(cat::native_handle handle) -> cat::scaredy<inode, linux_error>;
+inode_status(cat::native_handle handle) noexcept(!__has_feature(cxx_exceptions))
+   -> cat::scaredy<inode, linux_error>;
 
 }  // namespace nix
 

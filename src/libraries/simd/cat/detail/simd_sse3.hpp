@@ -20,8 +20,9 @@ template <typename T, is_sse_abi<T> Abi>
    requires(cat::is_floating_point<T>)
 [[gnu::target("sse3")]]
 constexpr auto
-sse3_add_sub_alternating(cat::simd<T, Abi> left, cat::simd<T, Abi> right)
-   -> cat::simd<T, Abi> {
+sse3_add_sub_alternating(
+   cat::simd<T, Abi> left, cat::simd<T, Abi> right
+) noexcept -> cat::simd<T, Abi> {
    if constexpr (sizeof(T) == 4) {
       return cat::simd<T, Abi>(__builtin_ia32_addsubps(left.raw, right.raw));
    } else {
@@ -34,7 +35,7 @@ sse3_add_sub_alternating(cat::simd<T, Abi> left, cat::simd<T, Abi> right)
 template <typename T, is_sse_abi<T> Abi = sse_abi<T>>
 [[gnu::target("sse3")]]
 auto
-sse3_load_unaligned_non_temporal(void const* _Nonnull p_source)
+sse3_load_unaligned_non_temporal(void const* _Nonnull p_source) noexcept
    -> cat::simd<T, Abi> {
    using raw_t = cat::simd<T, Abi>::raw_type;
    auto const bytes =
@@ -48,7 +49,7 @@ template <typename T, is_sse_abi<T> Abi>
    requires(cat::is_floating_point<T>)
 [[gnu::target("sse3")]]
 constexpr auto
-sse3_horizontal_add(cat::simd<T, Abi> left, cat::simd<T, Abi> right)
+sse3_horizontal_add(cat::simd<T, Abi> left, cat::simd<T, Abi> right) noexcept
    -> cat::simd<T, Abi> {
    if constexpr (sizeof(T) == 4) {
       return cat::simd<T, Abi>(__builtin_ia32_haddps(left.raw, right.raw));
@@ -63,7 +64,7 @@ template <typename T, is_sse_abi<T> Abi>
    requires(cat::is_floating_point<T>)
 [[gnu::target("sse3")]]
 constexpr auto
-sse3_horizontal_sub(cat::simd<T, Abi> left, cat::simd<T, Abi> right)
+sse3_horizontal_sub(cat::simd<T, Abi> left, cat::simd<T, Abi> right) noexcept
    -> cat::simd<T, Abi> {
    if constexpr (sizeof(T) == 4) {
       return cat::simd<T, Abi>(__builtin_ia32_hsubps(left.raw, right.raw));

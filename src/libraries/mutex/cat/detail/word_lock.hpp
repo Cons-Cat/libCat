@@ -17,10 +17,10 @@ class word_lock {
 
    word_lock(word_lock const&) = delete;
    auto
-   operator=(word_lock const&) -> word_lock& = delete;
+   operator=(word_lock const&) noexcept -> word_lock& = delete;
 
    void
-   lock() {
+   lock() noexcept(!__has_feature(cxx_exceptions)) {
       uword expected = 0u;
       if (
          m_state.compare_exchange_weak(
@@ -33,7 +33,7 @@ class word_lock {
    }
 
    void
-   unlock() {
+   unlock() noexcept {
       uword const previous = m_state.release().fetch_sub(locked_bit);
       if (
          (previous & queue_locked_bit) != 0u || (previous & queue_mask) == 0u
@@ -56,33 +56,33 @@ class word_lock {
    };
 
    static constexpr auto
-   is_locked(uword state) -> bool {
+   is_locked(uword state) noexcept -> bool {
       return (state & locked_bit) != 0u;
    }
 
    static constexpr auto
-   is_queue_locked(uword state) -> bool {
+   is_queue_locked(uword state) noexcept -> bool {
       return (state & queue_locked_bit) != 0u;
    }
 
    static auto
-   queue_head(uword state) -> thread_data* {
+   queue_head(uword state) noexcept -> thread_data* {
       uword const address = state & queue_mask;
       return __builtin_bit_cast(thread_data*, address);
    }
 
    static auto
-   with_queue_head(uword state, thread_data* p_head) -> uword {
+   with_queue_head(uword state, thread_data* p_head) noexcept -> uword {
       return (state & ~queue_mask) | __builtin_bit_cast(uword, p_head);
    }
 
    void
-   prepare_park(thread_data& node) {
+   prepare_park(thread_data& node) noexcept {
       node.m_parker.m_value.relaxed() = 1u;
    }
 
    void
-   park(thread_data& node) {
+   park(thread_data& node) noexcept(!__has_feature(cxx_exceptions)) {
       while (node.m_parker.m_value.acquire() != 0u) {
          scaredy result = node.m_parker.wait(1u);
          if (result.has_value()) {
@@ -98,7 +98,7 @@ class word_lock {
    }
 
    void
-   unpark(thread_data& node) {
+   unpark(thread_data& node) noexcept {
       node.m_parker.m_value.release() = 0u;
       // The waiter may have already observed the store and left, so waking
       // nobody is fine.
@@ -107,7 +107,7 @@ class word_lock {
 
    [[gnu::noinline]]
    void
-   lock_slow() {
+   lock_slow() noexcept(!__has_feature(cxx_exceptions)) {
       uint1 spin_counter = 0u;
       uword state = m_state.relaxed();
       for (;;) {
@@ -162,7 +162,7 @@ class word_lock {
 
    [[gnu::noinline]]
    void
-   unlock_slow() {
+   unlock_slow() noexcept(!__has_feature(cxx_exceptions)) {
       uword state = m_state.relaxed();
       for (;;) {
          if (is_queue_locked(state) || queue_head(state) == nullptr) {

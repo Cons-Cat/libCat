@@ -75,7 +75,7 @@ inline constexpr str_vec_flags path_default_flags =
 // Path storage always reserves one character for its null terminator.
 [[nodiscard]]
 constexpr auto
-path_initial_capacity(str_vec_flags flags) -> idx {
+path_initial_capacity(str_vec_flags flags) noexcept -> idx {
    vec_flags const vector = (path_default_flags | flags).vec;
    return vector.inline_storage_count != 0u
              ? idx(vector.inline_storage_count - 1u)
@@ -91,21 +91,21 @@ template <typename Segment>
    requires(is_char_safe_string<Segment>)
 [[nodiscard]]
 constexpr auto
-path_segment_view(Segment const& segment) -> str_view {
+path_segment_view(Segment const& segment) noexcept -> str_view {
    return str_view(segment);
 }
 
 template <idx extent>
 [[nodiscard]]
 constexpr auto
-path_segment_view(char const (&segment)[extent]) -> str_view {
+path_segment_view(char const (&segment)[extent]) noexcept -> str_view {
    return {segment, idx(extent - 1u)};
 }
 
 template <idx extent>
 [[nodiscard]]
 constexpr auto
-path_segment_view(char (&segment)[extent]) -> str_view {
+path_segment_view(char (&segment)[extent]) noexcept -> str_view {
    return {segment, idx(extent - 1u)};
 }
 
@@ -116,13 +116,13 @@ template <typename Segment>
    )
 [[nodiscard]]
 constexpr auto
-path_segment_view(Segment const& segment) -> str_view {
+path_segment_view(Segment const& segment) noexcept -> str_view {
    return str_view(segment);
 }
 
 [[nodiscard]]
 constexpr auto
-path_slice(str_view value, idx first, idx last) -> str_view {
+path_slice(str_view value, idx first, idx last) noexcept -> str_view {
    if (first == last) {
       return {};
    }
@@ -132,7 +132,9 @@ path_slice(str_view value, idx first, idx last) -> str_view {
 template <bool equal>
 [[nodiscard]]
 constexpr auto
-path_find_first(str_view value, char character) -> maybe<idx> {
+path_find_first(str_view value, char character) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<idx> {
    if consteval {
       for (idx position = 0u; position < value.size(); ++position) {
          if ((value[position] == character) == equal) {
@@ -175,7 +177,9 @@ path_find_first(str_view value, char character) -> maybe<idx> {
 template <bool equal>
 [[nodiscard]]
 constexpr auto
-path_find_last(str_view value, char character) -> maybe<idx> {
+path_find_last(str_view value, char character) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<idx> {
    if consteval {
       idx position = value.size();
       while (position > 0u) {
@@ -220,25 +224,27 @@ path_find_last(str_view value, char character) -> maybe<idx> {
 
 [[nodiscard]]
 constexpr auto
-path_find_first_equal(str_view value, char character) -> maybe<idx> {
+path_find_first_equal(str_view value, char character) noexcept -> maybe<idx> {
    return path_find_first<true>(value, character);
 }
 
 [[nodiscard]]
 constexpr auto
-path_find_first_not_equal(str_view value, char character) -> maybe<idx> {
+path_find_first_not_equal(str_view value, char character) noexcept
+   -> maybe<idx> {
    return path_find_first<false>(value, character);
 }
 
 [[nodiscard]]
 constexpr auto
-path_find_last_equal(str_view value, char character) -> maybe<idx> {
+path_find_last_equal(str_view value, char character) noexcept -> maybe<idx> {
    return path_find_last<true>(value, character);
 }
 
 [[nodiscard]]
 constexpr auto
-path_find_last_not_equal(str_view value, char character) -> maybe<idx> {
+path_find_last_not_equal(str_view value, char character) noexcept
+   -> maybe<idx> {
    return path_find_last<false>(value, character);
 }
 
@@ -282,19 +288,22 @@ class path_component_stepanov_iterator
 
    constexpr path_component_stepanov_iterator() = default;
 
-   constexpr path_component_stepanov_iterator(str_view value, idx position)
+   constexpr path_component_stepanov_iterator(
+      str_view value, idx position
+   ) noexcept(!__has_feature(cxx_exceptions))
        : m_value(value), m_start(position), m_end(position) {
       seek();
    }
 
    [[nodiscard]]
    constexpr auto
-   dereference() const -> str_view {
+   dereference() const noexcept -> str_view {
       return detail::path_slice(m_value, m_start, m_end);
    }
 
    constexpr auto
-   increment() -> path_component_stepanov_iterator& {
+   increment() noexcept(!__has_feature(cxx_exceptions))
+      -> path_component_stepanov_iterator& {
       m_start = m_end;
       seek();
       return *this;
@@ -302,7 +311,8 @@ class path_component_stepanov_iterator
 
    [[nodiscard]]
    constexpr auto
-   equal_to(path_component_stepanov_iterator const& other) const -> bool {
+   equal_to(path_component_stepanov_iterator const& other) const noexcept
+      -> bool {
       return m_value.data() == other.m_value.data()
              && m_value.size() == other.m_value.size()
              && m_start == other.m_start;
@@ -341,7 +351,7 @@ class path_component_iteration_context {
    constexpr path_component_iteration_context(
       path_component_stepanov_iterator current,
       path_component_stepanov_iterator end
-   )
+   ) noexcept
        : m_current(current), m_end(end) {
    }
 
@@ -350,15 +360,16 @@ class path_component_iteration_context {
    path_component_iteration_context(path_component_iteration_context&&) =
       delete;
    auto
-   operator=(path_component_iteration_context const&)
+   operator=(path_component_iteration_context const&) noexcept
       -> path_component_iteration_context& = delete;
    auto
-   operator=(path_component_iteration_context&&)
+   operator=(path_component_iteration_context&&) noexcept
       -> path_component_iteration_context& = delete;
 
    template <is_predicate<element_type> LoopBody>
    constexpr auto
-   run_while(LoopBody&& loop_body) -> iteration_result {
+   run_while(LoopBody&& loop_body) noexcept(!__has_feature(cxx_exceptions))
+      -> iteration_result {
       while (m_current != m_end) {
          if (!loop_body(*m_current)) {
             return iteration_result::incomplete;
@@ -381,35 +392,35 @@ class path_components : public iterable_interface<path_components> {
 
    constexpr path_components() = default;
 
-   constexpr path_components(str_view value) : m_value(value) {
+   constexpr path_components(str_view value) noexcept : m_value(value) {
    }
 
    [[nodiscard]]
    constexpr auto
-   begin() const -> iterator {
+   begin() const noexcept -> iterator {
       return {m_value, 0u};
    }
 
    [[nodiscard]]
    constexpr auto
-   end() const -> iterator {
+   end() const noexcept -> iterator {
       return {m_value, m_value.size()};
    }
 
    [[nodiscard]]
    constexpr auto
-   cbegin() const -> const_iterator {
+   cbegin() const noexcept -> const_iterator {
       return begin();
    }
 
    [[nodiscard]]
    constexpr auto
-   cend() const -> const_iterator {
+   cend() const noexcept -> const_iterator {
       return end();
    }
 
    constexpr auto
-   iterate() const -> path_component_iteration_context {
+   iterate() const noexcept -> path_component_iteration_context {
       return {begin(), end()};
    }
 
@@ -471,82 +482,82 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
       delete ("Implicit copying of `cat::basic_file_path` is forbidden. Call "
               "`.clone()` or move instead.");
    constexpr auto
-   operator=(basic_file_path&&) -> basic_file_path& = default;
+   operator=(basic_file_path&&) noexcept -> basic_file_path& = default;
    auto
-   operator=(basic_file_path const&) -> basic_file_path& =
+   operator=(basic_file_path const&) noexcept -> basic_file_path& =
       delete ("Implicit copying of `cat::basic_file_path` is forbidden. Call "
               "`.clone()` or move instead.");
 
    [[nodiscard]]
    constexpr auto
-   operator==(basic_file_path const& other) const -> bool {
+   operator==(basic_file_path const& other) const noexcept -> bool {
       return view() == other.view();
    }
 
    [[nodiscard]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> char* _Nullable {
+   data() noexcept [[clang::lifetimebound]] -> char* _Nullable {
       return m_storage.data();
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> char const* _Nullable {
+   data() const noexcept [[clang::lifetimebound]] -> char const* _Nullable {
       return m_storage.data();
    }
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_storage.size();
    }
 
    [[nodiscard]]
    constexpr auto
-   capacity() const -> idx {
+   capacity() const noexcept -> idx {
       return m_storage.capacity();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_null_terminated() const -> bool {
+   is_null_terminated() const noexcept -> bool {
       return true;
    }
 
    [[nodiscard]]
    constexpr auto
-   view() const [[clang::lifetimebound]] -> str_view {
+   view() const noexcept [[clang::lifetimebound]] -> str_view {
       return m_storage.view();
    }
 
    [[nodiscard]]
    constexpr auto
-   native_handle() [[clang::lifetimebound]] -> zstr_span {
+   native_handle() noexcept [[clang::lifetimebound]] -> zstr_span {
       return m_storage.span();
    }
 
    [[nodiscard]]
    constexpr auto
-   native_handle() const [[clang::lifetimebound]] -> zstr_view {
+   native_handle() const noexcept [[clang::lifetimebound]] -> zstr_view {
       return m_storage.span();
    }
 
    [[nodiscard]]
    constexpr
-   operator zstr_span() [[clang::lifetimebound]] {
+   operator zstr_span() noexcept [[clang::lifetimebound]] {
       return native_handle();
    }
 
    [[nodiscard]]
    constexpr
-   operator zstr_view() const [[clang::lifetimebound]] {
+   operator zstr_view() const noexcept [[clang::lifetimebound]] {
       return native_handle();
    }
 
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   reserve(allocator_ref<Allocator> allocator, idx minimum_capacity)
+   reserve(allocator_ref<Allocator> allocator, idx minimum_capacity) noexcept
       -> maybe<void>
       requires(!m_flags.vec.is_fixed_size)
    {
@@ -555,7 +566,8 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   reserve(allocator_dyn allocator, idx minimum_capacity) -> maybe<void>
+   reserve(allocator_dyn allocator, idx minimum_capacity) noexcept
+      -> maybe<void>
       requires(!m_flags.vec.is_fixed_size)
    {
       return m_storage.reserve(allocator, minimum_capacity);
@@ -564,45 +576,46 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   resize(allocator_ref<Allocator> allocator, idx new_size) -> maybe<void> {
+   resize(allocator_ref<Allocator> allocator, idx new_size) noexcept
+      -> maybe<void> {
       return m_storage.resize(allocator, new_size);
    }
 
    [[nodiscard]]
    constexpr auto
-   resize(allocator_dyn allocator, idx new_size) -> maybe<void> {
+   resize(allocator_dyn allocator, idx new_size) noexcept -> maybe<void> {
       return m_storage.resize(allocator, new_size);
    }
 
    constexpr void
-   clear() {
+   clear() noexcept {
       m_storage.clear();
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
       m_storage.reset();
    }
 
    template <is_allocator Allocator>
    constexpr void
-   free(allocator_ref<Allocator> allocator) {
+   free(allocator_ref<Allocator> allocator) noexcept {
       m_storage.free(allocator);
    }
 
    constexpr void
-   free(allocator_dyn allocator) {
+   free(allocator_dyn allocator) noexcept {
       m_storage.free(allocator);
    }
 
    template <is_allocator Allocator>
    constexpr void
-   cfree(allocator_ref<Allocator> allocator) {
+   cfree(allocator_ref<Allocator> allocator) noexcept {
       m_storage.cfree(allocator);
    }
 
    constexpr void
-   cfree(allocator_dyn allocator) {
+   cfree(allocator_dyn allocator) noexcept {
       m_storage.cfree(allocator);
    }
 
@@ -621,31 +634,31 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   clone(allocator_dyn allocator) const& -> maybe<basic_file_path> {
+   clone(allocator_dyn allocator) const& noexcept -> maybe<basic_file_path> {
       return clone<allocator_dyn>(allocator);
    }
 
    [[nodiscard]]
    constexpr auto
-   is_absolute() const -> bool {
+   is_absolute() const noexcept -> bool {
       return !this->is_empty() && data()[0] == '/';
    }
 
    [[nodiscard]]
    constexpr auto
-   is_relative() const -> bool {
+   is_relative() const noexcept -> bool {
       return !is_absolute();
    }
 
    [[nodiscard]]
    constexpr auto
-   root_name() const -> str_view {
+   root_name() const noexcept -> str_view {
       return {};
    }
 
    [[nodiscard]]
    constexpr auto
-   root_directory() const -> str_view {
+   root_directory() const noexcept -> str_view {
       if (!is_absolute()) {
          return {};
       }
@@ -654,13 +667,13 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   root_path() const -> str_view {
+   root_path() const noexcept -> str_view {
       return root_directory();
    }
 
    [[nodiscard]]
    constexpr auto
-   relative_path() const -> str_view {
+   relative_path() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
       idx const first = detail::path_root_end(view());
       return detail::path_slice(view(), first, size());
    }
@@ -739,55 +752,55 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   has_root_name() const -> bool {
+   has_root_name() const noexcept -> bool {
       return false;
    }
 
    [[nodiscard]]
    constexpr auto
-   has_root_directory() const -> bool {
+   has_root_directory() const noexcept -> bool {
       return is_absolute();
    }
 
    [[nodiscard]]
    constexpr auto
-   has_root_path() const -> bool {
+   has_root_path() const noexcept -> bool {
       return is_absolute();
    }
 
    [[nodiscard]]
    constexpr auto
-   has_relative_path() const -> bool {
+   has_relative_path() const noexcept -> bool {
       return relative_path().size() != 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   has_parent_path() const -> bool {
+   has_parent_path() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
       return parent_path().size() != 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   has_filename() const -> bool {
+   has_filename() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
       return filename().size() != 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   has_stem() const -> bool {
+   has_stem() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
       return stem().size() != 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   has_extension() const -> bool {
+   has_extension() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
       return extension().size() != 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   components() const -> path_components {
+   components() const noexcept -> path_components {
       return view();
    }
 
@@ -813,7 +826,9 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    template <is_path_segment Segment>
    [[nodiscard]]
    constexpr auto
-   append(allocator_dyn allocator, Segment const& segment) -> maybe<void> {
+   append(allocator_dyn allocator, Segment const& segment) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
       return append<allocator_dyn>(allocator, segment);
    }
 
@@ -881,8 +896,9 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_dyn allocator, Segment const& segment)
-   -> maybe<basic_file_path<flags>> {
+make_file_path(allocator_dyn allocator, Segment const& segment) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<basic_file_path<flags>> {
    return manual::make_file_path<allocator_dyn, flags>(allocator, segment);
 }
 
@@ -890,15 +906,17 @@ template <
    is_allocator Allocator, str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_ref<Allocator> allocator)
-   -> maybe<basic_file_path<flags>> {
+make_file_path(allocator_ref<Allocator> allocator) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<basic_file_path<flags>> {
    return make_file_path<Allocator, flags>(allocator, str_view{});
 }
 
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_dyn allocator) -> maybe<basic_file_path<flags>> {
+make_file_path(allocator_dyn allocator) noexcept
+   -> maybe<basic_file_path<flags>> {
    return make_file_path<allocator_dyn, flags>(allocator);
 }
 
@@ -923,7 +941,7 @@ constexpr auto
 make_file_path_joined(
    allocator_dyn allocator, basic_file_path<flags> const& left,
    Segment const& right
-) -> maybe<basic_file_path<flags>> {
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<basic_file_path<flags>> {
    return make_file_path_joined<allocator_dyn>(allocator, left, right);
 }
 
@@ -948,7 +966,7 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_file_path_current(allocator_ref<Allocator> allocator)
+make_file_path_current(allocator_ref<Allocator> allocator) noexcept(false)
    -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
    auto made = manual::make_file_path<Allocator, flags>(allocator);
    if (made.is_empty()) {
@@ -986,8 +1004,9 @@ make_file_path_current(allocator_ref<Allocator> allocator)
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 auto
-make_file_path_current(allocator_dyn allocator)
-   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+make_file_path_current(allocator_dyn allocator) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
    return make_file_path_current<flags, allocator_dyn>(allocator);
 }
 
@@ -1053,7 +1072,8 @@ template <
 auto
 make_file_path_absolute(
    Segment const& segment, Base const& base, allocator_dyn allocator
-) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+) noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
    return make_file_path_absolute<flags, Segment, Base, allocator_dyn>(
       segment, base, allocator
    );
@@ -1066,7 +1086,7 @@ template <
 auto
 make_file_path_absolute(
    Segment const& segment, allocator_ref<Allocator> allocator
-) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+) noexcept -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
    return make_file_path_absolute<flags, Segment, str_view, Allocator>(
       segment, str_view{}, allocator
    );
@@ -1076,8 +1096,9 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 auto
-make_file_path_absolute(Segment const& segment, allocator_dyn allocator)
-   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+make_file_path_absolute(
+   Segment const& segment, allocator_dyn allocator
+) noexcept -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
    return make_file_path_absolute<flags, Segment, allocator_dyn>(
       segment, allocator
    );
@@ -1135,7 +1156,7 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_file_path_unique(allocator_ref<Allocator> allocator)
+make_file_path_unique(allocator_ref<Allocator> allocator) noexcept
    -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
    return make_file_path_unique<flags>(allocator, "%%%%-%%%%-%%%%-%%%%");
 }
@@ -1144,15 +1165,16 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Model>
 [[nodiscard]]
 auto
-make_file_path_unique(allocator_dyn allocator, Model const& model)
-   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+make_file_path_unique(allocator_dyn allocator, Model const& model) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
    return make_file_path_unique<flags, allocator_dyn>(allocator, model);
 }
 
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 auto
-make_file_path_unique(allocator_dyn allocator)
+make_file_path_unique(allocator_dyn allocator) noexcept
    -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
    return make_file_path_unique<flags, allocator_dyn>(allocator);
 }
@@ -1167,12 +1189,12 @@ struct path_formatter : formatter_base<CharT> {
    bool debug = false;
 
    constexpr void
-   set_debug_format(bool set = true) {
+   set_debug_format(bool set = true) noexcept {
       debug = set;
    }
 
    constexpr auto
-   parse(format_parse_context& context)
+   parse(format_parse_context& context) noexcept
       -> scaredy_format<format_parse_context::const_iterator> {
       format_parse_context::const_iterator p_it = context.begin();
       if (p_it == context.end()) {
@@ -1193,8 +1215,9 @@ struct path_formatter : formatter_base<CharT> {
 
    template <typename Path>
    auto
-   format(Path const& value, format_context& context) const
-      -> scaredy_format<void> {
+   format(Path const& value, format_context& context) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy_format<void> {
       if (debug) {
          return append_escaped(context, value.view(), '"');
       }

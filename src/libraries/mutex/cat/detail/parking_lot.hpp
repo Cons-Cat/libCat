@@ -48,7 +48,9 @@ struct unpark_result {
 
 class fair_timeout {
  public:
-   fair_timeout(clock_steady::time_point timeout, uint4 seed, bool has_timeout)
+   fair_timeout(
+      clock_steady::time_point timeout, uint4 seed, bool has_timeout
+   ) noexcept
        : m_timeout(timeout), m_seed(seed), m_has_timeout(has_timeout) {
    }
 
@@ -72,7 +74,7 @@ class fair_timeout {
 
  private:
    auto
-   generate() -> uint4 {
+   generate() noexcept -> uint4 {
       // Xorshift32 RNG advances per bucket fairness jitter.
       // TODO: Should we provide an `xorshift_engine`?
       m_seed = m_seed ^ (m_seed << 13);
@@ -89,7 +91,9 @@ class fair_timeout {
 struct thread_data;
 
 struct alignas(64) bucket {
-   bucket(clock_steady::time_point timeout, uint4 seed, bool has_timeout)
+   bucket(
+      clock_steady::time_point timeout, uint4 seed, bool has_timeout
+   ) noexcept
        : m_timeout(timeout, seed, has_timeout) {
    }
 
@@ -111,12 +115,12 @@ inline atomic<idx> num_threads;
 
 struct parker {
    void
-   prepare_park() {
+   prepare_park() noexcept {
       m_futex.m_value.relaxed() = 1;
    }
 
    void
-   park() {
+   park() noexcept(!__has_feature(cxx_exceptions)) {
       while (m_futex.m_value.acquire() != 0) {
          scaredy result = m_futex.wait(1);
          if (result.has_value()) {
@@ -133,7 +137,9 @@ struct parker {
 
    template <is_clock Clock, is_duration Duration>
    auto
-   park_until(time_point<Clock, Duration> timeout) -> bool {
+   park_until(time_point<Clock, Duration> timeout) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       typename Clock::time_point const deadline =
          typename Clock::time_point(timeout);
       while (m_futex.m_value.acquire() != 0) {
@@ -163,13 +169,13 @@ struct parker {
    }
 
    auto
-   unpark_lock() -> nix::futex* {
+   unpark_lock() noexcept -> nix::futex* {
       m_futex.m_value.release() = 0;
       return &m_futex;
    }
 
    static void
-   unpark(nix::futex* p_futex) {
+   unpark(nix::futex* p_futex) noexcept {
       // The waiter may have already observed the store and left, so waking
       // nobody is fine.
       auto _ = p_futex->wake();
@@ -179,11 +185,11 @@ struct parker {
 };
 
 struct thread_data {
-   thread_data() {
+   thread_data() noexcept {
       num_threads.relaxed().fetch_add(1);
    }
 
-   ~thread_data() {
+   ~thread_data() noexcept {
       num_threads.relaxed().fetch_sub(1);
    }
 
@@ -199,8 +205,9 @@ inline thread_local thread_data local_thread_data;
 
 template <is_allocator Allocator>
 auto
-allocate_hash_table(allocator_ref<Allocator> allocator, idx thread_count)
-   -> maybe<hash_table*> {
+allocate_hash_table(
+   allocator_ref<Allocator> allocator, idx thread_count
+) noexcept(false) -> maybe<hash_table*> {
    assert(thread_count > 0);
 
    idx const size = bit_ceil(thread_count * load_factor);
@@ -242,7 +249,7 @@ template <is_allocator Allocator, typename Free>
 void
 destroy_hash_table(
    allocator_ref<Allocator> allocator, hash_table* p_table, Free&& free_mapping
-) {
+) noexcept(false) {
    if (p_table == nullptr) {
       return;
    }
@@ -275,8 +282,9 @@ namespace cat {
 
 template <is_allocator Allocator>
 auto
-alloc_mutex_runtime(allocator_ref<Allocator> allocator, idx thread_count)
-   -> maybe<void> {
+alloc_mutex_runtime(
+   allocator_ref<Allocator> allocator, idx thread_count
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
    if (detail::mutex_parking_lot::p_hash_table.acquire() != nullptr) {
       return monostate;
    }
@@ -305,13 +313,17 @@ alloc_mutex_runtime(allocator_ref<Allocator> allocator, idx thread_count)
 }
 
 inline auto
-alloc_mutex_runtime(allocator_dyn allocator, idx thread_count) -> maybe<void> {
+alloc_mutex_runtime(allocator_dyn allocator, idx thread_count) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<void> {
    return alloc_mutex_runtime<allocator_dyn>(allocator, thread_count);
 }
 
 template <is_allocator Allocator>
 void
-free_mutex_runtime(allocator_ref<Allocator> allocator) {
+free_mutex_runtime(allocator_ref<Allocator> allocator) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    detail::mutex_parking_lot::hash_table* const p_table =
       detail::mutex_parking_lot::p_hash_table.exchange(
          nullptr, memory_order::acq_rel
@@ -325,13 +337,15 @@ free_mutex_runtime(allocator_ref<Allocator> allocator) {
 }
 
 inline void
-free_mutex_runtime(allocator_dyn allocator) {
+free_mutex_runtime(allocator_dyn allocator) noexcept {
    free_mutex_runtime<allocator_dyn>(allocator);
 }
 
 template <is_allocator Allocator>
 void
-cfree_mutex_runtime(allocator_ref<Allocator> allocator) {
+cfree_mutex_runtime(allocator_ref<Allocator> allocator) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    detail::mutex_parking_lot::hash_table* const p_table =
       detail::mutex_parking_lot::p_hash_table.exchange(
          nullptr, memory_order::acq_rel
@@ -345,7 +359,7 @@ cfree_mutex_runtime(allocator_ref<Allocator> allocator) {
 }
 
 inline void
-cfree_mutex_runtime(allocator_dyn allocator) {
+cfree_mutex_runtime(allocator_dyn allocator) noexcept {
    cfree_mutex_runtime<allocator_dyn>(allocator);
 }
 
@@ -355,7 +369,7 @@ namespace cat::detail::mutex_parking_lot {
 
 // TODO: Provide re-usable hash functions.
 inline auto
-hash(uword key, uint1 bits) -> idx {
+hash(uword key, uint1 bits) noexcept(!__has_feature(cxx_exceptions)) -> idx {
    // Golden ratio hash.
    // https://softwareengineering.stackexchange.com/questions/402542/where-do-magic-hashing-constants-like-0x9e3779b9-and-0x9e3779b1-come-from/402543#402543
    uword const hash = key.wrap() * 0x9e3779b9'7f4a7c15u;
@@ -363,7 +377,7 @@ hash(uword key, uint1 bits) -> idx {
 }
 
 inline auto
-lock_bucket(uword key) -> bucket* {
+lock_bucket(uword key) noexcept(!__has_feature(cxx_exceptions)) -> bucket* {
    hash_table* const p_table = p_hash_table.acquire();
    assert(p_table != nullptr);
 

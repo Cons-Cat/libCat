@@ -20,8 +20,9 @@ namespace cat {
 template <typename T>
    requires(is_collection<T>)
 constexpr auto
-read_at(T& collection, position_type<T> const& position)
-   -> decltype(read_at_unchecked(collection, position)) {
+read_at(T& collection, position_type<T> const& position) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> decltype(read_at_unchecked(collection, position)) {
    cat::assert(!(position < begin_pos(collection)));
    cat::assert(position < end_pos(collection));
    return read_at_unchecked(collection, position);
@@ -52,7 +53,7 @@ constexpr auto
 slice(
    T& collection [[clang::lifetimebound]], position_type<T> first,
    position_type<T> last
-) -> detail::slice_view<T> {
+) noexcept(!__has_feature(cxx_exceptions)) -> detail::slice_view<T> {
    // Bounds are verified at construction so an invalid range fails fast instead
    // of turning into an out-of-bounds read later.
    cat::assert(!(last < first));

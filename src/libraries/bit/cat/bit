@@ -20,52 +20,52 @@ inline namespace bit_literals {
 // TODO: Reverse the default signed-ness here.
 
 constexpr auto
-operator""_ki(unsigned long long input) -> iword {
+operator""_ki(unsigned long long input) noexcept -> iword {
    return 1'024 * static_cast<signed long long>(input);
 }
 
 constexpr auto
-operator""_uki(unsigned long long input) -> idx {
+operator""_uki(unsigned long long input) noexcept -> idx {
    return 1'024u * input;
 }
 
 constexpr auto
-operator""_ki(long double input) -> iword {
+operator""_ki(long double input) noexcept -> iword {
    return static_cast<signed long long>(1024.f * input);
 }
 
 constexpr auto
-operator""_uki(long double input) -> idx {
+operator""_uki(long double input) noexcept -> idx {
    return static_cast<unsigned long long>(1024.f * input);
 }
 
 constexpr auto
-operator""_mi(unsigned long long input) -> iword {
+operator""_mi(unsigned long long input) noexcept -> iword {
    return 1'024ll * 1'024ll * static_cast<signed long long>(input);
 }
 
 constexpr auto
-operator""_umi(unsigned long long input) -> idx {
+operator""_umi(unsigned long long input) noexcept -> idx {
    return 1'024ull * 1'024ull * input;
 }
 
 constexpr auto
-operator""_mi(long double input) -> iword {
+operator""_mi(long double input) noexcept -> iword {
    return static_cast<signed long long>(1024.f * 1024.f * input);
 }
 
 constexpr auto
-operator""_gi(unsigned long long input) -> iword {
+operator""_gi(unsigned long long input) noexcept -> iword {
    return 1'024ll * 1'024ll * 1'024ll * static_cast<signed long long>(input);
 }
 
 constexpr auto
-operator""_ugi(unsigned long long input) -> idx {
+operator""_ugi(unsigned long long input) noexcept -> idx {
    return 1'024ull * 1'024ull * 1'024ull * input;
 }
 
 constexpr auto
-operator""_gi(long double input) -> iword {
+operator""_gi(long double input) noexcept -> iword {
    return static_cast<signed long long>(
       1024.f * 1024.f * 1024.f * 1024.f * input
    );
@@ -97,29 +97,37 @@ namespace x64 {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-shift_left_by(T value, cat::uword count) -> T;
+shift_left_by(T value, cat::uword count) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> T;
 
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-shift_right_by(T value, cat::uword count) -> T;
+shift_right_by(T value, cat::uword count) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> T;
 
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-rotate_right_by(T value, cat::uword count) -> T;
+rotate_right_by(T value, cat::uword count) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> T;
 
 template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-parallel_extract_bits(T value, U mask) -> T;
+parallel_extract_bits(T value, U mask) noexcept(!__has_feature(cxx_exceptions))
+   -> T;
 
 template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-deposit_bits_mask(T value, U mask) -> T;
+deposit_bits_mask(T value, U mask) noexcept(!__has_feature(cxx_exceptions))
+   -> T;
 }  // namespace x64
 
 namespace cat {
@@ -133,7 +141,7 @@ template <typename To, typename From>
    )
 [[nodiscard]]
 constexpr auto
-bit_cast(From const& value) -> To {
+bit_cast(From const& value) noexcept -> To {
    return __builtin_bit_cast(To, value);
 }
 
@@ -143,7 +151,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)
 [[nodiscard]]
 constexpr auto
-countl_zero(T value) -> uint1 {
+countl_zero(T value) noexcept -> uint1 {
    return uint1(__builtin_stdc_leading_zeros(make_raw_arithmetic(value)));
 }
 
@@ -155,7 +163,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)
 [[nodiscard]]
 consteval uint1
-countl_zero_unchecked(T value) __attribute__((enable_if(
+countl_zero_unchecked(T value) noexcept __attribute__((enable_if(
    value == 0u,
    "Input must be non-zero! Consider `cat::countl_zero()` instead for "
    "known 0 input or `cat::try_countl_zero()` for checked input."
@@ -167,7 +175,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)
 [[nodiscard]]
 constexpr auto
-countl_one(T value) -> uint1 {
+countl_one(T value) noexcept -> uint1 {
    return uint1(__builtin_stdc_leading_ones(make_raw_arithmetic(value)));
 }
 
@@ -176,7 +184,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)
 [[nodiscard]]
 consteval uint1
-countl_one_unchecked(T value) __attribute__((enable_if(
+countl_one_unchecked(T value) noexcept __attribute__((enable_if(
    make_raw_arithmetic(value) == limits<raw_arithmetic_type<T>>::max(),
    "Input must not be all-ones! Consider `cat::countl_one()` instead or "
    "`cat::try_countl_one()` for checked input."
@@ -188,7 +196,7 @@ countl_one_unchecked(T value) __attribute__((enable_if(
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-countr_zero(T value) -> uint1 {
+countr_zero(T value) noexcept -> uint1 {
    return uint1(__builtin_stdc_trailing_zeros(make_raw_arithmetic(value)));
 }
 
@@ -196,7 +204,7 @@ countr_zero(T value) -> uint1 {
 template <is_unsigned_integral T>
 [[nodiscard]]
 consteval uint1
-countr_zero_unchecked(T value) __attribute__((enable_if(
+countr_zero_unchecked(T value) noexcept __attribute__((enable_if(
    value == 0u,
    "Input must be non-zero! Consider `cat::countr_zero()` instead for "
    "known 0 input or `cat::try_countr_zero()` for checked input."
@@ -207,7 +215,7 @@ countr_zero_unchecked(T value) __attribute__((enable_if(
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-countr_one(T value) -> uint1 {
+countr_one(T value) noexcept -> uint1 {
    return uint1(__builtin_stdc_trailing_ones(make_raw_arithmetic(value)));
 }
 
@@ -215,7 +223,7 @@ countr_one(T value) -> uint1 {
 template <is_unsigned_integral T>
 [[nodiscard]]
 consteval uint1
-countr_one_unchecked(T value) __attribute__((enable_if(
+countr_one_unchecked(T value) noexcept __attribute__((enable_if(
    make_raw_arithmetic(value) == limits<raw_arithmetic_type<T>>::max(),
    "Input must not be all-ones! Consider `cat::countr_one()` instead or "
    "`cat::try_countr_one()` for checked input."
@@ -225,7 +233,7 @@ countr_one_unchecked(T value) __attribute__((enable_if(
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-popcount(T value) -> uint1 {
+popcount(T value) noexcept -> uint1 {
    // This intrinsic returns `int` but it can't exceed 64 so it's safe to cast.
    return uint1(__builtin_popcountg(make_raw_arithmetic(value)));
 }
@@ -234,7 +242,7 @@ popcount(T value) -> uint1 {
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-has_single_bit(T value) -> bool {
+has_single_bit(T value) noexcept -> bool {
    return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
 }
 
@@ -243,7 +251,7 @@ has_single_bit(T value) -> bool {
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-bit_floor(T value) -> T {
+bit_floor(T value) noexcept -> T {
    return T(__builtin_stdc_bit_floor(make_raw_arithmetic(value)));
 }
 
@@ -252,7 +260,7 @@ bit_floor(T value) -> T {
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-bit_ceil(T value) -> T {
+bit_ceil(T value) noexcept -> T {
    return T(__builtin_stdc_bit_ceil(make_raw_arithmetic(value)));
 }
 
@@ -260,7 +268,7 @@ bit_ceil(T value) -> T {
 template <is_unsigned_integral T>
 [[nodiscard]]
 consteval T
-bit_ceil_unchecked(T value) __attribute__((enable_if(
+bit_ceil_unchecked(T value) noexcept __attribute__((enable_if(
    value > raw_arithmetic_type<T>(limits<T>::high_bit),
    "Result must be representable! Consider `cat::try_bit_ceil()` for "
    "checked input."
@@ -270,7 +278,7 @@ bit_ceil_unchecked(T value) __attribute__((enable_if(
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-bit_width(T value) -> uint1 {
+bit_width(T value) noexcept -> uint1 {
    return uint1(__builtin_stdc_bit_width(make_raw_arithmetic(value)));
 }
 
@@ -279,7 +287,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
 [[nodiscard]]
 constexpr auto
-byteswap(T value) -> T {
+byteswap(T value) noexcept -> T {
    auto raw_value = make_raw_arithmetic(value);
    if constexpr (sizeof(raw_value) == 1) {
       return value;
@@ -297,7 +305,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
 [[nodiscard]]
 constexpr auto
-shift_left(T value, uword count) -> T {
+shift_left(T value, uword count) noexcept -> T {
    return ::x64::shift_left_by(value, count);
 }
 
@@ -306,7 +314,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
 [[nodiscard]]
 constexpr auto
-shift_right(T value, uword count) -> T {
+shift_right(T value, uword count) noexcept -> T {
    return ::x64::shift_right_by(value, count);
 }
 
@@ -316,7 +324,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)  // TODO: Support `idx`.
 [[nodiscard]]
 constexpr auto
-rotate_left(T value, uword shift) -> T {
+rotate_left(T value, uword shift) noexcept -> T {
    return T(__builtin_stdc_rotate_left(make_raw_arithmetic(value), shift.raw));
 }
 
@@ -326,7 +334,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)
 [[nodiscard]]
 constexpr T
-rotate_left(T value, iword shift) {
+rotate_left(T value, iword shift) noexcept {
    // Unsigned wrap is intentional so the most-negative value has a magnitude.
    uword magnitude = 0u - shift;
    return rotate_right(value, magnitude);
@@ -336,7 +344,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)
 [[nodiscard]]
 constexpr auto
-rotate_right(T value, uword shift) -> T;
+rotate_right(T value, uword shift) noexcept -> T;
 
 // Returns `value` rotated left by `shift` positions. Shifts wrap around the bit
 // width of `T`.
@@ -359,7 +367,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)  // TODO: Support `idx`.
 [[nodiscard]]
 constexpr auto
-rotate_right(T value, uword shift) -> T {
+rotate_right(T value, uword shift) noexcept -> T {
    return ::x64::rotate_right_by(value, shift);
 }
 
@@ -369,7 +377,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)
 [[nodiscard]]
 constexpr T
-rotate_right(T value, iword shift) {
+rotate_right(T value, iword shift) noexcept {
    // Unsigned wrap is intentional so the most-negative value has a magnitude.
    uword magnitude = 0u - shift;
    return rotate_left(value, magnitude);
@@ -395,7 +403,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
 [[nodiscard]]
 constexpr auto
-bit_reverse(T value) -> T {
+bit_reverse(T value) noexcept -> T {
    auto raw_value = make_raw_arithmetic(value);
    if constexpr (sizeof(raw_value) == 1) {
       return T(__builtin_bitreverse8(static_cast<unsigned char>(raw_value)));
@@ -416,7 +424,8 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
 [[nodiscard]]
 constexpr auto
-bit_repeat(T value, idx pattern_bits) -> T {
+bit_repeat(T value, idx pattern_bits) noexcept(!__has_feature(cxx_exceptions))
+   -> T {
    assert(pattern_bits > 0u);
    constexpr idx bits = limits<T>::digits;
    if (pattern_bits >= bits) {
@@ -437,7 +446,7 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
 [[nodiscard]]
 constexpr auto
-bit_compress(T value, T mask) -> T {
+bit_compress(T value, T mask) noexcept -> T {
    return ::x64::parallel_extract_bits(value, mask);
 }
 
@@ -446,14 +455,14 @@ template <is_unsigned_integral T>
    requires(!is_idx<T>)  // TODO: Support `idx` without setting its high bit.
 [[nodiscard]]
 constexpr auto
-bit_expand(T value, T mask) -> T {
+bit_expand(T value, T mask) noexcept -> T {
    return ::x64::deposit_bits_mask(value, mask);
 }
 
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::countl_zero() const -> uint1
+basic_int<T, overflow_policy, quantity>::countl_zero() const noexcept -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::countl_zero(*this);
@@ -462,7 +471,7 @@ basic_int<T, overflow_policy, quantity>::countl_zero() const -> uint1
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::countl_one() const -> uint1
+basic_int<T, overflow_policy, quantity>::countl_one() const noexcept -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::countl_one(*this);
@@ -471,7 +480,7 @@ basic_int<T, overflow_policy, quantity>::countl_one() const -> uint1
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::countr_zero() const -> uint1
+basic_int<T, overflow_policy, quantity>::countr_zero() const noexcept -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::countr_zero(*this);
@@ -480,7 +489,7 @@ basic_int<T, overflow_policy, quantity>::countr_zero() const -> uint1
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::countr_one() const -> uint1
+basic_int<T, overflow_policy, quantity>::countr_one() const noexcept -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::countr_one(*this);
@@ -490,7 +499,7 @@ basic_int<T, overflow_policy, quantity>::countr_one() const -> uint1
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::popcount() const -> uint1
+basic_int<T, overflow_policy, quantity>::popcount() const noexcept -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::popcount(*this);
@@ -499,7 +508,7 @@ basic_int<T, overflow_policy, quantity>::popcount() const -> uint1
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::has_single_bit() const -> bool
+basic_int<T, overflow_policy, quantity>::has_single_bit() const noexcept -> bool
    requires(is_unsigned_integral<T>)
 {
    return cat::has_single_bit(*this);
@@ -508,7 +517,7 @@ basic_int<T, overflow_policy, quantity>::has_single_bit() const -> bool
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::bit_floor() const
+basic_int<T, overflow_policy, quantity>::bit_floor() const noexcept
    -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
@@ -518,7 +527,7 @@ basic_int<T, overflow_policy, quantity>::bit_floor() const
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::bit_ceil() const
+basic_int<T, overflow_policy, quantity>::bit_ceil() const noexcept
    -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
@@ -528,7 +537,7 @@ basic_int<T, overflow_policy, quantity>::bit_ceil() const
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::bit_width() const -> uint1
+basic_int<T, overflow_policy, quantity>::bit_width() const noexcept -> uint1
    requires(is_unsigned_integral<T>)
 {
    return cat::bit_width(*this);
@@ -537,7 +546,7 @@ basic_int<T, overflow_policy, quantity>::bit_width() const -> uint1
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::byteswap() const
+basic_int<T, overflow_policy, quantity>::byteswap() const noexcept
    -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
@@ -547,7 +556,7 @@ basic_int<T, overflow_policy, quantity>::byteswap() const
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::shift_left(uword count) const
+basic_int<T, overflow_policy, quantity>::shift_left(uword count) const noexcept
    -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
@@ -557,7 +566,7 @@ basic_int<T, overflow_policy, quantity>::shift_left(uword count) const
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::shift_right(uword count) const
+basic_int<T, overflow_policy, quantity>::shift_right(uword count) const noexcept
    -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
@@ -567,7 +576,7 @@ basic_int<T, overflow_policy, quantity>::shift_right(uword count) const
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::rotate_left(uword count) const
+basic_int<T, overflow_policy, quantity>::rotate_left(uword count) const noexcept
    -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
@@ -577,8 +586,9 @@ basic_int<T, overflow_policy, quantity>::rotate_left(uword count) const
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::rotate_right(uword count) const
-   -> basic_int<T, overflow_policy, quantity>
+basic_int<T, overflow_policy, quantity>::rotate_right(
+   uword count
+) const noexcept -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::rotate_right(*this, count);
@@ -587,7 +597,7 @@ basic_int<T, overflow_policy, quantity>::rotate_right(uword count) const
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::bit_reverse() const
+basic_int<T, overflow_policy, quantity>::bit_reverse() const noexcept
    -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
@@ -597,7 +607,9 @@ basic_int<T, overflow_policy, quantity>::bit_reverse() const
 template <typename T, overflow_policies overflow_policy, auto quantity>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-basic_int<T, overflow_policy, quantity>::bit_repeat(idx pattern_bits) const
+basic_int<T, overflow_policy, quantity>::bit_repeat(
+   idx pattern_bits
+) const noexcept(!__has_feature(cxx_exceptions))
    -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
@@ -609,7 +621,7 @@ template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
 basic_int<T, overflow_policy, quantity>::bit_compress(
    basic_int<T, overflow_policy, quantity> mask
-) const -> basic_int<T, overflow_policy, quantity>
+) const noexcept -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::bit_compress(*this, mask);
@@ -620,7 +632,7 @@ template <typename T, overflow_policies overflow_policy, auto quantity>
 constexpr auto
 basic_int<T, overflow_policy, quantity>::bit_expand(
    basic_int<T, overflow_policy, quantity> mask
-) const -> basic_int<T, overflow_policy, quantity>
+) const noexcept -> basic_int<T, overflow_policy, quantity>
    requires(is_unsigned_integral<T>)
 {
    return cat::bit_expand(*this, mask);
@@ -633,7 +645,8 @@ namespace detail {
 template <cat::is_unsigned T>
 [[nodiscard]]
 constexpr auto
-extract_bits_fallback(T from, cat::uint1 offset, cat::idx length) -> T {
+extract_bits_fallback(T from, cat::uint1 offset, cat::idx length) noexcept
+   -> T {
    constexpr cat::idx bits = sizeof(T) * 8u;
    auto raw_from = cat::make_raw_arithmetic(from);
 
@@ -656,7 +669,7 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-parallel_extract_bits_fallback(T value, U mask) -> T {
+parallel_extract_bits_fallback(T value, U mask) noexcept -> T {
    T result = 0u;
    auto raw_value = cat::make_raw_arithmetic(value);
    auto raw_mask = cat::make_raw_arithmetic(mask);
@@ -680,7 +693,7 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-deposit_bits_mask_fallback(T value, U mask) -> T {
+deposit_bits_mask_fallback(T value, U mask) noexcept -> T {
    T result = 0u;
    auto raw_value = cat::make_raw_arithmetic(value);
    auto raw_mask = cat::make_raw_arithmetic(mask);
@@ -703,7 +716,7 @@ deposit_bits_mask_fallback(T value, U mask) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-zero_high_bits_at_fallback(T source, cat::uint4 bit_index) -> T {
+zero_high_bits_at_fallback(T source, cat::uint4 bit_index) noexcept -> T {
    constexpr cat::idx bits = sizeof(T) * 8u;
    if (bit_index == 0u) {
       return 0u;
@@ -721,14 +734,14 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-and_not_fallback(T left, U right) -> T {
+and_not_fallback(T left, U right) noexcept -> T {
    return T(~cat::make_raw_arithmetic(left) & cat::make_raw_arithmetic(right));
 }
 
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-extract_lowest_bit_fallback(T value) -> T {
+extract_lowest_bit_fallback(T value) noexcept -> T {
    using raw_type = cat::raw_arithmetic_type<T>;
    raw_type const raw_value = cat::make_raw_arithmetic(value);
    return T(raw_value & raw_type(0u - raw_value));
@@ -737,7 +750,7 @@ extract_lowest_bit_fallback(T value) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-mask_through_lowest_bit_fallback(T value) -> T {
+mask_through_lowest_bit_fallback(T value) noexcept -> T {
    using raw_type = cat::raw_arithmetic_type<T>;
    raw_type const raw_value = cat::make_raw_arithmetic(value);
    return T(raw_value ^ raw_type(raw_value - 1u));
@@ -746,7 +759,7 @@ mask_through_lowest_bit_fallback(T value) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-reset_lowest_bit_fallback(T value) -> T {
+reset_lowest_bit_fallback(T value) noexcept -> T {
    using raw_type = cat::raw_arithmetic_type<T>;
    raw_type const raw_value = cat::make_raw_arithmetic(value);
    return T(raw_value & raw_type(raw_value - 1u));
@@ -755,7 +768,7 @@ reset_lowest_bit_fallback(T value) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-shift_left_by_fallback(T value, cat::uword count) -> T {
+shift_left_by_fallback(T value, cat::uword count) noexcept -> T {
    constexpr cat::idx bits = sizeof(T) * 8u;
    if (count >= bits) {
       return 0u;
@@ -766,7 +779,7 @@ shift_left_by_fallback(T value, cat::uword count) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-shift_right_by_fallback(T value, cat::uword count) -> T {
+shift_right_by_fallback(T value, cat::uword count) noexcept -> T {
    constexpr cat::idx bits = sizeof(T) * 8u;
    if (count >= bits) {
       return 0u;
@@ -777,7 +790,7 @@ shift_right_by_fallback(T value, cat::uword count) -> T {
 template <cat::is_signed_integral T>
 [[nodiscard]]
 constexpr auto
-shift_right_arithmetic_by_fallback(T value, cat::uword count) -> T {
+shift_right_arithmetic_by_fallback(T value, cat::uword count) noexcept -> T {
    constexpr cat::idx bits = sizeof(T) * 8u;
    if (count >= bits) {
       return value < 0 ? T(-1) : T(0);
@@ -788,7 +801,7 @@ shift_right_arithmetic_by_fallback(T value, cat::uword count) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-rotate_right_by_fallback(T value, cat::uword count) -> T {
+rotate_right_by_fallback(T value, cat::uword count) noexcept -> T {
    constexpr cat::idx bits = sizeof(T) * 8u;
    cat::uword const reduced_count = count % bits;
    if (reduced_count == 0u) {
@@ -804,7 +817,7 @@ rotate_right_by_fallback(T value, cat::uword count) -> T {
 template <cat::is_unsigned T>
 [[nodiscard, gnu::target("bmi"), gnu::nodebug]]
 auto
-extract_bits_bmi(T from, cat::uint1 offset, cat::idx length) -> T {
+extract_bits_bmi(T from, cat::uint1 offset, cat::idx length) noexcept -> T {
    auto raw_from = cat::make_raw_arithmetic(from);
    auto raw_length = cat::make_raw_arithmetic(length);
 
@@ -823,7 +836,7 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
 auto
-parallel_extract_bits_bmi2(T value, U mask) -> T {
+parallel_extract_bits_bmi2(T value, U mask) noexcept -> T {
    auto raw_value = cat::make_raw_arithmetic(value);
    auto raw_mask = cat::make_raw_arithmetic(mask);
 
@@ -840,7 +853,7 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
 auto
-deposit_bits_mask_bmi2(T value, U mask) -> T {
+deposit_bits_mask_bmi2(T value, U mask) noexcept -> T {
    auto raw_value = cat::make_raw_arithmetic(value);
    auto raw_mask = cat::make_raw_arithmetic(mask);
 
@@ -856,7 +869,7 @@ deposit_bits_mask_bmi2(T value, U mask) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
 auto
-zero_high_bits_at_bmi2(T source, cat::uint4 bit_index) -> T {
+zero_high_bits_at_bmi2(T source, cat::uint4 bit_index) noexcept -> T {
    if constexpr (__has_builtin(__builtin_ia32_bzhi_si) && sizeof(T) == 4) {
       return __builtin_ia32_bzhi_si(
          cat::make_raw_arithmetic(source), bit_index.raw
@@ -876,56 +889,56 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard, gnu::target("bmi"), gnu::nodebug]]
 auto
-and_not_bmi(T left, U right) -> T {
+and_not_bmi(T left, U right) noexcept -> T {
    return T(~cat::make_raw_arithmetic(left) & cat::make_raw_arithmetic(right));
 }
 
 template <cat::is_unsigned_integral T>
 [[nodiscard, gnu::target("bmi"), gnu::nodebug]]
 auto
-extract_lowest_bit_bmi(T value) -> T {
+extract_lowest_bit_bmi(T value) noexcept -> T {
    return extract_lowest_bit_fallback(value);
 }
 
 template <cat::is_unsigned_integral T>
 [[nodiscard, gnu::target("bmi"), gnu::nodebug]]
 auto
-mask_through_lowest_bit_bmi(T value) -> T {
+mask_through_lowest_bit_bmi(T value) noexcept -> T {
    return mask_through_lowest_bit_fallback(value);
 }
 
 template <cat::is_unsigned_integral T>
 [[nodiscard, gnu::target("bmi"), gnu::nodebug]]
 auto
-reset_lowest_bit_bmi(T value) -> T {
+reset_lowest_bit_bmi(T value) noexcept -> T {
    return reset_lowest_bit_fallback(value);
 }
 
 template <cat::is_unsigned_integral T>
 [[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
 auto
-shift_left_by_bmi2(T value, cat::uword count) -> T {
+shift_left_by_bmi2(T value, cat::uword count) noexcept -> T {
    return shift_left_by_fallback(value, count);
 }
 
 template <cat::is_unsigned_integral T>
 [[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
 auto
-shift_right_by_bmi2(T value, cat::uword count) -> T {
+shift_right_by_bmi2(T value, cat::uword count) noexcept -> T {
    return shift_right_by_fallback(value, count);
 }
 
 template <cat::is_signed_integral T>
 [[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
 auto
-shift_right_arithmetic_by_bmi2(T value, cat::uword count) -> T {
+shift_right_arithmetic_by_bmi2(T value, cat::uword count) noexcept -> T {
    return shift_right_arithmetic_by_fallback(value, count);
 }
 
 template <cat::is_unsigned_integral T>
 [[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
 auto
-rotate_right_by_bmi2(T value, cat::uword count) -> T {
+rotate_right_by_bmi2(T value, cat::uword count) noexcept -> T {
    return rotate_right_by_fallback(value, count);
 }
 }  // namespace detail
@@ -936,7 +949,7 @@ rotate_right_by_bmi2(T value, cat::uword count) -> T {
 template <cat::is_unsigned T>
 [[nodiscard]]
 constexpr auto
-extract_bits(T from, cat::uint1 offset, cat::idx length) -> T {
+extract_bits(T from, cat::uint1 offset, cat::idx length) noexcept -> T {
    if consteval {
       return detail::extract_bits_fallback(from, offset, length);
    } else {
@@ -951,7 +964,7 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-and_not(T left, U right) -> T {
+and_not(T left, U right) noexcept -> T {
    if consteval {
       return detail::and_not_fallback(left, right);
    } else {
@@ -965,7 +978,7 @@ and_not(T left, U right) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-extract_lowest_bit(T value) -> T {
+extract_lowest_bit(T value) noexcept -> T {
    if consteval {
       return detail::extract_lowest_bit_fallback(value);
    } else {
@@ -979,7 +992,7 @@ extract_lowest_bit(T value) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-mask_through_lowest_bit(T value) -> T {
+mask_through_lowest_bit(T value) noexcept -> T {
    if consteval {
       return detail::mask_through_lowest_bit_fallback(value);
    } else {
@@ -993,7 +1006,7 @@ mask_through_lowest_bit(T value) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-reset_lowest_bit(T value) -> T {
+reset_lowest_bit(T value) noexcept -> T {
    if consteval {
       return detail::reset_lowest_bit_fallback(value);
    } else {
@@ -1009,7 +1022,8 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-parallel_extract_bits(T value, U mask) -> T {
+parallel_extract_bits(T value, U mask) noexcept(!__has_feature(cxx_exceptions))
+   -> T {
    if consteval {
       return detail::parallel_extract_bits_fallback(value, mask);
    } else {
@@ -1025,7 +1039,8 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-deposit_bits_mask(T value, U mask) -> T {
+deposit_bits_mask(T value, U mask) noexcept(!__has_feature(cxx_exceptions))
+   -> T {
    if consteval {
       return detail::deposit_bits_mask_fallback(value, mask);
    } else {
@@ -1039,7 +1054,7 @@ deposit_bits_mask(T value, U mask) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-zero_high_bits_at(T source, cat::uint4 bit_index) -> T {
+zero_high_bits_at(T source, cat::uint4 bit_index) noexcept -> T {
    if consteval {
       return detail::zero_high_bits_at_fallback(source, bit_index);
    } else {
@@ -1053,7 +1068,9 @@ zero_high_bits_at(T source, cat::uint4 bit_index) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-shift_left_by(T value, cat::uword count) -> T {
+shift_left_by(T value, cat::uword count) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> T {
    if consteval {
       return detail::shift_left_by_fallback(value, count);
    } else {
@@ -1067,7 +1084,9 @@ shift_left_by(T value, cat::uword count) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-shift_right_by(T value, cat::uword count) -> T {
+shift_right_by(T value, cat::uword count) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> T {
    if consteval {
       return detail::shift_right_by_fallback(value, count);
    } else {
@@ -1081,7 +1100,7 @@ shift_right_by(T value, cat::uword count) -> T {
 template <cat::is_signed_integral T>
 [[nodiscard]]
 constexpr auto
-shift_right_arithmetic_by(T value, cat::uword count) -> T {
+shift_right_arithmetic_by(T value, cat::uword count) noexcept -> T {
    if consteval {
       return detail::shift_right_arithmetic_by_fallback(value, count);
    } else {
@@ -1095,7 +1114,9 @@ shift_right_arithmetic_by(T value, cat::uword count) -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-rotate_right_by(T value, cat::uword count) -> T {
+rotate_right_by(T value, cat::uword count) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> T {
    if consteval {
       return detail::rotate_right_by_fallback(value, count);
    } else {
@@ -1120,34 +1141,40 @@ class bit_reference;
 
 template <is_unsigned_integral Storage, is_unsigned_integral Mask>
 constexpr auto
-make_bit_reference_from_mask(Storage& reference, Mask mask)
-   -> bit_reference<Storage>;
+make_bit_reference_from_mask(Storage& reference, Mask mask) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bit_reference<Storage>;
 
 template <is_unsigned_integral Storage>
 constexpr auto
-make_bit_reference_from_offset(Storage& reference, uword offset)
-   -> bit_reference<Storage>;
+make_bit_reference_from_offset(Storage& reference, uword offset) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bit_reference<Storage>;
 
 template <is_unsigned_integral Storage>
    requires(!is_const<Storage>)
 constexpr void
-swap(bit_reference<Storage> left, bit_reference<Storage> right);
+swap(bit_reference<Storage> left, bit_reference<Storage> right) noexcept;
 
 template <is_unsigned_integral Storage, is_unsigned_integral Mask>
 constexpr auto
-make_bit_ptr_from_mask(Storage* _Nonnull p_storage, Mask mask)
-   -> bit_ptr<Storage>;
+make_bit_ptr_from_mask(Storage* _Nonnull p_storage, Mask mask) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bit_ptr<Storage>;
 
 template <is_unsigned_integral Storage, is_arithmetic Offset>
 constexpr auto
-make_bit_ptr_from_offset(Storage* _Nonnull p_storage, Offset offset)
-   -> bit_ptr<Storage>;
+make_bit_ptr_from_offset(Storage* _Nonnull p_storage, Offset offset) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bit_ptr<Storage>;
 
 namespace detail {
 constexpr auto
-get_bit_value(bit_value& value) -> bool&;
+get_bit_value(bit_value& value) noexcept(!__has_feature(cxx_exceptions))
+   -> bool&;
 constexpr auto
-get_bit_value(bit_value const& value) -> bool const&;
+get_bit_value(bit_value const& value) noexcept(!__has_feature(cxx_exceptions))
+   -> bool const&;
 }  // namespace detail
 
 }  // namespace cat
@@ -1160,9 +1187,13 @@ namespace cat {
 class bit_value {
  private:
    friend constexpr auto
-   cat::detail::get_bit_value(bit_value& value) -> bool&;
+   cat::detail::get_bit_value(bit_value& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool&;
    friend constexpr auto
-   cat::detail::get_bit_value(bit_value const& value) -> bool const&;
+   cat::detail::get_bit_value(bit_value const& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool const&;
 
  public:
    template <is_unsigned_integral>
@@ -1173,136 +1204,141 @@ class bit_value {
    constexpr bit_value(bit_value&&) = default;
 
    // Implicitly convert from a `bool`.
-   constexpr bit_value(bool other) : m_value(other) {
+   constexpr bit_value(bool other) noexcept : m_value(other) {
    }
 
    // Create a `bit_value` copied from a bit position `offset` bits from the
    // right of a `Storage`.
    template <is_unsigned_integral Storage>
    static constexpr auto
-   from_offset(Storage word, iword offset) {
+   from_offset(Storage word, iword offset) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       assert(offset < limits<Storage>::bits);
       bit_value bit;
       bit.m_value = ((word >> offset) & 1u) != 0u;
    }
 
    constexpr auto
-   operator=(bit_value const& other) -> bit_value& = default;
+   operator=(bit_value const& other) noexcept -> bit_value& = default;
 
    template <is_unsigned_integral T>
    constexpr auto
-   operator=(bit_reference<T> other) -> bit_value& {
+   operator=(bit_reference<T> other) noexcept -> bit_value& {
       m_value = other.is_set();
       return *this;
    }
 
    constexpr auto
-   operator=(bool other) -> bit_value& {
+   operator=(bool other) noexcept -> bit_value& {
       m_value = other;
       return *this;
    }
 
    // Implicitly convert to `bool`.
    constexpr
-   operator bool() const {
+   operator bool() const noexcept {
       return m_value;
    }
 
    friend constexpr auto
-   operator==(bit_value const& self, bit_value const& other) -> bool {
+   operator==(bit_value const& self, bit_value const& other) noexcept -> bool {
       return self.m_value == other.m_value;
    }
 
    friend constexpr auto
-   operator==(bit_value const& self, bool other) -> bool {
+   operator==(bit_value const& self, bool other) noexcept -> bool {
       return self.m_value == other;
    }
 
    friend constexpr auto
-   operator&(bit_value const& self, bit_value const& other) -> bit_value {
+   operator&(bit_value const& self, bit_value const& other) noexcept
+      -> bit_value {
       return (static_cast<unsigned char>(self.m_value)
               & static_cast<unsigned char>(other.m_value))
              != 0u;
    }
 
    constexpr auto
-   operator&=(bit_value const& other) -> bit_value& {
+   operator&=(bit_value const& other) noexcept -> bit_value& {
       m_value &= other.m_value;
       return *this;
    }
 
    friend constexpr auto
-   operator|(bit_value const& self, bit_value const& other) -> bit_value {
+   operator|(bit_value const& self, bit_value const& other) noexcept
+      -> bit_value {
       return (static_cast<unsigned char>(self.m_value)
               | static_cast<unsigned char>(other.m_value))
              != 0u;
    }
 
    constexpr auto
-   operator|=(bit_value const& other) -> bit_value& {
+   operator|=(bit_value const& other) noexcept -> bit_value& {
       m_value |= other.m_value;
       return *this;
    }
 
    friend constexpr auto
-   operator^(bit_value const& self, bit_value const& other) -> bit_value {
+   operator^(bit_value const& self, bit_value const& other) noexcept
+      -> bit_value {
       return (static_cast<unsigned char>(self.m_value)
               ^ static_cast<unsigned char>(other.m_value))
              != 0u;
    }
 
    constexpr auto
-   operator^=(bit_value const& other) -> bit_value& {
+   operator^=(bit_value const& other) noexcept -> bit_value& {
       m_value ^= static_cast<unsigned char>(other.m_value);
       return *this;
    }
 
    constexpr auto
-   operator~() const -> bit_value {
+   operator~() const noexcept -> bit_value {
       bit_value bit = !m_value;
       return bit;
    }
 
    constexpr void
-   assign(bit_value const& input) {
+   assign(bit_value const& input) noexcept {
       m_value = input.m_value;
    }
 
    template <is_unsigned_integral T>
    constexpr void
-   assign(bit_reference<T> input) {
+   assign(bit_reference<T> input) noexcept {
       m_value = input.is_set();
    }
 
    constexpr void
-   assign(bool input) {
+   assign(bool input) noexcept {
       m_value = input;
    }
 
    // Flag this bit on.
    constexpr auto
-   set() -> bit_value& {
+   set() noexcept -> bit_value& {
       m_value = true;
       return *this;
    }
 
    // Flag this bit off.
    constexpr auto
-   unset() -> bit_value& {
+   unset() noexcept -> bit_value& {
       m_value = false;
       return *this;
    }
 
    // Flag this bit as the opposite of its current state.
    constexpr auto
-   flip() -> bit_value& {
+   flip() noexcept -> bit_value& {
       m_value = !m_value;
       return *this;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_set() const -> bool {
+   is_set() const noexcept -> bool {
       return m_value;
    }
 
@@ -1323,12 +1359,14 @@ inline constexpr bit_value zero_bit = false;
 
 namespace detail {
 constexpr auto
-get_bit_value(bit_value& value) -> bool& {
+get_bit_value(bit_value& value) noexcept(!__has_feature(cxx_exceptions))
+   -> bool& {
    return value.m_value;
 }
 
 constexpr auto
-get_bit_value(bit_value const& value) -> bool const& {
+get_bit_value(bit_value const& value) noexcept(!__has_feature(cxx_exceptions))
+   -> bool const& {
    return value.m_value;
 }
 }  // namespace detail
@@ -1342,7 +1380,7 @@ namespace cat {
 template <is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-invert_endianess(T value) -> T {
+invert_endianess(T value) noexcept -> T {
    if constexpr (sizeof(value) == 1) {
       return value;
    }
@@ -1366,32 +1404,32 @@ invert_endianess(T value) -> T {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_aligned(T* _Nullable p_value, ualign alignment) -> bool;
+is_aligned(T* _Nullable p_value, ualign alignment) noexcept -> bool;
 
 template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-is_aligned(T value, ualign alignment) -> bool;
+is_aligned(T value, ualign alignment) noexcept -> bool;
 
 template <typename T>
 [[nodiscard]]
 constexpr auto
-align_up(T* _Nullable p_value, ualign alignment) -> T* _Nullable;
+align_up(T* _Nullable p_value, ualign alignment) noexcept -> T* _Nullable;
 
 template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-align_up(T value, ualign alignment) -> T;
+align_up(T value, ualign alignment) noexcept -> T;
 
 template <typename T>
 [[nodiscard]]
 constexpr auto
-align_down(T* _Nullable p_value, ualign alignment) -> T* _Nullable;
+align_down(T* _Nullable p_value, ualign alignment) noexcept -> T* _Nullable;
 
 template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-align_down(T value, ualign alignment) -> T;
+align_down(T value, ualign alignment) noexcept -> T;
 
 // `byte` is a storage type which enables bitwise operations but not arithmetic.
 struct byte : bitwise_interface<byte> {
@@ -1399,39 +1437,39 @@ struct byte : bitwise_interface<byte> {
 
    template <is_arithmetic T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   constexpr explicit byte(T from)
+   constexpr explicit byte(T from) noexcept
        : value(static_cast<unsigned char>(from)) {
    }
 
    uint1 value;
 
    friend constexpr auto
-   operator==(byte const& left, byte const& right) -> bool {
+   operator==(byte const& left, byte const& right) noexcept -> bool {
       return left.value == right.value;
    }
 
    template <is_integral T>
    friend constexpr auto
-   operator==(byte const& left, T right) -> bool {
+   operator==(byte const& left, T right) noexcept -> bool {
       return left.value == right;
    }
 
    template <is_integral T>
    friend constexpr auto
-   operator==(T left, byte const& right) -> bool {
+   operator==(T left, byte const& right) noexcept -> bool {
       return right == left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator<=>(byte const& left, byte const& right) {
+   operator<=>(byte const& left, byte const& right) noexcept {
       return left.value <=> right.value;
    }
 
    template <is_integral T>
    [[nodiscard]]
    friend constexpr auto
-   operator<=>(byte const& left, T right) {
+   operator<=>(byte const& left, T right) noexcept {
       return detail::raw_mixed_integral_spaceship(
          make_raw_arithmetic(left.value), make_raw_arithmetic(right)
       );
@@ -1440,7 +1478,7 @@ struct byte : bitwise_interface<byte> {
    template <is_integral T>
    [[nodiscard]]
    friend constexpr auto
-   operator<=>(T left, byte const& right) {
+   operator<=>(T left, byte const& right) noexcept {
       return detail::raw_mixed_integral_spaceship(
          make_raw_arithmetic(left), make_raw_arithmetic(right.value)
       );
@@ -1449,7 +1487,7 @@ struct byte : bitwise_interface<byte> {
    template <typename T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator T() const
+   operator T() const noexcept
       requires(
          is_either<remove_cv<T>, char, signed char, unsigned char, char8_t>
       )
@@ -1459,164 +1497,165 @@ struct byte : bitwise_interface<byte> {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_complement() const -> byte {
+   bit_complement() const noexcept -> byte {
       return byte(~value);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(byte from) const -> byte {
+   bit_and(byte from) const noexcept -> byte {
       return byte(value & from.value);
    }
 
    template <is_integral T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(T from) const -> byte {
+   bit_and(T from) const noexcept -> byte {
       return bit_and(byte(from));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(byte from) const -> byte {
+   bit_or(byte from) const noexcept -> byte {
       return byte(value | from.value);
    }
 
    template <is_integral T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(T from) const -> byte {
+   bit_or(T from) const noexcept -> byte {
       return bit_or(byte(from));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_xor(byte from) const -> byte {
+   bit_xor(byte from) const noexcept -> byte {
       return byte(value ^ from.value);
    }
 
    template <is_integral T>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_xor(T from) const -> byte {
+   bit_xor(T from) const noexcept -> byte {
       return bit_xor(byte(from));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(byte operand) const -> byte {
+   shift_left_by(byte operand) const noexcept -> byte {
       return byte(value << operand.value);
    }
 
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(U operand) const -> byte {
+   shift_left_by(U operand) const noexcept -> byte {
       return byte(value << operand);
    }
 
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_into(U other) const -> U {
+   shift_left_into(U other) const noexcept -> U {
       return other << value;
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(byte operand) const -> byte {
+   shift_right_by(byte operand) const noexcept -> byte {
       return byte(value >> operand.value);
    }
 
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(U operand) const -> byte {
+   shift_right_by(U operand) const noexcept -> byte {
       return byte(value >> operand);
    }
 
    template <is_arithmetic U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_into(U other) const -> U {
+   shift_right_into(U other) const noexcept -> U {
       return other >> value;
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   has_single_bit() const -> bool {
+   has_single_bit() const noexcept -> bool {
       return __builtin_stdc_has_single_bit(make_raw_arithmetic(value));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_width() const -> uint1 {
+   bit_width() const noexcept -> uint1 {
       return cat::bit_width(value);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_floor() const -> byte {
+   bit_floor() const noexcept -> byte {
       return byte(cat::bit_floor(value));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_ceil() const -> byte {
+   bit_ceil() const noexcept -> byte {
       return byte(cat::bit_ceil(value));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   byteswap() const -> byte {
+   byteswap() const noexcept -> byte {
       return *this;
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left(uword count) const -> byte {
+   shift_left(uword count) const noexcept -> byte {
       return byte(cat::shift_left(value, count));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right(uword count) const -> byte {
+   shift_right(uword count) const noexcept -> byte {
       return byte(cat::shift_right(value, count));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   rotate_left(uword count) const -> byte {
+   rotate_left(uword count) const noexcept -> byte {
       return byte(cat::rotate_left(value, count));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   rotate_right(uword count) const -> byte {
+   rotate_right(uword count) const noexcept -> byte {
       return byte(cat::rotate_right(value, count));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_reverse() const -> byte {
+   bit_reverse() const noexcept -> byte {
       return byte(cat::bit_reverse(value));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_repeat(idx pattern_bits) const -> byte {
+   bit_repeat(idx pattern_bits) const noexcept(!__has_feature(cxx_exceptions))
+      -> byte {
       return byte(cat::bit_repeat(value, pattern_bits));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_compress(byte mask) const -> byte {
+   bit_compress(byte mask) const noexcept -> byte {
       return byte(cat::bit_compress(value, mask.value));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_expand(byte mask) const -> byte {
+   bit_expand(byte mask) const noexcept -> byte {
       return byte(cat::bit_expand(value, mask.value));
    }
 };
@@ -1625,80 +1664,82 @@ static_assert(is_implicit_lifetime<cat::byte>);
 
 [[nodiscard]]
 constexpr auto
-countl_zero(byte value) -> uint1 {
+countl_zero(byte value) noexcept -> uint1 {
    return countl_zero(value.value);
 }
 
 [[nodiscard]]
 constexpr auto
-countl_one(byte value) -> uint1 {
+countl_one(byte value) noexcept -> uint1 {
    return countl_one(value.value);
 }
 
 [[nodiscard]]
 constexpr auto
-countr_zero(byte value) -> uint1 {
+countr_zero(byte value) noexcept -> uint1 {
    return countr_zero(value.value);
 }
 
 [[nodiscard]]
 constexpr auto
-countr_one(byte value) -> uint1 {
+countr_one(byte value) noexcept -> uint1 {
    return countr_one(value.value);
 }
 
 // Count set bits in a byte value.
 [[nodiscard]]
 constexpr auto
-popcount(byte value) -> uint1 {
+popcount(byte value) noexcept -> uint1 {
    return popcount(value.value);
 }
 
 [[nodiscard]]
 constexpr auto
-bit_width(byte value) -> uint1 {
+bit_width(byte value) noexcept -> uint1 {
    return bit_width(value.value);
 }
 
 [[nodiscard]]
 constexpr auto
-byteswap(byte value) -> byte {
+byteswap(byte value) noexcept -> byte {
    return value;
 }
 
 [[nodiscard]]
 constexpr auto
-shift_left(byte value, uword count) -> byte {
+shift_left(byte value, uword count) noexcept -> byte {
    return byte(shift_left(value.value, count));
 }
 
 [[nodiscard]]
 constexpr auto
-shift_right(byte value, uword count) -> byte {
+shift_right(byte value, uword count) noexcept -> byte {
    return byte(shift_right(value.value, count));
 }
 
 [[nodiscard]]
 constexpr auto
-bit_reverse(byte value) -> byte {
+bit_reverse(byte value) noexcept -> byte {
    return byte(bit_reverse(value.value));
 }
 
 [[nodiscard]]
 constexpr auto
-bit_repeat(byte value, idx pattern_bits) -> byte {
+bit_repeat(byte value, idx pattern_bits) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> byte {
    return byte(bit_repeat(value.value, pattern_bits));
 }
 
 [[nodiscard]]
 constexpr auto
-bit_compress(byte value, byte mask) -> byte {
+bit_compress(byte value, byte mask) noexcept -> byte {
    return byte(bit_compress(value.value, mask.value));
 }
 
 [[nodiscard]]
 constexpr auto
-bit_expand(byte value, byte mask) -> byte {
+bit_expand(byte value, byte mask) noexcept -> byte {
    return byte(bit_expand(value.value, mask.value));
 }
 
@@ -1706,21 +1747,25 @@ namespace detail {
 // Count set bits in a byte buffer at runtime.
 [[nodiscard]]
 auto
-popcount_bytes_runtime(byte const* _Nonnull p_bytes, idx bytes) -> idx;
+popcount_bytes_runtime(byte const* _Nonnull p_bytes, idx bytes) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> idx;
 
 // Count set bits in a word buffer at runtime.
 [[nodiscard]]
 auto
 popcount_words_runtime(
    uword const* _Nonnull p_words, idx words, uword tail_mask
-) -> idx;
+) noexcept(!__has_feature(cxx_exceptions)) -> idx;
 }  // namespace detail
 
 // Count set bits across a byte span.
 template <idx fixed_extent>
 [[nodiscard]]
 constexpr auto
-popcount(span<byte const, fixed_extent> bytes) -> idx {
+popcount(span<byte const, fixed_extent> bytes) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> idx {
    if consteval {
       idx count = 0u;
       for (idx i = 0u; i < bytes.size(); ++i) {
@@ -1736,7 +1781,9 @@ popcount(span<byte const, fixed_extent> bytes) -> idx {
 template <is_unsigned_integral Word, idx fixed_extent>
 [[nodiscard]]
 constexpr auto
-popcount(span<Word const, fixed_extent> words) -> idx {
+popcount(span<Word const, fixed_extent> words) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> idx {
    if consteval {
       idx count = 0u;
       for (idx i = 0u; i < words.size(); ++i) {
@@ -1789,7 +1836,7 @@ concept is_contiguous_bits =
 template <is_unsigned_word_container Words>
 [[nodiscard]]
 constexpr auto
-popcount(Words const& words) -> idx {
+popcount(Words const& words) noexcept -> idx {
    using word_type = remove_cv<typename remove_cvref<Words>::value_type>;
    return popcount(
       span<word_type const, idx::max()>{words.data(), words.size()}
@@ -1800,7 +1847,7 @@ template <is_integral T>
    requires(!is_unsigned_integral<T>)
 [[nodiscard]]
 constexpr auto
-has_single_bit(T value) -> bool {
+has_single_bit(T value) noexcept -> bool {
    return __builtin_stdc_has_single_bit(
       static_cast<make_unsigned_type<raw_arithmetic_type<T>>>(
          make_raw_arithmetic(value)
@@ -1810,43 +1857,43 @@ has_single_bit(T value) -> bool {
 
 [[nodiscard]]
 constexpr auto
-has_single_bit(byte value) -> bool {
+has_single_bit(byte value) noexcept -> bool {
    return value.has_single_bit();
 }
 
 [[nodiscard]]
 constexpr auto
-bit_floor(byte value) -> byte {
+bit_floor(byte value) noexcept -> byte {
    return byte(bit_floor(value.value));
 }
 
 [[nodiscard]]
 constexpr auto
-bit_ceil(byte value) -> byte {
+bit_ceil(byte value) noexcept -> byte {
    return byte(bit_ceil(value.value));
 }
 
 [[nodiscard]]
 constexpr auto
-rotate_left(byte value, uword shift) -> byte {
+rotate_left(byte value, uword shift) noexcept -> byte {
    return byte(rotate_left(value.value, shift));
 }
 
 [[nodiscard]]
 constexpr auto
-rotate_left(byte value, iword shift) -> byte {
+rotate_left(byte value, iword shift) noexcept -> byte {
    return byte(rotate_left(value.value, shift));
 }
 
 [[nodiscard]]
 constexpr auto
-rotate_right(byte value, uword shift) -> byte {
+rotate_right(byte value, uword shift) noexcept -> byte {
    return byte(rotate_right(value.value, shift));
 }
 
 [[nodiscard]]
 constexpr auto
-rotate_right(byte value, iword shift) -> byte {
+rotate_right(byte value, iword shift) noexcept -> byte {
    return byte(rotate_right(value.value, shift));
 }
 
@@ -1861,7 +1908,7 @@ concept is_enum_flag = enum_flag_trait<T>::value;
 template <cat::is_enum_flag T>
 [[nodiscard]]
 constexpr auto
-operator|(T flag_1, T flag_2) -> T {
+operator|(T flag_1, T flag_2) noexcept -> T {
    using underlying = cat::underlying_type<T>;
    return static_cast<T>(
       static_cast<underlying>(flag_1) | static_cast<underlying>(flag_2)
@@ -1870,7 +1917,7 @@ operator|(T flag_1, T flag_2) -> T {
 
 template <cat::is_enum_flag T>
 constexpr auto
-operator|=(T& self, T other) -> T& {
+operator|=(T& self, T other) noexcept -> T& {
    self = self | other;
    return self;
 }
@@ -1880,7 +1927,7 @@ operator|=(T& self, T other) -> T& {
 template <cat::is_enum_flag T>
 [[nodiscard]]
 constexpr auto
-operator&(T flag_1, T flag_2) -> T {
+operator&(T flag_1, T flag_2) noexcept -> T {
    using underlying = cat::underlying_type<T>;
    return static_cast<T>(
       static_cast<underlying>(flag_1) & static_cast<underlying>(flag_2)
@@ -1889,7 +1936,7 @@ operator&(T flag_1, T flag_2) -> T {
 
 template <cat::is_enum_flag T>
 constexpr auto
-operator&=(T& self, T other) -> T& {
+operator&=(T& self, T other) noexcept -> T& {
    self = self & other;
    return self;
 }

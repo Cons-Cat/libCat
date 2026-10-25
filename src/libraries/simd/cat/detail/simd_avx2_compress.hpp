@@ -47,7 +47,8 @@ struct compress_lookup_table_8x32_storage {
 
 [[nodiscard]]
 constexpr auto
-build_compress_lookup_table_8x32() -> compress_lookup_table_8x32_storage {
+build_compress_lookup_table_8x32() noexcept
+   -> compress_lookup_table_8x32_storage {
    compress_lookup_table_8x32_storage out{};
    for (__SIZE_TYPE__ m = 0u; m < 256u; ++m) {
       __SIZE_TYPE__ k = 0u;
@@ -73,7 +74,8 @@ struct compress_lookup_table_4x64_storage {
 // selected source qword. `vpermd` then handles the move.
 [[nodiscard]]
 constexpr auto
-build_compress_lookup_table_4x64() -> compress_lookup_table_4x64_storage {
+build_compress_lookup_table_4x64() noexcept
+   -> compress_lookup_table_4x64_storage {
    compress_lookup_table_4x64_storage out{};
    for (__SIZE_TYPE__ m = 0u; m < 16u; ++m) {
       __SIZE_TYPE__ k = 0u;
@@ -113,7 +115,8 @@ template <typename T, x64::is_avx_abi<T> Abi>
 struct compress<T, Abi> {
    [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd<T, Abi> input, simd_mask<T, Abi> selector) -> simd<T, Abi> {
+   invoke(simd<T, Abi> input, simd_mask<T, Abi> selector) noexcept
+      -> simd<T, Abi> {
       using v8si = simd<int, ::x64::avx_abi<int>>::raw_type;
       using raw_t = simd<T, Abi>::raw_type;
 
@@ -155,7 +158,8 @@ template <typename T, x64::is_avx_abi<T> Abi>
 struct compress<T, Abi> {
    [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd<T, Abi> input, simd_mask<T, Abi> selector) -> simd<T, Abi> {
+   invoke(simd<T, Abi> input, simd_mask<T, Abi> selector) noexcept
+      -> simd<T, Abi> {
       using v8si = simd<int, ::x64::avx_abi<int>>::raw_type;
       using raw_t = simd<T, Abi>::raw_type;
 
@@ -193,7 +197,8 @@ template <typename T, x64::is_avx_abi<T> Abi>
 struct compress<T, Abi> {
    [[nodiscard, gnu::target("avx2,bmi2"), gnu::nodebug]]
    static auto
-   invoke(simd<T, Abi> input, simd_mask<T, Abi> selector) -> simd<T, Abi> {
+   invoke(simd<T, Abi> input, simd_mask<T, Abi> selector) noexcept
+      -> simd<T, Abi> {
       using raw_t = simd<T, Abi>::raw_type;
 
       __UINT32_TYPE__ lane_bits =
@@ -234,7 +239,8 @@ template <typename T, x64::is_avx_abi<T> Abi>
 struct compress<T, Abi> {
    [[nodiscard, gnu::target("avx2,bmi2"), gnu::nodebug]]
    static auto
-   invoke(simd<T, Abi> input, simd_mask<T, Abi> selector) -> simd<T, Abi> {
+   invoke(simd<T, Abi> input, simd_mask<T, Abi> selector) noexcept
+      -> simd<T, Abi> {
       using raw_t = simd<T, Abi>::raw_type;
 
       __UINT32_TYPE__ const lane_bits =

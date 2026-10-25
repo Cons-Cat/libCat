@@ -17,7 +17,9 @@ cat::demangled_name::demangled_name(demangled_name&& other)
 }
 
 auto
-cat::demangled_name::operator=(demangled_name&& other) -> demangled_name& {
+cat::demangled_name::operator=(demangled_name&& other) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> demangled_name& {
    if (this == __builtin_addressof(other)) {
       return *this;
    }
@@ -32,7 +34,9 @@ cat::demangled_name::operator=(demangled_name&& other) -> demangled_name& {
    return *this;
 }
 
-cat::demangled_name::~demangled_name() {
+cat::demangled_name::~demangled_name() noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    reset();
 }
 
@@ -63,7 +67,8 @@ cat::demangled_name::grow(idx minimum_capacity) -> bool {
 }
 
 auto
-cat::demangled_name::append(char value) -> maybe<void> {
+cat::demangled_name::append(char value) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<void> {
    if (m_size == m_capacity && !grow(m_size + 1u)) {
       return nullopt;
    }
@@ -73,7 +78,9 @@ cat::demangled_name::append(char value) -> maybe<void> {
 }
 
 auto
-cat::demangled_name::append(str_view value) -> maybe<void> {
+cat::demangled_name::append(str_view value) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<void> {
    idx const new_size = m_size + value.size();
    if (new_size > m_capacity && !grow(new_size)) {
       return nullopt;

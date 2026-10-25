@@ -91,7 +91,9 @@ struct vec_capacity_size {
 
    template <typename T, typename Extent>
    constexpr void
-   set(T const* _Nullable p_data, idx size, Extent const& capacity) {
+   set(T const* _Nullable p_data, idx size, Extent const& capacity) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       cat::assert(size == capacity.get(p_data));
    }
 };

@@ -95,13 +95,13 @@ struct clock_system {
 
    [[nodiscard]]
    static auto
-   now() -> maybe<time_point> {
+   now() noexcept(!__has_feature(cxx_exceptions)) -> maybe<time_point> {
       return time_point($prop(m_timer.now()).time_since_epoch());
    }
 
    [[nodiscard]]
    static auto
-   native_handle() -> native_handle_type& {
+   native_handle() noexcept -> native_handle_type& {
       return m_timer;
    }
 
@@ -124,13 +124,13 @@ struct clock_steady {
 
    [[nodiscard]]
    static auto
-   now() -> maybe<time_point> {
+   now() noexcept(!__has_feature(cxx_exceptions)) -> maybe<time_point> {
       return time_point($prop(m_timer.now()).time_since_epoch());
    }
 
    [[nodiscard]]
    static auto
-   native_handle() -> native_handle_type& {
+   native_handle() noexcept -> native_handle_type& {
       return m_timer;
    }
 
@@ -151,13 +151,13 @@ struct clock_unix {
 
    [[nodiscard]]
    static auto
-   now() -> maybe<time_point> {
+   now() noexcept(!__has_feature(cxx_exceptions)) -> maybe<time_point> {
       return time_point($prop(m_timer.now()).time_since_epoch());
    }
 
    [[nodiscard]]
    static auto
-   native_handle() -> native_handle_type& {
+   native_handle() noexcept -> native_handle_type& {
       return m_timer;
    }
 
@@ -173,7 +173,7 @@ struct clock_tai {
 
    [[nodiscard]]
    static auto
-   now() -> maybe<time_point> {
+   now() noexcept(!__has_feature(cxx_exceptions)) -> maybe<time_point> {
       nix::timespec value;
       $prop_as(nix::sys_clock_gettime(nix::clock_id::tai, value), nullopt);
       return time_point(value.to_nanoseconds() + 378'691'200 * units::second);
@@ -188,7 +188,7 @@ struct clock_utc {
 
    [[nodiscard]]
    static auto
-   now() -> maybe<time_point> {
+   now() noexcept(!__has_feature(cxx_exceptions)) -> maybe<time_point> {
       nix::timespec value;
       $prop_as(nix::sys_clock_gettime(nix::clock_id::tai, value), nullopt);
       return time_point(value.to_nanoseconds() - 10 * units::second);
@@ -203,7 +203,7 @@ struct clock_gps {
 
    [[nodiscard]]
    static auto
-   now() -> maybe<time_point> {
+   now() noexcept(!__has_feature(cxx_exceptions)) -> maybe<time_point> {
       nix::timespec value;
       $prop_as(nix::sys_clock_gettime(nix::clock_id::tai, value), nullopt);
       return time_point(value.to_nanoseconds() - 315'964'819 * units::second);
@@ -219,14 +219,14 @@ struct clock_scaled {
 
    [[nodiscard]]
    static auto
-   now() -> maybe<time_point> {
+   now() noexcept(!__has_feature(cxx_exceptions)) -> maybe<time_point> {
       duration const elapsed = $prop(Clock::now()).time_since_epoch();
       return time_point(duration(elapsed.raw * m_speed.raw));
    }
 
    template <is_floating_point Speed>
    static void
-   set_speed(Speed speed) {
+   set_speed(Speed speed) noexcept {
       m_speed = speed;
    }
 

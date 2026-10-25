@@ -56,26 +56,26 @@ class simd_range_stepanov_iterator
 
    constexpr simd_range_stepanov_iterator(
       Pack* _Nullable p_data_in, idx offset_in
-   )
+   ) noexcept
        : m_data(p_data_in), m_offset(offset_in) {
    }
 
    constexpr simd_range_stepanov_iterator(
       simd_range_stepanov_iterator<pack_type> const& other
-   )
+   ) noexcept
       requires(is_const<Pack>)
        : m_data(other.m_data), m_offset(other.m_offset) {
    }
 
    [[nodiscard]]
    constexpr auto
-   lane_index() const -> idx {
+   lane_index() const noexcept -> idx {
       return m_offset;
    }
 
    [[nodiscard]]
    constexpr auto
-   dereference() -> value_type {
+   dereference() noexcept(!__has_feature(cxx_exceptions)) -> value_type {
       cat::assert(m_data != nullptr && m_offset < pack_type::size());
       using plain = remove_const<Pack>;
       return (*static_cast<plain const*>(m_data))[m_offset];
@@ -83,14 +83,14 @@ class simd_range_stepanov_iterator
 
    [[nodiscard]]
    constexpr auto
-   dereference() const -> value_type {
+   dereference() const noexcept(!__has_feature(cxx_exceptions)) -> value_type {
       cat::assert(m_data != nullptr && m_offset < pack_type::size());
       using plain = remove_const<Pack>;
       return (*static_cast<plain const*>(m_data))[m_offset];
    }
 
    constexpr void
-   advance(iword offset) {
+   advance(iword offset) noexcept(!__has_feature(cxx_exceptions)) {
       cat::assert(m_data != nullptr);
       iword const new_off = iword(m_offset) + offset;
       iword const sz = iword(pack_type::size());
@@ -100,14 +100,16 @@ class simd_range_stepanov_iterator
 
    [[nodiscard]]
    constexpr auto
-   distance_to(self_type const& other) const -> iword {
+   distance_to(self_type const& other) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> iword {
       cat::assert(m_data == other.m_data);
       return iword(other.m_offset) - iword(m_offset);
    }
 
    [[nodiscard]]
    constexpr auto
-   equal_to(self_type const& other) const -> bool {
+   equal_to(self_type const& other) const noexcept -> bool {
       return m_data == other.m_data && m_offset == other.m_offset;
    }
 };
@@ -115,8 +117,9 @@ class simd_range_stepanov_iterator
 template <typename Pack>
 [[nodiscard]]
 constexpr auto
-operator==(simd_range_stepanov_iterator<Pack> const& i, default_sentinel_t)
-   -> bool {
+operator==(
+   simd_range_stepanov_iterator<Pack> const& i, default_sentinel_t
+) noexcept -> bool {
    using pack_type = remove_const<Pack>;
    return i.lane_index() == pack_type::size();
 }
@@ -124,16 +127,18 @@ operator==(simd_range_stepanov_iterator<Pack> const& i, default_sentinel_t)
 template <typename Pack>
 [[nodiscard]]
 constexpr auto
-operator==(default_sentinel_t, simd_range_stepanov_iterator<Pack> const& i)
-   -> bool {
+operator==(
+   default_sentinel_t, simd_range_stepanov_iterator<Pack> const& i
+) noexcept -> bool {
    return i == default_sentinel;
 }
 
 template <typename Pack>
 [[nodiscard]]
 constexpr auto
-operator-(simd_range_stepanov_iterator<Pack> const& i, default_sentinel_t) ->
-   typename simd_range_stepanov_iterator<Pack>::difference_type {
+operator-(
+   simd_range_stepanov_iterator<Pack> const& i, default_sentinel_t
+) noexcept -> typename simd_range_stepanov_iterator<Pack>::difference_type {
    using pack_type = remove_const<Pack>;
    return iword(i.lane_index()) - iword(pack_type::size());
 }
@@ -141,8 +146,9 @@ operator-(simd_range_stepanov_iterator<Pack> const& i, default_sentinel_t) ->
 template <typename Pack>
 [[nodiscard]]
 constexpr auto
-operator-(default_sentinel_t, simd_range_stepanov_iterator<Pack> const& i) ->
-   typename simd_range_stepanov_iterator<Pack>::difference_type {
+operator-(
+   default_sentinel_t, simd_range_stepanov_iterator<Pack> const& i
+) noexcept -> typename simd_range_stepanov_iterator<Pack>::difference_type {
    using pack_type = remove_const<Pack>;
    return iword(pack_type::size()) - iword(i.lane_index());
 }

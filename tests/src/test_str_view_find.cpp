@@ -1,6 +1,7 @@
 #include <cat/simd>
 #include <cat/string>
 
+#include "../fragile.hpp"
 #include "../unit_tests.hpp"
 
 // `cat::basic_str_span::find` does its own bounded SIMD scan (`size`-bounded,
@@ -301,3 +302,6 @@ $test(wstr_view_find_wchar_past_first_simd_chunk) {
    cat::verify(haystack.find(L'Z').value() == past_first_chunk);
    cat::verify(haystack.find(L'q').is_empty());
 }
+
+static_assert(cat::is_nothrow_default_constructible<cat::str_view>);
+static_assert(cat::is_nothrow_copy_assignable<cat::str_view>);

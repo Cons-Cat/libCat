@@ -59,7 +59,7 @@ concept is_avx_abi = detail::is_avx_abi_impl<Abi, T>;
 // `vzeroall`. Zeros all ymm registers (and zmm when applicable).
 [[gnu::target("avx")]]
 inline void
-zero_avx_registers() {
+zero_avx_registers() noexcept {
    __builtin_ia32_vzeroall();
 }
 
@@ -67,7 +67,7 @@ zero_avx_registers() {
 // transitions.
 [[gnu::target("avx")]]
 inline void
-zero_upper_avx_registers() {
+zero_upper_avx_registers() noexcept {
    __builtin_ia32_vzeroupper();
 }
 

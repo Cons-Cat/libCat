@@ -51,17 +51,18 @@ class bernoulli_distribution {
     public:
       using distribution_type = bernoulli_distribution;
 
-      constexpr explicit param_type(Float probability = Float(0.5f))
+      constexpr explicit param_type(Float probability = Float(0.5f)) noexcept
           : m_probability(probability) {
       }
 
       constexpr auto
-      p() const -> Float {
+      p() const noexcept -> Float {
          return m_probability;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       Float m_probability;
@@ -69,40 +70,42 @@ class bernoulli_distribution {
 
    constexpr bernoulli_distribution() = default;
 
-   constexpr explicit bernoulli_distribution(Float probability)
+   constexpr explicit bernoulli_distribution(Float probability) noexcept
        : m_parameters(probability) {
    }
 
-   constexpr explicit bernoulli_distribution(param_type const& parameters)
+   constexpr explicit bernoulli_distribution(
+      param_type const& parameters
+   ) noexcept
        : m_parameters(parameters) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    constexpr auto
-   p() const -> Float {
+   p() const noexcept -> Float {
       return m_parameters.p();
    }
 
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return result_type(false);
    }
 
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type(true);
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameters;
    }
 
    constexpr void
-   param(param_type const& parameters) {
+   param(param_type const& parameters) noexcept {
       m_parameters = parameters;
    }
 

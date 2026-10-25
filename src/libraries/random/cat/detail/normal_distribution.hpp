@@ -47,22 +47,23 @@ class normal_distribution {
 
       constexpr explicit param_type(
          Float mean = 0.f, Float standard_deviation = 1.f
-      )
+      ) noexcept
           : m_mean(mean), m_standard_deviation(standard_deviation) {
       }
 
       constexpr auto
-      mean() const -> Float {
+      mean() const noexcept -> Float {
          return m_mean;
       }
 
       constexpr auto
-      stddev() const -> Float {
+      stddev() const noexcept -> Float {
          return m_standard_deviation;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       Float m_mean;
@@ -71,46 +72,46 @@ class normal_distribution {
 
    constexpr explicit normal_distribution(
       Float mean = 0.f, Float standard_deviation = 1.f
-   )
+   ) noexcept
        : m_parameter(mean, standard_deviation) {
    }
 
-   constexpr explicit normal_distribution(param_type const& parameter)
+   constexpr explicit normal_distribution(param_type const& parameter) noexcept
        : m_parameter(parameter) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
       m_has_spare = false;
    }
 
    constexpr auto
-   mean() const -> Float {
+   mean() const noexcept -> Float {
       return m_parameter.mean();
    }
 
    constexpr auto
-   stddev() const -> Float {
+   stddev() const noexcept -> Float {
       return m_parameter.stddev();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameter;
    }
 
    constexpr void
-   param(param_type const& parameter) {
+   param(param_type const& parameter) noexcept {
       m_parameter = parameter;
    }
 
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return -limits<Float>::infinity();
    }
 
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return limits<Float>::infinity();
    }
 
@@ -146,8 +147,9 @@ class normal_distribution {
    }
 
    friend constexpr auto
-   operator==(normal_distribution const& left, normal_distribution const& right)
-      -> bool {
+   operator==(
+      normal_distribution const& left, normal_distribution const& right
+   ) noexcept -> bool {
       return left.m_parameter == right.m_parameter
              && left.m_has_spare == right.m_has_spare
              && (!left.m_has_spare || left.m_spare == right.m_spare);
@@ -158,7 +160,7 @@ class normal_distribution {
 
    [[nodiscard]]
    constexpr auto
-   batch_available() const -> bool {
+   batch_available() const noexcept -> bool {
       return !m_has_spare;
    }
 

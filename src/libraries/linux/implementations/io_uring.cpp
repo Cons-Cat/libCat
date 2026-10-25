@@ -33,8 +33,9 @@ map_ring(nix::file_descriptor file_descriptor, cat::idx size, cat::uint8 offset)
 }  // namespace
 
 auto
-nix::make_io_uring(cat::uint4 entries, io_uring_params params)
-   -> cat::scaredy<io_uring, linux_error> {
+nix::make_io_uring(cat::uint4 entries, io_uring_params params) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> cat::scaredy<io_uring, linux_error> {
    io_uring ring;
    $prop(ring.setup(entries, params));  // NOLINT(misc-const-correctness)
    return cat::move(ring);
@@ -45,7 +46,7 @@ nix::io_uring::io_uring(io_uring&& other) {
 }
 
 auto
-nix::io_uring::operator=(io_uring&& other) -> io_uring& {
+nix::io_uring::operator=(io_uring&& other) noexcept -> io_uring& {
    if (this == &other) {
       return *this;
    }
@@ -61,8 +62,9 @@ nix::io_uring::~io_uring() {
 }
 
 auto
-nix::io_uring::setup(cat::uint4 entries, io_uring_params params)
-   -> scaredy_nix<void> {
+nix::io_uring::setup(cat::uint4 entries, io_uring_params params) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy_nix<void> {
    // TODO: Support caller-provided memory with `IORING_SETUP_NO_MMAP`.
    if (has_flag(params.flags, io_uring_setup_flags::no_mmap)) {
       return linux_error::inval;
@@ -153,21 +155,22 @@ nix::io_uring::setup(cat::uint4 entries, io_uring_params params)
 auto
 nix::io_uring::enter(
    cat::uint4 to_submit, cat::uint4 minimum_complete, io_uring_enter_flags flags
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_io_uring_enter(
       m_file_descriptor, to_submit, minimum_complete, flags
    );
 }
 
 auto
-nix::io_uring::submit(io_uring_enter_flags flags) -> scaredy_nix<cat::idx> {
+nix::io_uring::submit(io_uring_enter_flags flags) noexcept
+   -> scaredy_nix<cat::idx> {
    return submit_and_wait(0u, flags);
 }
 
 auto
 nix::io_uring::submit_and_wait(
    cat::uint4 minimum_complete, io_uring_enter_flags flags
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    cat::uint4 const submitted = m_submission_queue.flush();
    if (minimum_complete != 0u) {
       flags |= io_uring_enter_flags::get_events;
@@ -194,7 +197,8 @@ nix::io_uring::submit_and_wait(
 }
 
 auto
-nix::io_uring::close() -> scaredy_nix<void> {
+nix::io_uring::close() noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy_nix<void> {
    scaredy_nix<void> result = cat::monostate;
    auto const record_error = [&result](scaredy_nix<void> current) {
       if (result.has_value() && current.is_empty()) {

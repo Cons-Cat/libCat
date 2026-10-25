@@ -11,7 +11,7 @@ namespace cat {
 constexpr auto
 compare_memory_scalar(
    void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
-) -> std::strong_ordering {
+) noexcept -> std::strong_ordering {
    unsigned char const* _Nonnull const p_left =
       static_cast<unsigned char const* _Nonnull>(p_lhs);
    unsigned char const* _Nonnull const p_right =
@@ -30,7 +30,7 @@ compare_memory_scalar(
 constexpr auto
 compare_memory(
    void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
-) -> std::strong_ordering {
+) noexcept -> std::strong_ordering {
    if (bytes == 0u) {
       return std::strong_ordering::equal;
    }

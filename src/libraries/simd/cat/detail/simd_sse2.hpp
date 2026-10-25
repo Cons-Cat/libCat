@@ -61,7 +61,7 @@ concept is_sse_abi = detail::is_sse_abi_impl<Abi, T>;
 // them.
 [[gnu::target("sse"), gnu::always_inline]]
 inline void
-sfence() {
+sfence() noexcept {
    __builtin_ia32_sfence();
 }
 
@@ -69,7 +69,7 @@ sfence() {
 // loads.
 [[gnu::target("sse2"), gnu::always_inline]]
 inline void
-mfence() {
+mfence() noexcept {
    __builtin_ia32_mfence();
 }
 
@@ -77,7 +77,7 @@ mfence() {
 // `lfence/mfence` pairs).
 [[gnu::target("sse2"), gnu::always_inline]]
 inline void
-lfence() {
+lfence() noexcept {
    __builtin_ia32_lfence();
 }
 

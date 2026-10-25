@@ -146,14 +146,17 @@ class pcg_simd_state<Word, true> {
 
    [[nodiscard]]
    constexpr auto
-   lane(idx index) const -> scalar_type {
+   lane(idx index) const noexcept(!__has_feature(cxx_exceptions))
+      -> scalar_type {
       idx const word = index / wide_lanes;
       idx const lane = index % wide_lanes;
       return m_words[word][lane];
    }
 
    constexpr void
-   set_lane(idx index, scalar_type value) {
+   set_lane(idx index, scalar_type value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       idx const word = index / wide_lanes;
       idx const lane = index % wide_lanes;
       m_words[word].set_lane(lane, value);
@@ -161,7 +164,7 @@ class pcg_simd_state<Word, true> {
 
    [[nodiscard]]
    static constexpr auto
-   pack(word_type low, word_type high) -> pcg_simd_state {
+   pack(word_type low, word_type high) noexcept -> pcg_simd_state {
       pcg_simd_state result;
       for (idx lane = 0u; lane < word_type::abi_type::lanes; ++lane) {
          uint8 const value = uint8(low[lane]) | (uint8(high[lane]) << 32u);
@@ -173,7 +176,7 @@ class pcg_simd_state<Word, true> {
    template <pcg_permutation permutation>
    [[nodiscard]]
    static constexpr auto
-   output_word(wide_word state) -> wide_word {
+   output_word(wide_word state) noexcept -> wide_word {
       wide_word const mask = 0xffffffffull;
       if constexpr (
          permutation == pcg_permutation::xorshift_high_random_rotate
@@ -206,25 +209,27 @@ class pcg_simd_state<Word, true> {
  public:
    constexpr pcg_simd_state() = default;
 
-   constexpr pcg_simd_state(scalar_type value)
+   constexpr pcg_simd_state(scalar_type value) noexcept
        : m_words{wide_word(value), wide_word(value)} {
    }
 
    template <is_unsigned_integral Value>
       requires(!is_same<Value, scalar_type>)
-   constexpr pcg_simd_state(Value value) : pcg_simd_state(scalar_type(value)) {
+   constexpr pcg_simd_state(Value value) noexcept
+       : pcg_simd_state(scalar_type(value)) {
    }
 
-   constexpr pcg_simd_state(word_type low) : pcg_simd_state(pack(low, 0u)) {
+   constexpr pcg_simd_state(word_type low) noexcept
+       : pcg_simd_state(pack(low, 0u)) {
    }
 
-   constexpr pcg_simd_state(word_type low, word_type high)
+   constexpr pcg_simd_state(word_type low, word_type high) noexcept
        : pcg_simd_state(pack(low, high)) {
    }
 
    [[nodiscard]]
    constexpr auto
-   low() const -> word_type {
+   low() const noexcept -> word_type {
       word_type result;
       for (idx lane = 0u; lane < word_type::abi_type::lanes; ++lane) {
          result.set_lane(
@@ -236,7 +241,7 @@ class pcg_simd_state<Word, true> {
 
    [[nodiscard]]
    constexpr auto
-   high() const -> word_type {
+   high() const noexcept -> word_type {
       word_type result;
       for (idx lane = 0u; lane < word_type::abi_type::lanes; ++lane) {
          result.set_lane(
@@ -250,7 +255,7 @@ class pcg_simd_state<Word, true> {
    template <pcg_permutation permutation>
    [[nodiscard]]
    constexpr auto
-   output() const -> word_type {
+   output() const noexcept(!__has_feature(cxx_exceptions)) -> word_type {
       array<wide_word, 2u> const words = {
          output_word<permutation>(m_words[0u]),
          output_word<permutation>(m_words[1u]),
@@ -269,7 +274,7 @@ class pcg_simd_state<Word, true> {
 
    [[nodiscard]]
    constexpr auto
-   equal_lanes(pcg_simd_state const& operand) const -> mask_type {
+   equal_lanes(pcg_simd_state const& operand) const noexcept -> mask_type {
       mask_type result;
       for (idx lane = 0u; lane < word_type::abi_type::lanes; ++lane) {
          result.set_lane(lane, this->lane(lane) == operand.lane(lane));
@@ -279,8 +284,9 @@ class pcg_simd_state<Word, true> {
 
    [[nodiscard]]
    static constexpr auto
-   select(mask_type mask, pcg_simd_state on_true, pcg_simd_state on_false)
-      -> pcg_simd_state {
+   select(
+      mask_type mask, pcg_simd_state on_true, pcg_simd_state on_false
+   ) noexcept -> pcg_simd_state {
       pcg_simd_state result;
       for (idx lane = 0u; lane < word_type::abi_type::lanes; ++lane) {
          result.set_lane(
@@ -291,49 +297,55 @@ class pcg_simd_state<Word, true> {
    }
 
    constexpr auto
-   operator+=(pcg_simd_state operand) -> pcg_simd_state& {
+   operator+=(pcg_simd_state operand) noexcept(!__has_feature(cxx_exceptions))
+      -> pcg_simd_state& {
       m_words[0u] += operand.m_words[0u];
       m_words[1u] += operand.m_words[1u];
       return *this;
    }
 
    constexpr auto
-   operator*=(pcg_simd_state operand) -> pcg_simd_state& {
+   operator*=(pcg_simd_state operand) noexcept(!__has_feature(cxx_exceptions))
+      -> pcg_simd_state& {
       m_words[0u] *= operand.m_words[0u];
       m_words[1u] *= operand.m_words[1u];
       return *this;
    }
 
    constexpr auto
-   operator&=(pcg_simd_state operand) -> pcg_simd_state& {
+   operator&=(pcg_simd_state operand) noexcept(!__has_feature(cxx_exceptions))
+      -> pcg_simd_state& {
       m_words[0u] &= operand.m_words[0u];
       m_words[1u] &= operand.m_words[1u];
       return *this;
    }
 
    constexpr auto
-   operator|=(pcg_simd_state operand) -> pcg_simd_state& {
+   operator|=(pcg_simd_state operand) noexcept(!__has_feature(cxx_exceptions))
+      -> pcg_simd_state& {
       m_words[0u] |= operand.m_words[0u];
       m_words[1u] |= operand.m_words[1u];
       return *this;
    }
 
    constexpr auto
-   operator^=(pcg_simd_state operand) -> pcg_simd_state& {
+   operator^=(pcg_simd_state operand) noexcept -> pcg_simd_state& {
       m_words[0u] ^= operand.m_words[0u];
       m_words[1u] ^= operand.m_words[1u];
       return *this;
    }
 
    constexpr auto
-   operator>>=(idx count) -> pcg_simd_state& {
+   operator>>=(idx count) noexcept(!__has_feature(cxx_exceptions))
+      -> pcg_simd_state& {
       m_words[0u] >>= uint8(count.raw);
       m_words[1u] >>= uint8(count.raw);
       return *this;
    }
 
    constexpr auto
-   operator<<=(idx count) -> pcg_simd_state& {
+   operator<<=(idx count) noexcept(!__has_feature(cxx_exceptions))
+      -> pcg_simd_state& {
       m_words[0u] <<= uint8(count.raw);
       m_words[1u] <<= uint8(count.raw);
       return *this;
@@ -341,14 +353,16 @@ class pcg_simd_state<Word, true> {
 
    [[nodiscard]]
    friend constexpr auto
-   operator+(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator+(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left += right;
       return left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator-(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator-(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left.m_words[0u] -= right.m_words[0u];
       left.m_words[1u] -= right.m_words[1u];
       return left;
@@ -356,49 +370,54 @@ class pcg_simd_state<Word, true> {
 
    [[nodiscard]]
    friend constexpr auto
-   operator*(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator*(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left *= right;
       return left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator&(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator&(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left &= right;
       return left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator|(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator|(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left |= right;
       return left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator^(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator^(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left ^= right;
       return left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator>>(pcg_simd_state value, idx count) -> pcg_simd_state {
+   operator>>(pcg_simd_state value, idx count) noexcept -> pcg_simd_state {
       value >>= count;
       return value;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator<<(pcg_simd_state value, idx count) -> pcg_simd_state {
+   operator<<(pcg_simd_state value, idx count) noexcept -> pcg_simd_state {
       value <<= count;
       return value;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator==(pcg_simd_state const& left, pcg_simd_state const& right) -> bool {
+   operator==(pcg_simd_state const& left, pcg_simd_state const& right) noexcept
+      -> bool {
       for (idx lane = 0u; lane < word_type::abi_type::lanes; ++lane) {
          if (left.lane(lane) != right.lane(lane)) {
             return false;
@@ -427,7 +446,7 @@ class pcg_simd_state<Word, false> {
  public:
    constexpr pcg_simd_state() = default;
 
-   constexpr pcg_simd_state(scalar_type value)
+   constexpr pcg_simd_state(scalar_type value) noexcept
        : m_low(lane_type(lane_raw(make_raw_arithmetic(value)))),
          m_high(lane_type(
             lane_raw(make_raw_arithmetic(value >> (word_bytes * 8u).raw))
@@ -436,39 +455,41 @@ class pcg_simd_state<Word, false> {
 
    template <is_unsigned_integral Value>
       requires(!is_same<Value, scalar_type>)
-   constexpr pcg_simd_state(Value value) : pcg_simd_state(scalar_type(value)) {
+   constexpr pcg_simd_state(Value value) noexcept
+       : pcg_simd_state(scalar_type(value)) {
    }
 
-   constexpr pcg_simd_state(word_type low) : m_low(low) {
+   constexpr pcg_simd_state(word_type low) noexcept : m_low(low) {
    }
 
-   constexpr pcg_simd_state(word_type low, word_type high)
+   constexpr pcg_simd_state(word_type low, word_type high) noexcept
        : m_low(low), m_high(high) {
    }
 
    [[nodiscard]]
    constexpr auto
-   low() const -> word_type {
+   low() const noexcept -> word_type {
       return m_low;
    }
 
    [[nodiscard]]
    constexpr auto
-   high() const -> word_type {
+   high() const noexcept -> word_type {
       return m_high;
    }
 
    [[nodiscard]]
    constexpr auto
-   equal_lanes(pcg_simd_state const& operand) const -> mask_type {
+   equal_lanes(pcg_simd_state const& operand) const noexcept -> mask_type {
       return m_low.equal_lanes(operand.m_low)
              & m_high.equal_lanes(operand.m_high);
    }
 
    [[nodiscard]]
    static constexpr auto
-   select(mask_type mask, pcg_simd_state on_true, pcg_simd_state on_false)
-      -> pcg_simd_state {
+   select(
+      mask_type mask, pcg_simd_state on_true, pcg_simd_state on_false
+   ) noexcept -> pcg_simd_state {
       return {
          simd_select(mask, on_true.m_low, on_false.m_low),
          simd_select(mask, on_true.m_high, on_false.m_high),
@@ -476,7 +497,7 @@ class pcg_simd_state<Word, false> {
    }
 
    constexpr auto
-   operator+=(pcg_simd_state operand) -> pcg_simd_state& {
+   operator+=(pcg_simd_state operand) noexcept -> pcg_simd_state& {
       word_type const low = m_low + operand.m_low;
       m_high += operand.m_high;
       m_high += simd_select(low < m_low, word_type(1u), word_type(0u));
@@ -485,7 +506,7 @@ class pcg_simd_state<Word, false> {
    }
 
    constexpr auto
-   operator*=(pcg_simd_state operand) -> pcg_simd_state& {
+   operator*=(pcg_simd_state operand) noexcept -> pcg_simd_state& {
       m_high = m_high * operand.m_low + m_low * operand.m_high
                + lemire_multiply_high(m_low, operand.m_low);
       m_low *= operand.m_low;
@@ -493,48 +514,50 @@ class pcg_simd_state<Word, false> {
    }
 
    constexpr auto
-   operator&=(pcg_simd_state operand) -> pcg_simd_state& {
+   operator&=(pcg_simd_state operand) noexcept -> pcg_simd_state& {
       m_low &= operand.m_low;
       m_high &= operand.m_high;
       return *this;
    }
 
    constexpr auto
-   operator|=(pcg_simd_state operand) -> pcg_simd_state& {
+   operator|=(pcg_simd_state operand) noexcept -> pcg_simd_state& {
       m_low |= operand.m_low;
       m_high |= operand.m_high;
       return *this;
    }
 
    constexpr auto
-   operator^=(pcg_simd_state operand) -> pcg_simd_state& {
+   operator^=(pcg_simd_state operand) noexcept -> pcg_simd_state& {
       m_low ^= operand.m_low;
       m_high ^= operand.m_high;
       return *this;
    }
 
    constexpr auto
-   operator>>=(idx count) -> pcg_simd_state& {
+   operator>>=(idx count) noexcept -> pcg_simd_state& {
       *this = *this >> count;
       return *this;
    }
 
    constexpr auto
-   operator<<=(idx count) -> pcg_simd_state& {
+   operator<<=(idx count) noexcept -> pcg_simd_state& {
       *this = *this << count;
       return *this;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator+(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator+(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left += right;
       return left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator-(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator-(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       word_type const low = left.m_low - right.m_low;
       left.m_high -= right.m_high;
       left.m_high -=
@@ -545,35 +568,39 @@ class pcg_simd_state<Word, false> {
 
    [[nodiscard]]
    friend constexpr auto
-   operator*(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator*(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left *= right;
       return left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator&(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator&(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left &= right;
       return left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator|(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator|(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left |= right;
       return left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator^(pcg_simd_state left, pcg_simd_state right) -> pcg_simd_state {
+   operator^(pcg_simd_state left, pcg_simd_state right) noexcept
+      -> pcg_simd_state {
       left ^= right;
       return left;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator>>(pcg_simd_state value, idx count) -> pcg_simd_state {
+   operator>>(pcg_simd_state value, idx count) noexcept -> pcg_simd_state {
       if (count == 0u) {
          return value;
       }
@@ -595,7 +622,7 @@ class pcg_simd_state<Word, false> {
 
    [[nodiscard]]
    friend constexpr auto
-   operator<<(pcg_simd_state value, idx count) -> pcg_simd_state {
+   operator<<(pcg_simd_state value, idx count) noexcept -> pcg_simd_state {
       if (count == 0u) {
          return value;
       }
@@ -618,7 +645,8 @@ class pcg_simd_state<Word, false> {
 
    [[nodiscard]]
    friend constexpr auto
-   operator==(pcg_simd_state const& left, pcg_simd_state const& right) -> bool {
+   operator==(pcg_simd_state const& left, pcg_simd_state const& right) noexcept
+      -> bool {
       return left.m_low == right.m_low && left.m_high == right.m_high;
    }
 };
@@ -648,7 +676,7 @@ struct pcg_types<simd<Lane, Abi>> {
 
 template <typename T, typename State, pcg_stream stream>
 consteval auto
-pcg_default_permutation() -> pcg_permutation {
+pcg_default_permutation() noexcept -> pcg_permutation {
    if constexpr (is_simd<T>) {
       if constexpr (is_same<State, typename pcg_types<T>::result>) {
          static_assert(sizeof(typename T::value_type) == 8u);
@@ -699,7 +727,7 @@ template <typename Result, typename State, pcg_permutation permutation>
    requires(!is_simd<Result>)
 [[nodiscard]]
 constexpr auto
-pcg_output(State state) -> Result {
+pcg_output(State state) noexcept -> Result {
    auto const raw_state = make_raw_arithmetic(state);
 
    if constexpr (permutation == pcg_permutation::xorshift_high_random_rotate) {
@@ -761,7 +789,7 @@ pcg_output(State state) -> Result {
 template <is_simd Result, typename State, pcg_permutation permutation>
 [[nodiscard]]
 constexpr auto
-pcg_output(State state) -> Result {
+pcg_output(State state) noexcept -> Result {
    using lane_type = Result::value_type;
    using lane_raw = raw_arithmetic_type<lane_type>;
    constexpr idx word_bytes = sizeof(lane_type);
@@ -831,7 +859,9 @@ pcg_output(State state) -> Result {
 template <is_simd Result, typename State>
 [[nodiscard]]
 constexpr auto
-pcg_pack_states(array<State, Result::abi_type::lanes> const& states) {
+pcg_pack_states(array<State, Result::abi_type::lanes> const& states) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    if constexpr (sizeof(State) == sizeof(typename Result::value_type)) {
       Result result;
       for (idx lane = 0u; lane < Result::abi_type::lanes; ++lane) {
@@ -890,7 +920,7 @@ class pcg_engine {
 
    [[nodiscard]]
    constexpr auto
-   increment() const -> state_type {
+   increment() const noexcept -> state_type {
       if constexpr (stream == pcg_stream::unique) {
          return state_type(uintptr<pcg_engine const>(this).raw | 1u);
       }
@@ -899,7 +929,7 @@ class pcg_engine {
 
    [[nodiscard]]
    static constexpr auto
-   multiplier() -> state_type {
+   multiplier() noexcept -> state_type {
       if constexpr (use_cheap_multiplier) {
          return state_type(detail::pcg_constants<state_type>::cheap_multiplier);
       }
@@ -907,7 +937,7 @@ class pcg_engine {
    }
 
    constexpr void
-   step() {
+   step() noexcept {
       m_state =
          state_type(wrapping_state(m_state).fma(multiplier(), increment()));
    }
@@ -915,24 +945,26 @@ class pcg_engine {
  public:
    constexpr pcg_engine() = default;
 
-   constexpr explicit pcg_engine(random_seed initial_state) {
+   constexpr explicit pcg_engine(random_seed initial_state) noexcept {
       seed(initial_state);
    }
 
-   constexpr pcg_engine(random_seed initial_state, random_seed initial_sequence)
+   constexpr pcg_engine(
+      random_seed initial_state, random_seed initial_sequence
+   ) noexcept
       requires(stream == pcg_stream::setseq)
    {
       seed(initial_state, initial_sequence);
    }
 
    constexpr void
-   seed() {
+   seed() noexcept {
       m_state = detail::pcg_initial_state<state_type, stream>;
       m_increment = detail::pcg_initial_increment<state_type, stream>;
    }
 
    constexpr void
-   seed(random_seed initial_state) {
+   seed(random_seed initial_state) noexcept {
       auto const state = state_type(initial_state);
       if constexpr (stream == pcg_stream::mcg) {
          m_state = state | 1u;
@@ -945,7 +977,7 @@ class pcg_engine {
    }
 
    constexpr void
-   seed(random_seed initial_state, random_seed initial_sequence)
+   seed(random_seed initial_state, random_seed initial_sequence) noexcept
       requires(stream == pcg_stream::setseq)
    {
       auto const state = state_type(initial_state);
@@ -998,7 +1030,9 @@ class pcg_engine {
       batch_state m_increment;
 
     public:
-      constexpr explicit exact_bulk_session(pcg_engine const& generator) {
+      constexpr explicit exact_bulk_session(
+         pcg_engine const& generator
+      ) noexcept(!__has_feature(cxx_exceptions)) {
          state_type state = generator.m_state;
          state_type const multiplier_value = generator.multiplier();
          state_type const increment_value = generator.increment();
@@ -1033,7 +1067,7 @@ class pcg_engine {
       template <idx chain>
       [[nodiscard]]
       constexpr auto
-      generate() -> batch_type {
+      generate() noexcept(!__has_feature(cxx_exceptions)) -> batch_type {
          static_assert(chain < chain_count);
          batch_state const old_state = m_states[chain];
          m_states[chain] = old_state * m_multiplier + m_increment;
@@ -1046,7 +1080,7 @@ class pcg_engine {
    template <typename Abi, idx chain_count>
    [[nodiscard]]
    constexpr auto
-   make_exact_bulk_session() const
+   make_exact_bulk_session() const noexcept
       requires(sizeof(state_type) == sizeof(result_type) * 2u)
    {
       return exact_bulk_session<Abi, chain_count>(*this);
@@ -1055,7 +1089,8 @@ class pcg_engine {
    template <typename Abi>
    [[nodiscard]]
    constexpr auto
-   generate_exact_batch() -> simd<result_type, Abi>
+   generate_exact_batch() noexcept(!__has_feature(cxx_exceptions))
+      -> simd<result_type, Abi>
       requires(!is_simd<T>)
    {
       using batch_type = simd<result_type, Abi>;
@@ -1109,19 +1144,19 @@ class pcg_engine {
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0u;
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 
  private:
    constexpr void
-   advance(state_type count) {
+   advance(state_type count) noexcept {
       state_type accumulated_multiplier = 1u;
       state_type accumulated_increment = 0u;
       state_type current_multiplier = multiplier();
@@ -1146,13 +1181,14 @@ class pcg_engine {
  public:
    // Skip this many outputs.
    constexpr void
-   discard(uint8 count) {
+   discard(uint8 count) noexcept {
       advance(static_cast<state_type>(count));
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator==(pcg_engine const& left, pcg_engine const& right) -> bool {
+   operator==(pcg_engine const& left, pcg_engine const& right) noexcept
+      -> bool {
       return left.m_state == right.m_state
              && left.increment() == right.increment();
    }
@@ -1193,7 +1229,7 @@ class pcg_engine<
 
    [[nodiscard]]
    static constexpr auto
-   select(mask_type mask, state_type on_true, state_type on_false)
+   select(mask_type mask, state_type on_true, state_type on_false) noexcept
       -> state_type {
       if constexpr (equal_width_state) {
          return simd_select(mask, on_true, on_false);
@@ -1204,19 +1240,19 @@ class pcg_engine<
 
    [[nodiscard]]
    static constexpr auto
-   output(state_type state) -> result_type {
+   output(state_type state) noexcept -> result_type {
       return detail::pcg_output<result_type, state_type, permutation>(state);
    }
 
    constexpr void
-   step(mask_type active) {
+   step(mask_type active) noexcept {
       state_type const next = m_state * multiplier() + increment();
       m_state = select(active, next, m_state);
    }
 
    [[nodiscard]]
    constexpr auto
-   generate(mask_type active) -> result_type {
+   generate(mask_type active) noexcept -> result_type {
       if constexpr (output_previous) {
          state_type const old_state = m_state;
          step(active);
@@ -1229,7 +1265,7 @@ class pcg_engine<
 
    [[nodiscard]]
    constexpr auto
-   increment() const -> state_type {
+   increment() const noexcept -> state_type {
       if constexpr (stream == pcg_stream::unique) {
          scalar_state const base = uintptr<pcg_engine const>(this).raw | 1u;
          return state_type(base) + state_type(m_lane_offsets);
@@ -1239,7 +1275,7 @@ class pcg_engine<
 
    [[nodiscard]]
    static constexpr auto
-   multiplier() -> state_type {
+   multiplier() noexcept -> state_type {
       if constexpr (use_cheap_multiplier) {
          return state_type(
             detail::pcg_constants<scalar_state>::cheap_multiplier
@@ -1251,27 +1287,27 @@ class pcg_engine<
  public:
    constexpr pcg_engine() = default;
 
-   constexpr explicit pcg_engine(random_seed initial_state_value) {
+   constexpr explicit pcg_engine(random_seed initial_state_value) noexcept {
       seed(initial_state_value);
    }
 
    constexpr pcg_engine(
       random_seed initial_state_value, random_seed initial_sequence
-   )
+   ) noexcept
       requires(stream == pcg_stream::setseq)
    {
       seed(initial_state_value, initial_sequence);
    }
 
    constexpr void
-   seed() {
+   seed() noexcept {
       m_state = state_type(detail::pcg_initial_state<scalar_state, stream>);
       m_increment =
          state_type(detail::pcg_initial_increment<scalar_state, stream>);
    }
 
    constexpr void
-   seed(random_seed initial_state_value) {
+   seed(random_seed initial_state_value) noexcept {
       state_type const state =
          state_type(static_cast<scalar_state>(initial_state_value))
          + state_type(simd_iota<result_type>(0u));
@@ -1286,7 +1322,7 @@ class pcg_engine<
    }
 
    constexpr void
-   seed(random_seed initial_state_value, random_seed initial_sequence)
+   seed(random_seed initial_state_value, random_seed initial_sequence) noexcept
       requires(stream == pcg_stream::setseq)
    {
       state_type const offsets(simd_iota<result_type>(0u));
@@ -1338,19 +1374,19 @@ class pcg_engine<
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0u;
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return lane_type::max();
    }
 
  private:
    constexpr void
-   advance(state_type count) {
+   advance(state_type count) noexcept {
       state_type accumulated_multiplier = 1u;
       state_type accumulated_increment = 0u;
       state_type current_multiplier = multiplier();
@@ -1377,13 +1413,14 @@ class pcg_engine<
 
  public:
    constexpr void
-   discard(result_type count) {
+   discard(result_type count) noexcept {
       advance(state_type(count));
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator==(pcg_engine const& left, pcg_engine const& right) -> bool {
+   operator==(pcg_engine const& left, pcg_engine const& right) noexcept
+      -> bool {
       return left.m_state == right.m_state
              && left.increment() == right.increment();
    }

@@ -11,7 +11,7 @@ namespace cat {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_aligned(T* _Nullable p_value, ualign alignment) -> bool {
+is_aligned(T* _Nullable p_value, ualign alignment) noexcept -> bool {
    return __builtin_is_aligned(p_value, alignment.raw);
 }
 
@@ -19,7 +19,7 @@ is_aligned(T* _Nullable p_value, ualign alignment) -> bool {
 template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-is_aligned(T value, ualign alignment) -> bool {
+is_aligned(T value, ualign alignment) noexcept -> bool {
    return __builtin_is_aligned(make_raw_arithmetic(value), alignment.raw);
 }
 

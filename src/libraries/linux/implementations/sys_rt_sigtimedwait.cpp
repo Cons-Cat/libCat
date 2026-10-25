@@ -4,7 +4,7 @@ auto
 nix::sys_rt_sigtimedwait(
    signals_mask_set const& set, signal_info* _Nullable p_info,
    futex_timespec const* _Nullable p_timeout
-) -> nix::scaredy_nix<signal> {
+) noexcept -> nix::scaredy_nix<signal> {
    // https://filippo.io/linux-syscall-table/
    return nix::syscall_volatile<signal>(
       128, &set, p_info, p_timeout, sizeof(signals_mask_set)

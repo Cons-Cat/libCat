@@ -2,7 +2,7 @@
 
 [[gnu::no_sanitize_address]]
 auto
-nix::syscall0(cat::iword call) -> cat::iword {
+nix::syscall0(cat::iword call) noexcept -> cat::iword {
    cat::iword result;
    asm("syscall"
        : "=a"(result)

@@ -93,7 +93,8 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
 
    [[nodiscard]]
    auto
-   reserve(is_allocator auto& allocator, iword new_capacity) -> maybe<void> {
+   reserve(is_allocator auto& allocator, iword new_capacity) noexcept(false)
+      -> maybe<void> {
       // The capacity of a `ring` must be a power of two.
       cat::assert(has_single_bit(new_capacity));
 
@@ -184,7 +185,7 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
    template <typename U>
       requires(is_implicitly_convertible<U, T>)
    void
-   push_back(U const& value) {
+   push_back(U const& value) noexcept(!__has_feature(cxx_exceptions)) {
       cat::assert(this->current_capacity > 0);
       *(this->p_storage + this->current_index) = value;
 

@@ -11,7 +11,7 @@ template <
    is_allocator Inner, is_allocator Backing, idx node_bytes_param,
    idx chunk_bytes_param>
 allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
-   ~allocator_resizeable() {
+   ~allocator_resizeable() noexcept(!__has_feature(cxx_exceptions)) {
    this->reset();
 }
 
@@ -40,7 +40,8 @@ template <
    idx chunk_bytes_param>
 constexpr auto
 allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
-   acquire_chunk(idx chunk_bytes_request) -> chunk_header* _Nullable {
+   acquire_chunk(idx chunk_bytes_request) noexcept(false)
+      -> chunk_header* _Nullable {
    // Each chunk reserves a `chunk_header` prologue at the start of the
    // backing allocation and gives the rest of the slab to `Inner`.
    idx const total_bytes = chunk_bytes_request;
@@ -91,7 +92,7 @@ template <
 [[nodiscard]]
 auto
 allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
-   find_chunk(span<byte> allocation) const -> chunk_header* _Nullable {
+   find_chunk(span<byte> allocation) const noexcept -> chunk_header* _Nullable {
    uintptr<void> const allocation_begin = allocation.data();
    uintptr<void> const allocation_end = allocation_begin + allocation.size();
 
@@ -116,7 +117,7 @@ template <
 auto
 allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::grow(
    span<byte> allocation, idx new_bytes
-) -> maybe<void>
+) noexcept -> maybe<void>
    requires(detail::inner_has_grow<Inner>)
 {
    chunk_header* const p_chunk = this->find_chunk(allocation);
@@ -132,7 +133,8 @@ template <
 [[nodiscard]]
 auto
 allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
-   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>
+   grow_feedback(span<byte> allocation, idx new_bytes) noexcept
+   -> maybe_non_zero<idx>
    requires(
       detail::inner_has_grow<Inner> || detail::inner_has_grow_feedback<Inner>
    )
@@ -157,7 +159,7 @@ template <
 [[gnu::malloc, clang::ownership_returns(libcat)]]
 auto
 allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
-   allocate(idx /*allocation_bytes*/) -> void* _Nullable {
+   allocate(idx /*allocation_bytes*/) noexcept -> void* _Nullable {
    // Reuse a freed slot.
    if (m_p_free_head != nullptr) {
       free_node* const p_slot = m_p_free_head;
@@ -202,7 +204,8 @@ template <
    idx chunk_bytes_param>
 auto
 allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
-   resize(idx minimum_bytes) -> maybe_non_zero<idx> {
+   resize(idx minimum_bytes) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe_non_zero<idx> {
    idx const request_bytes = idx(
       minimum_bytes + sizeof(chunk_header) > chunk_bytes
          ? minimum_bytes + sizeof(chunk_header)
@@ -222,9 +225,8 @@ template <
    idx chunk_bytes_param>
 [[nodiscard]]
 auto
-allocator_resizeable<
-   Inner, Backing, node_bytes_param, chunk_bytes_param>::bytes_used() const
-   -> idx {
+allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+   bytes_used() const noexcept -> idx {
    idx total = 0u;
    for (chunk_header const* p_walk = m_p_chunks; p_walk != nullptr;
         p_walk = p_walk->p_next) {
@@ -244,9 +246,8 @@ template <
    idx chunk_bytes_param>
 [[nodiscard]]
 auto
-allocator_resizeable<
-   Inner, Backing, node_bytes_param, chunk_bytes_param>::bytes_capacity() const
-   -> idx {
+allocator_resizeable<Inner, Backing, node_bytes_param, chunk_bytes_param>::
+   bytes_capacity() const noexcept -> idx {
    idx total = 0u;
    for (chunk_header const* p_walk = m_p_chunks; p_walk != nullptr;
         p_walk = p_walk->p_next) {

@@ -15,22 +15,22 @@ class no_type {
 
    // Zero-extend smaller than 8-byte values for passing into syscalls.
 
-   constexpr no_type(auto input)
+   constexpr no_type(auto input) noexcept
       requires(sizeof(input) == 1)
        : m_storage(__builtin_bit_cast(unsigned char, input)) {
    }
 
-   constexpr no_type(auto input)
+   constexpr no_type(auto input) noexcept
       requires(sizeof(input) == 2)
        : m_storage(__builtin_bit_cast(unsigned short, input)) {
    }
 
-   constexpr no_type(auto input)
+   constexpr no_type(auto input) noexcept
       requires(sizeof(input) == 4)
        : m_storage(__builtin_bit_cast(unsigned int, input)) {
    }
 
-   constexpr no_type(auto input)
+   constexpr no_type(auto input) noexcept
       requires(sizeof(input) == 8)
        : m_storage(__builtin_bit_cast(unsigned long long, input)) {
    }
@@ -39,7 +39,7 @@ class no_type {
       requires(!is_void<T>)
    [[nodiscard]]
    constexpr
-   operator T() const {
+   operator T() const noexcept {
       if constexpr (sizeof(T) == 1) {
          return __builtin_bit_cast(T, static_cast<unsigned char>(m_storage));
       } else if constexpr (sizeof(T) == 2) {
@@ -60,17 +60,17 @@ class no_type_ptr {
  public:
    constexpr no_type_ptr() = default;
 
-   constexpr no_type_ptr(decltype(nullptr)) : m_p_storage(nullptr) {
+   constexpr no_type_ptr(decltype(nullptr)) noexcept : m_p_storage(nullptr) {
    }
 
-   constexpr no_type_ptr(auto const* _Nonnull p_input)
+   constexpr no_type_ptr(auto const* _Nonnull p_input) noexcept
        : m_p_storage(const_cast<void*>(static_cast<void const*>(p_input))) {
    }
 
    template <is_pointer T>
    [[nodiscard]]
    constexpr
-   operator T() const {
+   operator T() const noexcept {
       return static_cast<T>(m_p_storage);
    }
 

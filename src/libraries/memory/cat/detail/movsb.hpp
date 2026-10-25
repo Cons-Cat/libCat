@@ -15,7 +15,7 @@ void
 movsb(
    Destination* _Nonnull p_destination, Source const* _Nonnull p_source,
    cat::idx bytes
-) {
+) noexcept {
    asm volatile(R"(rep movsb)"
                 : "+D"(p_destination), "+S"(p_source), "+c"(bytes)
                 :
@@ -29,7 +29,7 @@ void
 movsb_backward(
    Destination* _Nonnull p_destination, Source const* _Nonnull p_source,
    cat::idx bytes
-) {
+) noexcept {
    unsigned char* p_dest = reinterpret_cast<unsigned char*>(p_destination);
    unsigned char const* p_src =
       reinterpret_cast<unsigned char const*>(p_source);
@@ -52,7 +52,7 @@ void
 stosb(
    Destination* _Nonnull p_destination, cat::byte const byte_value,
    cat::idx bytes
-) {
+) noexcept {
    asm volatile(R"(rep stosb)"
                 : "+D"(p_destination), "+c"(bytes)
                 : "a"(byte_value)

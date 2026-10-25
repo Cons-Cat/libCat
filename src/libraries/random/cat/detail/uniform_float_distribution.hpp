@@ -47,22 +47,23 @@ class uniform_float_distribution {
 
       constexpr explicit param_type(
          result_type lower = 0, result_type upper = 1
-      )
+      ) noexcept
           : m_lower(lower), m_upper(upper) {
       }
 
       constexpr auto
-      a() const -> result_type {
+      a() const noexcept -> result_type {
          return m_lower;
       }
 
       constexpr auto
-      b() const -> result_type {
+      b() const noexcept -> result_type {
          return m_upper;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       result_type m_lower;
@@ -73,45 +74,47 @@ class uniform_float_distribution {
 
    constexpr explicit uniform_float_distribution(
       result_type lower, result_type upper = 1
-   )
+   ) noexcept
        : m_parameters(lower, upper) {
    }
 
-   constexpr explicit uniform_float_distribution(param_type const& parameters)
+   constexpr explicit uniform_float_distribution(
+      param_type const& parameters
+   ) noexcept
        : m_parameters(parameters) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    constexpr auto
-   a() const -> result_type {
+   a() const noexcept -> result_type {
       return m_parameters.a();
    }
 
    constexpr auto
-   b() const -> result_type {
+   b() const noexcept -> result_type {
       return m_parameters.b();
    }
 
    constexpr auto
-   min() const -> result_type {
+   min() const noexcept -> result_type {
       return a();
    }
 
    constexpr auto
-   max() const -> result_type {
+   max() const noexcept -> result_type {
       return b();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameters;
    }
 
    constexpr void
-   param(param_type const& parameters) {
+   param(param_type const& parameters) noexcept {
       m_parameters = parameters;
    }
 

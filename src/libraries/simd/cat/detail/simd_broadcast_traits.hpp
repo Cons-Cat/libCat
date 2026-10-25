@@ -27,7 +27,7 @@ using simd_broadcast_lane_raw = simd_broadcast_lane_raw_trait<ToLane>::type;
 
 template <typename From, typename ToLane>
 consteval auto
-simd_broadcast_really_convertible_to() -> bool {
+simd_broadcast_really_convertible_to() noexcept -> bool {
    using unqualified = remove_cvref<From>;
 
    if constexpr (!is_constructible<ToLane, From>) {
@@ -93,7 +93,7 @@ template <typename From, typename ToLane>
 [[gnu::const]]
 // Clang needs this to use it in `[[assume]]`.
 consteval auto
-has_simd_broadcast_consteval_value(From f) -> bool {
+has_simd_broadcast_consteval_value(From f) noexcept -> bool {
    using to_raw = simd_broadcast_lane_raw<ToLane>;
    to_raw const tr = static_cast<to_raw>(f);
    return static_cast<long double>(f) == static_cast<long double>(tr);

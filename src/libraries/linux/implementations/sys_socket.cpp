@@ -2,8 +2,9 @@
 
 // Create and return a socket.
 auto
-nix::sys_socket(cat::int8 protocol_family, cat::int8 type, cat::int8 protocol)
-   -> nix::scaredy_nix<nix::file_descriptor> {
+nix::sys_socket(
+   cat::int8 protocol_family, cat::int8 type, cat::int8 protocol
+) noexcept -> nix::scaredy_nix<nix::file_descriptor> {
    // https://filippo.io/linux-syscall-table/
    return nix::syscall_volatile<nix::file_descriptor>(
       41, protocol_family, type, protocol

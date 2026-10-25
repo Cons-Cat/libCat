@@ -24,7 +24,7 @@ template <
 constexpr auto
 generate_random_distribution_batch(
    Distribution& distribution, Generator& generator
-) -> decltype(auto) {
+) noexcept -> decltype(auto) {
    return distribution_batch_traits<Distribution>::template generate<Abi>(
       distribution, generator
    );
@@ -54,7 +54,7 @@ class distribution_batch_engine {
  public:
    using result_type = distribution_batch_simd<Result, Abi>;
 
-   constexpr explicit distribution_batch_engine(Generator& generator)
+   constexpr explicit distribution_batch_engine(Generator& generator) noexcept
        : m_generator(generator) {
    }
 
@@ -81,13 +81,13 @@ class distribution_batch_engine {
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return result_type(limits<Result>::min());
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type(limits<Result>::max());
    }
 
@@ -125,14 +125,14 @@ using distribution_sampling_float = random_rebind<
 // TODO: Remove these once scalar and SIMD conversions share an API.
 template <typename T>
 constexpr auto
-distribution_float(auto value) -> T {
+distribution_float(auto value) noexcept -> T {
    using scalar = random_scalar<T>;
    return T(scalar(value));
 }
 
 template <typename T, typename U>
 constexpr auto
-distribution_broadcast(U value) -> T {
+distribution_broadcast(U value) noexcept -> T {
    using scalar = random_scalar<T>;
    return T(scalar(make_raw_arithmetic(value)));
 }
@@ -140,7 +140,7 @@ distribution_broadcast(U value) -> T {
 // TODO: Remove these once scalar and SIMD mask operations share an API.
 template <typename Mask>
 constexpr auto
-distribution_any(Mask mask) -> bool {
+distribution_any(Mask mask) noexcept -> bool {
    if constexpr (is_simd_mask<Mask>) {
       return simd_any_of(mask);
    } else {
@@ -150,7 +150,7 @@ distribution_any(Mask mask) -> bool {
 
 template <typename Mask, typename T>
 constexpr auto
-distribution_select(Mask mask, T on_true, T on_false) -> T {
+distribution_select(Mask mask, T on_true, T on_false) noexcept -> T {
    if constexpr (is_simd_mask<Mask>) {
       return simd_select(mask, on_true, on_false);
    } else {
@@ -160,7 +160,7 @@ distribution_select(Mask mask, T on_true, T on_false) -> T {
 
 template <is_simd To, is_simd_mask SimdMask>
 constexpr auto
-distribution_mask_cast(SimdMask mask) -> To::mask_type {
+distribution_mask_cast(SimdMask mask) noexcept -> To::mask_type {
    using result = To::mask_type;
    static_assert(SimdMask::abi_type::lanes == result::abi_type::lanes);
    return result(__builtin_bit_cast(typename result::raw_type, mask.raw));
@@ -168,7 +168,7 @@ distribution_mask_cast(SimdMask mask) -> To::mask_type {
 
 template <typename T>
 constexpr auto
-distribution_equal_lanes(T left, T right) {
+distribution_equal_lanes(T left, T right) noexcept {
    if constexpr (is_simd<T>) {
       return left.equal_lanes(right);
    } else {
@@ -180,7 +180,7 @@ distribution_equal_lanes(T left, T right) {
 template <typename Float>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-distribution_pow(Float base, Float exponent) -> Float {
+distribution_pow(Float base, Float exponent) noexcept -> Float {
    if constexpr (is_simd<Float>) {
       return simd_pow(base, exponent);
    } else {
@@ -190,7 +190,9 @@ distribution_pow(Float base, Float exponent) -> Float {
 
 template <is_uniform_random_bit_generator Generator>
 constexpr auto
-distribution_engine_word(Generator& generator) {
+distribution_engine_word(Generator& generator) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    using engine_type = __typeof_unqual(generator);
    using unsigned_type = random_unsigned<typename engine_type::result_type>;
    unsigned_type const minimum = engine_type::min();
@@ -200,7 +202,7 @@ distribution_engine_word(Generator& generator) {
 template <
    is_simd_unsigned_integral T, is_uniform_random_bit_generator Generator>
 constexpr auto
-distribution_random_word(Generator& generator) -> T {
+distribution_random_word(Generator& generator) noexcept -> T {
    using engine_type = __typeof_unqual(generator);
    using engine_result = engine_type::result_type;
    using engine_unsigned = random_unsigned<engine_result>;
@@ -238,7 +240,7 @@ distribution_random_word(Generator& generator) -> T {
 
 template <is_uniform_random_bit_generator Generator>
 constexpr auto
-distribution_random_bit(Generator& generator) -> bool {
+distribution_random_bit(Generator& generator) noexcept -> bool {
    using engine_type = __typeof_unqual(generator);
    static_assert(!is_simd<typename engine_type::result_type>);
    using unsigned_type = make_unsigned_type<typename engine_type::result_type>;
@@ -259,7 +261,7 @@ distribution_random_bit(Generator& generator) -> bool {
 
 template <is_uniform_random_bit_generator Generator, is_unsigned_integral T>
 constexpr auto
-distribution_random_bounded(Generator& generator, T bound) -> T {
+distribution_random_bounded(Generator& generator, T bound) noexcept -> T {
    using engine_type = __typeof_unqual(generator);
    using engine_unsigned =
       make_unsigned_type<typename engine_type::result_type>;
@@ -288,7 +290,7 @@ distribution_random_bounded(Generator& generator, T bound) -> T {
 template <typename Int, typename Unsigned>
    requires(is_integral<Int> || is_simd_integral<Int>)
 constexpr auto
-distribution_int_from_bits(Unsigned value) -> Int {
+distribution_int_from_bits(Unsigned value) noexcept -> Int {
    static_assert(is_same<Unsigned, random_unsigned<Int>>);
    if constexpr (is_simd<Int>) {
       return Int(__builtin_bit_cast(typename Int::raw_type, value.raw));
@@ -306,7 +308,7 @@ distribution_int_from_bits(Unsigned value) -> Int {
 template <typename Float>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-distribution_next_toward(Float value, Float toward) -> Float {
+distribution_next_toward(Float value, Float toward) noexcept -> Float {
    using scalar = random_scalar<Float>;
    using raw_type = raw_arithmetic_type<scalar>;
    using bits_scalar = uint_fixed<sizeof(raw_type)>;
@@ -363,7 +365,7 @@ distribution_next_toward(Float value, Float toward) -> Float {
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-distribution_generate_canonical(Generator& generator) -> Float {
+distribution_generate_canonical(Generator& generator) noexcept -> Float {
    using engine_result = Generator::result_type;
    using engine_scalar = random_scalar<engine_result>;
    using unsigned_scalar = make_unsigned_type<engine_scalar>;
@@ -438,7 +440,7 @@ distribution_generate_canonical(Generator& generator) -> Float {
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-random_positive_canonical(Generator& generator) -> Float {
+random_positive_canonical(Generator& generator) noexcept -> Float {
    Float value = distribution_generate_canonical<Float>(generator);
    if constexpr (is_simd<Float>) {
       auto zero = value.equal_lanes(Float(0));
@@ -458,7 +460,7 @@ random_positive_canonical(Generator& generator) -> Float {
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-random_standard_normal(Generator& generator) -> Float {
+random_standard_normal(Generator& generator) noexcept -> Float {
    using scalar = random_scalar<Float>;
    Float const radius =
       sqrt(Float(-2.f) * log(random_positive_canonical<Float>(generator)));
@@ -470,7 +472,7 @@ random_standard_normal(Generator& generator) -> Float {
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-random_gamma(Generator& generator, Float alpha, Float beta) -> Float {
+random_gamma(Generator& generator, Float alpha, Float beta) noexcept -> Float {
    Float const one = 1.f;
    if constexpr (is_simd<Float>) {
       auto const small_shape = alpha < one;

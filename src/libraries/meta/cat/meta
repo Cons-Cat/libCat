@@ -73,7 +73,7 @@ declval_detail(signed long) -> T;
 
 template <typename T>
 auto
-declval() -> decltype(detail::declval_detail<T>(0));
+declval() noexcept -> decltype(detail::declval_detail<T>(0));
 
 // Make a value stop being a constant expression without changing its type.
 template <typename T>
@@ -932,14 +932,14 @@ namespace std {
 template <typename T>
 [[nodiscard]]
 constexpr auto
-move(T&& input) -> cat::remove_reference<T>&& {
+move(T&& input) noexcept -> cat::remove_reference<T>&& {
    return static_cast<cat::remove_reference<T>&&>(input);
 }
 
 template <typename T>
 [[nodiscard, gnu::nodebug]]
 constexpr auto
-forward(cat::remove_reference<T>& input) -> T&& {
+forward(cat::remove_reference<T>& input) noexcept -> T&& {
    return static_cast<T&&>(input);
 }
 
@@ -947,7 +947,7 @@ template <typename T>
    requires(!cat::is_lvalue_reference<T>)
 [[nodiscard, gnu::nodebug]]
 constexpr auto
-forward(cat::remove_reference<T>&& input) -> T&& {
+forward(cat::remove_reference<T>&& input) noexcept -> T&& {
    return static_cast<T&&>(input);
 }
 
@@ -964,6 +964,18 @@ using std::forward;
 using std::move;
 
 #define $fwd(x) ::cat::forward<decltype(x)>(x)
+
+// Move `input` unless its move constructor could throw and a copy constructor
+// is available. Containers relocate elements with this so that an exception
+// thrown mid-relocation leaves the source elements intact.
+template <typename T>
+[[nodiscard, gnu::nodebug]]
+constexpr auto
+move_if_noexcept(T& input) noexcept -> conditional<
+   !is_nothrow_move_constructible<T> && is_copy_constructible<T>, T const&,
+   T&&> {
+   return move(input);
+}
 
 // `is_forwarding_move` matches types that can move. Those are non-`const`
 // r-value references. This is used to bind forwarding-reference parameters that

@@ -56,7 +56,7 @@ concept can_split_to =
 
 template <idx selected_index, idx... split_sizes>
 consteval auto
-simd_split_offset_at() -> idx {
+simd_split_offset_at() noexcept -> idx {
    idx const sizes[] = {split_sizes...};
    idx offset = 0u;
    for (idx index = 0u; index < selected_index; ++index) {
@@ -70,7 +70,7 @@ template <idx... split_sizes, typename Simd, idx... indices>
 constexpr auto
 simd_split_impl(
    Simd const& input, [[maybe_unused]] index_list_type<indices...> /*unused*/
-) {
+) noexcept {
    return tuple<resize_simd<split_sizes, Simd>...>{simd_extract<
       simd_split_offset_at<indices, split_sizes...>(),
       simd_split_offset_at<indices, split_sizes...>()
@@ -82,7 +82,9 @@ template <typename Split, typename Simd, idx... indices>
 constexpr auto
 simd_split_uniform_impl(
    Simd const& input, [[maybe_unused]] index_list_type<indices...> /*unused*/
-) -> array<Split, idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}> {
+) noexcept
+   -> array<
+      Split, idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}> {
    constexpr idx split_lanes = Split::abi_type::lanes;
    return {
       simd_extract<
@@ -96,7 +98,9 @@ simd_split_uniform_impl(
 template <is_simd Simd>
 [[nodiscard]]
 constexpr auto
-simd_concat(Simd const& lower_lanes_first, Simd const& upper_lanes_second) {
+simd_concat(
+   Simd const& lower_lanes_first, Simd const& upper_lanes_second
+) noexcept {
    // P2638R0 glue smaller packs into one (`concat` / split story).
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    using scalar_type = Simd::scalar_type;
@@ -118,7 +122,7 @@ template <idx... split_sizes, is_simd_or_mask Simd>
    )
 [[nodiscard]]
 constexpr auto
-simd_split(Simd const& input) {
+simd_split(Simd const& input) noexcept {
    // P2638R0 `split` turns one pack into a tuple of smaller packs.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return detail::simd_split_impl<split_sizes...>(
@@ -130,9 +134,8 @@ template <is_simd_or_mask Split, is_simd_or_mask Simd>
    requires(detail::can_split_to<Split, Simd>)
 [[nodiscard]]
 constexpr auto
-simd_split(
-   Simd const& input
-) -> array<Split, idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}> {
+simd_split(Simd const& input) noexcept -> array<
+   Split, idx{Simd::abi_type::lanes.raw / Split::abi_type::lanes.raw}> {
    // P2638R0 `split<V>` splits into uniform chunks of type `V`.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    constexpr idx split_count =
@@ -146,7 +149,7 @@ template <idx count, is_simd_or_mask Simd>
    requires(count != 0u && (Simd::abi_type::lanes % count) == 0u)
 [[nodiscard]]
 constexpr auto
-simd_split_by(Simd const& input) {
+simd_split_by(Simd const& input) noexcept {
    // P2638R0 `split_by<N>` splits one pack into `N` equal chunks.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    using split = resize_simd<idx{Simd::abi_type::lanes.raw / count.raw}, Simd>;
@@ -157,7 +160,7 @@ template <idx new_lanes, typename Simd>
    requires((is_simd<Simd> || is_simd_mask<Simd>) && new_lanes != 0)
 [[nodiscard]]
 constexpr auto
-simd_resize(Simd const& v) -> resize_simd<new_lanes, Simd> {
+simd_resize(Simd const& v) noexcept -> resize_simd<new_lanes, Simd> {
    // P2638R0 resize to `new_lanes` (truncate or value-init new lanes).
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    resize_simd<new_lanes, Simd> result{};
@@ -175,7 +178,7 @@ template <idx begin_index, idx end_index, typename Simd>
    )
 [[nodiscard]]
 constexpr auto
-simd_extract(Simd const& parent)
+simd_extract(Simd const& parent) noexcept
    -> resize_simd<idx{end_index.raw - begin_index.raw}, Simd> {
    // P2638R0 `extract` a contiguous lane subrange `[begin_index, end_index)`.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
@@ -196,7 +199,8 @@ template <idx position, typename SimdParent, typename SimdChild>
    )
 [[nodiscard]]
 constexpr auto
-simd_insert(SimdParent const& parent, SimdChild const& child) -> SimdParent {
+simd_insert(SimdParent const& parent, SimdChild const& child) noexcept
+   -> SimdParent {
    // P2638R0 `insert` a smaller pack into a lane range of the parent.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    SimdParent result = parent;
@@ -211,7 +215,7 @@ template <is_simd Simd>
 constexpr auto
 simd_interleave(
    Simd const& from_even_lane_index, Simd const& from_odd_lane_index
-) {
+) noexcept {
    using scalar_type = Simd::scalar_type;
    using abi = Simd::abi_type;
    using out_abi = simd_abi::deduce<scalar_type, idx{abi::lanes.raw * 2uz}>;
@@ -226,7 +230,7 @@ simd_interleave(
 template <is_simd Simd>
 [[nodiscard]]
 constexpr auto
-simd_duplicate_even(Simd input) -> Simd {
+simd_duplicate_even(Simd input) noexcept -> Simd {
    Simd result{};
    for (idx i = 0u; i < Simd::abi_type::lanes; ++i) {
       idx const from = idx(i.raw & ~static_cast<idx::raw_type>(1u));
@@ -238,7 +242,7 @@ simd_duplicate_even(Simd input) -> Simd {
 template <is_simd Simd>
 [[nodiscard]]
 constexpr auto
-simd_duplicate_odd(Simd input) -> Simd {
+simd_duplicate_odd(Simd input) noexcept -> Simd {
    Simd result{};
    for (idx i = 0u; i < Simd::abi_type::lanes; ++i) {
       idx::raw_type raw = i.raw | static_cast<idx::raw_type>(1u);
@@ -253,7 +257,7 @@ simd_duplicate_odd(Simd input) -> Simd {
 template <is_simd Simd>
 [[nodiscard]]
 constexpr auto
-simd_reverse_blocks(Simd input, idx block_lanes) -> Simd {
+simd_reverse_blocks(Simd input, idx block_lanes) noexcept -> Simd {
    using abi = Simd::abi_type;
    if (block_lanes == 0u || (abi::lanes % block_lanes) != 0u) {
       return input;
@@ -273,7 +277,7 @@ template <typename T, typename Abi>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-simd_clz(simd<T, Abi> x) -> simd<T, Abi> {
+simd_clz(simd<T, Abi> x) noexcept -> simd<T, Abi> {
    return simd<T, Abi>(__builtin_elementwise_clzg(x.raw));
 }
 
@@ -281,7 +285,7 @@ template <typename T, typename Abi>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-simd_clz(simd<T, Abi> x, simd<T, Abi> if_zero) -> simd<T, Abi> {
+simd_clz(simd<T, Abi> x, simd<T, Abi> if_zero) noexcept -> simd<T, Abi> {
    return simd<T, Abi>(__builtin_elementwise_clzg(x.raw, if_zero.raw));
 }
 
@@ -289,7 +293,7 @@ template <typename T, typename Abi>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-simd_ctz(simd<T, Abi> x) -> simd<T, Abi> {
+simd_ctz(simd<T, Abi> x) noexcept -> simd<T, Abi> {
    return simd<T, Abi>(__builtin_elementwise_ctzg(x.raw));
 }
 
@@ -297,7 +301,7 @@ template <typename T, typename Abi>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-simd_ctz(simd<T, Abi> x, simd<T, Abi> if_zero) -> simd<T, Abi> {
+simd_ctz(simd<T, Abi> x, simd<T, Abi> if_zero) noexcept -> simd<T, Abi> {
    return simd<T, Abi>(__builtin_elementwise_ctzg(x.raw, if_zero.raw));
 }
 
@@ -307,7 +311,7 @@ template <is_simd Simd>
 constexpr auto
 simd_partial_load(
    Simd& v, typename Simd::value_type const* _Nonnull p_source, idx n
-) -> Simd& {
+) noexcept -> Simd& {
    return v.partial_load(p_source, n);
 }
 
@@ -315,14 +319,14 @@ template <is_simd Simd>
 constexpr void
 simd_partial_store(
    Simd const& v, typename Simd::value_type* _Nonnull p_destination, idx n
-) {
+) noexcept {
    v.partial_store(p_destination, n);
 }
 
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_mask_none_of(simd_mask<T, Abi> m) -> bool {
+simd_mask_none_of(simd_mask<T, Abi> m) noexcept -> bool {
    // P2638R0 mask summaries (`none` via `simd_any_of`).
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return !simd_any_of(m);
@@ -331,7 +335,7 @@ simd_mask_none_of(simd_mask<T, Abi> m) -> bool {
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_mask_all_of(simd_mask<T, Abi> m) -> bool {
+simd_mask_all_of(simd_mask<T, Abi> m) noexcept -> bool {
    // P2638R0 forwards `simd_all_of` (`bitset`-style `all`).
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return simd_all_of(m);
@@ -340,7 +344,7 @@ simd_mask_all_of(simd_mask<T, Abi> m) -> bool {
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_mask_any_of(simd_mask<T, Abi> m) -> bool {
+simd_mask_any_of(simd_mask<T, Abi> m) noexcept -> bool {
    // P2638R0 forwards `simd_any_of` (`bitset`-style `any`).
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return simd_any_of(m);

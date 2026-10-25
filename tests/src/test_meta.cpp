@@ -3,6 +3,7 @@
 #include <cat/string>
 #include <cat/tuple>
 
+#include "../fragile.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -922,3 +923,16 @@ $test(meta_is_predicate) {
    static_assert(!is_predicate<decltype(&return_opaque), int>);
    static_assert(!is_predicate<decltype(&bad_predicate_return), int>);
 }
+
+static_assert(noexcept(cat::move(cat::declval<int4&>())));
+static_assert(noexcept(cat::forward<int4&>(cat::declval<int4&>())));
+static_assert(cat::is_same<
+              decltype(cat::move_if_noexcept(cat::declval<nothrow_element&>())),
+              nothrow_element&&>);
+static_assert(
+   cat::is_same<
+      decltype(cat::move_if_noexcept(cat::declval<throwing_move_element&>())),
+      throwing_move_element const&>
+);
+static_assert(cat::is_nothrow_default_constructible<int4>);
+static_assert(cat::is_nothrow_constructible<idx, unsigned>);

@@ -10,13 +10,13 @@ template <is_floating_point T>
    requires is_dimensionless_arithmetic<T>
 [[nodiscard]]
 constexpr auto
-nroot(T x, iword n) -> T;
+nroot(T x, iword n) noexcept -> T;
 
 template <int root, is_floating_point T>
    requires(root != 0 && arithmetic_quantity<T>::scale % root == 0)
 [[nodiscard]]
 constexpr auto
-nroot(T x) {
+nroot(T x) noexcept {
    using result_quantity = powered_quantity<arithmetic_quantity<T>, 1, root>;
    using result_type = detail::rebind_quantity_type<T, result_quantity{}>;
    return result_type(cat::nroot(make_raw_arithmetic(x), root));
@@ -26,7 +26,7 @@ template <is_floating_point T>
    requires is_dimensionless_arithmetic<T>
 [[nodiscard]]
 constexpr auto
-nroot(T x, iword n) -> T {
+nroot(T x, iword n) noexcept -> T {
    using raw_type = raw_arithmetic_type<T>;
    if (n <= 1u) {
       return x;
@@ -54,7 +54,7 @@ template <is_floating_point T>
    requires(arithmetic_quantity<T>::scale % 3 == 0)
 [[nodiscard]]
 constexpr auto
-cbrt(T x) {
+cbrt(T x) noexcept {
    return cat::nroot<3>(x);
 }
 
@@ -62,13 +62,13 @@ template <is_floating_point T>
    requires is_dimensionless_arithmetic<T>
 [[nodiscard]]
 constexpr auto
-rnroot(T x, iword n) -> T;
+rnroot(T x, iword n) noexcept -> T;
 
 template <int root, is_floating_point T>
    requires(root != 0 && arithmetic_quantity<T>::scale % root == 0)
 [[nodiscard]]
 constexpr auto
-rnroot(T x) {
+rnroot(T x) noexcept {
    using result_quantity = powered_quantity<arithmetic_quantity<T>, -1, root>;
    using result_type = detail::rebind_quantity_type<T, result_quantity{}>;
    return result_type(cat::rnroot(make_raw_arithmetic(x), root));
@@ -78,7 +78,7 @@ template <is_floating_point T>
    requires is_dimensionless_arithmetic<T>
 [[nodiscard]]
 constexpr auto
-rnroot(T x, iword n) -> T {
+rnroot(T x, iword n) noexcept -> T {
    using raw_type = raw_arithmetic_type<T>;
    if (n <= 0) {
       return x;
@@ -93,7 +93,7 @@ template <is_floating_point T>
    requires(arithmetic_quantity<T>::scale % 3 == 0)
 [[nodiscard]]
 constexpr auto
-rcbrt(T x) {
+rcbrt(T x) noexcept {
    return cat::rnroot<3>(x);
 }
 

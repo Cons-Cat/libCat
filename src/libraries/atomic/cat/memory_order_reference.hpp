@@ -22,14 +22,15 @@ class memory_order_reference
 
    explicit constexpr memory_order_reference(
       Atomic& atomic [[clang::lifetimebound]]
-   )
+   ) noexcept
        : base(target(atomic)) {
    }
 
    memory_order_reference(memory_order_reference const&) = default;
 
    auto
-   operator=(memory_order_reference const&) -> memory_order_reference& = delete;
+   operator=(memory_order_reference const&) noexcept
+      -> memory_order_reference& = delete;
 
    friend constexpr void
    operator&(memory_order_reference const volatile&) = delete;
@@ -44,7 +45,7 @@ class memory_order_reference
       )
    [[nodiscard]]
    friend constexpr auto
-   operator==(memory_order_reference lhs, U const& rhs) -> bool {
+   operator==(memory_order_reference lhs, U const& rhs) noexcept -> bool {
       return lhs.load() == rhs;
    }
 
@@ -55,7 +56,7 @@ class memory_order_reference
       )
    [[nodiscard]]
    friend constexpr auto
-   operator==(U const& lhs, memory_order_reference rhs) -> bool {
+   operator==(U const& lhs, memory_order_reference rhs) noexcept -> bool {
       return lhs == rhs.load();
    }
 
@@ -63,7 +64,7 @@ class memory_order_reference
       requires is_weakly_equality_comparable<value_type, typename U::value_type>
    [[nodiscard]]
    friend constexpr auto
-   operator==(memory_order_reference lhs, U const& rhs) -> bool {
+   operator==(memory_order_reference lhs, U const& rhs) noexcept -> bool {
       return lhs.load() == rhs.load();
    }
 
@@ -74,7 +75,7 @@ class memory_order_reference
       )
    [[nodiscard]]
    friend constexpr auto
-   operator!=(memory_order_reference lhs, U const& rhs) -> bool {
+   operator!=(memory_order_reference lhs, U const& rhs) noexcept -> bool {
       return !(lhs == rhs);
    }
 
@@ -85,7 +86,7 @@ class memory_order_reference
       )
    [[nodiscard]]
    friend constexpr auto
-   operator!=(U const& lhs, memory_order_reference rhs) -> bool {
+   operator!=(U const& lhs, memory_order_reference rhs) noexcept -> bool {
       return !(lhs == rhs);
    }
 
@@ -93,7 +94,7 @@ class memory_order_reference
       requires is_weakly_equality_comparable<value_type, typename U::value_type>
    [[nodiscard]]
    friend constexpr auto
-   operator!=(memory_order_reference lhs, U const& rhs) -> bool {
+   operator!=(memory_order_reference lhs, U const& rhs) noexcept -> bool {
       return !(lhs == rhs);
    }
 
@@ -103,7 +104,7 @@ class memory_order_reference
       )
    [[nodiscard]]
    friend constexpr auto
-   operator<=>(memory_order_reference lhs, U const& rhs) {
+   operator<=>(memory_order_reference lhs, U const& rhs) noexcept {
       return lhs.load() <=> rhs;
    }
 
@@ -113,7 +114,7 @@ class memory_order_reference
       )
    [[nodiscard]]
    friend constexpr auto
-   operator<=>(U const& lhs, memory_order_reference rhs) {
+   operator<=>(U const& lhs, memory_order_reference rhs) noexcept {
       return lhs <=> rhs.load();
    }
 
@@ -121,13 +122,13 @@ class memory_order_reference
       requires is_threeway_comparable<value_type, typename U::value_type>
    [[nodiscard]]
    friend constexpr auto
-   operator<=>(memory_order_reference lhs, U const& rhs) {
+   operator<=>(memory_order_reference lhs, U const& rhs) noexcept {
       return lhs.load() <=> rhs.load();
    }
 
  private:
    static constexpr auto
-   target(Atomic& atomic) -> target_type& {
+   target(Atomic& atomic) noexcept -> target_type& {
       if constexpr (detail::memory_order_traits<Atomic>::is_reference) {
          return *atomic.m_p_value;
       } else {
@@ -139,7 +140,7 @@ class memory_order_reference
 namespace detail {
 template <overflow_policies overflow_policy>
 constexpr auto
-bind_atomic_overflow_policy(auto memory_order_reference) {
+bind_atomic_overflow_policy(auto memory_order_reference) noexcept {
    if constexpr (overflow_policy == overflow_policies::undefined) {
       return memory_order_reference.undef();
    } else if constexpr (overflow_policy == overflow_policies::wrap) {
@@ -183,160 +184,160 @@ detail::atomic_overflow_reference<Atomic, overflow_policy>::seq_cst() const {
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::relaxed() & -> memory_order_reference<
-   atomic, memory_order::relaxed> {
+atomic<T>::relaxed() & noexcept
+   -> memory_order_reference<atomic, memory_order::relaxed> {
    return memory_order_reference<atomic, memory_order::relaxed>(*this);
 }
 
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::relaxed() const& -> memory_order_reference<
-   atomic const, memory_order::relaxed> {
+atomic<T>::relaxed() const& noexcept
+   -> memory_order_reference<atomic const, memory_order::relaxed> {
    return memory_order_reference<atomic const, memory_order::relaxed>(*this);
 }
 
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::acquire() & -> memory_order_reference<
-   atomic, memory_order::acquire> {
+atomic<T>::acquire() & noexcept
+   -> memory_order_reference<atomic, memory_order::acquire> {
    return memory_order_reference<atomic, memory_order::acquire>(*this);
 }
 
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::acquire() const& -> memory_order_reference<
-   atomic const, memory_order::acquire> {
+atomic<T>::acquire() const& noexcept
+   -> memory_order_reference<atomic const, memory_order::acquire> {
    return memory_order_reference<atomic const, memory_order::acquire>(*this);
 }
 
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::release() & -> memory_order_reference<
-   atomic, memory_order::release> {
+atomic<T>::release() & noexcept
+   -> memory_order_reference<atomic, memory_order::release> {
    return memory_order_reference<atomic, memory_order::release>(*this);
 }
 
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::release() const& -> memory_order_reference<
-   atomic const, memory_order::release> {
+atomic<T>::release() const& noexcept
+   -> memory_order_reference<atomic const, memory_order::release> {
    return memory_order_reference<atomic const, memory_order::release>(*this);
 }
 
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::acq_rel() & -> memory_order_reference<
-   atomic, memory_order::acq_rel> {
+atomic<T>::acq_rel() & noexcept
+   -> memory_order_reference<atomic, memory_order::acq_rel> {
    return memory_order_reference<atomic, memory_order::acq_rel>(*this);
 }
 
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::acq_rel() const& -> memory_order_reference<
-   atomic const, memory_order::acq_rel> {
+atomic<T>::acq_rel() const& noexcept
+   -> memory_order_reference<atomic const, memory_order::acq_rel> {
    return memory_order_reference<atomic const, memory_order::acq_rel>(*this);
 }
 
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::seq_cst() & -> memory_order_reference<
-   atomic, memory_order::seq_cst> {
+atomic<T>::seq_cst() & noexcept
+   -> memory_order_reference<atomic, memory_order::seq_cst> {
    return memory_order_reference<atomic, memory_order::seq_cst>(*this);
 }
 
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::seq_cst() const& -> memory_order_reference<
-   atomic const, memory_order::seq_cst> {
+atomic<T>::seq_cst() const& noexcept
+   -> memory_order_reference<atomic const, memory_order::seq_cst> {
    return memory_order_reference<atomic const, memory_order::seq_cst>(*this);
 }
 
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::relaxed() & -> memory_order_reference<
-   atomic, memory_order::relaxed> {
+atomic<T&>::relaxed() & noexcept
+   -> memory_order_reference<atomic, memory_order::relaxed> {
    return memory_order_reference<atomic, memory_order::relaxed>(*this);
 }
 
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::relaxed() const& -> memory_order_reference<
-   atomic const, memory_order::relaxed> {
+atomic<T&>::relaxed() const& noexcept
+   -> memory_order_reference<atomic const, memory_order::relaxed> {
    return memory_order_reference<atomic const, memory_order::relaxed>(*this);
 }
 
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::acquire() & -> memory_order_reference<
-   atomic, memory_order::acquire> {
+atomic<T&>::acquire() & noexcept
+   -> memory_order_reference<atomic, memory_order::acquire> {
    return memory_order_reference<atomic, memory_order::acquire>(*this);
 }
 
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::acquire() const& -> memory_order_reference<
-   atomic const, memory_order::acquire> {
+atomic<T&>::acquire() const& noexcept
+   -> memory_order_reference<atomic const, memory_order::acquire> {
    return memory_order_reference<atomic const, memory_order::acquire>(*this);
 }
 
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::release() & -> memory_order_reference<
-   atomic, memory_order::release> {
+atomic<T&>::release() & noexcept
+   -> memory_order_reference<atomic, memory_order::release> {
    return memory_order_reference<atomic, memory_order::release>(*this);
 }
 
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::release() const& -> memory_order_reference<
-   atomic const, memory_order::release> {
+atomic<T&>::release() const& noexcept
+   -> memory_order_reference<atomic const, memory_order::release> {
    return memory_order_reference<atomic const, memory_order::release>(*this);
 }
 
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::acq_rel() & -> memory_order_reference<
-   atomic, memory_order::acq_rel> {
+atomic<T&>::acq_rel() & noexcept
+   -> memory_order_reference<atomic, memory_order::acq_rel> {
    return memory_order_reference<atomic, memory_order::acq_rel>(*this);
 }
 
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::acq_rel() const& -> memory_order_reference<
-   atomic const, memory_order::acq_rel> {
+atomic<T&>::acq_rel() const& noexcept
+   -> memory_order_reference<atomic const, memory_order::acq_rel> {
    return memory_order_reference<atomic const, memory_order::acq_rel>(*this);
 }
 
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::seq_cst() & -> memory_order_reference<
-   atomic, memory_order::seq_cst> {
+atomic<T&>::seq_cst() & noexcept
+   -> memory_order_reference<atomic, memory_order::seq_cst> {
    return memory_order_reference<atomic, memory_order::seq_cst>(*this);
 }
 
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::seq_cst() const& -> memory_order_reference<
-   atomic const, memory_order::seq_cst> {
+atomic<T&>::seq_cst() const& noexcept
+   -> memory_order_reference<atomic const, memory_order::seq_cst> {
    return memory_order_reference<atomic const, memory_order::seq_cst>(*this);
 }
 

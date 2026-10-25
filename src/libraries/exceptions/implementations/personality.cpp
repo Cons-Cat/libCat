@@ -12,7 +12,7 @@ extern "C" auto
 __gxx_personality_v0(
    int4 version, unwind_action actions, uint8 exception_class,
    unwind_exception* p_exception, unwind_context* p_context
-) -> unwind_reason_code {
+) noexcept(!__has_feature(cxx_exceptions)) -> unwind_reason_code {
    if (version != 1 || !is_native_exception(exception_class)) {
       return unwind_reason_code::fatal_phase1_error;
    }

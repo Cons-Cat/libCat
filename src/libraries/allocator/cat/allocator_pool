@@ -23,17 +23,19 @@ allocator_pool : public allocator_interface<allocator_pool<max_node_bytes>> {
    // Friend factory functions.
    template <idx in_max_node_bytes>
    friend constexpr auto
-   make_allocator_pool(uintptr<void> p_address, idx arena_bytes)
+   make_allocator_pool(uintptr<void> p_address, idx arena_bytes) noexcept
       -> allocator_pool<in_max_node_bytes>;
 
    template <idx in_max_node_bytes>
    friend constexpr auto
-   make_allocator_pool(span<byte>& span [[clang::lifetimebound]])
+   make_allocator_pool(span<byte>& span [[clang::lifetimebound]]) noexcept
       -> allocator_pool<in_max_node_bytes>;
 
    // Initialize a `allocator_pool`. This should only be called from
    // `cat::make_allocator_pool`.
-   constexpr allocator_pool(uintptr<void> p_address, idx arena_bytes)
+   constexpr allocator_pool(uintptr<void> p_address, idx arena_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   )
        : m_nodes(
             span<node_union>(
                // Pun the opaque `p_address` to the internal `node_union` type.
@@ -65,13 +67,13 @@ allocator_pool : public allocator_interface<allocator_pool<max_node_bytes>> {
 
  private:
    auto
-   allocation_bytes(ualign, idx) -> maybe_non_zero<idx> {
+   allocation_bytes(ualign, idx) noexcept -> maybe_non_zero<idx> {
       return max_node_bytes;
    }
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(idx /*unused*/) -> void* _Nullable {
+   allocate(idx /*unused*/) noexcept -> void* _Nullable {
       // If there is a next node in the free list, make that the head and
       // allocate the current head to the user. Otherwise, do not allocate
       // anything.
@@ -87,7 +89,7 @@ allocator_pool : public allocator_interface<allocator_pool<max_node_bytes>> {
 
    [[clang::ownership_takes(libcat, 2)]]
    void
-   deallocate(void const* _Nonnull p_allocation, idx /*unused*/) {
+   deallocate(void const* _Nonnull p_allocation, idx /*unused*/) noexcept {
       // Swap the head for this newly freed allocation.
       node_union* p_new_head = __builtin_bit_cast(node_union*, p_allocation);
       p_new_head->p_next = m_p_head;
@@ -108,7 +110,7 @@ allocator_pool : public allocator_interface<allocator_pool<max_node_bytes>> {
 
    [[nodiscard]]
    auto
-   bytes_used() const -> idx {
+   bytes_used() const noexcept -> idx {
       idx free_nodes = 0u;
       for (node_union const* p_walk = m_p_head; p_walk != nullptr;
            p_walk = p_walk->p_next) {
@@ -120,14 +122,14 @@ allocator_pool : public allocator_interface<allocator_pool<max_node_bytes>> {
 
    [[nodiscard]]
    auto
-   bytes_capacity() const -> idx {
+   bytes_capacity() const noexcept -> idx {
       return m_nodes.size() * max_node_bytes;
    }
 
    // Two pools are equivalent when they alias the same memory.
    [[nodiscard]]
    auto
-   is_equivalent(allocator_pool const& other) const -> bool {
+   is_equivalent(allocator_pool const& other) const noexcept -> bool {
       return m_nodes.data() == other.m_nodes.data()
              && m_nodes.size() == other.m_nodes.size();
    }
@@ -140,7 +142,7 @@ allocator_pool : public allocator_interface<allocator_pool<max_node_bytes>> {
 template <idx max_node_bytes>
 [[nodiscard]]
 constexpr auto
-make_allocator_pool(uintptr<void> p_address, idx arena_bytes)
+make_allocator_pool(uintptr<void> p_address, idx arena_bytes) noexcept
    -> allocator_pool<max_node_bytes> {
    return allocator_pool<max_node_bytes>(p_address, arena_bytes);
 }
@@ -148,7 +150,7 @@ make_allocator_pool(uintptr<void> p_address, idx arena_bytes)
 template <idx max_node_bytes>
 [[nodiscard]]
 constexpr auto
-make_allocator_pool(span<byte>& span [[clang::lifetimebound]])
+make_allocator_pool(span<byte>& span [[clang::lifetimebound]]) noexcept
    -> allocator_pool<max_node_bytes> {
    return allocator_pool<max_node_bytes>(span.data(), span.size());
 }
@@ -160,7 +162,8 @@ template <idx max_node_bytes>
      "unintentionally leak memory. Copy an l-value `cat::span` instead."
   )]]
 constexpr auto
-make_allocator_pool(span<byte>&& span) -> allocator_pool<max_node_bytes> {
+make_allocator_pool(span<byte>&& span) noexcept
+   -> allocator_pool<max_node_bytes> {
    return make_allocator_pool<max_node_bytes>(span);
 }
 

@@ -47,27 +47,31 @@ class discrete_distribution {
     public:
       using distribution_type = discrete_distribution;
 
-      constexpr param_type() {
+      constexpr param_type() noexcept {
          set_default();
       }
 
-      constexpr explicit param_type(span<float8 const> weights) {
+      constexpr explicit param_type(span<float8 const> weights) noexcept(
+         !__has_feature(cxx_exceptions)
+      ) {
          assign(weights);
       }
 
-      constexpr param_type(initializer_list<float8> weights)
+      constexpr param_type(initializer_list<float8> weights) noexcept
           : param_type(span<float8 const>{weights}) {
       }
 
       [[nodiscard]]
       constexpr auto
-      probabilities() const -> span<float8 const> {
+      probabilities() const noexcept -> span<float8 const> {
          return {m_probabilities.data(), m_size};
       }
 
       [[nodiscard]]
       constexpr auto
-      operator==(param_type const& other) const -> bool {
+      operator==(param_type const& other) const noexcept(
+         !__has_feature(cxx_exceptions)
+      ) -> bool {
          if (m_size != other.m_size) {
             return false;
          }
@@ -83,14 +87,16 @@ class discrete_distribution {
       friend class discrete_distribution;
 
       constexpr void
-      set_default() {
+      set_default() noexcept(!__has_feature(cxx_exceptions)) {
          m_size = 1u;
          m_probabilities[0u] = 1;
          m_cumulative[0u] = 1;
       }
 
       constexpr void
-      assign(span<float8 const> weights) {
+      assign(span<float8 const> weights) noexcept(
+         !__has_feature(cxx_exceptions)
+      ) {
          bool valid = weights.size() <= detail::sampling_distribution_capacity;
          idx const size = weights.size();
          if (size == 0u) {
@@ -133,31 +139,33 @@ class discrete_distribution {
 
    constexpr discrete_distribution() = default;
 
-   constexpr explicit discrete_distribution(span<float8 const> weights)
+   constexpr explicit discrete_distribution(span<float8 const> weights) noexcept
        : m_parameters(weights) {
    }
 
-   constexpr discrete_distribution(initializer_list<float8> weights)
+   constexpr discrete_distribution(initializer_list<float8> weights) noexcept
        : m_parameters(weights) {
    }
 
-   constexpr explicit discrete_distribution(param_type const& parameters)
+   constexpr explicit discrete_distribution(
+      param_type const& parameters
+   ) noexcept
        : m_parameters(parameters) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    [[nodiscard]]
    constexpr auto
-   min() const -> result_type {
+   min() const noexcept -> result_type {
       return 0;
    }
 
    [[nodiscard]]
    constexpr auto
-   max() const -> result_type {
+   max() const noexcept -> result_type {
       return detail::sampling_integer<result_type>(
          idx(m_parameters.m_size - 1u)
       );
@@ -165,18 +173,18 @@ class discrete_distribution {
 
    [[nodiscard]]
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameters;
    }
 
    constexpr void
-   param(param_type const& parameters) {
+   param(param_type const& parameters) noexcept {
       m_parameters = parameters;
    }
 
    [[nodiscard]]
    constexpr auto
-   probabilities() const -> span<float8 const> {
+   probabilities() const noexcept -> span<float8 const> {
       return m_parameters.probabilities();
    }
 
@@ -220,7 +228,7 @@ class discrete_distribution {
 
    [[nodiscard]]
    constexpr auto
-   operator==(discrete_distribution const& other) const -> bool {
+   operator==(discrete_distribution const& other) const noexcept -> bool {
       return m_parameters == other.m_parameters;
    }
 

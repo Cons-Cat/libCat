@@ -198,7 +198,7 @@ struct timespec {
    // `cat::units::nanoseconds`.
    [[nodiscard]]
    constexpr auto
-   to_nanoseconds() const -> cat::units::nanosecond_int8;
+   to_nanoseconds() const noexcept -> cat::units::nanosecond_int8;
 };
 
 using futex_timespec = timespec;
@@ -213,7 +213,7 @@ struct itimerspec {
 template <cat::is_duration Duration>
 [[nodiscard]]
 constexpr auto
-make_timespec(Duration elapsed) -> timespec;
+make_timespec(Duration elapsed) noexcept -> timespec;
 
 static_assert(sizeof(timespec) == 16);
 static_assert(sizeof(itimerspec) == 32);
@@ -223,7 +223,7 @@ static_assert(sizeof(itimerspec) == 32);
 // <cat/linux/implementations/clock_timerfd.tpp>.
 [[nodiscard]]
 consteval auto
-is_steady_clock_id(clock_id clock) -> bool;
+is_steady_clock_id(clock_id clock) noexcept -> bool;
 
 // `cat/chrono` compatible API for Linux `timerfd`.
 template <clock_id clock = clock_id::monotonic>
@@ -237,15 +237,15 @@ class clock_timerfd {
 
    [[nodiscard]]
    static auto
-   now() -> cat::maybe<time_point>;
+   now() noexcept(!__has_feature(cxx_exceptions)) -> cat::maybe<time_point>;
 
-   explicit constexpr clock_timerfd(file_descriptor descriptor)
+   explicit constexpr clock_timerfd(file_descriptor descriptor) noexcept
        : m_descriptor(descriptor) {
    }
 
    [[nodiscard]]
    auto
-   descriptor() const -> file_descriptor {
+   descriptor() const noexcept -> file_descriptor {
       return m_descriptor;
    }
 
@@ -254,14 +254,14 @@ class clock_timerfd {
       itimerspec const& value,
       timerfd_set_flags flags = timerfd_set_flags::none,
       itimerspec* _Nullable p_old = nullptr
-   ) -> scaredy_nix<void>;
+   ) noexcept -> scaredy_nix<void>;
 
    template <cat::is_duration Duration>
    auto
    set(
       Duration value, Duration interval = Duration(0),
       timerfd_set_flags flags = timerfd_set_flags::none
-   ) -> scaredy_nix<void> {
+   ) noexcept -> scaredy_nix<void> {
       itimerspec const spec = {
          .interval = make_timespec(interval),
          .value = make_timespec(value),
@@ -270,14 +270,14 @@ class clock_timerfd {
    }
 
    auto
-   get(itimerspec& out) const -> scaredy_nix<void>;
+   get(itimerspec& out) const noexcept -> scaredy_nix<void>;
 
    [[nodiscard]]
    auto
    wait() const -> scaredy_nix<cat::uint8>;
 
    auto
-   close() -> scaredy_nix<void>;
+   close() noexcept -> scaredy_nix<void>;
 
  private:
    file_descriptor m_descriptor;
@@ -286,8 +286,9 @@ class clock_timerfd {
 template <clock_id clock = clock_id::monotonic>
 [[nodiscard]]
 auto
-create_clock_timerfd(timerfd_flags flags = timerfd_flags::close_exec)
-   -> scaredy_nix<clock_timerfd<clock>>;
+create_clock_timerfd(timerfd_flags flags = timerfd_flags::close_exec) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy_nix<clock_timerfd<clock>>;
 
 }  // namespace nix
 
@@ -333,18 +334,18 @@ basic_futex : public futex_word {
    auto
    wait(
       cat::uint4 expected, futex_timespec const* _Nullable p_timeout = nullptr
-   ) -> scaredy_nix<void>;
+   ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<void>;
 
    // Wake at most one waiter. Returns the number of waiting threads woken.
    [[nodiscard]]
    auto
-   wake() -> scaredy_nix<cat::idx>;
+   wake() noexcept -> scaredy_nix<cat::idx>;
 
    // Wake as many waiters as possible. Returns the number of waiting threads
    // woken.
    [[nodiscard]]
    auto
-   wake_all() -> scaredy_nix<cat::idx>;
+   wake_all() noexcept -> scaredy_nix<cat::idx>;
 
    // TODO: Once timers are implemented, add blocking+timeout variants of
    // `wake()`.
@@ -357,12 +358,12 @@ basic_futex : public futex_word {
    compare_requeue(
       cat::uint4 wake_limit, cat::uint4 requeue_limit, futex_word& target,
       cat::uint4 expected_source_value
-   ) -> scaredy_nix<cat::idx>;
+   ) noexcept -> scaredy_nix<cat::idx>;
 
    // Robust mutex word layout (`futex_waiters_flag`, `futex_owner_died_flag`).
    [[nodiscard]]
    static constexpr auto
-   unlocked() -> cat::uint4
+   unlocked() noexcept -> cat::uint4
       requires(cat::is_same<Kind, futex_robust>)
    {
       return 0u;
@@ -370,7 +371,7 @@ basic_futex : public futex_word {
 
    [[nodiscard]]
    static constexpr auto
-   decode_owner_thread_id(cat::uint4 lock_word) -> cat::uint4
+   decode_owner_thread_id(cat::uint4 lock_word) noexcept -> cat::uint4
       requires(cat::is_same<Kind, futex_robust>)
    {
       return lock_word & futex_tid_mask;
@@ -378,7 +379,7 @@ basic_futex : public futex_word {
 
    [[nodiscard]]
    static constexpr auto
-   has_waiters(cat::uint4 lock_word) -> bool
+   has_waiters(cat::uint4 lock_word) noexcept -> bool
       requires(cat::is_same<Kind, futex_robust>)
    {
       return (lock_word & futex_waiters_flag) != 0u;
@@ -386,7 +387,7 @@ basic_futex : public futex_word {
 
    [[nodiscard]]
    static constexpr auto
-   owner_exited_abnormally(cat::uint4 lock_word) -> bool
+   owner_exited_abnormally(cat::uint4 lock_word) noexcept -> bool
       requires(cat::is_same<Kind, futex_robust>)
    {
       return (lock_word & futex_owner_died_flag) != 0u;
@@ -772,7 +773,7 @@ struct kernel_version {
 // Parse the host's kernel version from `sys_uname()`.
 [[nodiscard]]
 auto
-get_kernel_version() -> kernel_version;
+get_kernel_version() noexcept -> kernel_version;
 
 namespace detail {
 // These runtime feature checks are initialized in `_start()`.
@@ -976,8 +977,9 @@ enum class
 
 namespace detail {
 consteval auto
-compose_io_request(io_requests a, io_requests b, io_requests c, io_requests d)
-   -> io_requests {
+compose_io_request(
+   io_requests a, io_requests b, io_requests c, io_requests d
+) noexcept -> io_requests {
    return io_requests{
       (cat::to_underlying(a) << 30)
       | (cat::to_underlying(b) << 8)
@@ -988,28 +990,30 @@ compose_io_request(io_requests a, io_requests b, io_requests c, io_requests d)
 }  // namespace detail
 
 consteval auto
-io_request(io_requests a, io_requests b) -> io_requests {
+io_request(io_requests a, io_requests b) noexcept -> io_requests {
    return detail::compose_io_request(
       io_requests::none, a, b, io_requests::none
    );
 }
 
 consteval auto
-io_request_write(io_requests a, io_requests b, io_requests c) -> io_requests {
+io_request_write(io_requests a, io_requests b, io_requests c) noexcept
+   -> io_requests {
    return detail::compose_io_request(
       io_requests::write, a, b, io_requests(sizeof(c))
    );
 }
 
 consteval auto
-io_request_read(io_requests a, io_requests b, io_requests c) -> io_requests {
+io_request_read(io_requests a, io_requests b, io_requests c) noexcept
+   -> io_requests {
    return detail::compose_io_request(
       io_requests::read, a, b, io_requests(sizeof(c))
    );
 }
 
 consteval auto
-io_request_readwrite(io_requests a, io_requests b, io_requests c)
+io_request_readwrite(io_requests a, io_requests b, io_requests c) noexcept
    -> io_requests {
    return detail::compose_io_request(
       io_requests{
@@ -1247,7 +1251,7 @@ namespace nix {
 
 // Syscall 0.
 auto
-sys_read(file_descriptor file_descriptor, cat::span<char> buffer)
+sys_read(file_descriptor file_descriptor, cat::span<char> buffer) noexcept
    -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
@@ -1255,13 +1259,13 @@ inline auto
 sys_read(
    file_descriptor file_descriptor, char* _Nonnull p_string_buffer,
    cat::idx length
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_read(file_descriptor, cat::span<char>(p_string_buffer, length));
 }
 
 // Syscall 1.
 auto
-sys_write(file_descriptor file_descriptor, cat::str_view string)
+sys_write(file_descriptor file_descriptor, cat::str_view string) noexcept
    -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
@@ -1269,7 +1273,7 @@ inline auto
 sys_write(
    file_descriptor file_descriptor, char const* _Nonnull p_string_buffer,
    cat::idx length
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_write(file_descriptor, cat::str_view(p_string_buffer, length));
 }
 
@@ -1279,11 +1283,11 @@ auto
 sys_open(
    cat::zstr_view file_path, open_mode file_mode,
    open_flags flags = open_flags(0)
-) -> scaredy_nix<file_descriptor>;
+) noexcept -> scaredy_nix<file_descriptor>;
 
 // Syscall 3.
 auto
-sys_close(file_descriptor descriptor) -> scaredy_nix<void>;
+sys_close(file_descriptor descriptor) noexcept -> scaredy_nix<void>;
 
 // TODO: Flesh this out more.
 // TODO: Extract this to an implementation file.
@@ -1334,16 +1338,19 @@ struct file_handle {
 
 // Syscall 4. Fills `out` with the status of the file at `file_path`.
 auto
-sys_stat(cat::str_view file_path, file_status& out) -> scaredy_nix<void>;
+sys_stat(cat::str_view file_path, file_status& out) noexcept
+   -> scaredy_nix<void>;
 
 // Syscall 5.
 auto
-sys_fstat(file_descriptor file_descriptor)
-   -> cat::scaredy<file_status, linux_error>;
+sys_fstat(file_descriptor file_descriptor) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> cat::scaredy<file_status, linux_error>;
 
 // Syscall 6. `lstat()` does not follow symbolic links. Fills `out`.
 auto
-sys_lstat(cat::str_view file_path, file_status& out) -> scaredy_nix<void>;
+sys_lstat(cat::str_view file_path, file_status& out) noexcept
+   -> scaredy_nix<void>;
 
 // TODO: `sys_poll()` (syscall 7).
 
@@ -1351,7 +1358,7 @@ sys_lstat(cat::str_view file_path, file_status& out) -> scaredy_nix<void>;
 auto
 sys_lseek(
    file_descriptor file_descriptor, cat::iword offset, seek_whence whence
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 // Syscall 9. `p_start_address` is a hint; passing `nullptr` lets the
 // kernel choose the mapping address.
@@ -1367,14 +1374,14 @@ sys_mmap(
 auto
 sys_mprotect(
    cat::span<cat::byte const> memory, memory_protection_flags protections
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_mprotect(
    void* _Nonnull p_address, cat::uword length,
    memory_protection_flags protections
-) -> scaredy_nix<void> {
+) noexcept -> scaredy_nix<void> {
    return sys_mprotect(
       cat::span(
          __builtin_bit_cast(cat::byte const* _Nonnull, p_address),
@@ -1386,11 +1393,11 @@ sys_mprotect(
 
 // Syscall 11.
 auto
-sys_munmap(cat::span<cat::byte const> memory) -> scaredy_nix<void>;
+sys_munmap(cat::span<cat::byte const> memory) noexcept -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_munmap(void const* _Nonnull p_memory, cat::uword length)
+sys_munmap(void const* _Nonnull p_memory, cat::uword length) noexcept
    -> scaredy_nix<void> {
    return sys_munmap(
       cat::span(
@@ -1403,7 +1410,7 @@ sys_munmap(void const* _Nonnull p_memory, cat::uword length)
 // Syscall 12. `brk(0)` queries the current program break. A non-null
 // argument adjusts it. Returns the resulting break address.
 auto
-sys_brk(void* _Nullable p_address) -> scaredy_nix<void* _Nullable>;
+sys_brk(void* _Nullable p_address) noexcept -> scaredy_nix<void* _Nullable>;
 
 struct signals_mask_set {
    // TODO: A `cat::bitset` could simplify this.
@@ -1468,7 +1475,7 @@ auto
 sys_rt_sigaction(
    signal s, sigaction const* _Nullable __restrict p_act,
    sigaction* _Nullable __restrict p_old_act
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 14.
 auto
@@ -1478,34 +1485,34 @@ sys_rt_sigprocmask(
    signal_action action,
    signals_mask_set const* _Nullable __restrict p_other_set,
    signals_mask_set* _Nullable __restrict p_current_set
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 15 (`rt_sigreturn`) is the kernel-internal signal-handler trampoline
 // and is not callable directly from user code.
 
 // Syscall 16.
 auto
-sys_ioctl(file_descriptor io_descriptor, io_requests request)
+sys_ioctl(file_descriptor io_descriptor, io_requests request) noexcept
    -> scaredy_nix<void>;
 
 auto
 sys_ioctl(
    file_descriptor io_descriptor, io_requests request,
    cat::no_type_ptr p_argument
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 17. Read up to `length` bytes from `file_descriptor` at `offset`.
 auto
 sys_pread64(
    file_descriptor file_descriptor, cat::span<char> buffer, cat::iword offset
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_pread64(
    file_descriptor file_descriptor, char* _Nonnull p_buffer, cat::idx length,
    cat::iword offset
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_pread64(
       file_descriptor, cat::span<char>(p_buffer, length), offset
    );
@@ -1515,14 +1522,14 @@ sys_pread64(
 auto
 sys_pwrite64(
    file_descriptor file_descriptor, cat::str_view buffer, cat::iword offset
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_pwrite64(
    file_descriptor file_descriptor, char const* _Nonnull p_buffer,
    cat::idx length, cat::iword offset
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_pwrite64(
       file_descriptor, cat::str_view(p_buffer, length), offset
    );
@@ -1535,12 +1542,16 @@ struct io_vector : cat::span<cat::byte> {
    ~io_vector() = default;
 
    // Construct from any reasonable pointer type.
-   constexpr io_vector(cat::byte* _Nonnull p_in_data, cat::idx in_length)
+   constexpr io_vector(
+      cat::byte* _Nonnull p_in_data, cat::idx in_length
+   ) noexcept
        : cat::span<cat::byte>(p_in_data, in_length) {
    }
 
    // Construct from any reasonable pointer type.
-   constexpr io_vector(cat::byte* _Nonnull p_start, cat::byte* _Nonnull p_end)
+   constexpr io_vector(
+      cat::byte* _Nonnull p_start, cat::byte* _Nonnull p_end
+   ) noexcept
        : cat::span<cat::byte>(
             p_start,
             cat::idx(
@@ -1550,7 +1561,7 @@ struct io_vector : cat::span<cat::byte> {
    }
 
    constexpr auto
-   operator=(io_vector const& io_vector) -> struct io_vector& {
+   operator=(io_vector const& io_vector) noexcept -> struct io_vector& {
       m_p_data = io_vector.m_p_data;
       m_size = io_vector.m_size;
       return *this;
@@ -1566,15 +1577,16 @@ struct io_vector : cat::span<cat::byte> {
 
 // Syscall 19.
 auto
-sys_readv(file_descriptor file_descriptor, cat::span<io_vector> const& vectors)
-   -> scaredy_nix<cat::idx>;
+sys_readv(
+   file_descriptor file_descriptor, cat::span<io_vector> const& vectors
+) noexcept -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_readv(
    file_descriptor file_descriptor, io_vector* _Nonnull p_vectors,
    cat::idx vector_count
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_readv(
       file_descriptor, cat::span<io_vector>(p_vectors, vector_count)
    );
@@ -1582,15 +1594,16 @@ sys_readv(
 
 // Syscall 20.
 auto
-sys_writev(file_descriptor file_descriptor, cat::span<io_vector> const& vectors)
-   -> scaredy_nix<cat::idx>;
+sys_writev(
+   file_descriptor file_descriptor, cat::span<io_vector> const& vectors
+) noexcept -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_writev(
    file_descriptor file_descriptor, io_vector* _Nonnull p_vectors,
    cat::idx vector_count
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_writev(
       file_descriptor, cat::span<io_vector>(p_vectors, vector_count)
    );
@@ -1600,14 +1613,15 @@ sys_writev(
 // real user/group id. `mode` is `access_mode::exists` to test for presence,
 // or any combination of the `readable`/`writable`/`executable` bits.
 auto
-sys_access(cat::zstr_view file_path, access_mode mode) -> scaredy_nix<void>;
+sys_access(cat::zstr_view file_path, access_mode mode) noexcept
+   -> scaredy_nix<void>;
 
 // Syscall 22. `pipefd[0]` becomes the read end and `pipefd[1]` the write end.
 auto sys_pipe(file_descriptor (&pipefd)[2]) -> scaredy_nix<void>;
 
 // Syscall 24.
 auto
-sys_sched_yield() -> scaredy_nix<void>;
+sys_sched_yield() noexcept -> scaredy_nix<void>;
 
 // Syscall 25. Resize the mapping at `p_old_address` from `old_size` to
 // `new_size`.
@@ -1620,13 +1634,14 @@ sys_mremap(
 // Syscall 26. Flush the page-aligned range
 // [`p_address`, `p_address + length`) to its backing file.
 auto
-sys_msync(cat::span<cat::byte const> memory, msync_flags flags)
+sys_msync(cat::span<cat::byte const> memory, msync_flags flags) noexcept
    -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_msync(void const* _Nonnull p_address, cat::idx length, msync_flags flags)
-   -> scaredy_nix<void> {
+sys_msync(
+   void const* _Nonnull p_address, cat::idx length, msync_flags flags
+) noexcept -> scaredy_nix<void> {
    return sys_msync(
       cat::span(
          __builtin_bit_cast(cat::byte const* _Nonnull, p_address), length
@@ -1638,14 +1653,14 @@ sys_msync(void const* _Nonnull p_address, cat::idx length, msync_flags flags)
 // Syscall 28. Advise the kernel about the page-aligned range
 // [`p_address`, `p_address + length`).
 auto
-sys_madvise(cat::span<cat::byte const> memory, madvise_advice advice)
+sys_madvise(cat::span<cat::byte const> memory, madvise_advice advice) noexcept
    -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_madvise(
    void const* _Nonnull p_address, cat::idx length, madvise_advice advice
-) -> scaredy_nix<void> {
+) noexcept -> scaredy_nix<void> {
    return sys_madvise(
       cat::span(
          __builtin_bit_cast(cat::byte const* _Nonnull, p_address), length
@@ -1656,12 +1671,12 @@ sys_madvise(
 
 // Syscall 32. Duplicate a file descriptor onto the lowest available number.
 auto
-sys_dup(file_descriptor fd) -> scaredy_nix<file_descriptor>;
+sys_dup(file_descriptor fd) noexcept -> scaredy_nix<file_descriptor>;
 
 // Syscall 33. Duplicate `oldfd` onto exactly `newfd`, atomically closing
 // any descriptor previously at `newfd`.
 auto
-sys_dup2(file_descriptor oldfd, file_descriptor newfd)
+sys_dup2(file_descriptor oldfd, file_descriptor newfd) noexcept
    -> scaredy_nix<file_descriptor>;
 
 // Syscall 35. Sleep for `request`. `p_remaining` receives leftover time if
@@ -1669,7 +1684,7 @@ sys_dup2(file_descriptor oldfd, file_descriptor newfd)
 auto
 sys_nanosleep(
    timespec const& request, timespec* _Nullable p_remaining = nullptr
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 39.
 auto
@@ -1677,15 +1692,16 @@ sys_getpid() -> process_id;
 
 // Syscall 41.
 auto
-sys_socket(cat::int8 protocol_family, cat::int8 type, cat::int8 protocol)
-   -> scaredy_nix<file_descriptor>;
+sys_socket(
+   cat::int8 protocol_family, cat::int8 type, cat::int8 protocol
+) noexcept -> scaredy_nix<file_descriptor>;
 
 // Syscall 42.
 auto
 sys_connect(
    file_descriptor socket_descriptor, void const* _Nonnull p_socket,
    cat::iword socket_size
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 43. Pass `nullptr` for `p_socket` and `p_addr_len` to accept
 // without retrieving the peer address.
@@ -1694,7 +1710,7 @@ sys_accept(
    file_descriptor socket_descriptor,
    void* _Nullable __restrict p_socket = nullptr,
    cat::iword const* _Nullable __restrict p_addr_len = nullptr
-) -> scaredy_nix<file_descriptor>;
+) noexcept -> scaredy_nix<file_descriptor>;
 
 // Syscall 44. Pass `nullptr` for `p_destination_socket` when sending on a
 // connected socket.
@@ -1704,7 +1720,7 @@ sys_sendto(
    message_flags flags = message_flags::none,
    void const* _Nullable p_destination_socket = nullptr,
    cat::iword addr_length = 0
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -1713,7 +1729,7 @@ sys_sendto(
    cat::idx buffer_length, message_flags flags = message_flags::none,
    void const* _Nullable p_destination_socket = nullptr,
    cat::iword addr_length = 0
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_sendto(
       socket_descriptor, cat::str_view(p_message_buffer, buffer_length), flags,
       p_destination_socket, addr_length
@@ -1729,7 +1745,7 @@ sys_recv(
    message_flags flags = message_flags::none,
    void* _Nullable __restrict p_addr = nullptr,
    cat::iword* _Nullable __restrict p_addr_length = nullptr
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
@@ -1737,7 +1753,7 @@ sys_recv(
    file_descriptor socket_descriptor, cat::span<char> buffer,
    void* _Nullable __restrict p_addr,
    cat::iword* _Nullable __restrict p_addr_length
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_recv(
       socket_descriptor, buffer, message_flags::none, p_addr, p_addr_length
    );
@@ -1750,7 +1766,7 @@ sys_recv(
    cat::idx buffer_length, message_flags flags = message_flags::none,
    void* _Nullable __restrict p_addr = nullptr,
    cat::iword* _Nullable __restrict p_addr_length = nullptr
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_recv(
       socket_descriptor,
       cat::span<char>(static_cast<char*>(p_message_buffer), buffer_length),
@@ -1764,7 +1780,7 @@ sys_recv(
    file_descriptor socket_descriptor, void* _Nonnull p_message_buffer,
    cat::idx buffer_length, void* _Nullable __restrict p_addr,
    cat::iword* _Nullable __restrict p_addr_length
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_recv(
       socket_descriptor, p_message_buffer, buffer_length, message_flags::none,
       p_addr, p_addr_length
@@ -1800,18 +1816,18 @@ auto
 sys_sendmsg(
    file_descriptor socket_descriptor, msg_header const& message,
    message_flags flags = message_flags::none
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 // Syscall 47. Returns the number of bytes received.
 auto
 sys_recvmsg(
    file_descriptor socket_descriptor, msg_header& message,
    message_flags flags = message_flags::none
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 // Syscall 48. Tear down half or all of a connected socket.
 auto
-sys_shutdown(file_descriptor socket_descriptor, shutdown_how how)
+sys_shutdown(file_descriptor socket_descriptor, shutdown_how how) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 49.
@@ -1819,11 +1835,11 @@ auto
 sys_bind(
    file_descriptor socket_descriptor, void const* _Nonnull p_socket,
    cat::iword p_addr_len
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 50.
 auto
-sys_listen(file_descriptor socket_descriptor, cat::int8 backlog)
+sys_listen(file_descriptor socket_descriptor, cat::int8 backlog) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 51. Fill `out_socket` with the local address `socket_descriptor` is
@@ -1833,14 +1849,14 @@ auto
 sys_getsockname(
    file_descriptor socket_descriptor, void* _Nonnull p_out_socket,
    cat::iword& inout_addr_length
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 52. Fill `out_socket` with the address of the connected peer.
 auto
 sys_getpeername(
    file_descriptor socket_descriptor, void* _Nonnull p_out_socket,
    cat::iword& inout_addr_length
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 53. Create a connected pair of sockets and write the file
 // descriptors into `socket_vector[0]` and `socket_vector[1]`.
@@ -1848,14 +1864,14 @@ auto
 sys_socketpair(
    cat::int8 protocol_family, cat::int8 type, cat::int8 protocol,
    file_descriptor (&socket_vector)[2]
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 54.
 auto
 sys_setsockopt(
    file_descriptor socket_descriptor, cat::int4 level, cat::int4 option_name,
    void const* _Nonnull p_option_value, cat::int4 option_length
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 55. `inout_option_length` is in/out. On input it bounds the buffer,
 // on output it holds the actual size written to `p_option_value`.
@@ -1863,7 +1879,7 @@ auto
 sys_getsockopt(
    file_descriptor socket_descriptor, cat::int4 level, cat::int4 option_name,
    void* _Nonnull p_option_value, cat::int4& inout_option_length
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 56 (`sys_clone()`) is not provided because it is highly sensitive to
 // function inlining. Instead, the `nix::process` abstraction should be used.
@@ -1881,11 +1897,11 @@ auto
 sys_wait4(
    process_id waiting_on_id, cat::int4* _Nullable p_status_output,
    wait_options_flags options, void* _Nullable p_resource_usage
-) -> scaredy_nix<process_id>;
+) noexcept -> scaredy_nix<process_id>;
 
 // Syscall 63.
 auto
-sys_uname(utsname& out) -> scaredy_nix<void>;
+sys_uname(utsname& out) noexcept -> scaredy_nix<void>;
 
 // Syscall 72. The third argument is command-specific. Pass `nullptr` when
 // the command does not consume one.
@@ -1893,28 +1909,29 @@ auto
 sys_fcntl(
    file_descriptor file_descriptor, fcntl_command command,
    cat::no_type_ptr p_argument = nullptr
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 // Syscall 73.
 auto
-sys_flock(file_descriptor file_descriptor, flock_op operation)
+sys_flock(file_descriptor file_descriptor, flock_op operation) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 74. Flush all dirty data and metadata for `file_descriptor`.
 auto
-sys_fsync(file_descriptor file_descriptor) -> scaredy_nix<void>;
+sys_fsync(file_descriptor file_descriptor) noexcept -> scaredy_nix<void>;
 
 // Syscall 75. Flush only dirty data (skip non-essential metadata).
 auto
-sys_fdatasync(file_descriptor file_descriptor) -> scaredy_nix<void>;
+sys_fdatasync(file_descriptor file_descriptor) noexcept -> scaredy_nix<void>;
 
 // Syscall 76.
 auto
-sys_truncate(cat::zstr_view file_path, cat::iword length) -> scaredy_nix<void>;
+sys_truncate(cat::zstr_view file_path, cat::iword length) noexcept
+   -> scaredy_nix<void>;
 
 // Syscall 77.
 auto
-sys_ftruncate(file_descriptor file_descriptor, cat::iword length)
+sys_ftruncate(file_descriptor file_descriptor, cat::iword length) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 78. Read directory entries from `file_descriptor` into `p_buffer`.
@@ -1922,7 +1939,7 @@ sys_ftruncate(file_descriptor file_descriptor, cat::iword length)
 // variable-length, advance by `record_length` to reach the next entry. The
 // `linux_dirent64` form (`sys_getdents64()`) is preferred on 64-bit.
 auto
-sys_getdents(file_descriptor file_descriptor, cat::span<char> buffer)
+sys_getdents(file_descriptor file_descriptor, cat::span<char> buffer) noexcept
    -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
@@ -1930,7 +1947,7 @@ inline auto
 sys_getdents(
    file_descriptor file_descriptor, linux_dirent* _Nonnull p_buffer,
    cat::uword length
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_getdents(
       file_descriptor,
       cat::span<char>(
@@ -1942,59 +1959,60 @@ sys_getdents(
 // Syscall 79. Fill `p_buffer` with the calling process's working directory.
 // Returns the number of bytes written, including the terminating NUL.
 auto
-sys_getcwd(cat::span<char> buffer) -> scaredy_nix<cat::idx>;
+sys_getcwd(cat::span<char> buffer) noexcept -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_getcwd(char* _Nonnull p_buffer, cat::uword length)
+sys_getcwd(char* _Nonnull p_buffer, cat::uword length) noexcept
    -> scaredy_nix<cat::idx> {
    return sys_getcwd(cat::span<char>(p_buffer, cat::idx(length)));
 }
 
 // Syscall 80.
 auto
-sys_chdir(cat::zstr_view file_path) -> scaredy_nix<void>;
+sys_chdir(cat::zstr_view file_path) noexcept -> scaredy_nix<void>;
 
 // Syscall 81.
 auto
-sys_fchdir(file_descriptor file_descriptor) -> scaredy_nix<void>;
+sys_fchdir(file_descriptor file_descriptor) noexcept -> scaredy_nix<void>;
 
 // Syscall 82.
 auto
-sys_rename(cat::zstr_view old_path, cat::zstr_view new_path)
+sys_rename(cat::zstr_view old_path, cat::zstr_view new_path) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 83.
 auto
-sys_mkdir(cat::zstr_view file_path, file_permissions mode) -> scaredy_nix<void>;
+sys_mkdir(cat::zstr_view file_path, file_permissions mode) noexcept
+   -> scaredy_nix<void>;
 
 // Syscall 84.
 auto
-sys_rmdir(cat::zstr_view file_path) -> scaredy_nix<void>;
+sys_rmdir(cat::zstr_view file_path) noexcept -> scaredy_nix<void>;
 
 // Syscall 85.
 auto
-sys_creat(cat::zstr_view file_path, file_permissions mode)
+sys_creat(cat::zstr_view file_path, file_permissions mode) noexcept
    -> scaredy_nix<file_descriptor>;
 
 // Syscall 86.
 auto
-sys_link(cat::zstr_view existing_path, cat::zstr_view new_path)
+sys_link(cat::zstr_view existing_path, cat::zstr_view new_path) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 87.
 auto
-sys_unlink(cat::zstr_view path_name) -> scaredy_nix<void>;
+sys_unlink(cat::zstr_view path_name) noexcept -> scaredy_nix<void>;
 
 // Syscall 88.
 auto
-sys_symlink(cat::zstr_view target_path, cat::zstr_view link_path)
+sys_symlink(cat::zstr_view target_path, cat::zstr_view link_path) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 89. Returns the number of bytes written to `p_buffer`. The kernel
 // does not append a terminating NUL.
 auto
-sys_readlink(cat::zstr_view file_path, cat::span<char> buffer)
+sys_readlink(cat::zstr_view file_path, cat::span<char> buffer) noexcept
    -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
@@ -2002,7 +2020,7 @@ inline auto
 sys_readlink(
    cat::zstr_view file_path, char* _Nonnull __restrict p_buffer,
    cat::uword buffer_length
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_readlink(
       file_path, cat::span<char>(p_buffer, cat::idx(buffer_length))
    );
@@ -2010,32 +2028,34 @@ sys_readlink(
 
 // Syscall 90.
 auto
-sys_chmod(cat::zstr_view file_path, file_permissions mode) -> scaredy_nix<void>;
+sys_chmod(cat::zstr_view file_path, file_permissions mode) noexcept
+   -> scaredy_nix<void>;
 
 // Syscall 91.
 auto
-sys_fchmod(file_descriptor file_descriptor, file_permissions mode)
+sys_fchmod(file_descriptor file_descriptor, file_permissions mode) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 92.
 auto
-sys_chown(cat::zstr_view file_path, user_id user, group_id group)
+sys_chown(cat::zstr_view file_path, user_id user, group_id group) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 93.
 auto
-sys_fchown(file_descriptor file_descriptor, user_id user, group_id group)
-   -> scaredy_nix<void>;
+sys_fchown(
+   file_descriptor file_descriptor, user_id user, group_id group
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 94. `lchown()` does not follow symbolic links.
 auto
-sys_lchown(cat::zstr_view file_path, user_id user, group_id group)
+sys_lchown(cat::zstr_view file_path, user_id user, group_id group) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 95. Replace the file mode creation mask with `mask` and return the
 // previous mask.
 auto
-sys_umask(file_permissions mask) -> scaredy_nix<file_permissions>;
+sys_umask(file_permissions mask) noexcept -> scaredy_nix<file_permissions>;
 
 // Syscall 97.
 enum class [[clang::enum_extensibility(open)]] rlimit_resource : unsigned int {
@@ -2079,7 +2099,7 @@ struct rlimit {
 };
 
 auto
-sys_getrlimit(rlimit_resource resource, rlimit& out_limits)
+sys_getrlimit(rlimit_resource resource, rlimit& out_limits) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 102.
@@ -2092,11 +2112,11 @@ sys_getgid() -> group_id;
 
 // Syscall 105.
 auto
-sys_setuid(user_id user) -> scaredy_nix<void>;
+sys_setuid(user_id user) noexcept -> scaredy_nix<void>;
 
 // Syscall 106.
 auto
-sys_setgid(group_id group) -> scaredy_nix<void>;
+sys_setgid(group_id group) noexcept -> scaredy_nix<void>;
 
 // Syscall 107.
 auto
@@ -2109,7 +2129,8 @@ sys_getegid() -> group_id;
 // Syscall 109. Set the process group of `pid` to `process_group`. Pass
 // `process_id{0}` for `pid` to mean "the calling process".
 auto
-sys_setpgid(process_id pid, process_id process_group) -> scaredy_nix<void>;
+sys_setpgid(process_id pid, process_id process_group) noexcept
+   -> scaredy_nix<void>;
 
 // Syscall 110.
 auto
@@ -2122,51 +2143,51 @@ sys_getpgrp() -> process_id;
 // Syscall 112. Create a new session and process group with the calling
 // thread as the leader. Returns the new session id.
 auto
-sys_setsid() -> scaredy_nix<process_id>;
+sys_setsid() noexcept -> scaredy_nix<process_id>;
 
 // Syscall 113.
 auto
-sys_setreuid(user_id real, user_id effective) -> scaredy_nix<void>;
+sys_setreuid(user_id real, user_id effective) noexcept -> scaredy_nix<void>;
 
 // Syscall 114.
 auto
-sys_setregid(group_id real, group_id effective) -> scaredy_nix<void>;
+sys_setregid(group_id real, group_id effective) noexcept -> scaredy_nix<void>;
 
 // Syscall 115. Fill `list` with the calling process's supplementary group
 // ids and return the number written. If `list` is empty, the count is
 // returned without writing anything.
 auto
-sys_getgroups(cat::span<group_id> list) -> scaredy_nix<cat::idx>;
+sys_getgroups(cat::span<group_id> list) noexcept -> scaredy_nix<cat::idx>;
 
 // Syscall 116. Replace the calling process's supplementary group list
 // with `list`.
 auto
-sys_setgroups(cat::span<group_id const> list) -> scaredy_nix<void>;
+sys_setgroups(cat::span<group_id const> list) noexcept -> scaredy_nix<void>;
 
 // Syscall 117.
 auto
-sys_setresuid(user_id real, user_id effective, user_id saved)
+sys_setresuid(user_id real, user_id effective, user_id saved) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 118. All three output slots are required.
 auto
-sys_getresuid(user_id& real, user_id& effective, user_id& saved)
+sys_getresuid(user_id& real, user_id& effective, user_id& saved) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 119.
 auto
-sys_setresgid(group_id real, group_id effective, group_id saved)
+sys_setresgid(group_id real, group_id effective, group_id saved) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 120. All three output slots are required.
 auto
-sys_getresgid(group_id& real, group_id& effective, group_id& saved)
+sys_getresgid(group_id& real, group_id& effective, group_id& saved) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 121. Pass `process_id{0}` to query the calling process.
 // libC implements POSIX `getpgrp()` via this.
 auto
-sys_getpgid(process_id pid) -> scaredy_nix<process_id>;
+sys_getpgid(process_id pid) noexcept -> scaredy_nix<process_id>;
 
 // Syscall 122. Set the filesystem user id used for filesystem checks and
 // return the previous value. Pass `user_id{cat::uint4_max}` to query.
@@ -2180,12 +2201,12 @@ sys_setfsgid(group_id group) -> group_id;
 
 // Syscall 124. Pass `process_id{0}` to query the calling process.
 auto
-sys_getsid(process_id pid) -> scaredy_nix<process_id>;
+sys_getsid(process_id pid) noexcept -> scaredy_nix<process_id>;
 
 // Syscall 127. Fill `out` with the set of signals pending delivery to the
 // calling thread.
 auto
-sys_rt_sigpending(signals_mask_set& out) -> scaredy_nix<void>;
+sys_rt_sigpending(signals_mask_set& out) noexcept -> scaredy_nix<void>;
 
 // Syscall 128. Block until one of the signals in `set` is pending, then
 // dequeue it and return its `signal_number`. `p_timeout == nullptr` waits
@@ -2194,17 +2215,18 @@ auto
 sys_rt_sigtimedwait(
    signals_mask_set const& set, signal_info* _Nullable p_info,
    futex_timespec const* _Nullable p_timeout
-) -> scaredy_nix<signal>;
+) noexcept -> scaredy_nix<signal>;
 
 // Syscall 129. Send `s` to `pid` along with a queued `info` payload.
 auto
-sys_rt_sigqueueinfo(process_id pid, signal s, signal_info const& info)
+sys_rt_sigqueueinfo(process_id pid, signal s, signal_info const& info) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 130. Atomically replace the signal mask with `new_mask` and wait
 // for an unmasked signal. Always returns `linux_error::intr` on resume.
 auto
-sys_rt_sigsuspend(signals_mask_set const& new_mask) -> scaredy_nix<void>;
+sys_rt_sigsuspend(signals_mask_set const& new_mask) noexcept
+   -> scaredy_nix<void>;
 
 // Syscall 131. Install a new alternate signal stack and/or query the
 // current one. Either pointer may be `nullptr`.
@@ -2212,33 +2234,34 @@ auto
 sys_sigaltstack(
    signal_stack const* _Nullable __restrict p_new_stack,
    signal_stack* _Nullable __restrict p_old_stack
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 132. Update the access and modification times of `p_file_path`.
 // Pass `nullptr` to set both timestamps to the current time.
 auto
-sys_utime(cat::zstr_view file_path, utimbuf const* _Nullable p_times)
+sys_utime(cat::zstr_view file_path, utimbuf const* _Nullable p_times) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 137. Fill `out` with statistics for the file system that
 // contains `p_file_path`.
 auto
-sys_statfs(cat::zstr_view file_path, statfs_data& out) -> scaredy_nix<void>;
+sys_statfs(cat::zstr_view file_path, statfs_data& out) noexcept
+   -> scaredy_nix<void>;
 
 // Syscall 138.
 auto
-sys_fstatfs(file_descriptor file_descriptor, statfs_data& out)
+sys_fstatfs(file_descriptor file_descriptor, statfs_data& out) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 149. Lock the page-aligned range
 // [`p_address`, `p_address + length`) into RAM so the kernel may not page
 // it out.
 auto
-sys_mlock(cat::span<cat::byte const> memory) -> scaredy_nix<void>;
+sys_mlock(cat::span<cat::byte const> memory) noexcept -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_mlock(void const* _Nonnull p_address, cat::uword length)
+sys_mlock(void const* _Nonnull p_address, cat::uword length) noexcept
    -> scaredy_nix<void> {
    return sys_mlock(
       cat::span(
@@ -2250,11 +2273,11 @@ sys_mlock(void const* _Nonnull p_address, cat::uword length)
 
 // Syscall 150.
 auto
-sys_munlock(cat::span<cat::byte const> memory) -> scaredy_nix<void>;
+sys_munlock(cat::span<cat::byte const> memory) noexcept -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_munlock(void const* _Nonnull p_address, cat::uword length)
+sys_munlock(void const* _Nonnull p_address, cat::uword length) noexcept
    -> scaredy_nix<void> {
    return sys_munlock(
       cat::span(
@@ -2268,15 +2291,15 @@ sys_munlock(void const* _Nonnull p_address, cat::uword length)
 // all future mappings (`mlockall_flags::future`), or both. `on_fault` is a
 // Linux 4.4+ extension.
 auto
-sys_mlockall(mlockall_flags flags) -> scaredy_nix<void>;
+sys_mlockall(mlockall_flags flags) noexcept -> scaredy_nix<void>;
 
 // Syscall 152. Reverse the effect of `sys_mlockall()`.
 auto
-sys_munlockall() -> scaredy_nix<void>;
+sys_munlockall() noexcept -> scaredy_nix<void>;
 
 // Syscall 160.
 auto
-sys_setrlimit(rlimit_resource resource, rlimit const& limits)
+sys_setrlimit(rlimit_resource resource, rlimit const& limits) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 186.
@@ -2285,7 +2308,7 @@ sys_gettid() -> process_id;
 
 // Syscall 200.
 auto
-sys_tkill(process_id pid, signal signal) -> scaredy_nix<void>;
+sys_tkill(process_id pid, signal signal) noexcept -> scaredy_nix<void>;
 
 struct futex_waitv {
    cat::uint8 expected_value;
@@ -2318,34 +2341,34 @@ sys_futex(
    futex_word& futex, futex_op operation, cat::uint4 value,
    futex_timespec const* _Nullable p_timeout,
    futex_word* _Nullable p_second_futex, cat::uint4 value3
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 auto
 sys_futex(
    futex_word& futex, futex_op operation, cat::uint4 value, cat::uint4 value2,
    futex_word* _Nullable p_second_futex, cat::uint4 value3
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 // Syscall 203. Pin thread `pid` (or the calling thread when `pid` is
 // `process_id{0}`) to the CPUs whose bits are set in `mask`. The kernel
 // reads `mask.size_bytes()` bytes. Round it up to whatever the host's
 // configured CPU count requires.
 auto
-sys_sched_setaffinity(process_id pid, cat::span<cat::uword const> mask)
+sys_sched_setaffinity(process_id pid, cat::span<cat::uword const> mask) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 204. Fill `mask` with the CPUs thread `pid` (or the caller when
 // `pid` is `process_id{0}`) is permitted to run on. Returns the number of
 // bytes the kernel actually wrote.
 auto
-sys_sched_getaffinity(process_id pid, cat::span<cat::uword> mask)
+sys_sched_getaffinity(process_id pid, cat::span<cat::uword> mask) noexcept
    -> scaredy_nix<cat::idx>;
 
 // Syscall 217. The 64-bit form of `sys_getdents()`. Each `linux_dirent64`
 // record carries a `file_type`, unlike the legacy form. Returns the total
 // number of bytes filled into `p_buffer`.
 auto
-sys_getdents64(file_descriptor file_descriptor, cat::span<char> buffer)
+sys_getdents64(file_descriptor file_descriptor, cat::span<char> buffer) noexcept
    -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
@@ -2353,7 +2376,7 @@ inline auto
 sys_getdents64(
    file_descriptor file_descriptor, linux_dirent64* _Nonnull p_buffer,
    cat::uword length
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_getdents64(
       file_descriptor,
       cat::span<char>(
@@ -2381,7 +2404,7 @@ auto
 sys_clock_nanosleep(
    clock_id clock, clock_nanosleep_flags flags, timespec const& request,
    timespec* _Nullable p_remaining = nullptr
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 231. Terminate every thread in the calling thread group with
 // `status` as the exit code.
@@ -2392,12 +2415,13 @@ sys_exit_group(cat::int4 status);
 // Syscall 234.
 // libC implements POSIX `raise()` via this.
 auto
-sys_tgkill(process_id thread_group_id, process_id target, signal delivered)
-   -> scaredy_nix<void>;
+sys_tgkill(
+   process_id thread_group_id, process_id target, signal delivered
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 247.
 auto
-sys_waitid(wait_id type, process_id id, wait_options_flags options)
+sys_waitid(wait_id type, process_id id, wait_options_flags options) noexcept
    -> scaredy_nix<process_id>;
 
 // Syscall 257. `dirfd` may be `at_fdcwd` or any other directory descriptor.
@@ -2408,14 +2432,14 @@ sys_openat(
    file_descriptor dirfd, cat::zstr_view file_path, open_mode mode,
    open_flags flags = open_flags(0),
    file_permissions permissions = file_permissions::none
-) -> scaredy_nix<file_descriptor>;
+) noexcept -> scaredy_nix<file_descriptor>;
 
 // Syscall 258.
 // libC implements POSIX `mkdir()` via this when `mkdir` is unavailable.
 auto
 sys_mkdirat(
    file_descriptor dirfd, cat::zstr_view file_path, file_permissions mode
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 260. `flags` accepts `atfile_flags::no_follow` and
 // `atfile_flags::empty_path`.
@@ -2424,7 +2448,7 @@ auto
 sys_fchownat(
    file_descriptor dirfd, cat::zstr_view file_path, user_id user,
    group_id group, atfile_flags flags = atfile_flags::none
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 262. The kernel name is `newfstatat`. Resolves `p_file_path`
 // relative to `dirfd` (or `at_fdcwd`) and fills `out`.
@@ -2433,7 +2457,7 @@ auto
 sys_newfstatat(
    file_descriptor dirfd, cat::zstr_view file_path, file_status& out,
    atfile_flags flags = atfile_flags::none
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 263. `flags` accepts `atfile_flags::remove_directory` to behave
 // like `sys_rmdir()`.
@@ -2442,7 +2466,7 @@ auto
 sys_unlinkat(
    file_descriptor dirfd, cat::zstr_view file_path,
    atfile_flags flags = atfile_flags::none
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 264.
 // libC implements POSIX `rename()` via this when `rename` is unavailable.
@@ -2450,7 +2474,7 @@ auto
 sys_renameat(
    file_descriptor old_dirfd, cat::zstr_view old_path,
    file_descriptor new_dirfd, cat::zstr_view new_path
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 265.
 // libC implements POSIX `link()` via this when `link` is unavailable.
@@ -2459,7 +2483,7 @@ sys_linkat(
    file_descriptor old_dirfd, cat::zstr_view existing_path,
    file_descriptor new_dirfd, cat::zstr_view new_path,
    atfile_flags flags = atfile_flags::none
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 266.
 // libC implements POSIX `symlink()` via this when `symlink` is unavailable.
@@ -2467,21 +2491,21 @@ auto
 sys_symlinkat(
    cat::zstr_view target_path, file_descriptor new_dirfd,
    cat::zstr_view link_path
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 267.
 // libC implements POSIX `readlink()` via this when `readlink` is unavailable.
 auto
 sys_readlinkat(
    file_descriptor dirfd, cat::zstr_view file_path, cat::span<char> buffer
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_readlinkat(
    file_descriptor dirfd, cat::zstr_view file_path,
    char* _Nonnull __restrict p_buffer, cat::uword buffer_length
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_readlinkat(
       dirfd, file_path, cat::span<char>(p_buffer, cat::idx(buffer_length))
    );
@@ -2493,7 +2517,7 @@ auto
 sys_fchmodat(
    file_descriptor dirfd, cat::zstr_view file_path, file_permissions mode,
    atfile_flags flags = atfile_flags::none
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 269. `flags` accepts `atfile_flags::eaccess` (effective uid/gid
 // instead of real) and `atfile_flags::no_follow`.
@@ -2502,11 +2526,11 @@ auto
 sys_faccessat(
    file_descriptor dirfd, cat::zstr_view file_path, access_mode mode,
    atfile_flags flags = atfile_flags::none
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 273.
 auto
-sys_set_robust_list(robust_list_head& head, cat::uword length_bytes)
+sys_set_robust_list(robust_list_head& head, cat::uword length_bytes) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 274. The output slots are required. The returned robust-list head
@@ -2515,7 +2539,7 @@ auto
 sys_get_robust_list(
    process_id target, robust_list_head* _Nullable& out_head,
    cat::idx& out_length_bytes
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 280. Update access and modification times. `p_times` is a 2-element
 // array (`{access, modification}`) or `nullptr` to set both to the current
@@ -2526,12 +2550,13 @@ sys_utimensat(
    file_descriptor dirfd, cat::zstr_view file_path = {},
    futex_timespec const (*_Nullable p_times)[2] = nullptr,
    atfile_flags flags = atfile_flags::none
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 283. Create a timer file descriptor for `clock`.
 auto
-sys_timerfd_create(clock_id clock, timerfd_flags flags = timerfd_flags::none)
-   -> scaredy_nix<file_descriptor>;
+sys_timerfd_create(
+   clock_id clock, timerfd_flags flags = timerfd_flags::none
+) noexcept -> scaredy_nix<file_descriptor>;
 
 // Syscall 285. Manipulate the on-disk allocation of `file_descriptor` over
 // the byte range [`offset`, `offset + length`).
@@ -2539,7 +2564,7 @@ auto
 sys_fallocate(
    file_descriptor file_descriptor, fallocate_flags mode, cat::iword offset,
    cat::iword length
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 286. Arm `file_descriptor` with `value`. `p_old` receives the
 // previous setting when non-null.
@@ -2547,12 +2572,12 @@ auto
 sys_timerfd_settime(
    file_descriptor file_descriptor, timerfd_set_flags flags,
    itimerspec const& value, itimerspec* _Nullable p_old = nullptr
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 287. Fill `out` with the remaining time and interval of
 // `file_descriptor`.
 auto
-sys_timerfd_gettime(file_descriptor file_descriptor, itimerspec& out)
+sys_timerfd_gettime(file_descriptor file_descriptor, itimerspec& out) noexcept
    -> scaredy_nix<void>;
 
 // Syscall 288. `sys_accept()` plus `accept4_flags::nonblocking` /
@@ -2563,13 +2588,14 @@ auto
 sys_accept4(
    file_descriptor socket_descriptor, void* _Nullable __restrict p_socket,
    cat::iword* _Nullable __restrict p_addr_len, accept4_flags flags
-) -> scaredy_nix<file_descriptor>;
+) noexcept -> scaredy_nix<file_descriptor>;
 
 // Syscall 292. `sys_dup2()` plus `dup3_flags::close_exec`.
 // libC implements POSIX `dup2()` via this when `dup2` is unavailable.
 auto
-sys_dup3(file_descriptor oldfd, file_descriptor newfd, dup3_flags flags)
-   -> scaredy_nix<file_descriptor>;
+sys_dup3(
+   file_descriptor oldfd, file_descriptor newfd, dup3_flags flags
+) noexcept -> scaredy_nix<file_descriptor>;
 
 // Syscall 293.
 // libC implements POSIX `pipe()` via this.
@@ -2581,7 +2607,7 @@ auto sys_pipe2(file_descriptor (&pipefd)[2], pipe2_flags flags)
 auto
 sys_rt_tgsigqueueinfo(
    process_id tgid, process_id tid, signal s, signal_info const& info
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 316. `sys_renameat()` plus `renameat2_flags`.
 // libC implements POSIX `rename()` via this when `rename`/`renameat` are
@@ -2590,7 +2616,7 @@ auto
 sys_renameat2(
    file_descriptor old_dirfd, cat::zstr_view old_path,
    file_descriptor new_dirfd, cat::zstr_view new_path, renameat2_flags flags
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 318. Fill `length` bytes of `p_buffer` with kernel-supplied
 // randomness. Returns the number of bytes actually written.
@@ -2605,7 +2631,7 @@ inline auto
 sys_getrandom(
    void* _Nonnull p_buffer, cat::idx length,
    getrandom_flags flags = getrandom_flags::none
-) -> scaredy_nix<cat::idx> {
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<cat::idx> {
    return sys_getrandom(
       cat::span<unsigned char>(static_cast<unsigned char*>(p_buffer), length),
       flags
@@ -2614,14 +2640,14 @@ sys_getrandom(
 
 // Syscall 325. `sys_mlock()` plus `mlock2_flags::on_fault`.
 auto
-sys_mlock2(cat::span<cat::byte const> memory, mlock2_flags flags)
+sys_mlock2(cat::span<cat::byte const> memory, mlock2_flags flags) noexcept
    -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
 sys_mlock2(
    void const* _Nonnull p_address, cat::uword length, mlock2_flags flags
-) -> scaredy_nix<void> {
+) noexcept -> scaredy_nix<void> {
    return sys_mlock2(
       cat::span(
          __builtin_bit_cast(cat::byte const* _Nonnull, p_address),
@@ -2638,7 +2664,7 @@ auto
 sys_statx(
    file_descriptor dirfd, cat::zstr_view file_path, atfile_flags flags,
    statx_mask mask, statx_data& out
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 // Syscall 425 (Linux 5.1). Set up an io_uring instance with `entries` SQEs
 // and the parameters in `params`. Returns the ring file descriptor on
@@ -2646,7 +2672,7 @@ sys_statx(
 // `/proc/sys/kernel/io_uring_disabled`. Query `has_sys_io_uring()` before
 // relying on it.
 auto
-sys_io_uring_setup(cat::uint4 entries, io_uring_params& params)
+sys_io_uring_setup(cat::uint4 entries, io_uring_params& params) noexcept
    -> scaredy_nix<file_descriptor>;
 
 // Syscall 426 (Linux 5.1). Submit `to_submit` SQEs and/or wait for
@@ -2661,7 +2687,7 @@ sys_io_uring_enter(
    io_uring_enter_flags flags,
    void const* _Nullable p_extended_argument = nullptr,
    cat::uword extended_argument_size = 0u
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 // Syscall 427 (Linux 5.1). Register or unregister resources with `ring`.
 // `op` selects the operation. `p_arg` and `nr_args` are op-specific. Some
@@ -2670,13 +2696,13 @@ auto
 sys_io_uring_register(
    file_descriptor ring, io_uring_register_op op, void* _Nullable p_arg,
    cat::uint4 nr_args
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 // Runtime probe for the whole io_uring family (setup / enter / register).
 // The kernel enables and disables them as a unit, so one query suffices.
 [[nodiscard, gnu::always_inline]]
 inline auto
-has_sys_io_uring() -> bool {
+has_sys_io_uring() noexcept -> bool {
    return detail::has_sys_io_uring_cache;
 }
 
@@ -2685,14 +2711,14 @@ has_sys_io_uring() -> bool {
 auto
 sys_openat2(
    file_descriptor dirfd, cat::zstr_view file_path, open_how const& how
-) -> scaredy_nix<file_descriptor>;
+) noexcept -> scaredy_nix<file_descriptor>;
 
 // Syscall 449.
 auto
 sys_futex_waitv(
    cat::span<futex_waitv const> waiters, futex_waitv_call_flags call_flags,
    futex_timespec const* _Nullable p_timeout, cat::int4 clock_id
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 // `cachestat_range` describes the [`offset`, `offset + length`) byte range
 // queried by `sys_cachestat()`.
@@ -2716,11 +2742,11 @@ auto
 sys_cachestat(
    file_descriptor file_descriptor, cachestat_range const& range,
    cachestat_stats& out, cat::uint4 flags = 0
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-has_sys_cachestat() -> bool {
+has_sys_cachestat() noexcept -> bool {
    return detail::has_sys_cachestat_cache;
 }
 
@@ -2728,22 +2754,23 @@ has_sys_cachestat() -> bool {
 auto
 sys_fchmodat2(
    file_descriptor dirfd, cat::zstr_view path, cat::uint4 mode, cat::int4 flags
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-has_sys_fchmodat2() -> bool {
+has_sys_fchmodat2() noexcept -> bool {
    return detail::has_sys_fchmodat2_cache;
 }
 
 // Syscall 453 (Linux 6.6).
 auto
-sys_map_shadow_stack(cat::uword address, cat::uword size, cat::uint4 flags)
-   -> scaredy_nix<void* _Nullable>;
+sys_map_shadow_stack(
+   cat::uword address, cat::uword size, cat::uint4 flags
+) noexcept -> scaredy_nix<void* _Nullable>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-has_sys_map_shadow_stack() -> bool {
+has_sys_map_shadow_stack() noexcept -> bool {
    return detail::has_sys_map_shadow_stack_cache;
 }
 
@@ -2752,11 +2779,11 @@ has_sys_map_shadow_stack() -> bool {
 auto
 sys_futex_wake(
    futex_word& uaddr, cat::uword mask, cat::int4 nr, cat::uint4 flags
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-has_sys_futex_wake() -> bool {
+has_sys_futex_wake() noexcept -> bool {
    return detail::has_sys_futex_wake_cache;
 }
 
@@ -2766,11 +2793,11 @@ auto
 sys_futex_wait(
    futex_word& uaddr, cat::uword value, cat::uword mask, cat::uint4 flags,
    futex_timespec const* _Nullable p_timeout, cat::int4 clock_id
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-has_sys_futex_wait() -> bool {
+has_sys_futex_wait() noexcept -> bool {
    return detail::has_sys_futex_wait_cache;
 }
 
@@ -2781,11 +2808,11 @@ auto
 sys_futex_requeue(
    cat::span<futex_waitv const> waiters, cat::uint4 flags, cat::int4 nr_wake,
    cat::int4 nr_requeue
-) -> scaredy_nix<cat::idx>;
+) noexcept -> scaredy_nix<cat::idx>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-has_sys_futex_requeue() -> bool {
+has_sys_futex_requeue() noexcept -> bool {
    return detail::has_sys_futex_requeue_cache;
 }
 
@@ -2793,13 +2820,14 @@ has_sys_futex_requeue() -> bool {
 // [`p_address`, `p_address + length`) so its mapping cannot be modified or
 // unmapped.
 auto
-sys_mseal(cat::span<cat::byte> memory, cat::uword flags = 0u)
+sys_mseal(cat::span<cat::byte> memory, cat::uword flags = 0u) noexcept
    -> scaredy_nix<void>;
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-sys_mseal(void* _Nonnull p_address, cat::uword length, cat::uword flags = 0u)
-   -> scaredy_nix<void> {
+sys_mseal(
+   void* _Nonnull p_address, cat::uword length, cat::uword flags = 0u
+) noexcept -> scaredy_nix<void> {
    return sys_mseal(
       cat::span(
          __builtin_bit_cast(cat::byte* _Nonnull, p_address), cat::idx(length)
@@ -2810,7 +2838,7 @@ sys_mseal(void* _Nonnull p_address, cat::uword length, cat::uword flags = 0u)
 
 [[nodiscard, gnu::always_inline]]
 inline auto
-has_sys_mseal() -> bool {
+has_sys_mseal() noexcept -> bool {
    return detail::has_sys_mseal_cache;
 }
 
@@ -2818,11 +2846,11 @@ auto
 wait_pid(
    process_id pid, file_status* _Nonnull p_file_status,
    wait_options_flags options
-) -> scaredy_nix<process_id>;
+) noexcept -> scaredy_nix<process_id>;
 
 // Create and return a local socket file descriptor.
 auto
-create_socket_local(cat::int8 type, cat::int8 protocol)
+create_socket_local(cat::int8 type, cat::int8 protocol) noexcept
    -> scaredy_nix<file_descriptor>;
 
 // `tty_io_serial` handles a configuration of tty IO, often referred to as
@@ -2854,12 +2882,12 @@ struct tty_window_size {
 };
 
 auto
-is_a_tty(file_descriptor file_descriptor) -> scaredy_nix<void>;
+is_a_tty(file_descriptor file_descriptor) noexcept -> scaredy_nix<void>;
 
 auto is_a_tty(tty_descriptor) -> scaredy_nix<void>;
 
 auto
-tty_get_attributes(file_descriptor tty)
+tty_get_attributes(file_descriptor tty) noexcept(!__has_feature(cxx_exceptions))
    -> cat::scaredy<tty_io_serial, linux_error>;
 
 enum class [[clang::enum_extensibility(open)]] tty_set_mode : unsigned short {
@@ -2876,17 +2904,17 @@ auto
 tty_set_attributes(
    file_descriptor tty, tty_set_mode tty_mode,
    tty_io_serial const& configuration
-) -> scaredy_nix<void>;
+) noexcept -> scaredy_nix<void>;
 
 auto
-read_char() -> scaredy_nix<char>;
+read_char() noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<char>;
 
 // TODO: Extract this to an implementation file.
 struct file_status {
  public:
    [[nodiscard]]
    auto
-   is_regular() const -> bool {
+   is_regular() const noexcept -> bool {
       return (this->protections_mode & 0170000u) == 0100000u;
    }
 
@@ -2894,37 +2922,37 @@ struct file_status {
 
    [[nodiscard]]
    auto
-   is_directory() const -> bool {
+   is_directory() const noexcept -> bool {
       return (this->protections_mode & 0170000u) == 0040000u;
    }
 
    [[nodiscard]]
    auto
-   is_character_device() const -> bool {
+   is_character_device() const noexcept -> bool {
       return (this->protections_mode & 0170000u) == 0020000u;
    }
 
    [[nodiscard]]
    auto
-   is_block_device() const -> bool {
+   is_block_device() const noexcept -> bool {
       return (this->protections_mode & 0170000u) == 0060000u;
    }
 
    [[nodiscard]]
    auto
-   is_fifo() const -> bool {
+   is_fifo() const noexcept -> bool {
       return (this->protections_mode & 0170000u) == 0010000u;
    }
 
    [[nodiscard]]
    auto
-   is_symbolic_link() const -> bool {
+   is_symbolic_link() const noexcept -> bool {
       return (this->protections_mode & 0170000u) == 0120000u;
    }
 
    [[nodiscard]]
    auto
-   is_socket() const -> bool {
+   is_socket() const noexcept -> bool {
       return (this->protections_mode & 0170000u) == 0140000u;
    }
 
@@ -2970,13 +2998,16 @@ struct process;
 }  // namespace manual
 
 auto
-block_all_signals() -> signals_mask_set;
+block_all_signals() noexcept(!__has_feature(cxx_exceptions))
+   -> signals_mask_set;
 
 auto
-raise(signal signal, process_id pid) -> scaredy_nix<void>;
+raise(signal signal, process_id pid) noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy_nix<void>;
 
 auto
-raise_here(signal signal) -> scaredy_nix<void>;
+raise_here(signal signal) noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy_nix<void>;
 
 // `arch_prctl_request::set_fs_base`/`get_fs_base` for x86-64. A custom
 // main-thread TLS block can be installed by copying the executable TLS image
@@ -2992,7 +3023,8 @@ namespace detail {
 // Covers `p_memsz`, thread-pointer alignment, and a 64-byte line round-up.
 [[nodiscard]]
 auto
-clone_thread_local_buffer_min_bytes() -> cat::idx;
+clone_thread_local_buffer_min_bytes() noexcept(!__has_feature(cxx_exceptions))
+   -> cat::idx;
 
 void
 install_executable_tls_image_at_thread_pointer(
@@ -3000,12 +3032,12 @@ install_executable_tls_image_at_thread_pointer(
 );
 
 void
-init_parent_process_tls();
+init_parent_process_tls() noexcept(!__has_feature(cxx_exceptions));
 }  // namespace detail
 
 [[nodiscard]]
 auto
-sys_arch_prctl(arch_prctl_request request, void* _Nonnull p_address)
+sys_arch_prctl(arch_prctl_request request, void* _Nonnull p_address) noexcept
    -> scaredy_nix<void>;
 
 // Fields of a `/proc/<pid>/statm` file in page units.
@@ -3032,7 +3064,8 @@ struct anon_smaps {
 // `total_pages`. `read_self_anon_smaps` reports exact numbers instead.
 [[nodiscard]]
 auto
-read_self_statm() -> cat::scaredy<statm, nix::linux_error>;
+read_self_statm() noexcept(!__has_feature(cxx_exceptions))
+   -> cat::scaredy<statm, nix::linux_error>;
 
 // Sum private anonymous rw RSS and non-file-backed mapped size from
 // `/proc/self/smaps`, the detailed memory-map file. Propagates `linux_error`

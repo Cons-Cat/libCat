@@ -9,14 +9,14 @@ namespace cat {
 template <is_integral T>
 [[nodiscard]]
 constexpr auto
-floor(T value) -> T {
+floor(T value) noexcept -> T {
    return value;
 }
 
 template <is_floating_point Float>
 [[nodiscard]]
 constexpr auto
-floor(Float value) -> Float {
+floor(Float value) noexcept -> Float {
    using raw_type = raw_arithmetic_type<Float>;
    raw_type const raw_value = make_raw_arithmetic(value);
    if consteval {
@@ -40,14 +40,14 @@ floor(Float value) -> Float {
 template <is_integral T>
 [[nodiscard]]
 constexpr auto
-ceil(T value) -> T {
+ceil(T value) noexcept -> T {
    return value;
 }
 
 template <is_floating_point Float>
 [[nodiscard]]
 constexpr auto
-ceil(Float value) -> Float {
+ceil(Float value) noexcept -> Float {
    using raw_type = raw_arithmetic_type<Float>;
    raw_type const raw_value = make_raw_arithmetic(value);
    if consteval {

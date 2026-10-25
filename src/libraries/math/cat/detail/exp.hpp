@@ -12,7 +12,7 @@ namespace cat::detail {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_exp(Float argument) -> Float {
+emulated_exp(Float argument) noexcept -> Float {
    if (is_nan(argument)) {
       return argument;
    }
@@ -57,7 +57,7 @@ template <is_floating_point Float>
    requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
-exp(Float argument) -> Float {
+exp(Float argument) noexcept -> Float {
    if consteval {
       return Float(detail::emulated_exp(make_raw_arithmetic(argument)));
    }

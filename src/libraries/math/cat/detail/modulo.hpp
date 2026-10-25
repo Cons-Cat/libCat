@@ -28,7 +28,7 @@ struct modulo_float_bits<double> {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-fmod_integer(Float left, Float right) -> Float {
+fmod_integer(Float left, Float right) noexcept -> Float {
    using traits = modulo_float_bits<Float>;
    using uint_type = traits::uint_type;
    constexpr int fraction_width = traits::fraction_width;

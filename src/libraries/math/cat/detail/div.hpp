@@ -11,7 +11,7 @@ namespace cat {
 template <is_integral T, is_integral U>
 [[nodiscard]]
 constexpr auto
-div_ceil(T dividend, U divisor) {
+div_ceil(T dividend, U divisor) noexcept {
    using raw_type = raw_arithmetic_type<T>;
    using result_type = decltype(dividend / divisor);
    raw_type const raw_dividend = make_raw_arithmetic(dividend);
@@ -22,7 +22,7 @@ div_ceil(T dividend, U divisor) {
 template <is_integral T, is_integral U>
 [[nodiscard]]
 constexpr auto
-div_floor(T dividend, U divisor) {
+div_floor(T dividend, U divisor) noexcept {
    using raw_type = raw_arithmetic_type<T>;
    using result_type = decltype(dividend / divisor);
    raw_type const raw_dividend = make_raw_arithmetic(dividend);
@@ -45,7 +45,7 @@ div_floor(T dividend, U divisor) {
 template <is_floating_point T, is_arithmetic U>
 [[nodiscard]]
 constexpr auto
-div_ceil(T dividend, U divisor) {
+div_ceil(T dividend, U divisor) noexcept {
    using raw_type = raw_arithmetic_type<T>;
    using result_type = decltype(dividend / divisor);
    raw_type const raw_dividend = make_raw_arithmetic(dividend);
@@ -63,7 +63,7 @@ div_ceil(T dividend, U divisor) {
 template <is_floating_point T, is_arithmetic U>
 [[nodiscard]]
 constexpr auto
-div_floor(T dividend, U divisor) {
+div_floor(T dividend, U divisor) noexcept {
    using raw_type = raw_arithmetic_type<T>;
    using result_type = decltype(dividend / divisor);
    raw_type const raw_dividend = make_raw_arithmetic(dividend);

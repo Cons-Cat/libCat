@@ -115,7 +115,7 @@ namespace cat::detail {
 extern "C" {
 // NOLINTNEXTLINE(bugprone-reserved-identifier)
 auto
-__cxa_allocate_exception(uword bytes) -> void* {
+__cxa_allocate_exception(uword bytes) noexcept(false) -> void* {
    if (bytes > __SIZE_MAX__ - sizeof(exception_header)) {
       terminate();
    }

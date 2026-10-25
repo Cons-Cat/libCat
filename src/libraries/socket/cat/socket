@@ -67,28 +67,30 @@ class unix_socket_address {
  public:
    constexpr unix_socket_address() = default;
 
-   explicit unix_socket_address(file_path const& socket_path);
+   explicit unix_socket_address(file_path const& socket_path) noexcept(
+      !__has_feature(cxx_exceptions)
+   );
 
    [[nodiscard]]
    static auto
-   create(file_path const& socket_path)
+   create(file_path const& socket_path) noexcept(!__has_feature(cxx_exceptions))
       -> scaredy<unix_socket_address, io_error>;
 
    [[nodiscard]]
    constexpr auto
-   domain() const -> socket_domain {
+   domain() const noexcept -> socket_domain {
       return socket_domain::local;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_abstract() const -> bool {
+   is_abstract() const noexcept -> bool {
       return m_length > family_size && m_path[0] == '\0';
    }
 
    [[nodiscard]]
    constexpr auto
-   path_size() const -> idx {
+   path_size() const noexcept -> idx {
       if (m_length <= family_size) {
          return 0u;
       }
@@ -102,7 +104,7 @@ class unix_socket_address {
 
    [[nodiscard]]
    constexpr auto
-   path_data() const -> char const* _Nonnull {
+   path_data() const noexcept -> char const* _Nonnull {
       return m_path;
    }
 
@@ -114,7 +116,7 @@ class unix_socket_address {
 
    [[nodiscard]]
    static constexpr auto
-   path_fits(file_path const& socket_path) -> bool {
+   path_fits(file_path const& socket_path) noexcept -> bool {
       if (socket_path.is_empty()) {
          return true;
       }
@@ -126,13 +128,13 @@ class unix_socket_address {
    assign(file_path const& socket_path);
 
    constexpr void
-   set_size(iword size) {
+   set_size(iword size) noexcept {
       m_length = size <= max_size ? uint1(size) : max_size;
    }
 
    [[nodiscard]]
    constexpr auto
-   address_size() const -> iword {
+   address_size() const noexcept -> iword {
       return m_length;
    }
 
@@ -143,29 +145,29 @@ class unix_socket_address {
 
 class ipv4_socket_address {
  public:
-   constexpr ipv4_socket_address()
+   constexpr ipv4_socket_address() noexcept(!__has_feature(cxx_exceptions))
        : m_address(make_array_filled<4u>(uint1(0u))) {
    }
 
-   constexpr ipv4_socket_address(array<uint1, 4u> address, uint2 port)
+   constexpr ipv4_socket_address(array<uint1, 4u> address, uint2 port) noexcept
        : m_port(network_order(port)), m_address(address) {
    }
 
    [[nodiscard]]
    constexpr auto
-   domain() const -> socket_domain {
+   domain() const noexcept -> socket_domain {
       return socket_domain::ipv4;
    }
 
    [[nodiscard]]
    constexpr auto
-   address() const -> array<uint1, 4u> const& {
+   address() const noexcept -> array<uint1, 4u> const& {
       return m_address;
    }
 
    [[nodiscard]]
    constexpr auto
-   port() const -> uint2 {
+   port() const noexcept -> uint2 {
       return network_order(m_port);
    }
 
@@ -174,7 +176,7 @@ class ipv4_socket_address {
 
    [[nodiscard]]
    static constexpr auto
-   network_order(uint2 value) -> uint2 {
+   network_order(uint2 value) noexcept -> uint2 {
       if constexpr (is_target_little_endian) {
          return byteswap(value);
       }
@@ -192,14 +194,14 @@ static_assert(sizeof(ipv4_socket_address) == 16);
 
 class ipv6_socket_address {
  public:
-   constexpr ipv6_socket_address()
+   constexpr ipv6_socket_address() noexcept(!__has_feature(cxx_exceptions))
        : m_address(make_array_filled<16u>(uint1(0u))) {
    }
 
    constexpr ipv6_socket_address(
       array<uint1, 16u> address, uint2 port, uint4 flow_info = 0u,
       uint4 scope_id = 0u
-   )
+   ) noexcept
        : m_port(network_order(port)),
          m_flow_info(network_order(flow_info)),
          m_address(address),
@@ -208,31 +210,31 @@ class ipv6_socket_address {
 
    [[nodiscard]]
    constexpr auto
-   domain() const -> socket_domain {
+   domain() const noexcept -> socket_domain {
       return socket_domain::ipv6;
    }
 
    [[nodiscard]]
    constexpr auto
-   address() const -> array<uint1, 16u> const& {
+   address() const noexcept -> array<uint1, 16u> const& {
       return m_address;
    }
 
    [[nodiscard]]
    constexpr auto
-   port() const -> uint2 {
+   port() const noexcept -> uint2 {
       return network_order(m_port);
    }
 
    [[nodiscard]]
    constexpr auto
-   flow_info() const -> uint4 {
+   flow_info() const noexcept -> uint4 {
       return network_order(m_flow_info);
    }
 
    [[nodiscard]]
    constexpr auto
-   scope_id() const -> uint4 {
+   scope_id() const noexcept -> uint4 {
       return m_scope_id;
    }
 
@@ -242,7 +244,7 @@ class ipv6_socket_address {
    template <typename T>
    [[nodiscard]]
    static constexpr auto
-   network_order(T value) -> T {
+   network_order(T value) noexcept -> T {
       if constexpr (is_target_little_endian) {
          return byteswap(value);
       }
@@ -264,7 +266,8 @@ class socket_handle {
 
    socket_handle(socket_handle const&) = delete;
 
-   constexpr socket_handle(socket_handle&& other) : m_handle(other.release()) {
+   constexpr socket_handle(socket_handle&& other) noexcept
+       : m_handle(other.release()) {
    }
 
    auto
@@ -291,13 +294,13 @@ class socket_handle {
 
    [[nodiscard]]
    constexpr auto
-   native_handle() const -> cat::native_handle {
+   native_handle() const noexcept -> cat::native_handle {
       return m_handle;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_open() const -> bool {
+   is_open() const noexcept -> bool {
       return m_handle.is_valid();
    }
 
@@ -308,135 +311,165 @@ class socket_handle {
    }
 
    auto
-   close() -> scaredy<void, io_error>;
+   close() noexcept(!__has_feature(cxx_exceptions)) -> scaredy<void, io_error>;
 
    auto
-   bind(unix_socket_address const& address) const -> scaredy<void, io_error>;
+   bind(unix_socket_address const& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
-   bind(ipv4_socket_address const& address) const -> scaredy<void, io_error>;
+   bind(ipv4_socket_address const& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
-   bind(ipv6_socket_address const& address) const -> scaredy<void, io_error>;
+   bind(ipv6_socket_address const& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
    bind(file_path const& socket_path) const -> scaredy<void, io_error>;
 
    auto
-   connect(unix_socket_address const& address) const -> scaredy<void, io_error>;
+   connect(unix_socket_address const& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
-   connect(ipv4_socket_address const& address) const -> scaredy<void, io_error>;
+   connect(ipv4_socket_address const& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
-   connect(ipv6_socket_address const& address) const -> scaredy<void, io_error>;
+   connect(ipv6_socket_address const& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
    connect(file_path const& socket_path) const -> scaredy<void, io_error>;
 
    auto
-   listen(int8 backlog) const -> scaredy<void, io_error>;
+   listen(int8 backlog) const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<void, io_error>;
 
    [[nodiscard]]
    auto
-   accept4(socket_flags flags = socket_flags::none) const
-      -> scaredy<socket_handle, io_error>;
+   accept4(socket_flags flags = socket_flags::none) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<socket_handle, io_error>;
 
    [[nodiscard]]
    auto
    accept4(
       unix_socket_address& address, socket_flags flags = socket_flags::none
-   ) const -> scaredy<socket_handle, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<socket_handle, io_error>;
 
    [[nodiscard]]
    auto
    accept4(
       ipv4_socket_address& address, socket_flags flags = socket_flags::none
-   ) const -> scaredy<socket_handle, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<socket_handle, io_error>;
 
    [[nodiscard]]
    auto
    accept4(
       ipv6_socket_address& address, socket_flags flags = socket_flags::none
-   ) const -> scaredy<socket_handle, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<socket_handle, io_error>;
 
    auto
-   shutdown(socket_shutdown how) const -> scaredy<void, io_error>;
+   shutdown(socket_shutdown how) const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy<void, io_error>;
 
    [[nodiscard]]
    auto
    send(
       str_view buffer, socket_message_flags flags = socket_message_flags::none
-   ) const -> scaredy<idx, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
    receive(
       span<char> buffer, socket_message_flags flags = socket_message_flags::none
-   ) const -> scaredy<idx, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
    send_to(
       str_view buffer, unix_socket_address const& address,
       socket_message_flags flags = socket_message_flags::none
-   ) const -> scaredy<idx, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
    send_to(
       str_view buffer, ipv4_socket_address const& address,
       socket_message_flags flags = socket_message_flags::none
-   ) const -> scaredy<idx, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
    send_to(
       str_view buffer, ipv6_socket_address const& address,
       socket_message_flags flags = socket_message_flags::none
-   ) const -> scaredy<idx, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
    receive_from(
       span<char> buffer, unix_socket_address& address,
       socket_message_flags flags = socket_message_flags::none
-   ) const -> scaredy<idx, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
    receive_from(
       span<char> buffer, ipv4_socket_address& address,
       socket_message_flags flags = socket_message_flags::none
-   ) const -> scaredy<idx, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error>;
 
    [[nodiscard]]
    auto
    receive_from(
       span<char> buffer, ipv6_socket_address& address,
       socket_message_flags flags = socket_message_flags::none
-   ) const -> scaredy<idx, io_error>;
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error>;
 
    auto
-   getsockname(unix_socket_address& address) const -> scaredy<void, io_error>;
+   getsockname(unix_socket_address& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
-   getsockname(ipv4_socket_address& address) const -> scaredy<void, io_error>;
+   getsockname(ipv4_socket_address& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
-   getsockname(ipv6_socket_address& address) const -> scaredy<void, io_error>;
+   getsockname(ipv6_socket_address& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
-   getpeername(unix_socket_address& address) const -> scaredy<void, io_error>;
+   getpeername(unix_socket_address& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
-   getpeername(ipv4_socket_address& address) const -> scaredy<void, io_error>;
+   getpeername(ipv4_socket_address& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
    auto
-   getpeername(ipv6_socket_address& address) const -> scaredy<void, io_error>;
+   getpeername(ipv6_socket_address& address) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<void, io_error>;
 
  private:
-   explicit constexpr socket_handle(cat::native_handle handle)
+   explicit constexpr socket_handle(cat::native_handle handle) noexcept
        : m_handle(move(handle)) {
    }
 

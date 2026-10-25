@@ -102,16 +102,16 @@ class native_handle {
 
    constexpr native_handle(native_handle const&) = default;
 
-   constexpr native_handle(native_handle&& other)
+   constexpr native_handle(native_handle&& other) noexcept
        : m_value(other.m_value), m_disposition(other.m_disposition) {
       other.reset();
    }
 
    constexpr auto
-   operator=(native_handle const&) -> native_handle& = default;
+   operator=(native_handle const&) noexcept -> native_handle& = default;
 
    constexpr auto
-   operator=(native_handle&& other) -> native_handle& {
+   operator=(native_handle&& other) noexcept -> native_handle& {
       if (this == __builtin_addressof(other)) {
          return *this;
       }
@@ -122,76 +122,76 @@ class native_handle {
    }
 
    constexpr auto
-   operator==(native_handle const&) const -> bool = default;
+   operator==(native_handle const&) const noexcept -> bool = default;
 
    [[nodiscard]]
    explicit constexpr
-   operator bool() const {
+   operator bool() const noexcept {
       return is_valid();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_valid() const -> bool {
+   is_valid() const noexcept -> bool {
       return m_value != -1 && m_disposition != native_handle_disposition::none;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_readable() const -> bool {
+   is_readable() const noexcept -> bool {
       return has(native_handle_disposition::readable);
    }
 
    [[nodiscard]]
    constexpr auto
-   is_writable() const -> bool {
+   is_writable() const noexcept -> bool {
       return has(native_handle_disposition::writable);
    }
 
    [[nodiscard]]
    constexpr auto
-   is_append_only() const -> bool {
+   is_append_only() const noexcept -> bool {
       return has(native_handle_disposition::append_only);
    }
 
    [[nodiscard]]
    constexpr auto
-   is_nonblocking() const -> bool {
+   is_nonblocking() const noexcept -> bool {
       return has(native_handle_disposition::nonblocking);
    }
 
    [[nodiscard]]
    constexpr auto
-   is_seekable() const -> bool {
+   is_seekable() const noexcept -> bool {
       return has(native_handle_disposition::seekable);
    }
 
    [[nodiscard]]
    constexpr auto
-   is_kernel_handle() const -> bool {
+   is_kernel_handle() const noexcept -> bool {
       return has(native_handle_disposition::kernel_handle);
    }
 
    [[nodiscard]]
    constexpr auto
-   is_file() const -> bool {
+   is_file() const noexcept -> bool {
       return has(native_handle_disposition::file);
    }
 
    [[nodiscard]]
    constexpr auto
-   is_socket() const -> bool {
+   is_socket() const noexcept -> bool {
       return has(native_handle_disposition::socket);
    }
 
    [[nodiscard]]
    constexpr auto
-   disposition() const -> native_handle_disposition {
+   disposition() const noexcept -> native_handle_disposition {
       return m_disposition;
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
       m_value = -1;
       m_disposition = native_handle_disposition::none;
    }
@@ -199,13 +199,15 @@ class native_handle {
  private:
    friend struct detail::native_handle_access;
 
-   constexpr native_handle(iword value, native_handle_disposition disposition)
+   constexpr native_handle(
+      iword value, native_handle_disposition disposition
+   ) noexcept
        : m_value(value), m_disposition(disposition) {
    }
 
    [[nodiscard]]
    constexpr auto
-   has(native_handle_disposition disposition) const -> bool {
+   has(native_handle_disposition disposition) const noexcept -> bool {
       return (m_disposition & disposition) != native_handle_disposition::none;
    }
 
@@ -218,13 +220,14 @@ namespace detail {
 struct native_handle_access {
    [[nodiscard]]
    static constexpr auto
-   make(iword value, native_handle_disposition disposition) -> native_handle {
+   make(iword value, native_handle_disposition disposition) noexcept
+      -> native_handle {
       return native_handle(value, disposition);
    }
 
    [[nodiscard]]
    static constexpr auto
-   value(native_handle const& handle) -> iword {
+   value(native_handle const& handle) noexcept -> iword {
       return handle.m_value;
    }
 };

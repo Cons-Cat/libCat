@@ -129,7 +129,7 @@ struct scaredy_variant_storage {
 
    [[nodiscard]]
    constexpr auto
-   has_value() const -> bool {
+   has_value() const noexcept -> bool {
       return m_storage.template is<value_type>();
    }
 
@@ -155,7 +155,7 @@ struct scaredy_variant_storage {
    template <typename U>
    [[nodiscard]]
    constexpr auto
-   is() const -> bool {
+   is() const noexcept -> bool {
       return m_storage.template is<U>();
    }
 
@@ -320,7 +320,7 @@ struct scaredy_compact_storage {
    template <typename U>
    [[nodiscard]]
    constexpr auto
-   is() const -> bool {
+   is() const noexcept -> bool {
       if constexpr (is_same<U, value_type>) {
          return this->has_value();
       } else if constexpr (is_same<U, Error>) {
@@ -600,13 +600,13 @@ class
 
    [[nodiscard]]
    constexpr auto
-   has_value() const -> bool {
+   has_value() const noexcept -> bool {
       return m_storage.has_value();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return !this->has_value();
    }
 
@@ -614,7 +614,7 @@ class
    // instead. Asserts engagement.
    [[nodiscard]]
    constexpr auto
-   value(this auto&& self) -> auto&&
+   value(this auto&& self) noexcept(false) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
       auto&& base = $fwd(self).as_base();
@@ -625,7 +625,7 @@ class
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    constexpr auto
-   value() const -> monostate_type
+   value() const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
       requires(storage_type::is_wrapping_void)
    {
       cat::assert(this->has_value());
@@ -637,7 +637,7 @@ class
    template <typename Error>
    [[nodiscard]]
    constexpr auto
-   error() {
+   error() noexcept(!__has_feature(cxx_exceptions)) {
       cat::assert(this->template is<Error>());
       return m_storage.template error<Error>();
    }
@@ -646,7 +646,7 @@ class
    template <typename Error>
    [[nodiscard]]
    constexpr auto
-   error() const {
+   error() const noexcept(!__has_feature(cxx_exceptions)) {
       cat::assert(this->template is<Error>());
       return m_storage.template error<Error>();
    }
@@ -654,7 +654,7 @@ class
    // If there is only one error type, a template argument is not required.
    [[nodiscard]]
    constexpr auto
-   error()
+   error() noexcept(!__has_feature(cxx_exceptions))
       requires(sizeof...(Errors) == 1)
    {
       cat::assert(this->is_empty());
@@ -664,7 +664,7 @@ class
    // If there is only one error type, a template argument is not required.
    [[nodiscard]]
    constexpr auto
-   error() const
+   error() const noexcept(!__has_feature(cxx_exceptions))
       requires(sizeof...(Errors) == 1)
    {
       cat::assert(this->is_empty());
@@ -713,7 +713,7 @@ class
    assert(
       this auto&& self,
       source_location const& callsite = source_location::current()
-   ) -> auto&&
+   ) noexcept(false) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
       auto&& base = $fwd(self).as_base();
@@ -726,7 +726,7 @@ class
       this auto&& self,
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
-   ) -> auto&&
+   ) noexcept(false) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
       auto&& base = $fwd(self).as_base();
@@ -737,8 +737,9 @@ class
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    auto
-   assert(source_location const& callsite = source_location::current()) const
-      -> monostate_type
+   assert(
+      source_location const& callsite = source_location::current()
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
       requires(storage_type::is_wrapping_void)
    {
       cat::assert(has_value(), callsite);
@@ -750,7 +751,7 @@ class
    assert(
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
-   ) const -> monostate_type
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
       requires(storage_type::is_wrapping_void)
    {
       cat::assert(has_value(), p_assert_handler, callsite);
@@ -761,7 +762,7 @@ class
    verify(
       this auto&& self,
       source_location const& callsite = source_location::current()
-   ) -> auto&&
+   ) noexcept(false) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
       auto&& base = $fwd(self).as_base();
@@ -774,7 +775,7 @@ class
       this auto&& self,
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
-   ) -> auto&&
+   ) noexcept(false) -> auto&&
       requires(!storage_type::is_wrapping_void)
    {
       auto&& base = $fwd(self).as_base();
@@ -785,8 +786,9 @@ class
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
    auto
-   verify(source_location const& callsite = source_location::current()) const
-      -> monostate_type
+   verify(
+      source_location const& callsite = source_location::current()
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
       requires(storage_type::is_wrapping_void)
    {
       cat::verify(has_value(), callsite);
@@ -797,7 +799,7 @@ class
    verify(
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
-   ) const -> monostate_type
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
       requires(storage_type::is_wrapping_void)
    {
       cat::verify(has_value(), p_assert_handler, callsite);
@@ -809,7 +811,7 @@ class
    template <typename U>
    [[nodiscard]]
    constexpr auto
-   is() const -> bool {
+   is() const noexcept -> bool {
       return m_storage.template is<U>();
    }
 

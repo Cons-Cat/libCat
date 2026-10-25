@@ -23,20 +23,22 @@ class span;
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_pointer_in_range(T const* _Nullable p_pointer, span<T const> range) -> bool;
+is_pointer_in_range(T const* _Nullable p_pointer, span<T const> range) noexcept
+   -> bool;
 
 [[nodiscard]]
 constexpr auto
 is_memory_overlapping(
    void const* _Nonnull p_first, idx first_bytes, void const* _Nonnull p_second,
    idx second_bytes
-) -> bool;
+) noexcept -> bool;
 
 // This is implemented in `<cat/span>`.
 template <typename T>
 [[nodiscard]]
 constexpr auto
-is_memory_overlapping(span<T const> first, span<T const> second) -> bool;
+is_memory_overlapping(span<T const> first, span<T const> second) noexcept
+   -> bool;
 
 constexpr void
 copy_memory_scalar(
@@ -48,19 +50,19 @@ copy_memory_scalar(
 constexpr auto
 compare_memory(
    void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
-) -> std::strong_ordering;
+) noexcept -> std::strong_ordering;
 
 [[nodiscard]]
 constexpr auto
 compare_memory_scalar(
    void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
-) -> std::strong_ordering;
+) noexcept -> std::strong_ordering;
 
 // Find the first element equal to `needle`.
 template <is_equality_comparable T>
 [[nodiscard]]
 constexpr auto
-find_memory(T const* _Nonnull p_haystack, T const& needle, idx size)
+find_memory(T const* _Nonnull p_haystack, T const& needle, idx size) noexcept
    -> maybe<idx>;
 
 // Find the first sequence equal to `[p_needle, p_needle + needle_size)`.
@@ -70,18 +72,22 @@ constexpr auto
 find_subspan_memory(
    T const* _Nonnull p_haystack, T const* _Nonnull p_needle, idx size,
    idx needle_size
-) -> maybe<idx>;
+) noexcept -> maybe<idx>;
 
 // This is implemented in `<cat/span>`.
 template <typename T>
    requires(is_implicit_lifetime<T>)
 constexpr void
-copy_memory(span<T const> source, span<T> destination);
+copy_memory(span<T const> source, span<T> destination) noexcept(
+   !__has_feature(cxx_exceptions)
+);
 
 template <typename T>
    requires(is_implicit_lifetime<T>)
 constexpr void
-copy_memory_backward(span<T const> source, span<T> destination);
+copy_memory_backward(span<T const> source, span<T> destination) noexcept(
+   !__has_feature(cxx_exceptions)
+);
 
 // `memmove`-class scalar copy. Overlapping intervals are allowed. When they
 // overlap, copies forward when `p_destination <= p_source` and backward
@@ -102,7 +108,7 @@ template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
 [[clang::no_builtin]]
 constexpr void
-fill_memory_scalar(T* _Nonnull p_source, T value, idx size) {
+fill_memory_scalar(T* _Nonnull p_source, T value, idx size) noexcept {
    for (idx i = 0u; i < size; ++i) {
       p_source[i] = value;
    }
@@ -114,12 +120,12 @@ template <typename T = unsigned char>
 // `[[gnu::noinline]]` attribute prevents this.
 [[gnu::noinline]]
 constexpr void
-fill_memory_scalar_explicit(T* _Nonnull p_source, T value, idx size) {
+fill_memory_scalar_explicit(T* _Nonnull p_source, T value, idx size) noexcept {
    fill_memory_scalar(p_source, value, size);
 }
 
 constexpr void
-zero_memory_scalar(void* _Nonnull p_source, idx bytes) {
+zero_memory_scalar(void* _Nonnull p_source, idx bytes) noexcept {
    fill_memory_scalar(
       static_cast<unsigned char*>(p_source), (unsigned char)0, bytes
    );
@@ -129,7 +135,7 @@ zero_memory_scalar(void* _Nonnull p_source, idx bytes) {
 // `[[gnu::noinline]]` attribute prevents this.
 [[gnu::noinline]]
 constexpr void
-zero_memory_scalar_explicit(void* _Nonnull p_source, idx bytes) {
+zero_memory_scalar_explicit(void* _Nonnull p_source, idx bytes) noexcept {
    fill_memory_scalar(
       static_cast<unsigned char*>(p_source), (unsigned char)0, bytes
    );
@@ -154,21 +160,21 @@ copy_memory_backward_impl(
 auto
 compare_memory_impl(
    byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
-) -> std::strong_ordering;
+) noexcept(!__has_feature(cxx_exceptions)) -> std::strong_ordering;
 
 // Implement the representation-safe runtime path of `find_memory`.
 auto
 find_memory_impl(
    byte const* _Nonnull p_haystack, byte const* _Nonnull p_needle,
    idx element_bytes, idx size
-) -> maybe<idx>;
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<idx>;
 
 // Implement the representation-safe runtime path of `find_subspan_memory`.
 auto
 find_subspan_memory_impl(
    byte const* _Nonnull p_haystack, byte const* _Nonnull p_needle,
    idx element_bytes, idx size, idx needle_size
-) -> maybe<idx>;
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<idx>;
 
 // Implement `fill_memory()` and `memset()`.
 void
@@ -247,13 +253,15 @@ template <typename T = unsigned char>
    requires(sizeof(T) <= 8)
 [[gnu::noinline]]
 constexpr void
-fill_memory_explicit(void* _Nonnull p_source, T value, idx size) {
+fill_memory_explicit(void* _Nonnull p_source, T value, idx size) noexcept {
    fill_memory(p_source, value, size);
 }
 
 // Set all bytes at this address to zero.
 constexpr void
-zero_memory(void* _Nonnull p_source, idx size) {
+zero_memory(void* _Nonnull p_source, idx size) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    detail::fill_memory_detail(p_source, static_cast<unsigned char>(0u), size);
 }
 
@@ -262,7 +270,7 @@ zero_memory(void* _Nonnull p_source, idx size) {
 // constant-folded out.
 [[gnu::noinline]]
 constexpr void
-zero_memory_explicit(void* _Nonnull p_source, idx bytes) {
+zero_memory_explicit(void* _Nonnull p_source, idx bytes) noexcept {
    zero_memory(p_source, bytes);
 }
 
@@ -290,7 +298,7 @@ set_object_explicit(T& object, U value) {
 template <typename T>
    requires(is_implicit_lifetime<T>)
 constexpr void
-zero_object(T& object) {
+zero_object(T& object) noexcept {
    zero_memory(__builtin_addressof(object), sizeof(T));
 }
 
@@ -302,7 +310,7 @@ template <typename T>
 // `[[gnu::noinline]]` attribute prevents this.
 [[gnu::noinline]]
 constexpr void
-zero_object_explicit(T& object) {
+zero_object_explicit(T& object) noexcept {
    zero_memory_explicit(__builtin_addressof(object), sizeof(T));
 }
 
@@ -312,7 +320,7 @@ zero_object_explicit(T& object) {
 template <typename T>
 [[nodiscard, gnu::returns_nonnull]]
 constexpr auto
-launder(T* _Nullable p_object) -> T* _Nonnull {
+launder(T* _Nullable p_object) noexcept -> T* _Nonnull {
    return __builtin_launder(p_object);
 }
 

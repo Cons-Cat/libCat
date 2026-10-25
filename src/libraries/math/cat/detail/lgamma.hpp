@@ -10,7 +10,7 @@ namespace cat::detail {
 
 [[nodiscard]]
 constexpr auto
-emulated_lgamma(double argument) -> double {
+emulated_lgamma(double argument) noexcept -> double {
    if (is_nan(argument)) {
       return argument;
    }
@@ -69,7 +69,7 @@ template <is_floating_point Float>
    requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
-lgamma(Float argument) -> Float {
+lgamma(Float argument) noexcept -> Float {
    using raw_type = raw_arithmetic_type<Float>;
    if consteval {
       return Float(detail::emulated_lgamma(static_cast<double>(argument)));

@@ -13,7 +13,7 @@ namespace cat::detail {
 
 template <typename Raw>
 constexpr void
-xoshiro_riffle_word(Raw source, Raw& low, Raw& high) {
+xoshiro_riffle_word(Raw source, Raw& low, Raw& high) noexcept {
    constexpr idx bits = sizeof(Raw) * 8u;
    constexpr idx half = bits / 2u;
    Raw const ones = ~Raw(0);
@@ -33,7 +33,7 @@ constexpr void
 xoshiro_riffle(
    array<Raw, word_count> const& source, array<Raw, word_count>& low,
    array<Raw, word_count>& high
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    Raw even = 0;
    Raw odd = 0;
    for (idx offset = 0u; offset < word_count; ++offset) {
@@ -58,7 +58,7 @@ constexpr auto
 xoshiro_jump_polynomial(
    array<Raw, word_count> const& characteristic, uword distance,
    bool distance_is_log2
-) -> array<Raw, word_count> {
+) noexcept(!__has_feature(cxx_exceptions)) -> array<Raw, word_count> {
    constexpr idx bits_per_word = sizeof(Raw) * 8u;
    constexpr idx bit_count = word_count * bits_per_word;
    constexpr idx npos = limits<idx>::max();

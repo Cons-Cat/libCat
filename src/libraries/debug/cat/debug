@@ -38,7 +38,7 @@ class source_location {
    current(
       decltype(__builtin_source_location()) _Nonnull p_call_site_location =
          __builtin_source_location()
-   ) -> source_location {
+   ) noexcept -> source_location {
       source_location current_location;
       current_location.m_p_location =
          static_cast<__impl const*>(p_call_site_location);
@@ -47,27 +47,27 @@ class source_location {
 
    [[nodiscard]]
    constexpr auto
-   line() const -> unsigned long {
+   line() const noexcept -> unsigned long {
       return (this->m_p_location != nullptr) ? this->m_p_location->_M_line : 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   column() const -> unsigned long {
+   column() const noexcept -> unsigned long {
       return (this->m_p_location != nullptr) ? this->m_p_location->_M_column
                                              : 0u;
    }
 
    [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   file_name() const -> char const* _Nonnull {
+   file_name() const noexcept -> char const* _Nonnull {
       return (this->m_p_location != nullptr) ? this->m_p_location->_M_file_name
                                              : "";
    }
 
    [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   function_name() const -> char const* _Nonnull {
+   function_name() const noexcept -> char const* _Nonnull {
       return (this->m_p_location != nullptr)
                 ? this->m_p_location->_M_function_name
                 : "";
@@ -100,14 +100,14 @@ struct formatter<source_location, CharT>;
 // TODO: Mark these functions `[[gnu::artificial]]` or `[[gnu::nodebug]]`.
 
 void
-breakpoint();
+breakpoint() noexcept;
 
 // If used at runtime, this inserts a `nop` instruction, which may be useful for
 // sequencing loops or preventing dead code elimination. In a `constexpr`
 // context, this is entirely ignored.
 [[gnu::always_inline]]
 constexpr void
-nop() {
+nop() noexcept {
    if !consteval {
       // TODO: Does this need `"memory"` clobber?
       asm volatile("nop");
@@ -117,10 +117,11 @@ nop() {
 using assert_handler = void (*_Nonnull)(source_location const&);
 
 namespace detail {
+
 void
 print_assert_location(
    source_location const& callsite = source_location::current()
-);
+) noexcept;
 
 struct assert_handler_frame {
    assert_handler handler;
@@ -128,16 +129,18 @@ struct assert_handler_frame {
 };
 
 void
-assert_failed(assert_handler p_assert_handler, source_location const& callsite);
+assert_failed(
+   assert_handler p_assert_handler, source_location const& callsite
+) noexcept(!__has_feature(cxx_exceptions));
 
 void
 assert_failed(
    str_view const& error_string, assert_handler p_assert_handler,
    source_location const& callsite
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 void
-reset_local_assert_handlers();
+reset_local_assert_handlers() noexcept;
 }  // namespace detail
 
 #ifndef CAT_NO_STACKTRACE
@@ -145,32 +148,34 @@ reset_local_assert_handlers();
 [[clang::disable_tail_calls]]
 #endif
 void
-default_assert_handler(source_location const& callsite);
+default_assert_handler(source_location const& callsite) noexcept(
+   !__has_feature(cxx_exceptions)
+);
 
 // Get the assert handler at the caller's scope.
 [[nodiscard]]
 auto
-current_assert_handler() -> assert_handler;
+current_assert_handler() noexcept -> assert_handler;
 
 // This changes the process-wide fallback handler. This operation is atomic, but
 // not thread-safe. It's susceptible to data races, but will always store a
 // valid function pointer.
 void
-set_global_assert_handler(assert_handler p_handler);
+set_global_assert_handler(assert_handler p_handler) noexcept;
 
 // This changes the calling thread's handler, which takes precedence over the
 // global handler.
 void
-set_thread_local_assert_handler(assert_handler p_handler);
+set_thread_local_assert_handler(assert_handler p_handler) noexcept;
 
 // The calling thread inherits the global handler again.
 void
-reset_thread_local_assert_handler();
+reset_thread_local_assert_handler() noexcept;
 
 // RAII block-scope guard for setting an assert handler.
 class [[nodiscard]] scoped_assert_handler {
  public:
-   explicit scoped_assert_handler(assert_handler p_handler);
+   explicit scoped_assert_handler(assert_handler p_handler) noexcept;
 
    scoped_assert_handler(scoped_assert_handler const&) = delete;
    scoped_assert_handler(scoped_assert_handler&&) = delete;
@@ -180,7 +185,7 @@ class [[nodiscard]] scoped_assert_handler {
    auto
    operator=(scoped_assert_handler&&) -> scoped_assert_handler& = delete;
 
-   ~scoped_assert_handler();
+   ~scoped_assert_handler() noexcept;
 
  private:
    detail::assert_handler_frame m_frame;
@@ -193,51 +198,51 @@ constexpr void
 verify(
    bool invariant_expression,
    source_location const& callsite = source_location::current()
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 constexpr void
 verify(
    bool invariant_expression, assert_handler p_assert_handler,
    source_location const& callsite = source_location::current()
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 constexpr void
 verify(
    bool invariant_expression, str_view const& error_string,
    source_location const& callsite = source_location::current()
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 constexpr void
 verify(
    bool invariant_expression, str_view const& error_string,
    assert_handler p_assert_handler,
    source_location const& callsite = source_location::current()
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 constexpr void
 assert(
    bool invariant_expression,
    source_location const& callsite = source_location::current()
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 constexpr void
 assert(
    bool invariant_expression, assert_handler p_assert_handler,
    source_location const& callsite = source_location::current()
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 constexpr void
 assert(
    bool invariant_expression, str_view const& error_string,
    source_location const& callsite = source_location::current()
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 constexpr void
 assert(
    bool invariant_expression, str_view const& error_string,
    assert_handler p_assert_handler,
    source_location const& callsite = source_location::current()
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 }  // namespace cat
 

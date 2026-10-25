@@ -9,7 +9,7 @@ namespace cat {
 template <is_integral T, is_integral U, is_integral V>
 [[nodiscard]]
 constexpr auto
-fma(T value, U multiplier, V addend) {
+fma(T value, U multiplier, V addend) noexcept {
    return value * multiplier + addend;
 }
 
@@ -21,7 +21,7 @@ template <is_floating_point T, is_arithmetic U, is_arithmetic V>
             }
 [[nodiscard]]
 constexpr auto
-fma(T value, U multiplier, V addend) {
+fma(T value, U multiplier, V addend) noexcept {
    return basic_float(value).fma(multiplier, addend);
 }
 

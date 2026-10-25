@@ -10,7 +10,7 @@ namespace x64 {
 // https://www.intel.com/content/www/us/en/docs/intrinsics-guide/index.html#text=_rdseed64_step
 [[nodiscard, gnu::always_inline]]
 inline auto
-rdseed() -> cat::maybe<cat::uint8> {
+rdseed() noexcept(!__has_feature(cxx_exceptions)) -> cat::maybe<cat::uint8> {
    auto const maximum_leaf = cpuid(0u)[0];
    if (maximum_leaf < 7u || (cpuid(7u)[1] & (1u << 18u)) == 0u) {
       return cat::nullopt;

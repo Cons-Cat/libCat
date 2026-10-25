@@ -16,36 +16,36 @@ class independent_bits_engine {
 
    constexpr independent_bits_engine() = default;
 
-   constexpr explicit independent_bits_engine(Engine engine)
+   constexpr explicit independent_bits_engine(Engine engine) noexcept
        : m_engine(move(engine)) {
    }
 
-   constexpr explicit independent_bits_engine(random_seed value)
+   constexpr explicit independent_bits_engine(random_seed value) noexcept
        : m_engine(value) {
    }
 
    constexpr void
-   seed() {
+   seed() noexcept {
       m_engine.seed();
    }
 
    constexpr void
-   seed(random_seed value) {
+   seed(random_seed value) noexcept {
       m_engine.seed(value);
    }
 
    constexpr auto
-   base() const -> Engine const& {
+   base() const noexcept -> Engine const& {
       return m_engine;
    }
 
    static consteval auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0u;
    }
 
    static consteval auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       using unsigned_type = make_unsigned_type<result_type>;
       if constexpr (bits == limits<unsigned_type>::digits) {
          return result_type::max();
@@ -85,7 +85,7 @@ class independent_bits_engine {
    }
 
    constexpr void
-   discard(uint8 count) {
+   discard(uint8 count) noexcept {
       while (count != 0u) {
          static_cast<void>((*this)());
          --count;
@@ -93,8 +93,9 @@ class independent_bits_engine {
    }
 
    friend constexpr auto
-   operator==(independent_bits_engine const&, independent_bits_engine const&)
-      -> bool = default;
+   operator==(
+      independent_bits_engine const&, independent_bits_engine const&
+   ) noexcept -> bool = default;
 
  private:
    Engine m_engine{};

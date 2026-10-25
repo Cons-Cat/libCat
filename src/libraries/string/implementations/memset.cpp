@@ -9,8 +9,9 @@ extern "C"
 #endif
    auto
    // NOLINTNEXTLINE(bugprone-std-namespace-modification)
-   std::memset(void* _Nonnull p_source, int byte_value, __SIZE_TYPE__ bytes)
-      -> void* _Nonnull {
+   std::memset(
+      void* _Nonnull p_source, int byte_value, __SIZE_TYPE__ bytes
+   ) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nonnull {
    cat::byte fill_byte;
    fill_byte = cat::byte(byte_value);
    cat::detail::fill_memory_impl(

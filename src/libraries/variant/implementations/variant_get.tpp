@@ -19,7 +19,7 @@ template <typename... Alternatives>
    )
 template <idx index>
 constexpr auto
-variant<Alternatives...>::get(this auto&& self) -> decltype(auto)
+variant<Alternatives...>::get(this auto&& self) noexcept -> decltype(auto)
    requires(index < sizeof...(Alternatives))
 {
    if constexpr (is_reference_variant) {
@@ -36,7 +36,7 @@ template <typename... Alternatives>
    )
 template <typename T>
 constexpr auto
-variant<Alternatives...>::get(this auto&& self) -> decltype(auto)
+variant<Alternatives...>::get(this auto&& self) noexcept -> decltype(auto)
    requires(
       types::template is_unique<T>
       || (is_reference_variant && types::template is_unique<add_lvalue_reference<T>>)

@@ -13,7 +13,7 @@ parse_decimal(char const* _Nonnull& p_cursor) -> cat::int4 {
 }  // namespace
 
 auto
-nix::get_kernel_version() -> kernel_version {
+nix::get_kernel_version() noexcept -> kernel_version {
    utsname uts{};
    if (auto result = sys_uname(uts); result.is_empty()) {
       // Treat as 0.0 on the rare case the syscall itself fails. The

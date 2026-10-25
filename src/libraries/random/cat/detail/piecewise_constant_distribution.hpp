@@ -53,20 +53,20 @@ class piecewise_constant_distribution {
     public:
       using distribution_type = piecewise_constant_distribution;
 
-      constexpr param_type() {
+      constexpr param_type() noexcept {
          set_default();
       }
 
       constexpr param_type(
          span<scalar_type const> boundaries, span<scalar_type const> weights
-      ) {
+      ) noexcept(!__has_feature(cxx_exceptions)) {
          assign(boundaries, weights);
       }
 
       constexpr param_type(
          initializer_list<scalar_type> boundaries,
          initializer_list<scalar_type> weights
-      )
+      ) noexcept
           : param_type(
                span<scalar_type const>{boundaries},
                span<scalar_type const>{weights}
@@ -100,19 +100,19 @@ class piecewise_constant_distribution {
 
       [[nodiscard]]
       constexpr auto
-      boundaries() const -> span<scalar_type const> {
+      boundaries() const noexcept -> span<scalar_type const> {
          return {m_boundaries.data(), m_boundary_count};
       }
 
       [[nodiscard]]
       constexpr auto
-      densities() const -> span<scalar_type const> {
+      densities() const noexcept -> span<scalar_type const> {
          return {m_densities.data(), idx(m_boundary_count - 1u)};
       }
 
       [[nodiscard]]
       constexpr auto
-      operator==(param_type const& other) const -> bool {
+      operator==(param_type const& other) const noexcept -> bool {
          if (m_boundary_count != other.m_boundary_count) {
             return false;
          }
@@ -133,7 +133,7 @@ class piecewise_constant_distribution {
       friend class piecewise_constant_distribution;
 
       constexpr void
-      set_default() {
+      set_default() noexcept(!__has_feature(cxx_exceptions)) {
          m_boundary_count = 2u;
          m_boundaries[0u] = 0;
          m_boundaries[1u] = 1;
@@ -144,7 +144,7 @@ class piecewise_constant_distribution {
       constexpr void
       assign(
          span<scalar_type const> boundaries, span<scalar_type const> weights
-      ) {
+      ) noexcept(!__has_feature(cxx_exceptions)) {
          bool valid =
             boundaries.size() >= 2u
             && boundaries.size() <= detail::sampling_distribution_capacity
@@ -198,14 +198,14 @@ class piecewise_constant_distribution {
 
    constexpr piecewise_constant_distribution(
       span<scalar_type const> boundaries, span<scalar_type const> weights
-   )
+   ) noexcept
        : m_parameters(boundaries, weights) {
    }
 
    constexpr piecewise_constant_distribution(
       initializer_list<scalar_type> boundaries,
       initializer_list<scalar_type> weights
-   )
+   ) noexcept
        : m_parameters(boundaries, weights) {
    }
 
@@ -225,46 +225,46 @@ class piecewise_constant_distribution {
 
    constexpr explicit piecewise_constant_distribution(
       param_type const& parameters
-   )
+   ) noexcept
        : m_parameters(parameters) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    [[nodiscard]]
    constexpr auto
-   min() const -> result_type {
+   min() const noexcept -> result_type {
       return m_parameters.m_boundaries[0u];
    }
 
    [[nodiscard]]
    constexpr auto
-   max() const -> result_type {
+   max() const noexcept -> result_type {
       return m_parameters.m_boundaries[idx(m_parameters.m_boundary_count - 1u)];
    }
 
    [[nodiscard]]
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameters;
    }
 
    constexpr void
-   param(param_type const& parameters) {
+   param(param_type const& parameters) noexcept {
       m_parameters = parameters;
    }
 
    [[nodiscard]]
    constexpr auto
-   boundaries() const -> span<scalar_type const> {
+   boundaries() const noexcept -> span<scalar_type const> {
       return m_parameters.boundaries();
    }
 
    [[nodiscard]]
    constexpr auto
-   densities() const -> span<scalar_type const> {
+   densities() const noexcept -> span<scalar_type const> {
       return m_parameters.densities();
    }
 
@@ -323,7 +323,8 @@ class piecewise_constant_distribution {
 
    [[nodiscard]]
    constexpr auto
-   operator==(piecewise_constant_distribution const& other) const -> bool {
+   operator==(piecewise_constant_distribution const& other) const noexcept
+      -> bool {
       return m_parameters == other.m_parameters;
    }
 

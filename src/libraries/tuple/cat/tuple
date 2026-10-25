@@ -247,8 +247,9 @@ tuple_apply_impl(
 
 template <typename Self, typename Subscript, idx... indices>
 constexpr auto
-tuple_at(Self&& self, idx index, index_list_type<indices...> /*unused*/)
-   -> maybe<Subscript> {
+tuple_at(
+   Self&& self, idx index, index_list_type<indices...> /*unused*/
+) noexcept(false) -> maybe<Subscript> {
    using self_decl = remove_cvref<Self>;
    if (!(index < self_decl::types::size())) {
       return maybe<Subscript>{nullopt};
@@ -286,13 +287,13 @@ struct tuple : detail::tuple_storage<
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return types::size();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return this->size() == 0;
    }
 

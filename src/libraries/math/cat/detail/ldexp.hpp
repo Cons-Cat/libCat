@@ -32,7 +32,7 @@ struct ldexp_float_bits<double> {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_ldexp(Float value, int exponent) -> Float {
+emulated_ldexp(Float value, int exponent) noexcept -> Float {
    using traits = ldexp_float_bits<Float>;
    constexpr int max_exponent = traits::exponent_bias;
    constexpr int min_exponent = 1 - max_exponent;

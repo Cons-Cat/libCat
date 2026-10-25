@@ -14,7 +14,7 @@ namespace cat::detail {
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-distribution_unit(Generator& generator) -> Float {
+distribution_unit(Generator& generator) noexcept -> Float {
    return uniform_float_distribution<Float>{}(generator);
 }
 
@@ -24,7 +24,7 @@ template <typename Int, typename Float>
       && (is_floating_point<Float> || is_simd_floating_point<Float>)
    )
 constexpr auto
-distribution_integer(Float value) -> Int {
+distribution_integer(Float value) noexcept -> Int {
    Float const maximum = distribution_float<Float>(
       make_raw_arithmetic(limits<random_scalar<Int>>::max())
    );
@@ -55,7 +55,7 @@ template <typename Int, typename Float>
       && (is_floating_point<Float> || is_simd_floating_point<Float>)
    )
 constexpr auto
-geometric_sample(Float probability, Float unit) -> Int {
+geometric_sample(Float probability, Float unit) noexcept -> Int {
    Float const one = distribution_float<Float>(1);
    Float const zero = distribution_float<Float>(0);
    Float const value = floor(log(one - unit) / log(one - probability));
@@ -75,7 +75,7 @@ geometric_sample(Float probability, Float unit) -> Int {
 template <typename Int>
    requires(is_integral<Int> || is_simd_integral<Int>)
 constexpr void
-distribution_add(Int& result, Int value) {
+distribution_add(Int& result, Int value) noexcept {
    if constexpr (is_simd<Int>) {
       Int const maximum = limits<Int>::max();
       result = simd_select(value > maximum - result, maximum, result + value);

@@ -255,7 +255,9 @@ section_name(
 
 [[nodiscard]]
 auto
-find_sections(cat::span<cat::byte const> elf) -> dwarf_sections {
+find_sections(cat::span<cat::byte const> elf) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> dwarf_sections {
    if (elf.size() < sizeof(elf_header)) {
       return {};
    }

@@ -9,16 +9,16 @@ namespace cat::detail {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_exp(Float argument) -> Float;
+emulated_exp(Float argument) noexcept -> Float;
 
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_log(Float argument) -> Float;
+emulated_log(Float argument) noexcept -> Float;
 
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_sin(Float argument) -> Float;
+emulated_sin(Float argument) noexcept -> Float;
 
 }  // namespace cat::detail

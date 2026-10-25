@@ -14,8 +14,9 @@ is_mapping_access(file_access access) -> bool {
 }  // namespace
 
 auto
-mapped_file_handle::operator=(mapped_file_handle&& other)
-   -> mapped_file_handle& {
+mapped_file_handle::operator=(mapped_file_handle&& other) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> mapped_file_handle& {
    if (this == __builtin_addressof(other)) {
       return *this;
    }
@@ -121,7 +122,8 @@ mapped_file_handle::unmap() -> scaredy<void, io_error> {
 }
 
 auto
-mapped_file_handle::release() -> scaredy<cat::native_handle, io_error> {
+mapped_file_handle::release() noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy<cat::native_handle, io_error> {
    scaredy<void, io_error> const result = unmap();
    if (!result.has_value()) {
       return result.error();
@@ -130,7 +132,8 @@ mapped_file_handle::release() -> scaredy<cat::native_handle, io_error> {
 }
 
 auto
-mapped_file_handle::close() -> scaredy<void, io_error> {
+mapped_file_handle::close() noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy<void, io_error> {
    scaredy<void, io_error> const mapping_result = unmap();
    scaredy<void, io_error> const file_result = m_file.close();
    if (!mapping_result.has_value()) {

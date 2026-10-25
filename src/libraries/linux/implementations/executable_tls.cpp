@@ -29,7 +29,8 @@ link_absolute_symbol(char const* const p_symbol_address) -> T {
 namespace nix::detail {
 
 auto
-clone_thread_local_buffer_min_bytes() -> cat::idx {
+clone_thread_local_buffer_min_bytes() noexcept(!__has_feature(cxx_exceptions))
+   -> cat::idx {
    cat::idx const tls_memory_size =
       link_absolute_symbol<cat::idx>(__cat_tls_memory_size);
    if (tls_memory_size == 0u) {
@@ -86,7 +87,7 @@ install_executable_tls_image_at_thread_pointer(
 // `CAT_THREAD_LOCAL_SIZE`.
 [[gnu::no_stack_protector, clang::disable_sanitizer_instrumentation]]
 void
-init_parent_process_tls() {
+init_parent_process_tls() noexcept(!__has_feature(cxx_exceptions)) {
 #ifdef CAT_THREAD_LOCAL_SIZE
    cat::idx const tls_memory_size = CAT_THREAD_LOCAL_SIZE;
    cat::ualign const minimum_alignment = 32u;

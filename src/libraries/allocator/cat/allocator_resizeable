@@ -97,7 +97,9 @@ allocator_resizeable
       is_allocator Inner, idx node_bytes_arg, idx chunk_bytes_arg,
       is_allocator BackingArg>
    friend constexpr auto
-   make_allocator_resizeable(BackingArg& backing [[clang::lifetimebound]])
+   make_allocator_resizeable(
+      BackingArg& backing [[clang::lifetimebound]]
+   ) noexcept
       -> allocator_resizeable<
          Inner, BackingArg, node_bytes_arg, chunk_bytes_arg>;
 
@@ -132,22 +134,25 @@ allocator_resizeable
 
    [[nodiscard]]
    auto
-   find_chunk(span<byte> allocation) const -> chunk_header* _Nullable;
+   find_chunk(span<byte> allocation) const noexcept -> chunk_header* _Nullable;
 
    [[nodiscard]]
    auto
-   grow(span<byte> allocation, idx new_bytes) -> maybe<void>
+   grow(span<byte> allocation, idx new_bytes) noexcept -> maybe<void>
       requires(detail::inner_has_grow<Allocator>);
 
    [[nodiscard]]
    auto
-   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>
+   grow_feedback(span<byte> allocation, idx new_bytes) noexcept
+      -> maybe_non_zero<idx>
       requires(
          detail::inner_has_grow<Allocator>
          || detail::inner_has_grow_feedback<Allocator>
       );
 
-   constexpr allocator_resizeable(Backing& backing [[clang::lifetimebound]])
+   constexpr allocator_resizeable(
+      Backing& backing [[clang::lifetimebound]]
+   ) noexcept
        : m_p_backing(__builtin_addressof(backing)) {
    }
 
@@ -171,7 +176,7 @@ allocator_resizeable
       other.m_p_free_head = nullptr;
    }
 
-   ~allocator_resizeable();
+   ~allocator_resizeable() noexcept(!__has_feature(cxx_exceptions));
 
    // Reset the wrapper: drain the free list (it lives inside chunks that
    // are about to be released), then return each chunk to `Backing`. This
@@ -185,18 +190,19 @@ allocator_resizeable
    // `allocate` calls this itself on overflow, so this is only needed to
    // reserve capacity ahead of time.
    auto
-   resize(idx minimum_bytes) -> maybe_non_zero<idx>;
+   resize(idx minimum_bytes) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe_non_zero<idx>;
 
  private:
    auto
-   allocation_bytes(ualign /*alignment*/, idx /*requested_bytes*/)
+   allocation_bytes(ualign /*alignment*/, idx /*requested_bytes*/) noexcept
       -> maybe_non_zero<idx> {
       return node_bytes;
    }
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(idx allocation_bytes) -> void* _Nullable;
+   allocate(idx allocation_bytes) noexcept -> void* _Nullable;
 
    [[clang::ownership_takes(libcat, 2)]]
    void
@@ -205,18 +211,18 @@ allocator_resizeable
  public:
    [[nodiscard]]
    auto
-   bytes_used() const -> idx;
+   bytes_used() const noexcept -> idx;
 
    [[nodiscard]]
    auto
-   bytes_capacity() const -> idx;
+   bytes_capacity() const noexcept -> idx;
 
    // Two wrappers are equivalent when they share `Backing` and govern the
    // same chunk list head. Sharing the chunk list head means a freed
    // allocation routed through either wrapper lands on the same free list.
    [[nodiscard]]
    auto
-   is_equivalent(allocator_resizeable const& other) const -> bool {
+   is_equivalent(allocator_resizeable const& other) const noexcept -> bool {
       return m_p_backing == other.m_p_backing && m_p_chunks == other.m_p_chunks;
    }
 };
@@ -229,7 +235,7 @@ template <
    idx chunk_bytes_param = 64_uki, is_allocator Backing>
 [[nodiscard]]
 constexpr auto
-make_allocator_resizeable(Backing& backing [[clang::lifetimebound]])
+make_allocator_resizeable(Backing& backing [[clang::lifetimebound]]) noexcept
    -> allocator_resizeable<
       Allocator, Backing, node_bytes_param, chunk_bytes_param> {
    return {backing};

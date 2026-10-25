@@ -1,7 +1,7 @@
 #include <cat/linux>
 
 auto
-nix::read_char() -> scaredy_nix<char> {
+nix::read_char() noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<char> {
    // This is functionally similar to POSIX `getchar()`.
    // TODO: A buffered implementation could be much more efficient.
    tty_io_serial const old_settings = $prop(tty_get_attributes(nix::stdin));

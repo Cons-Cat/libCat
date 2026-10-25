@@ -99,19 +99,20 @@ struct simd_dispatch_arch {
    idx length;
 
    template <idx extent>
-   consteval simd_dispatch_arch(char const (&data)[extent])
+   consteval simd_dispatch_arch(char const (&data)[extent]) noexcept
        : p_data(data), length(extent - 1u) {
    }
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return length;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator==(simd_dispatch_arch left, simd_dispatch_arch right) -> bool {
+   operator==(simd_dispatch_arch left, simd_dispatch_arch right) noexcept
+      -> bool {
       if (left.length != right.length) {
          return false;
       }
@@ -131,8 +132,9 @@ struct simd_dispatch_meta {
 
 template <idx n>
 consteval auto
-simd_dispatch_last_is_default(array<simd_dispatch_meta, n> const& meta)
-   -> bool {
+simd_dispatch_last_is_default(
+   array<simd_dispatch_meta, n> const& meta
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    if constexpr (n == 0u) {
       return false;
    } else {
@@ -142,7 +144,8 @@ simd_dispatch_last_is_default(array<simd_dispatch_meta, n> const& meta)
 
 template <idx n>
 consteval auto
-simd_dispatch_default_count(array<simd_dispatch_meta, n> const& meta) -> idx {
+simd_dispatch_default_count(array<simd_dispatch_meta, n> const& meta) noexcept
+   -> idx {
    idx defaults = 0u;
    for (auto const& entry : meta) {
       if (entry.arch.size() == 0u) {
@@ -154,8 +157,9 @@ simd_dispatch_default_count(array<simd_dispatch_meta, n> const& meta) -> idx {
 
 template <idx n>
 consteval auto
-simd_dispatch_has_duplicate_arch(array<simd_dispatch_meta, n> const& meta)
-   -> bool {
+simd_dispatch_has_duplicate_arch(
+   array<simd_dispatch_meta, n> const& meta
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    for (idx i = 0u; i < n; ++i) {
       for (idx j = i + 1u; j < n; ++j) {
          if (meta[i].arch.size() != 0u && meta[i].arch == meta[j].arch) {
@@ -179,7 +183,7 @@ template <idx n>
 consteval auto
 simd_dispatch_baseline_covers(
    array<simd_dispatch_meta, n> const& meta, int baseline_priority
-) -> bool {
+) noexcept -> bool {
    for (auto const& entry : meta) {
       if (entry.priority != -1 && entry.priority <= baseline_priority) {
          return true;
@@ -195,8 +199,9 @@ simd_dispatch_baseline_covers(
 // independent of the user's source ordering of `$abi(...)` entries.
 template <idx n>
 consteval auto
-simd_dispatch_priority_permutation(array<simd_dispatch_meta, n> const& meta)
-   -> array<idx, n> {
+simd_dispatch_priority_permutation(
+   array<simd_dispatch_meta, n> const& meta
+) noexcept(!__has_feature(cxx_exceptions)) -> array<idx, n> {
    array<idx, n> permutation{};
    for (idx i = 0u; i < n; ++i) {
       permutation[i] = i;
@@ -232,7 +237,7 @@ struct simd_dispatch_cache {
 
    [[gnu::always_inline]]
    static auto
-   get() -> int {
+   get() noexcept -> int {
       if (selected_priority < 0) [[unlikely]] {
          int best = -1;
          for (int const p : {priorities...}) {

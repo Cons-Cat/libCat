@@ -9,7 +9,7 @@ namespace cat {
 template <is_arithmetic T, is_arithmetic... Remaining>
 [[nodiscard]]
 constexpr auto
-product(T value, Remaining... remaining) {
+product(T value, Remaining... remaining) noexcept {
    return (value * ... * remaining);
 }
 

@@ -13,7 +13,8 @@
 namespace x64 {
 
 inline auto
-cpuid(cat::uint4 leaf, cat::uint4 subleaf = 0u) -> cat::array<cat::uint4, 4> {
+cpuid(cat::uint4 leaf, cat::uint4 subleaf = 0u) noexcept
+   -> cat::array<cat::uint4, 4> {
    cat::uint4 ebx;
    cat::uint4 edx;
    asm("cpuid"
@@ -210,7 +211,8 @@ enum class [[clang::enum_extensibility(
 };
 
 consteval auto
-default_cpu_features() -> cat::bitset<32> {
+default_cpu_features() noexcept(!__has_feature(cxx_exceptions))
+   -> cat::bitset<32> {
    using enum processor_features;
    cat::bitset<32> features{};
 
@@ -228,7 +230,8 @@ default_cpu_features() -> cat::bitset<32> {
 }
 
 consteval auto
-enable_baseline_feature() -> cat::bitset<32> {
+enable_baseline_feature() noexcept(!__has_feature(cxx_exceptions))
+   -> cat::bitset<32> {
    cat::bitset<32> baseline_flag{};
    baseline_flag[cat::to_underlying(processor_features::x86_64_baseline) % 32]
       .set();
@@ -292,8 +295,9 @@ extern "C"
 // leaf `0x80000007` sets EDX bit 8.
 [[nodiscard]]
 inline auto
-sample_invariant_tsc(cat::uint4 max_leaf, cat::uint4 max_extended_leaf)
-   -> bool {
+sample_invariant_tsc(
+   cat::uint4 max_leaf, cat::uint4 max_extended_leaf
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    if (max_leaf < 1u || max_extended_leaf < 0x80000007u) {
       return false;
    }
@@ -313,7 +317,7 @@ sample_invariant_tsc(cat::uint4 max_leaf, cat::uint4 max_extended_leaf)
 
 [[nodiscard]]
 inline auto
-has_invariant_tsc() -> bool {
+has_invariant_tsc() noexcept -> bool {
    if (!detail::invariant_tsc_support.is_sampled) {
       // Also covers `CAT_NO_CPUID`, which never runs `__cpu_indicator_init()`.
       // Racing threads here all compute the same answer.
@@ -354,7 +358,7 @@ inline void
 set_vendor_model(
    cat::uint4 vendor_family_model, cat::uint4 vendor1,
    cat::array<cat::bitset<32>, 4> const& feature_flags
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    // Extract bits 4 through 7.
    cat::uint4 cpu_model = (vendor_family_model >> 4u) & 0xfu;
    // Extract bits 8 through 11.
@@ -804,7 +808,7 @@ extern "C"
    [[gnu::always_inline]]
    inline void
    // NOLINTNEXTLINE
-   __cpu_indicator_init() {
+   __cpu_indicator_init() noexcept {
    using enum processor_features;
 
    // Get highest values for `%EAX` below and above `0x80000000u`.

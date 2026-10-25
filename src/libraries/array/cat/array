@@ -62,21 +62,21 @@ array : public container_interface<array<T, length>, T>,
    // Get the non-`const` address of this `array`'s internal array.
    [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> T* _Nonnull {
+   data() noexcept [[clang::lifetimebound]] -> T* _Nonnull {
       return this->m_data;
    }
 
    // Get the `const` address of this `array`'s internal array.
    [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> T const* _Nonnull {
+   data() const noexcept [[clang::lifetimebound]] -> T const* _Nonnull {
       return this->m_data;
    }
 
    // Get the number of elements contained in this `array`.
    [[nodiscard]]
    static constexpr auto
-   size() -> idx {
+   size() noexcept -> idx {
       return length;
    }
 
@@ -151,7 +151,7 @@ template <idx index, typename T, idx length>
    requires(index < length)
 [[nodiscard]]
 constexpr auto
-get(array<T, length>& a) noexcept -> T& {
+get(array<T, length>& a) noexcept(!__has_feature(cxx_exceptions)) -> T& {
    return a[index];
 }
 
@@ -159,7 +159,8 @@ template <idx index, typename T, idx length>
    requires(index < length)
 [[nodiscard]]
 constexpr auto
-get(array<T, length> const& a) noexcept -> T const& {
+get(array<T, length> const& a) noexcept(!__has_feature(cxx_exceptions))
+   -> T const& {
    return a[index];
 }
 

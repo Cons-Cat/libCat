@@ -16,7 +16,7 @@ namespace cat::detail {
 inline void
 copy_memory_backward_medium(
    byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    char* p_dest = reinterpret_cast<char*>(p_destination);
    char const* p_src = reinterpret_cast<char const*>(p_source);
    iword bytes_remaining = bytes;

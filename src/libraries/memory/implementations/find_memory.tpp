@@ -12,7 +12,7 @@ namespace cat {
 template <is_equality_comparable T>
 [[nodiscard]]
 constexpr auto
-find_memory(T const* _Nonnull p_haystack, T const& needle, idx size)
+find_memory(T const* _Nonnull p_haystack, T const& needle, idx size) noexcept
    -> maybe<idx> {
    if (size == 0u) {
       return nullopt;
@@ -54,7 +54,7 @@ constexpr auto
 find_subspan_memory(
    T const* _Nonnull p_haystack, T const* _Nonnull p_needle, idx size,
    idx needle_size
-) -> maybe<idx> {
+) noexcept -> maybe<idx> {
    if (needle_size == 0u) {
       return 0u;
    }

@@ -20,7 +20,7 @@ class basic_thread {
 
    basic_thread(
       allocator_ref<Allocator> allocator [[clang::lifetimebound]]
-   )
+   ) noexcept
        : m_allocator(allocator) {
    }
 
@@ -29,12 +29,12 @@ class basic_thread {
    basic_thread(basic_thread const&) = delete;
 
    auto
-   operator=(basic_thread const&) -> basic_thread& = delete;
+   operator=(basic_thread const&) noexcept -> basic_thread& = delete;
 
    auto
-   operator=(basic_thread&&) -> basic_thread& = delete;
+   operator=(basic_thread&&) noexcept -> basic_thread& = delete;
 
-   ~basic_thread() {
+   ~basic_thread() noexcept {
       if (m_core.is_empty()) {
          return;
       }
@@ -54,31 +54,31 @@ class basic_thread {
 
    [[nodiscard]]
    auto
-   join() const -> maybe<void> {
+   join() const noexcept -> maybe<void> {
       return m_core.join();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return m_core.is_empty();
    }
 
    [[nodiscard]]
    constexpr auto
-   get_id() const -> manual::thread::id {
+   get_id() const noexcept -> manual::thread::id {
       return m_core.get_id();
    }
 
    [[clang::reinitializes]]
    void
-   free() {
+   free() noexcept {
       m_core.free(m_allocator);
    }
 
    [[clang::reinitializes]]
    void
-   cfree() {
+   cfree() noexcept {
       m_core.cfree(m_allocator);
    }
 
@@ -97,7 +97,7 @@ struct formatter<raii::basic_thread<Allocator>, CharT> : formatter_base<CharT> {
    auto
    format(
       raii::basic_thread<Allocator> const& value, format_context& context
-   ) const -> scaredy_format<void> {
+   ) const noexcept -> scaredy_format<void> {
       return formatter<thread::id, CharT>{}.format(value.get_id(), context);
    }
 };

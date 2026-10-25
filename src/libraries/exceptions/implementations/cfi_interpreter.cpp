@@ -74,7 +74,11 @@ read_record_length(byte const* _Nonnull p_start, byte const*& out_body_start)
 
 [[nodiscard]]
 auto
-parse_cie(byte const* _Nonnull p_cie_record, cie_info& out) -> bool {
+parse_cie(byte const* _Nonnull p_cie_record, cie_info& out) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bool {
+   // `out` may be reused across frames, so nothing may carry over.
+   out = cie_info{};
    byte const* p_body = nullptr;
    uint8 const record_bytes = read_record_length(p_cie_record, p_body);
    byte const* const p_record_end = p_cie_record + record_bytes;
@@ -181,7 +185,12 @@ find_cie_for_fde(
 }  // namespace
 
 auto
-parse_fde(byte const* _Nonnull p_fde, fde_info& out_fde) -> bool {
+parse_fde(byte const* _Nonnull p_fde, fde_info& out_fde) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bool {
+   // `out_fde` is reused across frames, and a frame without an LSDA must not
+   // inherit the previous frame's.
+   out_fde = fde_info{};
    byte const* p_body = nullptr;
    uint8 const record_bytes = read_record_length(p_fde, p_body);
    byte const* const p_record_end = p_fde + record_bytes;
@@ -274,7 +283,7 @@ auto
 run_program(
    execution_context& context, byte const* _Nonnull p_start,
    byte const* _Nonnull p_end, bool stop_at_target
-) -> bool {
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    byte_cursor cursor{
       .p_data = p_start,
       .position = 0u,
@@ -634,7 +643,7 @@ compute_state_at(
 auto
 step_frame(
    cfi_state const& state, cie_info const& cie, register_context& registers
-) -> maybe_non_zero<uword> {
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe_non_zero<uword> {
    uword canonical_frame_address_value = 0u;
    switch (state.canonical_frame_address.kind) {
       case canonical_frame_address_kind::from_register:

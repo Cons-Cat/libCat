@@ -126,7 +126,9 @@ socket_disposition(socket_flags flags) -> native_handle_disposition {
 
 }  // namespace
 
-unix_socket_address::unix_socket_address(file_path const& socket_path) {
+unix_socket_address::unix_socket_address(file_path const& socket_path) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    cat::assert(path_fits(socket_path));
    if (path_fits(socket_path)) {
       assign(socket_path);
@@ -134,8 +136,9 @@ unix_socket_address::unix_socket_address(file_path const& socket_path) {
 }
 
 auto
-unix_socket_address::create(file_path const& socket_path)
-   -> scaredy<unix_socket_address, io_error> {
+unix_socket_address::create(file_path const& socket_path) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<unix_socket_address, io_error> {
    if (!path_fits(socket_path)) {
       return io_error::filename_too_long;
    }
@@ -196,7 +199,8 @@ socket_handle::create(
 }
 
 auto
-socket_handle::close() -> scaredy<void, io_error> {
+socket_handle::close() noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy<void, io_error> {
    if (!is_open()) {
       return {};
    }
@@ -221,20 +225,23 @@ socket_handle::bind_address(void const* _Nonnull p_address, iword size) const
 }
 
 auto
-socket_handle::bind(unix_socket_address const& address) const
-   -> scaredy<void, io_error> {
+socket_handle::bind(unix_socket_address const& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    return bind_address(__builtin_addressof(address), address.address_size());
 }
 
 auto
-socket_handle::bind(ipv4_socket_address const& address) const
-   -> scaredy<void, io_error> {
+socket_handle::bind(ipv4_socket_address const& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    return bind_address(__builtin_addressof(address), sizeof(address));
 }
 
 auto
-socket_handle::bind(ipv6_socket_address const& address) const
-   -> scaredy<void, io_error> {
+socket_handle::bind(ipv6_socket_address const& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    return bind_address(__builtin_addressof(address), sizeof(address));
 }
 
@@ -261,20 +268,23 @@ socket_handle::connect_address(void const* _Nonnull p_address, iword size) const
 }
 
 auto
-socket_handle::connect(unix_socket_address const& address) const
-   -> scaredy<void, io_error> {
+socket_handle::connect(unix_socket_address const& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    return connect_address(__builtin_addressof(address), address.address_size());
 }
 
 auto
-socket_handle::connect(ipv4_socket_address const& address) const
-   -> scaredy<void, io_error> {
+socket_handle::connect(ipv4_socket_address const& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    return connect_address(__builtin_addressof(address), sizeof(address));
 }
 
 auto
-socket_handle::connect(ipv6_socket_address const& address) const
-   -> scaredy<void, io_error> {
+socket_handle::connect(ipv6_socket_address const& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    return connect_address(__builtin_addressof(address), sizeof(address));
 }
 
@@ -289,7 +299,9 @@ socket_handle::connect(file_path const& socket_path) const
 }
 
 auto
-socket_handle::listen(int8 backlog) const -> scaredy<void, io_error> {
+socket_handle::listen(int8 backlog) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    iword const value = detail::native_handle_access::value(m_handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor
@@ -323,13 +335,16 @@ socket_handle::accept_address(
 }
 
 auto
-socket_handle::accept4(socket_flags flags) const
-   -> scaredy<socket_handle, io_error> {
+socket_handle::accept4(socket_flags flags) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<socket_handle, io_error> {
    return accept_address(nullptr, nullptr, flags);
 }
 
 auto
-socket_handle::accept4(unix_socket_address& address, socket_flags flags) const
+socket_handle::accept4(
+   unix_socket_address& address, socket_flags flags
+) const noexcept(!__has_feature(cxx_exceptions))
    -> scaredy<socket_handle, io_error> {
    iword size = unix_socket_address::max_size;
    auto result = accept_address(__builtin_addressof(address), &size, flags);
@@ -340,21 +355,27 @@ socket_handle::accept4(unix_socket_address& address, socket_flags flags) const
 }
 
 auto
-socket_handle::accept4(ipv4_socket_address& address, socket_flags flags) const
+socket_handle::accept4(
+   ipv4_socket_address& address, socket_flags flags
+) const noexcept(!__has_feature(cxx_exceptions))
    -> scaredy<socket_handle, io_error> {
    iword size = sizeof(address);
    return accept_address(__builtin_addressof(address), &size, flags);
 }
 
 auto
-socket_handle::accept4(ipv6_socket_address& address, socket_flags flags) const
+socket_handle::accept4(
+   ipv6_socket_address& address, socket_flags flags
+) const noexcept(!__has_feature(cxx_exceptions))
    -> scaredy<socket_handle, io_error> {
    iword size = sizeof(address);
    return accept_address(__builtin_addressof(address), &size, flags);
 }
 
 auto
-socket_handle::shutdown(socket_shutdown how) const -> scaredy<void, io_error> {
+socket_handle::shutdown(socket_shutdown how) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    iword const value = detail::native_handle_access::value(m_handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor
@@ -365,14 +386,16 @@ socket_handle::shutdown(socket_shutdown how) const -> scaredy<void, io_error> {
 }
 
 auto
-socket_handle::send(str_view buffer, socket_message_flags flags) const
-   -> scaredy<idx, io_error> {
+socket_handle::send(str_view buffer, socket_message_flags flags) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<idx, io_error> {
    return send_to_address(buffer, flags, nullptr, 0);
 }
 
 auto
-socket_handle::receive(span<char> buffer, socket_message_flags flags) const
-   -> scaredy<idx, io_error> {
+socket_handle::receive(
+   span<char> buffer, socket_message_flags flags
+) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error> {
    return receive_from_address(buffer, flags, nullptr, nullptr);
 }
 
@@ -394,7 +417,7 @@ auto
 socket_handle::send_to(
    str_view buffer, unix_socket_address const& address,
    socket_message_flags flags
-) const -> scaredy<idx, io_error> {
+) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error> {
    return send_to_address(
       buffer, flags, __builtin_addressof(address), address.address_size()
    );
@@ -404,7 +427,7 @@ auto
 socket_handle::send_to(
    str_view buffer, ipv4_socket_address const& address,
    socket_message_flags flags
-) const -> scaredy<idx, io_error> {
+) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error> {
    return send_to_address(
       buffer, flags, __builtin_addressof(address), sizeof(address)
    );
@@ -414,7 +437,7 @@ auto
 socket_handle::send_to(
    str_view buffer, ipv6_socket_address const& address,
    socket_message_flags flags
-) const -> scaredy<idx, io_error> {
+) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error> {
    return send_to_address(
       buffer, flags, __builtin_addressof(address), sizeof(address)
    );
@@ -437,7 +460,7 @@ socket_handle::receive_from_address(
 auto
 socket_handle::receive_from(
    span<char> buffer, unix_socket_address& address, socket_message_flags flags
-) const -> scaredy<idx, io_error> {
+) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error> {
    iword size = unix_socket_address::max_size;
    auto result =
       receive_from_address(buffer, flags, __builtin_addressof(address), &size);
@@ -450,7 +473,7 @@ socket_handle::receive_from(
 auto
 socket_handle::receive_from(
    span<char> buffer, ipv4_socket_address& address, socket_message_flags flags
-) const -> scaredy<idx, io_error> {
+) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error> {
    iword size = sizeof(address);
    return receive_from_address(
       buffer, flags, __builtin_addressof(address), &size
@@ -460,7 +483,7 @@ socket_handle::receive_from(
 auto
 socket_handle::receive_from(
    span<char> buffer, ipv6_socket_address& address, socket_message_flags flags
-) const -> scaredy<idx, io_error> {
+) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy<idx, io_error> {
    iword size = sizeof(address);
    return receive_from_address(
       buffer, flags, __builtin_addressof(address), &size
@@ -480,8 +503,9 @@ socket_handle::get_socket_name(void* _Nonnull p_address, iword& size) const
 }
 
 auto
-socket_handle::getsockname(unix_socket_address& address) const
-   -> scaredy<void, io_error> {
+socket_handle::getsockname(unix_socket_address& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    iword size = unix_socket_address::max_size;
    auto result = get_socket_name(__builtin_addressof(address), size);
    if (result.has_value()) {
@@ -491,15 +515,17 @@ socket_handle::getsockname(unix_socket_address& address) const
 }
 
 auto
-socket_handle::getsockname(ipv4_socket_address& address) const
-   -> scaredy<void, io_error> {
+socket_handle::getsockname(ipv4_socket_address& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    iword size = sizeof(address);
    return get_socket_name(__builtin_addressof(address), size);
 }
 
 auto
-socket_handle::getsockname(ipv6_socket_address& address) const
-   -> scaredy<void, io_error> {
+socket_handle::getsockname(ipv6_socket_address& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    iword size = sizeof(address);
    return get_socket_name(__builtin_addressof(address), size);
 }
@@ -517,8 +543,9 @@ socket_handle::get_peer_name(void* _Nonnull p_address, iword& size) const
 }
 
 auto
-socket_handle::getpeername(unix_socket_address& address) const
-   -> scaredy<void, io_error> {
+socket_handle::getpeername(unix_socket_address& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    iword size = unix_socket_address::max_size;
    auto result = get_peer_name(__builtin_addressof(address), size);
    if (result.has_value()) {
@@ -528,15 +555,17 @@ socket_handle::getpeername(unix_socket_address& address) const
 }
 
 auto
-socket_handle::getpeername(ipv4_socket_address& address) const
-   -> scaredy<void, io_error> {
+socket_handle::getpeername(ipv4_socket_address& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    iword size = sizeof(address);
    return get_peer_name(__builtin_addressof(address), size);
 }
 
 auto
-socket_handle::getpeername(ipv6_socket_address& address) const
-   -> scaredy<void, io_error> {
+socket_handle::getpeername(ipv6_socket_address& address) const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> scaredy<void, io_error> {
    iword size = sizeof(address);
    return get_peer_name(__builtin_addressof(address), size);
 }

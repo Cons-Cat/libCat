@@ -2,7 +2,7 @@
 
 // `read()` transmits a number of bytes into a file descriptor.
 auto
-nix::sys_read(file_descriptor file_descriptor, cat::span<char> buffer)
+nix::sys_read(file_descriptor file_descriptor, cat::span<char> buffer) noexcept
    -> nix::scaredy_nix<cat::idx> {
    // https://filippo.io/linux-syscall-table/
    return nix::syscall_volatile<cat::idx>(

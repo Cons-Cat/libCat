@@ -11,7 +11,9 @@ namespace nix::detail {
 // https://man7.org/linux/man-pages/man2/getrandom.2.html
 [[nodiscard]]
 inline auto
-kernel_random_uint8(getrandom_flags flags) -> cat::uint8 {
+kernel_random_uint8(getrandom_flags flags) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> cat::uint8 {
    cat::uint8 result;
    auto* p_output = reinterpret_cast<unsigned char*>(&result);
    cat::idx filled = 0u;
@@ -40,7 +42,9 @@ kernel_random_uint8(getrandom_flags flags) -> cat::uint8 {
 // https://man7.org/linux/man-pages/man4/random.4.html
 [[nodiscard]]
 inline auto
-kernel_random_file_uint8(cat::zstr_view path) -> cat::uint8 {
+kernel_random_file_uint8(cat::zstr_view path) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> cat::uint8 {
    file_descriptor const descriptor =
       sys_open(path, open_mode::read_only).assert();
    $defer {
@@ -90,13 +94,13 @@ class linux_getrandom_engine {
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0u;
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 };
@@ -130,13 +134,13 @@ class linux_random_file_engine {
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0u;
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 };
@@ -156,7 +160,7 @@ struct seed_state {
 
 [[nodiscard]]
 inline auto
-make_seed_state() -> seed_state {
+make_seed_state() noexcept(!__has_feature(cxx_exceptions)) -> seed_state {
    // Timing, identity, and temperature are diversity only, not entropy.
    return {
       .kernel_random = sys_urandom_engine{}(),

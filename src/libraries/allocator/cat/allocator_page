@@ -32,8 +32,9 @@ class [[clang::trivial_abi]] allocator_page
 
    // Allocations are always sized in a multiple of pages.
    static auto
-   allocation_bytes(ualign alignment, idx allocation_bytes)
-      -> maybe_non_zero<idx> {
+   allocation_bytes(ualign alignment, idx allocation_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe_non_zero<idx> {
       // Pages cannot be aligned by greater than 4 kibibytes.
       assert(alignment <= 4_uki);
       // Round `allocation_bytes` up to the nearest 4 kibibytes.
@@ -68,7 +69,9 @@ class [[clang::trivial_abi]] allocator_page
    // power of 2, but less than `4_uki`.
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    static auto
-   aligned_allocate(ualign alignment, idx allocation_bytes) -> void* _Nullable {
+   aligned_allocate(ualign alignment, idx allocation_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> void* _Nullable {
       // Pages cannot be aligned by greater than 4 kibibytes.
       // TODO: We can try hint addresses or over-allocation to make this work.
       // Or maybe `MAP_FIXED_NOREPLACE`.
@@ -82,13 +85,17 @@ class [[clang::trivial_abi]] allocator_page
    // optimization musl malloc's `calloc` makes for mmap-backed chunks.
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    static auto
-   allocate_zeroed(idx allocation_bytes) -> void* _Nullable {
+   allocate_zeroed(idx allocation_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> void* _Nullable {
       return allocate(allocation_bytes);
    }
 
    // Feedback variant of `allocate_zeroed`.
    static auto
-   allocate_zeroed_feedback(idx allocation_bytes) -> sized_allocation<void*> {
+   allocate_zeroed_feedback(idx allocation_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> sized_allocation<void*> {
       void* _Nullable p_result = allocate(allocation_bytes);
       // Propagating nullptr is handled correctly by `maybe_sized_allocation`.
       return {p_result, round_up_to_multiple_of(allocation_bytes, page_size)};
@@ -97,15 +104,17 @@ class [[clang::trivial_abi]] allocator_page
    // Aligned variant of `allocate_zeroed`.
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    static auto
-   aligned_allocate_zeroed(ualign alignment, idx allocation_bytes)
-      -> void* _Nullable {
+   aligned_allocate_zeroed(ualign alignment, idx allocation_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> void* _Nullable {
       return aligned_allocate(alignment, allocation_bytes);
    }
 
    // Aligned feedback variant of `allocate_zeroed`.
    static auto
-   aligned_allocate_zeroed_feedback(ualign alignment, idx allocation_bytes)
-      -> sized_allocation<void*> {
+   aligned_allocate_zeroed_feedback(
+      ualign alignment, idx allocation_bytes
+   ) noexcept(!__has_feature(cxx_exceptions)) -> sized_allocation<void*> {
       void* _Nullable p_result = aligned_allocate(alignment, allocation_bytes);
       // Propagating nullptr is handled correctly by `maybe_sized_allocation`.
       return {p_result, round_up_to_multiple_of(allocation_bytes, page_size)};
@@ -114,7 +123,9 @@ class [[clang::trivial_abi]] allocator_page
    // Unmap a pointer handle to page(s) of virtual memory.
    [[clang::ownership_takes(libcat, 1)]]
    static void
-   deallocate(void const* _Nonnull p_storage, idx allocation_bytes) {
+   deallocate(void const* _Nonnull p_storage, idx allocation_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       nix::sys_munmap(p_storage, allocation_bytes).assert();
    }
 
@@ -123,7 +134,8 @@ class [[clang::trivial_abi]] allocator_page
    // makes a `sys_mmap`/`sys_munmap` round trip without writing so that
    // the address space is not actually grown.
    static auto
-   resize(idx minimum_bytes) -> maybe_non_zero<idx> {
+   resize(idx minimum_bytes) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe_non_zero<idx> {
       // Round `minimum_bytes` up to a whole-page multiple. `page_size`
       // is a power of two, so this lowers to a single mask.
       idx const page_bytes = round_up_to_multiple_of(minimum_bytes, page_size);
@@ -142,7 +154,9 @@ class [[clang::trivial_abi]] allocator_page
    // Address-stable in-place grow via `sys_mremap` without `may_move`. The
    // kernel resizes the page mapping at the same address or fails.
    static auto
-   grow(span<byte> allocation, idx new_bytes) -> maybe<void> {
+   grow(span<byte> allocation, idx new_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
       idx const from_size =
          round_up_to_multiple_of(allocation.size(), page_size);
       idx const to_size = round_up_to_multiple_of(new_bytes, page_size);
@@ -158,7 +172,9 @@ class [[clang::trivial_abi]] allocator_page
    // Feedback variant of `grow`. Reports the page-rounded byte count of the
    // resized mapping, which may exceed `new_bytes`.
    static auto
-   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx> {
+   grow_feedback(span<byte> allocation, idx new_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe_non_zero<idx> {
       idx const from_size =
          round_up_to_multiple_of(allocation.size(), page_size);
       idx const to_size = round_up_to_multiple_of(new_bytes, page_size);
@@ -230,15 +246,16 @@ class [[clang::trivial_abi]] allocator_page
 
 [[nodiscard]]
 constexpr auto
-make_allocator_page() -> allocator_page {
+make_allocator_page() noexcept -> allocator_page {
    return {};
 }
 
 template <typename CharT>
 struct formatter<allocator_page, CharT> : formatter_base<CharT> {
    auto
-   format(allocator_page const& /*value*/, format_context& context) const
-      -> scaredy_format<void> {
+   format(
+      allocator_page const& /*value*/, format_context& context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
       return detail::format_allocator_usage(
          context, allocator_page::bytes_used(),
          allocator_page::bytes_capacity(), {}

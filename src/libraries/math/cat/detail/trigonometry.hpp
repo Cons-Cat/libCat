@@ -14,7 +14,7 @@ namespace cat::detail {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_reduce_angle(Float argument) -> Float {
+emulated_reduce_angle(Float argument) noexcept -> Float {
    Float reduced = fmod_integer(argument, tau<Float>);
    if (reduced > pi<Float>) {
       reduced -= tau<Float>;
@@ -27,7 +27,7 @@ emulated_reduce_angle(Float argument) -> Float {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_sin(Float argument) -> Float {
+emulated_sin(Float argument) noexcept -> Float {
    if (!is_finite(argument)) {
       return is_nan(argument) ? argument : limits<Float>::quiet_NaN();
    }
@@ -47,7 +47,7 @@ emulated_sin(Float argument) -> Float {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_cos(Float argument) -> Float {
+emulated_cos(Float argument) noexcept -> Float {
    if (!is_finite(argument)) {
       return is_nan(argument) ? argument : limits<Float>::quiet_NaN();
    }
@@ -67,14 +67,14 @@ emulated_cos(Float argument) -> Float {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_tan(Float argument) -> Float {
+emulated_tan(Float argument) noexcept -> Float {
    return emulated_sin(argument) / emulated_cos(argument);
 }
 
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_atan_series(Float argument) -> Float {
+emulated_atan_series(Float argument) noexcept -> Float {
    Float const squared = argument * argument;
    Float term = argument;
    Float result = argument;
@@ -89,7 +89,7 @@ emulated_atan_series(Float argument) -> Float {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_atan(Float argument) -> Float {
+emulated_atan(Float argument) noexcept -> Float {
    if (is_nan(argument)) {
       return argument;
    }
@@ -115,7 +115,7 @@ emulated_atan(Float argument) -> Float {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_atan2(Float y, Float x) -> Float {
+emulated_atan2(Float y, Float x) noexcept -> Float {
    if (is_nan(x) || is_nan(y)) {
       return x + y;
    }
@@ -158,7 +158,7 @@ emulated_atan2(Float y, Float x) -> Float {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_asin(Float argument) -> Float {
+emulated_asin(Float argument) noexcept -> Float {
    if (is_nan(argument)) {
       return argument;
    }
@@ -179,7 +179,7 @@ emulated_asin(Float argument) -> Float {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_acos(Float argument) -> Float {
+emulated_acos(Float argument) noexcept -> Float {
    if (is_nan(argument)) {
       return argument;
    }
@@ -200,7 +200,7 @@ emulated_acos(Float argument) -> Float {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_sinh(Float argument) -> Float {
+emulated_sinh(Float argument) noexcept -> Float {
    if (is_nan(argument) || !is_finite(argument) || argument == 0) {
       return argument;
    }
@@ -226,7 +226,7 @@ emulated_sinh(Float argument) -> Float {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_cosh(Float argument) -> Float {
+emulated_cosh(Float argument) noexcept -> Float {
    if (is_nan(argument)) {
       return argument;
    }
@@ -250,7 +250,7 @@ emulated_cosh(Float argument) -> Float {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_tanh(Float argument) -> Float {
+emulated_tanh(Float argument) noexcept -> Float {
    if (is_nan(argument) || argument == 0) {
       return argument;
    }
@@ -280,7 +280,7 @@ namespace detail {
 template <is_floating_point Float>
 [[nodiscard]]
 constexpr auto
-make_radian_argument(Float argument)
+make_radian_argument(Float argument) noexcept
    -> rebind_quantity_type<Float, units::radian> {
    static_assert(
       is_angle_quantity<Float>,
@@ -296,7 +296,7 @@ template <is_floating_point Float>
    requires(!has_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-raw_sin(Float argument) -> Float {
+raw_sin(Float argument) noexcept -> Float {
    if consteval {
       return Float(emulated_sin(make_raw_arithmetic(argument)));
    }
@@ -307,7 +307,7 @@ template <is_floating_point Float>
    requires(!has_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-raw_cos(Float argument) -> Float {
+raw_cos(Float argument) noexcept -> Float {
    if consteval {
       return Float(emulated_cos(make_raw_arithmetic(argument)));
    }
@@ -318,7 +318,7 @@ template <is_floating_point Float>
    requires(!has_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-raw_tan(Float argument) -> Float {
+raw_tan(Float argument) noexcept -> Float {
    if consteval {
       return Float(emulated_tan(make_raw_arithmetic(argument)));
    }
@@ -331,7 +331,7 @@ template <is_floating_point Float>
    requires(detail::is_angle_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-sin(Float argument) -> detail::rebind_quantity_type<Float, scalar> {
+sin(Float argument) noexcept -> detail::rebind_quantity_type<Float, scalar> {
    using result_type = detail::rebind_quantity_type<Float, scalar>;
    auto const raw_argument =
       make_raw_arithmetic(detail::make_radian_argument(argument));
@@ -350,7 +350,7 @@ template <is_floating_point Float>
    requires(detail::is_angle_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-cos(Float argument) -> detail::rebind_quantity_type<Float, scalar> {
+cos(Float argument) noexcept -> detail::rebind_quantity_type<Float, scalar> {
    using result_type = detail::rebind_quantity_type<Float, scalar>;
    auto const raw_argument =
       make_raw_arithmetic(detail::make_radian_argument(argument));
@@ -369,7 +369,7 @@ template <is_floating_point Float>
    requires(detail::is_angle_quantity<Float>)
 [[nodiscard]]
 constexpr auto
-tan(Float argument) -> detail::rebind_quantity_type<Float, scalar> {
+tan(Float argument) noexcept -> detail::rebind_quantity_type<Float, scalar> {
    using result_type = detail::rebind_quantity_type<Float, scalar>;
    auto const raw_argument =
       make_raw_arithmetic(detail::make_radian_argument(argument));
@@ -388,7 +388,7 @@ template <is_floating_point Float>
    requires(is_dimensionless_arithmetic<Float>)
 [[nodiscard]]
 constexpr auto
-asin(Float argument) {
+asin(Float argument) noexcept {
    if consteval {
       return detail::attach_quantity<units::radian>(
          Float(detail::emulated_asin(make_raw_arithmetic(argument)))
@@ -408,7 +408,7 @@ template <is_floating_point Float>
    requires(is_dimensionless_arithmetic<Float>)
 [[nodiscard]]
 constexpr auto
-acos(Float argument) {
+acos(Float argument) noexcept {
    if consteval {
       return detail::attach_quantity<units::radian>(
          Float(detail::emulated_acos(make_raw_arithmetic(argument)))
@@ -428,7 +428,7 @@ template <is_floating_point Float>
    requires(is_dimensionless_arithmetic<Float>)
 [[nodiscard]]
 constexpr auto
-atan(Float argument) {
+atan(Float argument) noexcept {
    if consteval {
       return detail::attach_quantity<units::radian>(
          Float(detail::emulated_atan(make_raw_arithmetic(argument)))
@@ -451,7 +451,7 @@ template <is_floating_point Y, is_floating_point X>
    )
 [[nodiscard]]
 constexpr auto
-atan2(Y y, X x) {
+atan2(Y y, X x) noexcept {
    using raw_type = raw_arithmetic_type<Y>;
    raw_type const raw_y = detail::quantity_value_in<arithmetic_quantity<Y>>(y);
    raw_type const raw_x = detail::quantity_value_in<arithmetic_quantity<Y>>(x);
@@ -476,7 +476,7 @@ template <is_floating_point Float>
    requires(is_dimensionless_arithmetic<Float>)
 [[nodiscard]]
 constexpr auto
-sinh(Float argument) -> Float {
+sinh(Float argument) noexcept -> Float {
    if consteval {
       return Float(detail::emulated_sinh(make_raw_arithmetic(argument)));
    }
@@ -487,7 +487,7 @@ template <is_floating_point Float>
    requires(is_dimensionless_arithmetic<Float>)
 [[nodiscard]]
 constexpr auto
-cosh(Float argument) -> Float {
+cosh(Float argument) noexcept -> Float {
    if consteval {
       return Float(detail::emulated_cosh(make_raw_arithmetic(argument)));
    }
@@ -498,7 +498,7 @@ template <is_floating_point Float>
    requires(is_dimensionless_arithmetic<Float>)
 [[nodiscard]]
 constexpr auto
-tanh(Float argument) -> Float {
+tanh(Float argument) noexcept -> Float {
    if consteval {
       return Float(detail::emulated_tanh(make_raw_arithmetic(argument)));
    }

@@ -2,7 +2,7 @@
 
 [[gnu::no_sanitize_address]]
 auto
-nix::syscall0_volatile(cat::iword call) -> cat::iword {
+nix::syscall0_volatile(cat::iword call) noexcept -> cat::iword {
    cat::iword result;
    asm volatile("syscall"
                 : "=a"(result)

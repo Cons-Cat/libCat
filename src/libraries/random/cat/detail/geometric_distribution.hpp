@@ -46,56 +46,57 @@ class geometric_distribution {
     public:
       using distribution_type = geometric_distribution;
 
-      constexpr explicit param_type(Float probability = 0.5)
+      constexpr explicit param_type(Float probability = 0.5) noexcept
           : m_probability(probability) {
       }
 
       constexpr auto
-      p() const -> Float {
+      p() const noexcept -> Float {
          return m_probability;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       Float m_probability;
    };
 
-   constexpr explicit geometric_distribution(Float probability = 0.5)
+   constexpr explicit geometric_distribution(Float probability = 0.5) noexcept
        : m_parameters(probability) {
    }
 
-   constexpr explicit geometric_distribution(param_type parameters)
+   constexpr explicit geometric_distribution(param_type parameters) noexcept
        : m_parameters(parameters) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    constexpr auto
-   p() const -> Float {
+   p() const noexcept -> Float {
       return m_parameters.p();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameters;
    }
 
    constexpr void
-   param(param_type parameters) {
+   param(param_type parameters) noexcept {
       m_parameters = parameters;
    }
 
    constexpr auto
-   min() const -> result_type {
+   min() const noexcept -> result_type {
       return 0u;
    }
 
    constexpr auto
-   max() const -> result_type {
+   max() const noexcept -> result_type {
       return limits<result_type>::max();
    }
 

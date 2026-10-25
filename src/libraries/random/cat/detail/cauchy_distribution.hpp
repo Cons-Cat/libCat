@@ -47,22 +47,25 @@ class cauchy_distribution {
     public:
       using distribution_type = cauchy_distribution;
 
-      constexpr explicit param_type(Float location = 0.f, Float scale = 1.f)
+      constexpr explicit param_type(
+         Float location = 0.f, Float scale = 1.f
+      ) noexcept
           : m_location(location), m_scale(scale) {
       }
 
       constexpr auto
-      a() const -> Float {
+      a() const noexcept -> Float {
          return m_location;
       }
 
       constexpr auto
-      b() const -> Float {
+      b() const noexcept -> Float {
          return m_scale;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       Float m_location;
@@ -71,45 +74,45 @@ class cauchy_distribution {
 
    constexpr explicit cauchy_distribution(
       Float location = 0.f, Float scale = 1.f
-   )
+   ) noexcept
        : m_parameter(location, scale) {
    }
 
-   constexpr explicit cauchy_distribution(param_type const& parameter)
+   constexpr explicit cauchy_distribution(param_type const& parameter) noexcept
        : m_parameter(parameter) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    constexpr auto
-   a() const -> Float {
+   a() const noexcept -> Float {
       return m_parameter.a();
    }
 
    constexpr auto
-   b() const -> Float {
+   b() const noexcept -> Float {
       return m_parameter.b();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameter;
    }
 
    constexpr void
-   param(param_type const& parameter) {
+   param(param_type const& parameter) noexcept {
       m_parameter = parameter;
    }
 
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return -limits<Float>::infinity();
    }
 
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return limits<Float>::infinity();
    }
 

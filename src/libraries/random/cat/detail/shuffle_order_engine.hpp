@@ -12,44 +12,44 @@ class shuffle_order_engine {
  public:
    using result_type = Engine::result_type;
 
-   constexpr shuffle_order_engine() {
+   constexpr shuffle_order_engine() noexcept {
       initialize();
    }
 
-   constexpr explicit shuffle_order_engine(Engine engine)
+   constexpr explicit shuffle_order_engine(Engine engine) noexcept
        : m_engine(move(engine)) {
       initialize();
    }
 
-   constexpr explicit shuffle_order_engine(random_seed value)
+   constexpr explicit shuffle_order_engine(random_seed value) noexcept
        : m_engine(value) {
       initialize();
    }
 
    constexpr void
-   seed() {
+   seed() noexcept {
       m_engine.seed();
       initialize();
    }
 
    constexpr void
-   seed(random_seed value) {
+   seed(random_seed value) noexcept {
       m_engine.seed(value);
       initialize();
    }
 
    constexpr auto
-   base() const -> Engine const& {
+   base() const noexcept -> Engine const& {
       return m_engine;
    }
 
    static consteval auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return Engine::min();
    }
 
    static consteval auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return Engine::max();
    }
 
@@ -69,7 +69,7 @@ class shuffle_order_engine {
    }
 
    constexpr void
-   discard(uint8 count) {
+   discard(uint8 count) noexcept {
       while (count != 0u) {
          static_cast<void>((*this)());
          --count;
@@ -77,12 +77,12 @@ class shuffle_order_engine {
    }
 
    friend constexpr auto
-   operator==(shuffle_order_engine const&, shuffle_order_engine const&)
+   operator==(shuffle_order_engine const&, shuffle_order_engine const&) noexcept
       -> bool = default;
 
  private:
    constexpr void
-   initialize() {
+   initialize() noexcept(!__has_feature(cxx_exceptions)) {
       for (idx index = 0u; index < table_size; ++index) {
          m_table[index] = m_engine();
       }

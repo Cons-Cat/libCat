@@ -13,7 +13,7 @@ template <typename T, typename Abi>
 constexpr auto
 simd_integral_mul_sat_lanes(
    cat::simd<T, Abi> const& left, cat::simd<T, Abi> const& right
-) -> cat::simd<T, Abi> {
+) noexcept -> cat::simd<T, Abi> {
    cat::simd<T, Abi> out{};
    for (idx i = 0u; i < left.size(); ++i) {
       out.set_lane(i, sat_mul(left[i], right[i]));
@@ -26,7 +26,7 @@ template <typename T, typename Abi, typename F>
 constexpr auto
 simd_integral_shift_lanes(
    F&& shift_fn, cat::simd<T, Abi> const& left, cat::simd<T, Abi> const& right
-) -> cat::simd<T, Abi> {
+) noexcept -> cat::simd<T, Abi> {
    cat::simd<T, Abi> out{};
    for (idx i = 0u; i < left.size(); ++i) {
       out.set_lane(i, shift_fn(left[i], right[i]));
@@ -39,7 +39,7 @@ template <typename T, typename Abi, typename F>
 constexpr auto
 simd_integral_lanewise_op(
    F&& op, cat::simd<T, Abi> const& left, cat::simd<T, Abi> const& right
-) -> cat::simd<T, Abi> {
+) noexcept -> cat::simd<T, Abi> {
    cat::simd<T, Abi> out{};
    for (idx i = 0u; i < left.size(); ++i) {
       out.set_lane(i, op(left[i], right[i]));
@@ -58,7 +58,7 @@ simd_integral_lanewise_op(
 template <typename T, typename Abi>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-simd_to_unsigned_raw(cat::simd<T, Abi> const& value) {
+simd_to_unsigned_raw(cat::simd<T, Abi> const& value) noexcept {
    using raw_scalar = raw_arithmetic_type<T>;
    using unsigned_scalar = make_unsigned_type<raw_scalar>;
    using unsigned_raw [[clang::ext_vector_type(Abi::lanes.raw)]] =
@@ -69,7 +69,7 @@ simd_to_unsigned_raw(cat::simd<T, Abi> const& value) {
 template <typename T, typename Abi, typename UnsignedRaw>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-simd_from_unsigned_raw(UnsignedRaw const& value) -> cat::simd<T, Abi> {
+simd_from_unsigned_raw(UnsignedRaw const& value) noexcept -> cat::simd<T, Abi> {
    using raw_type = cat::simd<T, Abi>::raw_type;
    return cat::simd<T, Abi>(__builtin_bit_cast(raw_type, value));
 }

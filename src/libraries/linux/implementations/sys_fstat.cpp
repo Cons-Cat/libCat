@@ -1,8 +1,9 @@
 #include <cat/linux>
 
 auto
-nix::sys_fstat(file_descriptor file_descriptor)
-   -> cat::scaredy<file_status, linux_error> {
+nix::sys_fstat(file_descriptor file_descriptor) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> cat::scaredy<file_status, linux_error> {
    file_status status;
    // https://filippo.io/linux-syscall-table/
    scaredy_nix<void> result = syscall<void>(5, file_descriptor, &status);

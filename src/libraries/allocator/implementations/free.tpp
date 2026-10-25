@@ -73,7 +73,7 @@ template <typename Derived>
 // Invalidate a pointer handle to an array of `T`, and call its destructors.
 template <typename T>
 constexpr void
-allocator_interface<Derived>::free_multi(span<T> handle) {
+allocator_interface<Derived>::free_multi(span<T> handle) noexcept(false) {
    if constexpr (has_max_allocation_bytes) {
       static_assert(
          sizeof(T) <= Derived::max_allocation_bytes,
@@ -172,7 +172,7 @@ allocator_interface<Derived>::cfree(T* _Nonnull p_memory) {
 template <typename Derived>
 template <typename T>
 constexpr void
-allocator_interface<Derived>::cfree_multi(span<T> handle) {
+allocator_interface<Derived>::cfree_multi(span<T> handle) noexcept(false) {
    if constexpr (has_max_allocation_bytes) {
       static_assert(
          sizeof(T) <= Derived::max_allocation_bytes,

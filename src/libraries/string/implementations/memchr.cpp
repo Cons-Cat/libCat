@@ -8,8 +8,9 @@ extern "C"
 #endif
    auto
    // NOLINTNEXTLINE(bugprone-std-namespace-modification)
-   std::memchr(void const* _Nonnull p_haystack, int needle, __SIZE_TYPE__ bytes)
-      -> void const* _Nonnull {
+   std::memchr(
+      void const* _Nonnull p_haystack, int needle, __SIZE_TYPE__ bytes
+   ) noexcept(!__has_feature(cxx_exceptions)) -> void const* _Nonnull {
    cat::str_view const haystack{
       static_cast<char const* _Nonnull>(p_haystack), cat::idx(bytes)
    };

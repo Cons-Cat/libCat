@@ -101,11 +101,11 @@ namespace detail {
 // size, so this bit pattern is unambiguously the empty state.
 template <typename T, vec_flags flags>
 constexpr auto
-maybe_vec_has_value(basic_vec<T, flags> const& value) -> bool;
+maybe_vec_has_value(basic_vec<T, flags> const& value) noexcept(false) -> bool;
 
 template <typename T, vec_flags flags>
 constexpr auto
-maybe_vec_nullopt() -> basic_vec<T, flags>;
+maybe_vec_nullopt() noexcept(false) -> basic_vec<T, flags>;
 }  // namespace detail
 
 inline namespace manual {
@@ -126,10 +126,18 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       "`inline_storage()` and `initial_growth()` cannot be combined!"
    );
 
+   // Moving inline storage relocates the elements, which may throw.
+   static constexpr bool is_nothrow_relocatable =
+      !detail::vec_storage<T, flags>::is_inline
+      || is_nothrow_move_constructible<T>;
+
  public:
    constexpr basic_vec() = default;
 
-   constexpr basic_vec(basic_vec&& other) {
+   // Moving a `vec` relocates its elements when they are stored inline.
+   constexpr basic_vec(basic_vec&& other) noexcept(
+      is_nothrow_relocatable && !__has_feature(cxx_exceptions)
+   ) {
       other.annotate_size_change(other.size(), other.capacity());
       move_from(other);
       annotate_size_change(capacity(), size());
@@ -140,13 +148,15 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
               "`.clone()` or move instead!");
 
    auto
-   operator=(basic_vec const&)
+   operator=(basic_vec const&) noexcept(!__has_feature(cxx_exceptions))
       -> basic_vec& = delete ("Implicit copying of `cat::basic_vec` is "
                               "forbidden. Call `.clone()` or move instead!");
 
    [[clang::reinitializes]]
    constexpr auto
-   operator=(basic_vec&& other) -> basic_vec& {
+   operator=(basic_vec&& other) noexcept(
+      !__has_feature(cxx_exceptions) && is_nothrow_relocatable
+   ) -> basic_vec& {
       if (this == &other) {
          return *this;
       }
@@ -201,7 +211,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    }
 
    constexpr void
-   swap(basic_vec& other) {
+   swap(basic_vec& other) noexcept(
+      is_nothrow_relocatable && !__has_feature(cxx_exceptions)
+   ) {
       basic_vec temporary(move(*this));
       *this = move(other);
       other = move(temporary);
@@ -218,44 +230,190 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       }
    }
 
-   // Move the contents of `this` into `p_destination`.
-   constexpr void
-   relocate_elements_to(T* _Nonnull p_destination) {
+   // Destroy `count` elements from `p_first` in reverse order, to unwind a
+   // partially-constructed range.
+   static constexpr void
+   destroy_backward(T* _Nonnull p_first, idx count) {
+      if constexpr (!is_trivially_destructible<T>) {
+         while (count > 0u) {
+            count = idx(count - 1u);
+            p_first[count].~T();
+         }
+      }
+   }
+
+   // The argument a relocation constructs an element from. With exceptions, a
+   // throwing move constructor is avoided by copying instead, unless
+   // `is_move_only`.
+   template <bool is_move_only>
+   [[nodiscard]]
+   static constexpr auto
+   relocation_source(T& value) noexcept -> auto&& {
+      if constexpr (__has_feature(cxx_exceptions) && !is_move_only) {
+         return move_if_noexcept(value);
+      } else if constexpr (is_move_constructible<T>) {
+         return move(value);
+      } else {
+         return as_const(value);
+      }
+   }
+
+   // Relocate `count` elements from `p_source` into `p_destination`. Unless
+   // `is_move_only`, if a constructor throws then the source is unchanged and
+   // the destination is empty.
+   template <bool is_move_only = false>
+   static constexpr void
+   relocate(T* _Nonnull p_source, idx count, T* _Nonnull p_destination) {
       if !consteval {
          if constexpr (is_trivially_relocatable<T>) {
             // Dynamic vectorized copy of eligible types.
-            copy_memory(data(), p_destination, size() * sizeof(T));
+            copy_memory(p_source, p_destination, count * sizeof(T));
             return;
          }
       }
       // Other types get a potentially auto-vectorized loop for one platform.
-      for (idx i; i < size(); ++i) {
-         if constexpr (is_move_constructible<T>) {
-            new (p_destination + i) T(move(data()[i]));
-         } else {
-            new (p_destination + i) T(data()[i]);
+      idx constructed;
+      detail::exception_defer guard([&] {
+         destroy_backward(p_destination, constructed);
+      });
+      for (; constructed < count; ++constructed) {
+         new (p_destination + constructed)
+            T(relocation_source<is_move_only>(p_source[constructed]));
+      }
+      guard.commit();
+      if constexpr (!is_trivially_destructible<T>) {
+         for (idx i; i < count; ++i) {
+            p_source[i].~T();
          }
       }
-      destroy_range(0u, size());
    }
 
-   template <typename U>
-   constexpr void
-   write_growth_slot(idx index, idx old_size, U&& value) {
-      if (index < old_size) {
-         data()[index] = $fwd(value);
+   // Construct `count` elements at `p_first`, the `i`th from `make(i)`. If a
+   // constructor throws, the elements already built are destroyed.
+   template <typename Make>
+   static constexpr void
+   construct_n(T* _Nonnull p_first, idx count, Make&& make) {
+      idx constructed;
+      detail::exception_defer guard([&] {
+         destroy_backward(p_first, constructed);
+      });
+      for (; constructed < count; ++constructed) {
+         new (p_first + constructed) T(make(constructed));
+      }
+      guard.commit();
+   }
+
+   // Read the `i`th element of a contiguous `range`, moving it if `range`
+   // yields r-values.
+   template <typename Range>
+   [[nodiscard]]
+   static constexpr auto
+   range_element(auto& range, idx i) noexcept -> decltype(auto) {
+      if constexpr (is_rvalue_reference<iterable_element_type<Range>>) {
+         return move(range.data()[i]);
       } else {
-         new (data() + index) T($fwd(value));
+         return range.data()[i];
       }
    }
 
+   // Construct one element at the end. If its constructor throws, this `vec`
+   // is unchanged.
+   template <typename... Args>
+   constexpr auto
+   construct_back(Args&&... arguments) -> T& {
+      idx const old_size = size();
+      annotate_size_change(old_size, old_size + 1u);
+      detail::exception_defer guard([&] {
+         annotate_size_change(old_size + 1u, old_size);
+      });
+      T* _Nonnull const p_slot = data() + old_size;
+      new (p_slot) T($fwd(arguments)...);
+      guard.commit();
+      m_storage.set_size(old_size + 1u);
+      return *p_slot;
+   }
+
+   // Construct elements in `[size(), new_size)` from `make(i)`, where `i`
+   // counts from `0`. If any constructor throws, this `vec` is unchanged.
+   template <typename Make>
    constexpr void
-   shift_tail_right(idx position, idx count, idx old_size) {
-      for (idx i = old_size; i > position; i = idx(i - 1u)) {
-         idx const destination = idx(i + count - 1u);
-         idx const source = idx(i - 1u);
-         write_growth_slot(destination, old_size, move(data()[source]));
+   construct_tail(idx new_size, Make&& make) {
+      idx const old_size = size();
+      annotate_size_change(old_size, new_size);
+      detail::exception_defer guard([&] {
+         annotate_size_change(new_size, old_size);
+      });
+      construct_n(data() + old_size, idx(new_size - old_size), make);
+      guard.commit();
+      m_storage.set_size(new_size);
+   }
+
+   // Shift `[first, size())` to start at `destination`. Elements landing past
+   // the end are move-constructed and owned immediately, and the rest are
+   // move-assigned backwards.
+   constexpr void
+   move_range(idx first, idx destination) {
+      idx const old_size = size();
+      idx const assigned = idx(old_size - destination);
+      construct_tail(idx(old_size + destination - first), [&](idx i) -> T&& {
+         return move(data()[first + assigned + i]);
+      });
+      for (idx i = assigned; i > 0u; i = idx(i - 1u)) {
+         data()[idx(destination + i - 1u)] = move(data()[idx(first + i - 1u)]);
       }
+   }
+
+   // Reverse `[first, last)` in place.
+   constexpr void
+   reverse_range(idx first, idx last) {
+      while (first < last) {
+         last = idx(last - 1u);
+         if (first == last) {
+            break;
+         }
+         cat::swap(data()[first], data()[last]);
+         ++first;
+      }
+   }
+
+   // Insert `count` elements before `position`, the `i`th from `make(i)`. With
+   // spare capacity, this has the basic guarantee. Otherwise, it reallocates
+   // around the new elements.
+   template <is_allocator Allocator, typename Make>
+   constexpr auto
+   insert_n(
+      allocator_ref<Allocator> allocator, idx position, idx count, Make&& make
+   ) -> maybe<void> {
+      idx const old_size = size();
+      if (count > capacity() - old_size) {
+         auto fill = [&](T* _Nonnull p_gap) {
+            construct_n(p_gap, count, make);
+         };
+         return reallocate(
+            allocator, recommend_capacity(old_size + count), position, count,
+            fill
+         );
+      }
+
+      // Construct the elements which land past the end first, so that every
+      // constructed element is immediately owned.
+      idx const after = idx(old_size - position);
+      idx assigned = count;
+      if (count > after) {
+         construct_tail(
+            idx(old_size + count - after), [&](idx i) -> decltype(auto) {
+               return make(after + i);
+            }
+         );
+         assigned = after;
+      }
+      if (after > 0u) {
+         move_range(position, position + count);
+         for (idx i; i < assigned; ++i) {
+            data()[position + i] = make(i);
+         }
+      }
+      return monostate;
    }
 
    // Move the contents of `other` into `this`.
@@ -270,10 +428,10 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
             m_storage.m_handle.set_inlined(true);
             m_storage.m_handle.set_count(other_capacity);
             m_storage.m_has_handle = true;
-            m_storage.set_layout(
-               m_storage.m_handle.get_inline_ptr(), other_size, other_capacity
-            );
-            other.relocate_elements_to(data());
+            // Only publish the elements once they have all been relocated.
+            T* _Nonnull const p_inline = m_storage.m_handle.get_inline_ptr();
+            relocate<true>(other.data(), other_size, p_inline);
+            m_storage.set_layout(p_inline, other_size, other_capacity);
             other.m_storage.disarm_inline();
             other.m_storage.set_layout(nullptr, 0u, 0u);
             return;
@@ -324,45 +482,138 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       );
    }
 
-   // Reallocate this `vec`'s memory if it is exceeded, in a non-`constexpr`
-   // context.
-   template <is_allocator Allocator>
+   // Geometric growth to hold at least `minimum_capacity` elements.
+   [[nodiscard]]
    constexpr auto
-   increase_storage(allocator_ref<Allocator> allocator) -> maybe<void> {
+   recommend_capacity(idx minimum_capacity) const -> idx {
       constexpr idx configured_initial_capacity =
          flags.initial_growth_count == 0u ? 4u : flags.initial_growth_count;
       constexpr idx initial_capacity = detail::vec_storage<T, flags>::is_inline
                                           ? flags.inline_storage_count
                                           : configured_initial_capacity;
-      idx const minimum_capacity = max(capacity() * 2u, initial_capacity);
+      return max(max(capacity() * 2u, initial_capacity), minimum_capacity);
+   }
 
-      return reserve(allocator, minimum_capacity);
+   // Relocate this `vec` into `p_new`, opening a gap of `gap_count` slots at
+   // `gap_position` which `fill_gap(p_gap)` constructs, and calling `release()`
+   // if that throws. The gap is filled before any element moves, so
+   // `fill_gap` may read this `vec`, then the suffix and the prefix are
+   // relocated around it. This has the strong
+   // guarantee when the gap is at the end, and the basic guarantee otherwise.
+   template <typename Fill, typename Release>
+   constexpr void
+   relocate_around_gap(
+      T* _Nonnull p_new, idx gap_position, idx gap_count, Fill& fill_gap,
+      Release const& release
+   ) {
+      idx const old_size = size();
+      idx const old_capacity = capacity();
+      idx const suffix_size = idx(old_size - gap_position);
+      T* _Nonnull const p_suffix = p_new + gap_position + gap_count;
+
+      // This is declared first so that it runs last.
+      detail::exception_defer release_guard([&] {
+         release();
+      });
+      fill_gap(p_new + gap_position);
+
+      idx relocated_suffix = 0u;
+      annotate_size_change(old_size, old_capacity);
+      detail::exception_defer guard([&] {
+         destroy_backward(p_suffix, relocated_suffix);
+         destroy_backward(p_new + gap_position, gap_count);
+         m_storage.set_size(idx(old_size - relocated_suffix));
+         annotate_size_change(old_capacity, size());
+      });
+      if (data() != nullptr) {
+         relocate(data() + gap_position, suffix_size, p_suffix);
+         relocated_suffix = suffix_size;
+         relocate(data(), gap_position, p_new);
+      }
+      guard.commit();
+      release_guard.commit();
+   }
+
+   // Move this `vec` into new storage for at least `minimum_capacity`
+   // elements around a gap, as described by `relocate_around_gap()`.
+   template <is_allocator Allocator, typename Fill>
+   constexpr auto
+   reallocate(
+      allocator_ref<Allocator> allocator, idx minimum_capacity,
+      idx gap_position, idx gap_count, Fill& fill_gap
+   ) -> maybe<void> {
+      idx const old_capacity = capacity();
+      idx const new_size = size() + gap_count;
+      // Allocate manually because unused capacity must remain uninitialized.
+      if constexpr (detail::vec_storage<T, flags>::is_inline) {
+         auto [new_handle, allocation_bytes] = $prop(
+            (allocator.template inline_salloc_multi_uninit<
+               T, flags.inline_storage_count * sizeof(T)>(minimum_capacity))
+         );
+         relocate_around_gap(
+            allocator.get(new_handle).data(), gap_position, gap_count, fill_gap,
+            [&] {
+               allocator.free_uninit(new_handle);
+            }
+         );
+
+         if (m_storage.m_has_handle) {
+            free_inline_storage(allocator);
+         }
+
+         m_storage.m_handle = move(new_handle);
+         m_storage.m_has_handle = true;
+         m_storage.set_layout(
+            allocator.get(m_storage.m_handle).data(), new_size,
+            allocation_bytes / sizeof(T)
+         );
+      } else {
+         auto [alloc_span, alloc_bytes] =
+            $prop(allocator.template salloc_multi_uninit<T>(minimum_capacity));
+         relocate_around_gap(
+            alloc_span.data(), gap_position, gap_count, fill_gap, [&] {
+               allocator.free_multi_uninit(
+                  span<T>(alloc_span.data(), alloc_bytes / sizeof(T))
+               );
+            }
+         );
+
+         if (data() != nullptr) {
+            allocator.free_multi_uninit(span<T>(data(), old_capacity));
+         }
+
+         m_storage.set_layout(
+            alloc_span.data(), new_size, alloc_bytes / sizeof(T)
+         );
+      }
+      annotate_size_change(capacity(), new_size);
+      return monostate;
    }
 
  public:
    // Returns `nullptr` when this `vec` is default-constructed or moved-from.
    [[nodiscard]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> T* _Nullable {
+   data() noexcept [[clang::lifetimebound]] -> T* _Nullable {
       return m_storage.data();
    }
 
    // Returns `nullptr` when this `vec` is default-constructed or moved-from.
    [[nodiscard]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> T const* _Nullable {
+   data() const noexcept [[clang::lifetimebound]] -> T const* _Nullable {
       return m_storage.data();
    }
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_storage.size();
    }
 
    [[nodiscard]]
    constexpr auto
-   capacity() const -> idx {
+   capacity() const noexcept -> idx {
       return m_storage.capacity();
    }
 
@@ -371,7 +622,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // deallocated separately through `.free(allocator)`.
    [[clang::reinitializes]]
    constexpr void
-   reset()
+   reset() noexcept
       requires(!flags.is_fixed_size)
    {
       destroy_range(0u, size());
@@ -449,10 +700,24 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
       [[maybe_unused]] auto [alloc_span, alloc_bytes] =
          $prop(internal_allocate(allocator, fixed_size));
-      m_storage.set_layout(alloc_span.data(), fixed_size, fixed_size);
-      for (idx index; index < fixed_size; ++index) {
-         new (data() + index) T();
+      idx constructed;
+      detail::exception_defer guard([&] {
+         for (idx i; i < constructed; ++i) {
+            alloc_span.data()[i].~T();
+         }
+         if constexpr (detail::vec_storage<T, flags>::is_inline) {
+            free_inline_storage(allocator);
+         } else {
+            allocator.free_multi_uninit(
+               span<T>(alloc_span.data(), alloc_bytes / sizeof(T))
+            );
+         }
+      });
+      for (; constructed < fixed_size; ++constructed) {
+         new (alloc_span.data() + constructed) T();
       }
+      guard.commit();
+      m_storage.set_layout(alloc_span.data(), fixed_size, fixed_size);
       return monostate;
    }
 
@@ -465,47 +730,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       requires(!flags.is_fixed_size)
    {
       if (minimum_capacity > capacity()) {
-         idx const old_size = size();
-         idx const old_capacity = capacity();
-         // Allocate manually because only `old_size` elements are live within
-         // `old_capacity`, and unused capacity must remain uninitialized.
-         if constexpr (detail::vec_storage<T, flags>::is_inline) {
-            auto [new_handle, allocation_bytes] = $prop(
-               (allocator.template inline_salloc_multi_uninit<
-                  T, flags.inline_storage_count * sizeof(T)>(minimum_capacity))
-            );
-
-            T* _Nonnull const p_new = allocator.get(new_handle).data();
-            annotate_size_change(old_size, old_capacity);
-            relocate_elements_to(p_new);
-
-            if (m_storage.m_has_handle) {
-               free_inline_storage(allocator);
-            }
-
-            m_storage.m_handle = move(new_handle);
-            m_storage.m_has_handle = true;
-            m_storage.set_layout(
-               allocator.get(m_storage.m_handle).data(), old_size,
-               allocation_bytes / sizeof(T)
-            );
-         } else {
-            auto [alloc_span, alloc_bytes] = $prop(
-               allocator.template salloc_multi_uninit<T>(minimum_capacity)
-            );
-
-            annotate_size_change(old_size, old_capacity);
-            relocate_elements_to(alloc_span.data());
-
-            if (data() != nullptr) {
-               allocator.free_multi_uninit(span<T>(data(), old_capacity));
-            }
-
-            m_storage.set_layout(
-               alloc_span.data(), old_size, alloc_bytes / sizeof(T)
-            );
-         }
-         annotate_size_change(capacity(), old_size);
+         auto fill = [](T* _Nonnull) {
+         };
+         $prop(this->reallocate(allocator, minimum_capacity, size(), 0u, fill));
       }
 
       // If the new capacity is not larger, do nothing.
@@ -529,23 +756,25 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    resize(allocator_ref<Allocator> allocator, idx size) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
-      if (size > capacity()) {
-         // This sets `this->current_capacity` and `this->p_storage`.
-         $prop(this->reserve(allocator, size));
-      }
-
       idx const old_size = this->size();
-      if (size > old_size) {
-         annotate_size_change(old_size, size);
-         for (idx i = old_size; i < size; ++i) {
-            new (data() + i) T();
-         }
+      auto make = [](idx) {
+         return T();
+      };
+      if (size > capacity()) {
+         auto fill = [&](T* _Nonnull p_gap) {
+            construct_n(p_gap, idx(size - old_size), make);
+         };
+         $prop(this->reallocate(
+            allocator, recommend_capacity(size), old_size, idx(size - old_size),
+            fill
+         ));
+      } else if (size > old_size) {
+         construct_tail(size, make);
       } else if (size < old_size) {
          destroy_range(size, old_size);
          annotate_size_change(old_size, size);
+         m_storage.set_size(size);
       }
-
-      m_storage.set_size(size);
       return monostate;
    }
 
@@ -568,21 +797,27 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       -> maybe<void>
       requires(!flags.is_fixed_size)
    {
+      idx const old_size = this->size();
+      auto make = [&](idx) -> T const& {
+         return value;
+      };
       if (size > capacity()) {
-         $prop(this->reserve(allocator, size));
+         // `value` may refer to an element of this `vec`, which is still alive
+         // while the gap is filled.
+         auto fill = [&](T* _Nonnull p_gap) {
+            construct_n(p_gap, idx(size - old_size), make);
+         };
+         $prop(this->reallocate(
+            allocator, recommend_capacity(size), old_size, idx(size - old_size),
+            fill
+         ));
+      } else if (size > old_size) {
+         construct_tail(size, make);
+      } else if (size < old_size) {
+         destroy_range(size, old_size);
+         annotate_size_change(old_size, size);
+         m_storage.set_size(size);
       }
-
-      if (size > this->size()) {
-         annotate_size_change(this->size(), size);
-         for (idx i = this->size(); i < size; ++i) {
-            new (data() + i) T(value);
-         }
-      } else if (size < this->size()) {
-         destroy_range(size, this->size());
-         annotate_size_change(this->size(), size);
-      }
-
-      m_storage.set_size(size);
       return monostate;
    }
 
@@ -624,8 +859,13 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       }
       idx const old_size = size();
       replacement.annotate_size_change(0u, old_size);
+      detail::exception_defer guard([&] {
+         replacement.annotate_size_change(old_size, 0u);
+         replacement.free(allocator);
+      });
+      relocate(data(), old_size, replacement.data());
+      guard.commit();
       replacement.m_storage.set_size(old_size);
-      relocate_elements_to(replacement.data());
       m_storage.set_size(0u);
       free(allocator);
       *this = move(replacement);
@@ -649,15 +889,26 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       vec<T, flags> new_vector;
       if constexpr (flags.is_fixed_size) {
          $prop(new_vector.initialize_fixed(allocator, capacity()));
+         detail::exception_defer guard([&] {
+            new_vector.free(allocator);
+         });
          for (idx i; i < size(); ++i) {
             new_vector[i] = data()[i];
          }
+         guard.commit();
       } else {
          $prop(new_vector.reserve(allocator, max(capacity(), 4u)));
+         idx constructed;
          new_vector.annotate_size_change(0u, size());
-         for (idx i; i < size(); ++i) {
-            new (new_vector.data() + i) T(data()[i]);
+         detail::exception_defer guard([&] {
+            new_vector.annotate_size_change(size(), constructed);
+            new_vector.m_storage.set_size(constructed);
+            new_vector.free(allocator);
+         });
+         for (; constructed < size(); ++constructed) {
+            new (new_vector.data() + constructed) T(data()[constructed]);
          }
+         guard.commit();
          new_vector.m_storage.set_size(size());
       }
 
@@ -678,14 +929,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    push_back(allocator_ref<Allocator> allocator, T const& value) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
-      if (size() + 1 > capacity()) {
-         $prop(this->increase_storage(allocator));
+      if (this->emplace_back(allocator, value).is_empty()) {
+         return nullopt;
       }
-
-      idx const old_size = size();
-      annotate_size_change(old_size, old_size + 1u);
-      new (data() + old_size) T(value);
-      m_storage.set_size(old_size + 1u);
       return monostate;
    }
 
@@ -696,14 +942,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    push_back(allocator_ref<Allocator> allocator, T&& value) -> maybe<void>
       requires(!flags.is_fixed_size)
    {
-      if (size() + 1 > capacity()) {
-         $prop(this->increase_storage(allocator));
+      if (this->emplace_back(allocator, move(value)).is_empty()) {
+         return nullopt;
       }
-
-      idx const old_size = size();
-      annotate_size_change(old_size, old_size + 1u);
-      new (data() + old_size) T(move(value));
-      m_storage.set_size(old_size + 1u);
       return monostate;
    }
 
@@ -749,16 +990,19 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       [[clang::lifetimebound]] -> maybe<T&>
       requires(!flags.is_fixed_size)
    {
-      if (size() + 1 > capacity()) {
-         $prop(this->increase_storage(allocator));
-      }
-
       idx const old_size = size();
-      annotate_size_change(old_size, old_size + 1u);
-      T* _Nonnull const p_slot = data() + old_size;
-      new (p_slot) T($fwd(arguments)...);
-      m_storage.set_size(old_size + 1u);
-      return *p_slot;
+      if (old_size == capacity()) [[unlikely]] {
+         // Construct the new element in new storage before relocating,
+         // because `arguments` may refer to an element of this `vec`.
+         auto fill = [&](T* _Nonnull p_gap) {
+            new (p_gap) T($fwd(arguments)...);
+         };
+         $prop(this->reallocate(
+            allocator, recommend_capacity(old_size + 1u), old_size, 1u, fill
+         ));
+         return data()[old_size];
+      }
+      return construct_back($fwd(arguments)...);
    }
 
    template <typename... Args>
@@ -783,8 +1027,8 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
          return nullopt;
       }
       idx const new_size = idx(size() - 1u);
-      m_storage.set_size(new_size);
       T result = move(data()[new_size]);
+      m_storage.set_size(new_size);
       destroy_range(new_size, new_size + 1u);
       annotate_size_change(new_size + 1u, new_size);
       return result;
@@ -794,7 +1038,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // capacity is unchanged. Equivalent to `.reset()`, named for std parity.
    [[clang::reinitializes]]
    constexpr void
-   clear()
+   clear() noexcept
       requires(!flags.is_fixed_size)
    {
       reset();
@@ -802,7 +1046,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
    // Remove the element at `index`, shifting subsequent elements left.
    constexpr void
-   erase(idx index)
+   erase(idx index) noexcept(false)
       requires(is_assignable<T&, T&&> && !flags.is_fixed_size)
    {
       cat::assert(index < size());
@@ -819,7 +1063,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // Remove the elements in the half-open range `[start, end)`, shifting
    // subsequent elements left.
    constexpr void
-   erase(idx start, idx end)
+   erase(idx start, idx end) noexcept(false)
       requires(is_assignable<T&, T&&> && !flags.is_fixed_size)
    {
       cat::assert(start <= end);
@@ -883,18 +1127,20 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
          return monostate;
       }
 
-      $prop(this->reserve(allocator, size() + count));
-
-      // Move or copy `range` to the end.
-      if constexpr (is_rvalue_reference<iterable_element_type<Range>>) {
-         for (idx i = 0u; i < count; ++i) {
-            $prop(this->push_back(allocator, move(range.data()[i])));
-         }
-      } else {
-         for (idx i = 0u; i < count; ++i) {
-            $prop(this->push_back(allocator, range.data()[i]));
-         }
+      idx const old_size = size();
+      auto make = [&](idx i) -> decltype(auto) {
+         return range_element<Range>(range, i);
+      };
+      if (count > capacity() - old_size) {
+         auto fill = [&](T* _Nonnull p_gap) {
+            construct_n(p_gap, count, make);
+         };
+         return this->reallocate(
+            allocator, recommend_capacity(old_size + count), old_size, count,
+            fill
+         );
       }
+      construct_tail(old_size + count, make);
       return monostate;
    }
 
@@ -909,7 +1155,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    constexpr auto
    append_range(allocator_ref<Allocator> allocator, Iterable&& range)
       -> maybe<void> {
-      $prop(this->reserve(allocator, size() + idx(range.size())));
+      $prop(this->reserve(
+         allocator, recommend_capacity(size() + idx(range.size()))
+      ));
 
       // Append each element.
       maybe<void> result = monostate;
@@ -969,8 +1217,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       )
    [[nodiscard]]
    constexpr auto
-   insert_range(allocator_ref<Allocator> allocator, idx position, Range&& range)
-      -> maybe<void>
+   insert_range(
+      allocator_ref<Allocator> allocator, idx position, Range&& range
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void>
       requires(is_assignable<T&, T&&>)
    {
       cat::assert(position <= size());
@@ -1005,119 +1254,41 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       )
    [[nodiscard]]
    constexpr auto
-   insert_range(allocator_ref<Allocator> allocator, idx position, Range&& range)
-      -> maybe<void>
+   insert_range(allocator_ref<Allocator> allocator, idx position, Range&& range) noexcept(
+      !__has_feature(cxx_exceptions)
+      && is_nothrow_constructible<T, iterable_element_type<Range>>
+      && is_nothrow_assignable<T&, iterable_element_type<Range>>
+      && is_nothrow_move_constructible<T> && is_nothrow_move_assignable<T>
+   ) -> maybe<void>
       requires(is_assignable<T&, T&&>)
    {
       cat::assert(position <= size());
-
-      idx const range_size = idx(range.size());
-      if (range_size == 0u) {
-         return monostate;
-      }
-      idx const old_size = size();
-      idx const new_size = old_size + range_size;
-      $prop(this->reserve(allocator, new_size));
-      annotate_size_change(old_size, new_size);
-
-      shift_tail_right(position, range_size, old_size);
-
-      // Move or copy `range` into the gap.
-      if constexpr (is_rvalue_reference<iterable_element_type<Range>>) {
-         for (idx i = 0u; i < range_size; ++i) {
-            write_growth_slot(position + i, old_size, move(range.data()[i]));
+      return insert_n(
+         allocator, position, idx(range.size()), [&](idx i) -> decltype(auto) {
+            return range_element<Range>(range, i);
          }
-      } else {
-         for (idx i = 0u; i < range_size; ++i) {
-            write_growth_slot(position + i, old_size, range.data()[i]);
-         }
-      }
-
-      m_storage.set_size(new_size);
-      return monostate;
+      );
    }
 
-   // Insert every element of `range` before `position`.
+   // Insert every element of `range` before `position`. A single-pass range
+   // is appended and then rotated into place.
    template <is_allocator Allocator, is_iterable Iterable>
       requires(
          (!is_contiguous_iterable<Iterable>
           || !is_same<remove_cvref<decltype(*declval<Iterable&>().data())>, T>)
-         && has_size<Iterable> && is_assignable<T&, T&&> && !flags.is_fixed_size
+         && is_assignable<T&, T&&> && !flags.is_fixed_size
       )
    [[nodiscard]]
    constexpr auto
    insert_range(
       allocator_ref<Allocator> allocator, idx position, Iterable&& range
-   ) -> maybe<void> {
+   ) noexcept(false) -> maybe<void> {
       cat::assert(position <= size());
-      idx const count = idx(range.size());
-      if (count == 0u) {
-         return monostate;
-      }
       idx const old_size = size();
-      idx const new_size = old_size + count;
-      $prop(this->reserve(allocator, new_size));
-      annotate_size_change(old_size, new_size);
-
-      shift_tail_right(position, count, old_size);
-
-      // Write `range` into the gap.
-      idx i = position;
-      auto insert = [&](auto&& value) {
-         write_growth_slot(i, old_size, $fwd(value));
-         ++i;
-      };
-      cat::iterate(range).run_while([&](auto&& value) -> bool {
-         insert($fwd(value));
-         return true;
-      });
-      m_storage.set_size(new_size);
-      return monostate;
-   }
-
-   // Insert every element of `range` before `position`.
-   template <is_allocator Allocator, is_iterable Iterable>
-      requires(
-         (!is_contiguous_iterable<Iterable>
-          || !is_same<remove_cvref<decltype(*declval<Iterable&>().data())>, T>)
-         && !has_size<Iterable> && is_assignable<T&, T&&>
-         && !flags.is_fixed_size
-      )
-   [[nodiscard]]
-   constexpr auto
-   insert_range(
-      allocator_ref<Allocator> allocator, idx position, Iterable&& range
-   ) -> maybe<void> {
-      cat::assert(position <= size());
-
-      idx insertion_position = position;
-      maybe<void> result = monostate;
-
-      // Insert each element and grow as needed.
-      auto insert = [&](auto&& value) {
-         if (result.is_empty()) {
-            return;
-         }
-         idx const old_size = size();
-         if (old_size + 1u > capacity()) {
-            result = this->increase_storage(allocator);
-            if (result.is_empty()) {
-               return;
-            }
-         }
-
-         annotate_size_change(old_size, old_size + 1u);
-         shift_tail_right(insertion_position, 1u, old_size);
-         write_growth_slot(insertion_position, old_size, $fwd(value));
-         m_storage.set_size(old_size + 1u);
-         ++insertion_position;
-      };
-
-      cat::iterate(range).run_while([&](auto&& value) -> bool {
-         insert($fwd(value));
-         return true;
-      });
-
+      maybe<void> const result = this->append_range(allocator, $fwd(range));
+      reverse_range(position, old_size);
+      reverse_range(old_size, size());
+      reverse_range(position, size());
       return result;
    }
 
@@ -1143,7 +1314,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    constexpr auto
    replace_with_range(
       allocator_ref<Allocator> allocator, idx first, idx last, Range&& range
-   ) -> maybe<void>
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void>
       requires(is_assignable<T&, T&&>)
    {
       cat::assert(first <= last);
@@ -1188,59 +1359,36 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       )
    [[nodiscard]]
    constexpr auto
-   replace_with_range(
-      allocator_ref<Allocator> allocator, idx first, idx last, Range&& range
+   replace_with_range(allocator_ref<Allocator> allocator, idx first, idx last, Range&& range) noexcept(
+      !__has_feature(cxx_exceptions)
+      && is_nothrow_constructible<T, iterable_element_type<Range>>
+      && is_nothrow_assignable<T&, iterable_element_type<Range>>
+      && is_nothrow_move_constructible<T> && is_nothrow_move_assignable<T>
    ) -> maybe<void>
       requires(is_assignable<T&, T&&>)
    {
       cat::assert(first <= last);
       cat::assert(last <= size());
       idx const count = idx(range.size());
-      idx const old_size = size();
       idx const removed = idx(last - first);
-      idx const new_size = idx(old_size - removed + count);
-      idx const tail_size = idx(old_size - last);
-      $prop(this->reserve(allocator, new_size));
+      auto make = [&](idx i) -> decltype(auto) {
+         return range_element<Range>(range, i);
+      };
 
-      if (new_size > old_size) {
-         annotate_size_change(old_size, new_size);
+      // Assign over the replaced elements, then erase or insert the rest.
+      idx const overlap = min(count, removed);
+      for (idx i; i < overlap; ++i) {
+         data()[first + i] = make(i);
       }
-
-      // Move the existing tail.
-      if (count > removed) {
-         for (idx i = tail_size; i > 0u; i = idx(i - 1u)) {
-            idx const destination = idx(first + count + i - 1u);
-            idx const source = idx(last + i - 1u);
-            write_growth_slot(destination, old_size, move(data()[source]));
+      if (count < removed) {
+         erase(first + count, last);
+         return monostate;
+      }
+      return insert_n(
+         allocator, last, idx(count - removed), [&](idx i) -> decltype(auto) {
+            return make(removed + i);
          }
-      } else {
-         for (idx i = 0u; i < tail_size; ++i) {
-            data()[first + count + i] = move(data()[last + i]);
-         }
-      }
-
-      // Move or copy `range` into the gap.
-      if constexpr (is_rvalue_reference<iterable_element_type<Range>>) {
-         for (idx i = 0u; i < count; ++i) {
-            write_growth_slot(first + i, old_size, move(range.data()[i]));
-         }
-      } else {
-         for (idx i = 0u; i < count; ++i) {
-            write_growth_slot(first + i, old_size, range.data()[i]);
-         }
-      }
-
-      // Destroy removed trailing elements.
-      if (new_size < old_size) {
-         destroy_range(new_size, old_size);
-      }
-
-      if (new_size <= old_size) {
-         annotate_size_change(old_size, new_size);
-      }
-
-      m_storage.set_size(new_size);
-      return monostate;
+      );
    }
 
    // Replace `[first, last)` with every element of `range`.
@@ -1286,7 +1434,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // by the address space rather than any allocator's actual ceiling.
    [[nodiscard]]
    static constexpr auto
-   max_size() -> idx {
+   max_size() noexcept -> idx {
       return idx::max() / sizeof(T);
    }
 

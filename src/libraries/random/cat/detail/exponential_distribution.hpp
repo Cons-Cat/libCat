@@ -43,55 +43,59 @@ class exponential_distribution {
     public:
       using distribution_type = exponential_distribution;
 
-      constexpr explicit param_type(Float lambda = 1.f) : m_lambda(lambda) {
+      constexpr explicit param_type(Float lambda = 1.f) noexcept
+          : m_lambda(lambda) {
       }
 
       constexpr auto
-      lambda() const -> Float {
+      lambda() const noexcept -> Float {
          return m_lambda;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       Float m_lambda;
    };
 
-   constexpr explicit exponential_distribution(Float lambda = 1.f)
+   constexpr explicit exponential_distribution(Float lambda = 1.f) noexcept
        : m_parameter(lambda) {
    }
 
-   constexpr explicit exponential_distribution(param_type const& parameter)
+   constexpr explicit exponential_distribution(
+      param_type const& parameter
+   ) noexcept
        : m_parameter(parameter) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    constexpr auto
-   lambda() const -> Float {
+   lambda() const noexcept -> Float {
       return m_parameter.lambda();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameter;
    }
 
    constexpr void
-   param(param_type const& parameter) {
+   param(param_type const& parameter) noexcept {
       m_parameter = parameter;
    }
 
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0.f;
    }
 
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return limits<Float>::infinity();
    }
 

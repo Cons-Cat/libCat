@@ -4,7 +4,8 @@
 // is not mounted, `mfile`/`nfile` at the fd limit, `nomem`, or `intr` on
 // signal interruption. Malformed output aborts via `assert`, not `scaredy`.
 auto
-nix::read_self_statm() -> cat::scaredy<nix::statm, nix::linux_error> {
+nix::read_self_statm() noexcept(!__has_feature(cxx_exceptions))
+   -> cat::scaredy<nix::statm, nix::linux_error> {
    nix::file_descriptor fd =
       $prop(nix::sys_open("/proc/self/statm", nix::open_mode::read_only));
 

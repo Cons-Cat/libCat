@@ -16,7 +16,7 @@ namespace x64 {
 // https://github.com/systemd/systemd/issues/11810#issuecomment-489727505
 [[nodiscard, gnu::always_inline]]
 inline auto
-rdrand() -> cat::maybe<cat::uint8> {
+rdrand() noexcept(!__has_feature(cxx_exceptions)) -> cat::maybe<cat::uint8> {
    if ((cpuid(1u)[2] & (1u << 30u)) == 0u) {
       return cat::nullopt;
    }
@@ -44,14 +44,14 @@ class rdrand_engine {
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0u;
    }
 
    // https://www.felixcloutier.com/x86/rdrand
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 };

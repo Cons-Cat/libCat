@@ -9,7 +9,7 @@ class random_batch_access {
    template <typename Abi, typename Generator>
    [[nodiscard]]
    static constexpr auto
-   exact(Generator& generator)
+   exact(Generator& generator) noexcept
       -> decltype(generator.template generate_exact_batch<Abi>()) {
       return generator.template generate_exact_batch<Abi>();
    }
@@ -17,7 +17,7 @@ class random_batch_access {
    template <typename Abi, idx chain_count, typename Generator>
    [[nodiscard]]
    static constexpr auto
-   exact_bulk(Generator const& generator)
+   exact_bulk(Generator const& generator) noexcept
       -> decltype(generator
                      .template make_exact_bulk_session<Abi, chain_count>()) {
       return generator.template make_exact_bulk_session<Abi, chain_count>();
@@ -26,7 +26,7 @@ class random_batch_access {
    template <typename Abi, typename Generator>
    [[nodiscard]]
    static constexpr auto
-   relaxed(Generator const& generator)
+   relaxed(Generator const& generator) noexcept
       -> decltype(generator.template make_relaxed_session<Abi>()) {
       return generator.template make_relaxed_session<Abi>();
    }
@@ -34,7 +34,7 @@ class random_batch_access {
    template <typename Abi, typename Generator>
    [[nodiscard]]
    static constexpr auto
-   relaxed_threshold()
+   relaxed_threshold() noexcept
       -> decltype(Generator::template relaxed_threshold<Abi>()) {
       return Generator::template relaxed_threshold<Abi>();
    }
@@ -43,7 +43,7 @@ class random_batch_access {
 template <typename Abi, typename Generator>
 [[nodiscard]]
 constexpr auto
-generate_exact_random_batch(Generator& generator)
+generate_exact_random_batch(Generator& generator) noexcept
    -> decltype(random_batch_access::exact<Abi>(generator)) {
    return random_batch_access::exact<Abi>(generator);
 }
@@ -51,7 +51,7 @@ generate_exact_random_batch(Generator& generator)
 template <typename Abi, idx chain_count, typename Generator>
 [[nodiscard]]
 constexpr auto
-make_exact_random_bulk_session(Generator const& generator)
+make_exact_random_bulk_session(Generator const& generator) noexcept
    -> decltype(random_batch_access::exact_bulk<Abi, chain_count>(generator)) {
    return random_batch_access::exact_bulk<Abi, chain_count>(generator);
 }
@@ -59,7 +59,7 @@ make_exact_random_bulk_session(Generator const& generator)
 template <typename Abi, typename Generator>
 [[nodiscard]]
 constexpr auto
-make_relaxed_random_bulk_session(Generator const& generator)
+make_relaxed_random_bulk_session(Generator const& generator) noexcept
    -> decltype(random_batch_access::relaxed<Abi>(generator)) {
    return random_batch_access::relaxed<Abi>(generator);
 }
@@ -67,7 +67,7 @@ make_relaxed_random_bulk_session(Generator const& generator)
 template <typename Abi, typename Generator>
 [[nodiscard]]
 constexpr auto
-relaxed_random_bulk_threshold()
+relaxed_random_bulk_threshold() noexcept
    -> decltype(random_batch_access::relaxed_threshold<Abi, Generator>()) {
    return random_batch_access::relaxed_threshold<Abi, Generator>();
 }
@@ -77,7 +77,7 @@ class distribution_batch_access {
    template <typename Distribution>
    [[nodiscard]]
    static constexpr auto
-   available(Distribution const& distribution) -> bool {
+   available(Distribution const& distribution) noexcept -> bool {
       if constexpr (requires { distribution.batch_available(); }) {
          return distribution.batch_available();
       } else {
@@ -89,7 +89,8 @@ class distribution_batch_access {
 template <typename Distribution>
 [[nodiscard]]
 constexpr auto
-distribution_batch_available(Distribution const& distribution) -> bool {
+distribution_batch_available(Distribution const& distribution) noexcept
+   -> bool {
    return distribution_batch_access::available(distribution);
 }
 

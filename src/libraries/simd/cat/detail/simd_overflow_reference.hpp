@@ -25,7 +25,7 @@ class simd_overflow_reference
    friend struct ::cat::formatter;
 
  public:
-   constexpr explicit simd_overflow_reference(wrapper_type& w)
+   constexpr explicit simd_overflow_reference(wrapper_type& w) noexcept
        : m_wrapped(addressof(w)) {
    }
 
@@ -40,20 +40,20 @@ class simd_overflow_reference
    // Assign through to the referenced vector.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(wrapper_type const& value) -> simd_overflow_reference& {
+   operator=(wrapper_type const& value) noexcept -> simd_overflow_reference& {
       *m_wrapped = value;
       return *this;
    }
 
    // Rebind this reference wrapper to a different address.
    constexpr void
-   rebind(wrapper_type& w [[clang::lifetime_capture_by_this]]) {
+   rebind(wrapper_type& w [[clang::lifetime_capture_by_this]]) noexcept {
       m_wrapped = addressof(w);
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(wrapper_type const& rhs) const -> wrapper_type {
+   add(wrapper_type const& rhs) const noexcept -> wrapper_type {
       return simd_integral_add_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
@@ -67,7 +67,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(wrapper_type const& rhs) const -> wrapper_type {
+   subtract_by(wrapper_type const& rhs) const noexcept -> wrapper_type {
       return simd_integral_sub_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
@@ -81,7 +81,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(wrapper_type const& lhs) const -> wrapper_type {
+   subtract_from(wrapper_type const& lhs) const noexcept -> wrapper_type {
       return simd_integral_sub_policy<T, Abi, semantics>(lhs, *m_wrapped);
    }
 
@@ -95,7 +95,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(wrapper_type const& rhs) const -> wrapper_type {
+   multiply(wrapper_type const& rhs) const noexcept -> wrapper_type {
       return simd_integral_mul_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
@@ -109,7 +109,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(wrapper_type const& rhs) const -> wrapper_type {
+   divide_by(wrapper_type const& rhs) const noexcept -> wrapper_type {
       return simd_integral_div_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
@@ -123,7 +123,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(wrapper_type const& lhs) const -> wrapper_type {
+   divide_into(wrapper_type const& lhs) const noexcept -> wrapper_type {
       return simd_integral_div_policy<T, Abi, semantics>(lhs, *m_wrapped);
    }
 
@@ -137,7 +137,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_by(wrapper_type const& rhs) const -> wrapper_type {
+   modulo_by(wrapper_type const& rhs) const noexcept -> wrapper_type {
       return simd_integral_mod_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
@@ -151,7 +151,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   modulo_into(wrapper_type const& lhs) const -> wrapper_type {
+   modulo_into(wrapper_type const& lhs) const noexcept -> wrapper_type {
       return simd_integral_mod_policy<T, Abi, semantics>(lhs, *m_wrapped);
    }
 
@@ -165,7 +165,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_by(wrapper_type const& rhs) const -> wrapper_type {
+   shift_left_by(wrapper_type const& rhs) const noexcept -> wrapper_type {
       return simd_integral_shl_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
@@ -179,7 +179,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_left_into(wrapper_type const& lhs) const -> wrapper_type {
+   shift_left_into(wrapper_type const& lhs) const noexcept -> wrapper_type {
       return simd_integral_shl_policy<T, Abi, semantics>(lhs, *m_wrapped);
    }
 
@@ -193,7 +193,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_by(wrapper_type const& rhs) const -> wrapper_type {
+   shift_right_by(wrapper_type const& rhs) const noexcept -> wrapper_type {
       return simd_integral_shr_policy<T, Abi, semantics>(*m_wrapped, rhs);
    }
 
@@ -207,7 +207,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   shift_right_into(wrapper_type const& lhs) const -> wrapper_type {
+   shift_right_into(wrapper_type const& lhs) const noexcept -> wrapper_type {
       return simd_integral_shr_policy<T, Abi, semantics>(lhs, *m_wrapped);
    }
 
@@ -221,7 +221,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_and(wrapper_type const& rhs) const -> wrapper_type {
+   bit_and(wrapper_type const& rhs) const noexcept -> wrapper_type {
       return wrapper_type(m_wrapped->raw & rhs.raw);
    }
 
@@ -235,7 +235,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_or(wrapper_type const& rhs) const -> wrapper_type {
+   bit_or(wrapper_type const& rhs) const noexcept -> wrapper_type {
       return wrapper_type(m_wrapped->raw | rhs.raw);
    }
 
@@ -249,7 +249,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_xor(wrapper_type const& rhs) const -> wrapper_type {
+   bit_xor(wrapper_type const& rhs) const noexcept -> wrapper_type {
       return wrapper_type(m_wrapped->raw ^ rhs.raw);
    }
 
@@ -263,7 +263,7 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   bit_complement() const -> wrapper_type
+   bit_complement() const noexcept -> wrapper_type
       requires(is_unsigned_integral<raw_arithmetic_type<T>>)
    {
       return wrapper_type(~m_wrapped->raw);
@@ -271,8 +271,9 @@ class simd_overflow_reference
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fma(wrapper_type const& multiplier, wrapper_type const& addend) const
-      -> wrapper_type {
+   fma(
+      wrapper_type const& multiplier, wrapper_type const& addend
+   ) const noexcept -> wrapper_type {
       return simd_integral_add_policy<T, Abi, semantics>(
          simd_integral_mul_policy<T, Abi, semantics>(*m_wrapped, multiplier),
          addend

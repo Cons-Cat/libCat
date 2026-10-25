@@ -33,7 +33,8 @@ class precision_reference {
    friend struct formatter;
 
  public:
-   constexpr explicit precision_reference(Float& w) : m_wrapped(addressof(w)) {
+   constexpr explicit precision_reference(Float& w) noexcept
+       : m_wrapped(addressof(w)) {
    }
 
    // P3207R0. This type is reference-like.
@@ -52,7 +53,7 @@ class precision_reference {
 
    // Rebind this reference wrapper to a different address.
    constexpr void
-   rebind(Float& w [[clang::lifetime_capture_by_this]]) {
+   rebind(Float& w [[clang::lifetime_capture_by_this]]) noexcept {
       m_wrapped = addressof(w);
    }
 
@@ -61,7 +62,8 @@ class precision_reference {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   view() const -> basic_float<raw_type, precision, quantity_reference> {
+   view() const noexcept
+      -> basic_float<raw_type, precision, quantity_reference> {
       return basic_float<raw_type, precision, quantity_reference>(
          m_wrapped->raw
       );
@@ -69,15 +71,16 @@ class precision_reference {
 
  public:
    constexpr auto
-   precise() & -> precision_reference<Float, precision_policies::precise> {
+   precise() & noexcept
+      -> precision_reference<Float, precision_policies::precise> {
       return precision_reference<Float, precision_policies::precise>(
          *m_wrapped
       );
    }
 
    constexpr auto
-   precise() const& -> precision_reference<
-      Float const, precision_policies::precise> {
+   precise() const& noexcept
+      -> precision_reference<Float const, precision_policies::precise> {
       return precision_reference<Float const, precision_policies::precise>(
          *m_wrapped
       );
@@ -85,7 +88,7 @@ class precision_reference {
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   precise() && -> basic_float<
+   precise() && noexcept -> basic_float<
       raw_type, precision_policies::precise, quantity_reference> {
       return basic_float<
          raw_type, precision_policies::precise, quantity_reference>(
@@ -94,12 +97,13 @@ class precision_reference {
    }
 
    constexpr auto
-   fast() & -> precision_reference<Float, precision_policies::fast> {
+   fast() & noexcept -> precision_reference<Float, precision_policies::fast> {
       return precision_reference<Float, precision_policies::fast>(*m_wrapped);
    }
 
    constexpr auto
-   fast() const& -> precision_reference<Float const, precision_policies::fast> {
+   fast() const& noexcept
+      -> precision_reference<Float const, precision_policies::fast> {
       return precision_reference<Float const, precision_policies::fast>(
          *m_wrapped
       );
@@ -107,8 +111,8 @@ class precision_reference {
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fast() && -> basic_float<
-      raw_type, precision_policies::fast, quantity_reference> {
+   fast() && noexcept
+      -> basic_float<raw_type, precision_policies::fast, quantity_reference> {
       return basic_float<
          raw_type, precision_policies::fast, quantity_reference>(
          m_wrapped->raw
@@ -118,7 +122,7 @@ class precision_reference {
    template <typename U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
-   operator U() const {
+   operator U() const noexcept {
       return static_cast<U>(view());
    }
 
@@ -126,15 +130,16 @@ class precision_reference {
       requires(is_safe_arithmetic_comparison<raw_type, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator<=>(U rhs) const {
+   operator<=>(U rhs) const noexcept {
       return view() <=> rhs;
    }
 
    template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator<=>(precision_reference<OtherFloat, other_precision> rhs) const
-      -> std::partial_ordering {
+   operator<=>(
+      precision_reference<OtherFloat, other_precision> rhs
+   ) const noexcept -> std::partial_ordering {
       return view() <=> rhs.view();
    }
 
@@ -142,7 +147,7 @@ class precision_reference {
       requires(is_safe_arithmetic_comparison<raw_type, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator==(precision_reference lhs, U rhs) -> bool {
+   operator==(precision_reference lhs, U rhs) noexcept -> bool {
       return lhs.view() == rhs;
    }
 
@@ -152,7 +157,7 @@ class precision_reference {
    operator==(
       precision_reference lhs,
       precision_reference<OtherFloat, other_precision> rhs
-   ) -> bool {
+   ) noexcept -> bool {
       return lhs.view() == rhs.view();
    }
 
@@ -160,7 +165,7 @@ class precision_reference {
       requires(is_safe_arithmetic_comparison<raw_type, U> && !is_const<Float>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U operand) -> precision_reference& {
+   operator=(U operand) noexcept -> precision_reference& {
       *m_wrapped = operand;
       return *this;
    }
@@ -169,14 +174,14 @@ class precision_reference {
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U other) const {
+   add(U other) const noexcept {
       return view().add(other);
    }
 
    template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(precision_reference<OtherFloat, other_precision> other) const {
+   add(precision_reference<OtherFloat, other_precision> other) const noexcept {
       return view().add(other.view());
    }
 
@@ -184,14 +189,16 @@ class precision_reference {
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(U operand) const {
+   subtract_by(U operand) const noexcept {
       return view().subtract_by(operand);
    }
 
    template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_by(precision_reference<OtherFloat, other_precision> operand) const {
+   subtract_by(
+      precision_reference<OtherFloat, other_precision> operand
+   ) const noexcept {
       return view().subtract_by(operand.view());
    }
 
@@ -203,7 +210,7 @@ class precision_reference {
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U operand) const {
+   subtract_from(U operand) const noexcept {
       return view().subtract_from(operand);
    }
 
@@ -211,14 +218,16 @@ class precision_reference {
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(U operand) const {
+   multiply(U operand) const noexcept {
       return view().multiply(operand);
    }
 
    template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   multiply(precision_reference<OtherFloat, other_precision> operand) const {
+   multiply(
+      precision_reference<OtherFloat, other_precision> operand
+   ) const noexcept {
       return view().multiply(operand.view());
    }
 
@@ -226,14 +235,16 @@ class precision_reference {
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(U operand) const {
+   divide_by(U operand) const noexcept {
       return view().divide_by(operand);
    }
 
    template <is_floating_point OtherFloat, precision_policies other_precision>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_by(precision_reference<OtherFloat, other_precision> operand) const {
+   divide_by(
+      precision_reference<OtherFloat, other_precision> operand
+   ) const noexcept {
       return view().divide_by(operand.view());
    }
 
@@ -241,7 +252,7 @@ class precision_reference {
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   divide_into(U operand) const {
+   divide_into(U operand) const noexcept {
       return view().divide_into(operand);
    }
 
@@ -254,7 +265,7 @@ class precision_reference {
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fma(U multiplier, V addend) const {
+   fma(U multiplier, V addend) const noexcept {
       return view().fma(multiplier, addend);
    }
 
@@ -264,7 +275,7 @@ class precision_reference {
                })
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+(precision_reference lhs, U&& rhs)
+   operator+(precision_reference lhs, U&& rhs) noexcept
       -> decltype(lhs.add(static_cast<U&&>(rhs))) {
       return lhs.add(static_cast<U&&>(rhs));
    }
@@ -273,7 +284,8 @@ class precision_reference {
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+(U lhs, precision_reference rhs) -> decltype(rhs.add(lhs)) {
+   operator+(U lhs, precision_reference rhs) noexcept
+      -> decltype(rhs.add(lhs)) {
       return rhs.add(lhs);
    }
 
@@ -283,7 +295,7 @@ class precision_reference {
                })
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-(precision_reference lhs, U&& rhs)
+   operator-(precision_reference lhs, U&& rhs) noexcept
       -> decltype(lhs.subtract_by(static_cast<U&&>(rhs))) {
       return lhs.subtract_by(static_cast<U&&>(rhs));
    }
@@ -292,7 +304,7 @@ class precision_reference {
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-(U lhs, precision_reference rhs)
+   operator-(U lhs, precision_reference rhs) noexcept
       -> decltype(rhs.subtract_from(lhs)) {
       return rhs.subtract_from(lhs);
    }
@@ -303,7 +315,7 @@ class precision_reference {
                })
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*(precision_reference lhs, U&& rhs)
+   operator*(precision_reference lhs, U&& rhs) noexcept
       -> decltype(lhs.multiply(static_cast<U&&>(rhs))) {
       return lhs.multiply(static_cast<U&&>(rhs));
    }
@@ -312,7 +324,8 @@ class precision_reference {
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*(U lhs, precision_reference rhs) -> decltype(rhs.multiply(lhs)) {
+   operator*(U lhs, precision_reference rhs) noexcept
+      -> decltype(rhs.multiply(lhs)) {
       return rhs.multiply(lhs);
    }
 
@@ -322,7 +335,7 @@ class precision_reference {
                })
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/(precision_reference lhs, U&& rhs)
+   operator/(precision_reference lhs, U&& rhs) noexcept
       -> decltype(lhs.divide_by(static_cast<U&&>(rhs))) {
       return lhs.divide_by(static_cast<U&&>(rhs));
    }
@@ -331,7 +344,8 @@ class precision_reference {
       requires(is_floating_point<U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/(U lhs, precision_reference rhs) -> decltype(rhs.divide_into(lhs)) {
+   operator/(U lhs, precision_reference rhs) noexcept
+      -> decltype(rhs.divide_into(lhs)) {
       return rhs.divide_into(lhs);
    }
 
@@ -345,7 +359,7 @@ class precision_reference {
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator+=(U operand) -> precision_reference& {
+   operator+=(U operand) noexcept -> precision_reference& {
       *this = add(operand);
       return *this;
    }
@@ -360,7 +374,7 @@ class precision_reference {
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator-=(U operand) -> precision_reference& {
+   operator-=(U operand) noexcept -> precision_reference& {
       *this = subtract_by(operand);
       return *this;
    }
@@ -375,7 +389,7 @@ class precision_reference {
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator*=(U operand) -> precision_reference& {
+   operator*=(U operand) noexcept -> precision_reference& {
       *this = multiply(operand);
       return *this;
    }
@@ -390,7 +404,7 @@ class precision_reference {
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator/=(U operand) -> precision_reference& {
+   operator/=(U operand) noexcept -> precision_reference& {
       *this = divide_by(operand);
       return *this;
    }

@@ -13,14 +13,17 @@ struct fde_lookup_result {
 // its address range.
 [[nodiscard]]
 auto
-find_fde_for_ip(uword instruction_pointer) -> fde_lookup_result;
+find_fde_for_ip(uword instruction_pointer) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> fde_lookup_result;
 
 [[nodiscard]]
 auto
-eh_frame_span() -> span<byte const>;
+eh_frame_span() noexcept(!__has_feature(cxx_exceptions)) -> span<byte const>;
 
 [[nodiscard]]
 auto
-eh_except_table_span() -> span<byte const>;
+eh_except_table_span() noexcept(!__has_feature(cxx_exceptions))
+   -> span<byte const>;
 
 }

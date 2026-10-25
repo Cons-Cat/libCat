@@ -14,7 +14,7 @@ namespace detail {
 // those C ABI symbols.
 [[nodiscard]]
 constexpr auto
-emulated_sqrt(double argument) -> double {
+emulated_sqrt(double argument) noexcept -> double {
    if (is_nan(argument)) {
       return argument;
    }
@@ -32,7 +32,7 @@ emulated_sqrt(double argument) -> double {
 
 [[nodiscard]]
 constexpr auto
-emulated_sqrtf(float argument) -> float {
+emulated_sqrtf(float argument) noexcept -> float {
    return static_cast<float>(emulated_sqrt(static_cast<double>(argument)));
 }
 
@@ -42,7 +42,7 @@ template <is_floating_point T>
    requires(arithmetic_quantity<T>::scale % 2 == 0)
 [[nodiscard]]
 constexpr auto
-sqrt(T argument) {
+sqrt(T argument) noexcept {
    using raw_type = raw_arithmetic_type<T>;
    using result_quantity = powered_quantity<arithmetic_quantity<T>, 1, 2>;
    using result_type = detail::rebind_quantity_type<T, result_quantity{}>;
@@ -62,7 +62,7 @@ template <is_floating_point T>
    requires(arithmetic_quantity<T>::scale % 2 == 0)
 [[nodiscard]]
 constexpr auto
-rsqrt(T argument) {
+rsqrt(T argument) noexcept {
    using raw_type = raw_arithmetic_type<T>;
    using result_quantity = powered_quantity<arithmetic_quantity<T>, -1, 2>;
    using result_type = detail::rebind_quantity_type<T, result_quantity{}>;
@@ -71,7 +71,7 @@ rsqrt(T argument) {
 
 [[nodiscard, gnu::always_inline]]
 constexpr auto
-rsqrt(float4_fast argument) -> float4_fast {
+rsqrt(float4_fast argument) noexcept -> float4_fast {
    float const approx = __builtin_ia32_rsqrtss({argument.raw})[0];
    float const minus_half_x = -0.5f * argument.raw;
    float const three_halves = 1.5f;

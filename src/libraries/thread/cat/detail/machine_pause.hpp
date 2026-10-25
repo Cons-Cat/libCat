@@ -11,7 +11,7 @@ namespace cat {
 // onward.
 // One `pause` is executed per the value of `delay`.
 constexpr void
-machine_pause(int4 delay = 1) {
+machine_pause(int4 delay = 1) noexcept {
    if consteval {
       return;
    } else {

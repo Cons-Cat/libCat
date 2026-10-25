@@ -11,8 +11,8 @@ namespace cat {
 
 template <typename CharT, __SIZE_TYPE__ fixed_size>
 constexpr auto
-basic_str_literal<CharT, fixed_size>::view() const [[clang::lifetimebound]]
--> basic_str_literal<CharT, fixed_size>::view_type {
+basic_str_literal<CharT, fixed_size>::view() const noexcept
+   [[clang::lifetimebound]] -> basic_str_literal<CharT, fixed_size>::view_type {
    return {data_, fixed_size};
 }
 

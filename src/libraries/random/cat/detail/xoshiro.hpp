@@ -84,7 +84,7 @@ namespace cat::detail {
 // width. This removes adjacent overlapping windows. Hash collisions remain
 // probabilistically possible, unlike published Xoshiro jumps.
 constexpr auto
-xoshiro_lane_seed(uint8 seed, idx stream, idx state_size) -> uint8 {
+xoshiro_lane_seed(uint8 seed, idx stream, idx state_size) noexcept -> uint8 {
    if (stream == 0u) {
       return seed;
    }
@@ -109,23 +109,25 @@ class simd_xoshiro_engine_base {
    using mask_type = result_type::mask_type;
 
  public:
-   constexpr simd_xoshiro_engine_base() {
+   constexpr simd_xoshiro_engine_base() noexcept {
       seed();
    }
 
-   constexpr explicit simd_xoshiro_engine_base(random_seed value) {
+   constexpr explicit simd_xoshiro_engine_base(random_seed value) noexcept {
       seed(value);
    }
 
    template <typename... Values>
       requires(sizeof...(Values) == state_size && sizeof...(Values) > 1u)
-   constexpr explicit simd_xoshiro_engine_base(Values... values)
+   constexpr explicit simd_xoshiro_engine_base(Values... values) noexcept
        : m_state(result_type(values)...) {
       prevent_zero_state();
    }
 
    constexpr void
-   seed(random_seed value = default_seed) {
+   seed(random_seed value = default_seed) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       auto const seed_value = uint8(value);
       if constexpr (sizeof(state_word) == 8u) {
          result_type mixer_state;
@@ -158,19 +160,19 @@ class simd_xoshiro_engine_base {
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return state_word::min();
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return state_word::max();
    }
 
    // Skip this many outputs.
    constexpr void
-   discard(uint8 count) {
+   discard(uint8 count) noexcept {
       for (uint8 iteration = 0u; iteration < count; ++iteration) {
          static_cast<Derived&>(*this).next_state();
       }
@@ -179,7 +181,9 @@ class simd_xoshiro_engine_base {
  protected:
    template <idx polynomial_size>
    constexpr void
-   apply_jump(array<state_word, polynomial_size> const& polynomial) {
+   apply_jump(array<state_word, polynomial_size> const& polynomial) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       state_type state;
       state.fill(result_type{});
       for (idx polynomial_index = 0u; polynomial_index < polynomial_size;
@@ -199,7 +203,7 @@ class simd_xoshiro_engine_base {
    }
 
    constexpr void
-   prevent_zero_state() {
+   prevent_zero_state() noexcept(!__has_feature(cxx_exceptions)) {
       for (idx lane = 0u; lane < result_type::abi_type::lanes; ++lane) {
          state_word combined = 0u;
          for (idx state_index = 0u; state_index < state_size; ++state_index) {
@@ -212,7 +216,7 @@ class simd_xoshiro_engine_base {
    }
 
    constexpr void
-   advance(mask_type active) {
+   advance(mask_type active) noexcept(!__has_feature(cxx_exceptions)) {
       state_type const previous = m_state;
       static_cast<Derived&>(*this).next_state();
       for (idx word = 0u; word < state_size; ++word) {
@@ -227,17 +231,17 @@ template <typename Word>
 struct xoshiro_word_operations {
    template <typename Value>
    static constexpr auto
-   constant(Value value) -> Word {
+   constant(Value value) noexcept -> Word {
       return Word(value);
    }
 
    static constexpr auto
-   rotate_left(Word value, unsigned count) -> Word {
+   rotate_left(Word value, unsigned count) noexcept -> Word {
       return value.rotate_left(count);
    }
 
    static constexpr auto
-   shift_left(Word value, unsigned count) -> Word {
+   shift_left(Word value, unsigned count) noexcept -> Word {
       return value.shift_left(count);
    }
 };
@@ -248,17 +252,17 @@ struct xoshiro_word_operations<Word> {
 
    template <typename Value>
    static constexpr auto
-   constant(Value value) -> value_type {
+   constant(Value value) noexcept -> value_type {
       return value_type(value);
    }
 
    static constexpr auto
-   rotate_left(Word value, unsigned count) -> Word {
+   rotate_left(Word value, unsigned count) noexcept -> Word {
       return simd_rotate_left(value, count);
    }
 
    static constexpr auto
-   shift_left(Word value, unsigned count) -> Word {
+   shift_left(Word value, unsigned count) noexcept -> Word {
       return value << count;
    }
 };
@@ -266,7 +270,9 @@ struct xoshiro_word_operations<Word> {
 template <
    xoshiro_scrambler scrambler, unsigned plusplus_rotation, typename Word>
 constexpr auto
-xoshiro_scramble_0_3(array<Word, 4u> const& state) -> Word {
+xoshiro_scramble_0_3(array<Word, 4u> const& state) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> Word {
    using operations = xoshiro_word_operations<Word>;
    if constexpr (scrambler == xoshiro_scrambler::plus) {
       return state[0u] + state[3u];
@@ -283,7 +289,7 @@ template <typename Word>
 constexpr void
 xoshiro_four_word_transition(
    array<Word, 4u>& state, unsigned shift, unsigned rotation
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    using operations = xoshiro_word_operations<Word>;
    auto const temporary = operations::shift_left(state[1u], shift);
    state[2u] ^= state[0u];
@@ -298,25 +304,25 @@ template <xoshiro_scrambler scrambler>
 struct xoshiro128_family {
    template <typename Word>
    static constexpr auto
-   scramble(array<Word, 4u> const& state) -> Word {
+   scramble(array<Word, 4u> const& state) noexcept -> Word {
       return xoshiro_scramble_0_3<scrambler, 7u>(state);
    }
 
    template <typename Word>
    static constexpr void
-   transition(array<Word, 4u>& state) {
+   transition(array<Word, 4u>& state) noexcept {
       xoshiro_four_word_transition(state, 9u, 11u);
    }
 
    template <typename Word>
    static constexpr auto
-   jump() -> array<Word, 4u> {
+   jump() noexcept -> array<Word, 4u> {
       return {0x8764000bu, 0xf542d2d3u, 0x6fa035c3u, 0x77f2db5bu};
    }
 
    template <typename Word>
    static constexpr auto
-   long_jump() -> array<Word, 4u> {
+   long_jump() noexcept -> array<Word, 4u> {
       return {0xb523952eu, 0x0b6f099fu, 0xccf5a0efu, 0x1c580662u};
    }
 };
@@ -325,19 +331,19 @@ template <xoshiro_scrambler scrambler>
 struct xoshiro256_family {
    template <typename Word>
    static constexpr auto
-   scramble(array<Word, 4u> const& state) -> Word {
+   scramble(array<Word, 4u> const& state) noexcept -> Word {
       return xoshiro_scramble_0_3<scrambler, 23u>(state);
    }
 
    template <typename Word>
    static constexpr void
-   transition(array<Word, 4u>& state) {
+   transition(array<Word, 4u>& state) noexcept {
       xoshiro_four_word_transition(state, 17u, 45u);
    }
 
    template <typename Word>
    static constexpr auto
-   jump() -> array<Word, 4u> {
+   jump() noexcept -> array<Word, 4u> {
       return {
          0x180ec6d3'3cfd0abaull,
          0xd5a61266'f0c9392cull,
@@ -348,7 +354,7 @@ struct xoshiro256_family {
 
    template <typename Word>
    static constexpr auto
-   long_jump() -> array<Word, 4u> {
+   long_jump() noexcept -> array<Word, 4u> {
       return {
          0x76e15d3e'fefdcbbfull,
          0xc5004e44'1c522fb3ull,
@@ -392,25 +398,25 @@ class simd_xoshiro128_engine
 
    [[nodiscard]]
    constexpr auto
-   generate(mask_type active) -> result_type {
+   generate(mask_type active) noexcept -> result_type {
       auto const result = family::scramble(m_state);
       this->advance(active);
       return result;
    }
 
    constexpr void
-   jump() {
+   jump() noexcept {
       this->apply_jump(family::template jump<state_word>());
    }
 
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       this->apply_jump(family::template long_jump<state_word>());
    }
 
  private:
    constexpr void
-   next_state() {
+   next_state() noexcept {
       family::transition(m_state);
    }
 };
@@ -449,25 +455,25 @@ class simd_xoshiro256_engine
 
    [[nodiscard]]
    constexpr auto
-   generate(mask_type active) -> result_type {
+   generate(mask_type active) noexcept -> result_type {
       auto const result = family::scramble(m_state);
       this->advance(active);
       return result;
    }
 
    constexpr void
-   jump() {
+   jump() noexcept {
       this->apply_jump(family::template jump<state_word>());
    }
 
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       this->apply_jump(family::template long_jump<state_word>());
    }
 
  private:
    constexpr void
-   next_state() {
+   next_state() noexcept {
       family::transition(m_state);
    }
 };
@@ -476,7 +482,9 @@ template <xoshiro_scrambler scrambler>
 struct xoroshiro64_family {
    template <typename Word>
    static constexpr auto
-   scramble(array<Word, 2u> const& state) -> Word {
+   scramble(array<Word, 2u> const& state) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> Word {
       using operations = xoshiro_word_operations<Word>;
       auto const multiplier = operations::constant(0x9e3779bbu);
       if constexpr (scrambler == xoshiro_scrambler::star) {
@@ -489,7 +497,7 @@ struct xoroshiro64_family {
 
    template <typename Word>
    static constexpr void
-   transition(array<Word, 2u>& state) {
+   transition(array<Word, 2u>& state) noexcept(!__has_feature(cxx_exceptions)) {
       using operations = xoshiro_word_operations<Word>;
       auto const state_0 = state[0u];
       auto state_1 = state[1u];
@@ -501,13 +509,13 @@ struct xoroshiro64_family {
 
    template <typename Word>
    static constexpr auto
-   jump() -> array<Word, 2u> {
+   jump() noexcept -> array<Word, 2u> {
       return {0x77fcd1a0u, 0x4cbf99bdu};
    }
 
    template <typename Word>
    static constexpr auto
-   long_jump() -> array<Word, 2u> {
+   long_jump() noexcept -> array<Word, 2u> {
       return {0x3f1f8b95u, 0xb4e7e463u};
    }
 };
@@ -516,7 +524,9 @@ template <xoshiro_scrambler scrambler>
 struct xoroshiro128_family {
    template <typename Word>
    static constexpr auto
-   scramble(array<Word, 2u> const& state) -> Word {
+   scramble(array<Word, 2u> const& state) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> Word {
       using operations = xoshiro_word_operations<Word>;
       auto const state_0 = state[0u];
       auto const state_1 = state[1u];
@@ -532,7 +542,7 @@ struct xoroshiro128_family {
 
    template <typename Word>
    static constexpr void
-   transition(array<Word, 2u>& state) {
+   transition(array<Word, 2u>& state) noexcept(!__has_feature(cxx_exceptions)) {
       using operations = xoshiro_word_operations<Word>;
       auto const state_0 = state[0u];
       auto state_1 = state[1u];
@@ -550,7 +560,7 @@ struct xoroshiro128_family {
 
    template <typename Word>
    static constexpr auto
-   jump() -> array<Word, 2u> {
+   jump() noexcept -> array<Word, 2u> {
       if constexpr (scrambler == xoshiro_scrambler::plusplus) {
          return {0x2bd7a6a6'e99c2ddcull, 0x0992ccaf'6a6fca05ull};
       } else {
@@ -560,7 +570,7 @@ struct xoroshiro128_family {
 
    template <typename Word>
    static constexpr auto
-   long_jump() -> array<Word, 2u> {
+   long_jump() noexcept -> array<Word, 2u> {
       if constexpr (scrambler == xoshiro_scrambler::plusplus) {
          return {0x360fd5f2'cf8d5d99ull, 0x9c6e6877'736c46e3ull};
       } else {
@@ -573,7 +583,9 @@ template <xoshiro_scrambler scrambler>
 struct xoshiro512_family {
    template <typename Word>
    static constexpr auto
-   scramble(array<Word, 8u> const& state) -> Word {
+   scramble(array<Word, 8u> const& state) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> Word {
       using operations = xoshiro_word_operations<Word>;
       if constexpr (scrambler == xoshiro_scrambler::plus) {
          return state[0u] + state[2u];
@@ -589,7 +601,7 @@ struct xoshiro512_family {
 
    template <typename Word>
    static constexpr void
-   transition(array<Word, 8u>& state) {
+   transition(array<Word, 8u>& state) noexcept(!__has_feature(cxx_exceptions)) {
       using operations = xoshiro_word_operations<Word>;
       auto const temporary = operations::shift_left(state[1u], 11u);
       state[2u] ^= state[0u];
@@ -606,7 +618,7 @@ struct xoshiro512_family {
 
    template <typename Word>
    static constexpr auto
-   jump() -> array<Word, 8u> {
+   jump() noexcept -> array<Word, 8u> {
       return {
          0x33ed89b6'e7a353f9ull, 0x760083d7'955323beull, 0x2837f2fb'b5f22faeull,
          0x4b8c5674'd309511cull, 0xb11ac47a'7ba28c25ull, 0xf1be7667'092bcc1cull,
@@ -616,7 +628,7 @@ struct xoshiro512_family {
 
    template <typename Word>
    static constexpr auto
-   long_jump() -> array<Word, 8u> {
+   long_jump() noexcept -> array<Word, 8u> {
       return {
          0x11467fef'8f921d28ull, 0xa2a819f2'e79c8ea8ull, 0xa8299fc2'84b3959aull,
          0xb4d34734'0ca63ee1ull, 0x1cb0940b'edbff6ceull, 0xd956c5c4'fa1f8e17ull,
@@ -627,7 +639,7 @@ struct xoshiro512_family {
 
 template <xoshiro_scrambler scrambler, typename Word>
 constexpr auto
-xoroshiro1024_scramble(Word state_0, Word state_15) -> Word {
+xoroshiro1024_scramble(Word state_0, Word state_15) noexcept -> Word {
    using operations = xoshiro_word_operations<Word>;
    if constexpr (scrambler == xoshiro_scrambler::star) {
       return state_0 * operations::constant(0x9e3779b9'7f4a7c13ull);
@@ -643,7 +655,7 @@ template <typename Word>
 constexpr void
 xoroshiro1024_transition(
    Word state_0, Word state_15, Word& next_0, Word& next_15
-) {
+) noexcept {
    using operations = xoshiro_word_operations<Word>;
    state_15 ^= state_0;
    next_15 = operations::rotate_left(state_0, 25u) ^ state_15
@@ -653,7 +665,7 @@ xoroshiro1024_transition(
 
 template <typename Word>
 constexpr auto
-xoroshiro1024_jump() -> array<Word, 16u> {
+xoroshiro1024_jump() noexcept -> array<Word, 16u> {
    return {
       0x931197d8'e3177f17ull, 0xb59422e0'b9138c5full, 0xf06a6afb'49d668bbull,
       0xacb8a641'2c8a1401ull, 0x12304ec8'5f0b3468ull, 0xb7dfe707'9209891eull,
@@ -666,7 +678,7 @@ xoroshiro1024_jump() -> array<Word, 16u> {
 
 template <typename Word>
 constexpr auto
-xoroshiro1024_long_jump() -> array<Word, 16u> {
+xoroshiro1024_long_jump() noexcept -> array<Word, 16u> {
    return {
       0x73741563'60bbf00full, 0x4630c2ef'a3b3c1f6ull, 0x6654183a'892786b1ull,
       0x94f7bfcb'fb0f1661ull, 0x27d8243d'3d13eb2dull, 0x9701730f'3dfb300full,
@@ -711,7 +723,7 @@ class simd_xoroshiro_engine
 
    [[nodiscard]]
    constexpr auto
-   generate(mask_type active) -> result_type {
+   generate(mask_type active) noexcept -> result_type {
       auto const result = family::scramble(m_state);
       this->advance(active);
       return result;
@@ -719,19 +731,19 @@ class simd_xoroshiro_engine
 
    // Published stream-split jump.
    constexpr void
-   jump() {
+   jump() noexcept {
       this->apply_jump(family::template jump<state_word>());
    }
 
    // Larger published stream-split jump.
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       this->apply_jump(family::template long_jump<state_word>());
    }
 
  private:
    constexpr void
-   next_state() {
+   next_state() noexcept {
       family::transition(m_state);
    }
 };
@@ -769,7 +781,7 @@ class simd_xoshiro512_engine
 
    [[nodiscard]]
    constexpr auto
-   generate(mask_type active) -> result_type {
+   generate(mask_type active) noexcept -> result_type {
       auto const result = family::scramble(m_state);
       this->advance(active);
       return result;
@@ -777,19 +789,19 @@ class simd_xoshiro512_engine
 
    // Published stream-split jump.
    constexpr void
-   jump() {
+   jump() noexcept {
       this->apply_jump(family::template jump<state_word>());
    }
 
    // Larger published stream-split jump.
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       this->apply_jump(family::template long_jump<state_word>());
    }
 
  private:
    constexpr void
-   next_state() {
+   next_state() noexcept {
       family::transition(m_state);
    }
 };
@@ -817,7 +829,7 @@ class simd_xoroshiro1024_engine
    using base::min;
 
    constexpr void
-   seed(random_seed value = default_seed) {
+   seed(random_seed value = default_seed) noexcept {
       base::seed(value);
       m_position = 0u;
    }
@@ -839,20 +851,20 @@ class simd_xoroshiro1024_engine
 
    // Published stream-split jump.
    constexpr void
-   jump() {
+   jump() noexcept {
       apply_jump(xoroshiro1024_jump<state_word>());
    }
 
    // Larger published stream-split jump.
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       apply_jump(xoroshiro1024_long_jump<state_word>());
    }
 
  private:
    [[nodiscard]]
    constexpr auto
-   physical_index(idx logical) const -> idx {
+   physical_index(idx logical) const noexcept -> idx {
       idx result = logical + m_position;
       if (result >= state_size) {
          result = idx(result - state_size);
@@ -861,7 +873,9 @@ class simd_xoroshiro1024_engine
    }
 
    constexpr void
-   apply_jump(array<state_word, 16u> const& polynomial) {
+   apply_jump(array<state_word, 16u> const& polynomial) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       array<result_type, 16u> state;
       state.fill(result_type{});
       for (idx polynomial_index = 0u; polynomial_index < state_size;
@@ -883,7 +897,7 @@ class simd_xoroshiro1024_engine
    }
 
    constexpr void
-   next_state() {
+   next_state() noexcept(!__has_feature(cxx_exceptions)) {
       idx const previous = m_position;
       ++m_position;
       if (m_position == state_size) {
@@ -908,20 +922,20 @@ class xoshiro_bulk_session {
    using state_type = array<result_type, state_size>;
 
  public:
-   constexpr explicit xoshiro_bulk_session(uint8 seed) {
+   constexpr explicit xoshiro_bulk_session(uint8 seed) noexcept {
       initialize(m_first, seed, 0u);
       initialize(m_second, seed, result_type::abi_type::lanes);
    }
 
    [[nodiscard]]
    constexpr auto
-   first() -> result_type {
+   first() noexcept -> result_type {
       return next(m_first);
    }
 
    [[nodiscard]]
    constexpr auto
-   second() -> result_type {
+   second() noexcept -> result_type {
       return next(m_second);
    }
 
@@ -934,25 +948,27 @@ class xoshiro_bulk_session {
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return result_type(Word::min());
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type(Word::max());
    }
 
    [[nodiscard]]
    constexpr auto
-   scalar_draws() const -> idx {
+   scalar_draws() const noexcept -> idx {
       return m_scalar_draws;
    }
 
  private:
    static constexpr void
-   initialize(state_type& state, uint8 seed, idx stream_offset) {
+   initialize(state_type& state, uint8 seed, idx stream_offset) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       for (idx lane = 0u; lane < result_type::abi_type::lanes; ++lane) {
          idx const stream = stream_offset + lane;
          splitmix64_engine mixer(
@@ -971,7 +987,7 @@ class xoshiro_bulk_session {
    }
 
    constexpr auto
-   next(state_type& state) -> result_type {
+   next(state_type& state) noexcept -> result_type {
       result_type const result = Family::scramble(state);
       Family::transition(state);
       m_scalar_draws += result_type::abi_type::lanes;
@@ -1001,17 +1017,17 @@ class xoshiro_engine_base {
    using state_type = array<state_word, state_size>;
 
  public:
-   constexpr xoshiro_engine_base() {
+   constexpr xoshiro_engine_base() noexcept {
       seed();
    }
 
-   constexpr explicit xoshiro_engine_base(random_seed value) {
+   constexpr explicit xoshiro_engine_base(random_seed value) noexcept {
       seed(value);
    }
 
    template <typename... Values>
       requires(sizeof...(Values) == state_size && sizeof...(Values) > 1u)
-   constexpr explicit xoshiro_engine_base(Values... values)
+   constexpr explicit xoshiro_engine_base(Values... values) noexcept
        : m_state(state_word(values)...) {
       prevent_zero_state();
    }
@@ -1022,7 +1038,8 @@ class xoshiro_engine_base {
    template <typename Abi>
    [[nodiscard]]
    constexpr auto
-   generate_exact_batch() -> simd<result_type, Abi> {
+   generate_exact_batch() noexcept(!__has_feature(cxx_exceptions))
+      -> simd<result_type, Abi> {
       using batch_type = simd<result_type, Abi>;
       array<batch_type, state_size> states;
       for (idx lane = 0u; lane < batch_type::abi_type::lanes; ++lane) {
@@ -1037,7 +1054,7 @@ class xoshiro_engine_base {
    template <typename Abi>
    [[nodiscard]]
    constexpr auto
-   make_relaxed_session() const
+   make_relaxed_session() const noexcept(!__has_feature(cxx_exceptions))
       -> xoshiro_bulk_session<result_type, Abi, state_size, Family> {
       uint8 seed_hash = 0x243f6a88'85a308d3ull;
       for (idx word = 0u; word < state_size; ++word) {
@@ -1054,7 +1071,7 @@ class xoshiro_engine_base {
    template <typename Abi>
    [[nodiscard]]
    static constexpr auto
-   relaxed_threshold() -> idx {
+   relaxed_threshold() noexcept -> idx {
       if constexpr (sizeof(simd<result_type, Abi>) > 32u) {
          return idx::max();
       } else {
@@ -1064,7 +1081,9 @@ class xoshiro_engine_base {
 
  public:
    constexpr void
-   seed(random_seed value = default_seed) {
+   seed(random_seed value = default_seed) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       splitmix64_engine mixer{uint8(value)};
       for (idx state_index = 0u; state_index < state_size; ++state_index) {
          m_state[state_index] = state_word(mixer());
@@ -1074,13 +1093,13 @@ class xoshiro_engine_base {
 
    // Apply a jump polynomial.
    constexpr void
-   jump(array<state_word, state_size> const& polynomial) {
+   jump(array<state_word, state_size> const& polynomial) noexcept {
       apply_jump(polynomial);
    }
 
    // Skip 2^log2_distance outputs.
    constexpr void
-   jump_log2(uword log2_distance) {
+   jump_log2(uword log2_distance) noexcept {
       apply_jump(jump_polynomial(log2_distance, true));
    }
 
@@ -1088,8 +1107,9 @@ class xoshiro_engine_base {
    // `distance_is_log2`.
    [[nodiscard]]
    static constexpr auto
-   jump_polynomial(uword distance, bool distance_is_log2)
-      -> array<state_word, state_size> {
+   jump_polynomial(uword distance, bool distance_is_log2) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> array<state_word, state_size> {
       using raw = raw_arithmetic_type<state_word>;
       array<raw, state_size> characteristic;
       auto const words = Derived::characteristic_coefficients();
@@ -1108,7 +1128,9 @@ class xoshiro_engine_base {
  protected:
    template <idx polynomial_size>
    constexpr void
-   apply_jump(array<state_word, polynomial_size> const& polynomial) {
+   apply_jump(array<state_word, polynomial_size> const& polynomial) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       state_type state;
       state.fill(0u);
       for (idx polynomial_index = 0u; polynomial_index < polynomial_size;
@@ -1129,7 +1151,7 @@ class xoshiro_engine_base {
    }
 
    constexpr void
-   prevent_zero_state() {
+   prevent_zero_state() noexcept(!__has_feature(cxx_exceptions)) {
       state_word combined = 0u;
       for (idx state_index = 0u; state_index < state_size; ++state_index) {
          combined |= m_state[state_index];
@@ -1141,7 +1163,7 @@ class xoshiro_engine_base {
 
    // Skip this many outputs.
    constexpr void
-   discard(uint8 count) {
+   discard(uint8 count) noexcept {
       for (uint8 iteration = 0u; iteration < count; ++iteration) {
          static_cast<Derived&>(*this).next_state();
       }
@@ -1175,7 +1197,7 @@ class xoroshiro64_engine : public xoshiro_engine_base<
    using base::seed;
 
    static constexpr auto
-   characteristic_coefficients() -> array<state_word, 2u> {
+   characteristic_coefficients() noexcept -> array<state_word, 2u> {
       return {0x6e2286c1ul, 0x053be9daul};
    }
 
@@ -1189,31 +1211,31 @@ class xoroshiro64_engine : public xoshiro_engine_base<
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return result_type::min();
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 
    // Published stream-split jump.
    constexpr void
-   jump() {
+   jump() noexcept {
       this->apply_jump(family::template jump<state_word>());
    }
 
    // Larger published stream-split jump.
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       this->apply_jump(family::template long_jump<state_word>());
    }
 
  private:
    constexpr void
-   next_state() {
+   next_state() noexcept {
       family::transition(m_state);
    }
 };
@@ -1244,7 +1266,7 @@ class xoshiro128_engine : public xoshiro_engine_base<
    using base::seed;
 
    static constexpr auto
-   characteristic_coefficients() -> array<state_word, 4u> {
+   characteristic_coefficients() noexcept -> array<state_word, 4u> {
       return {0xde18fc01ul, 0x1b489db6ul, 0x006254b1ul, 0x00fc65a2ul};
    }
 
@@ -1258,31 +1280,31 @@ class xoshiro128_engine : public xoshiro_engine_base<
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return result_type::min();
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 
    // Published stream-split jump.
    constexpr void
-   jump() {
+   jump() noexcept {
       this->apply_jump(family::template jump<state_word>());
    }
 
    // Larger published stream-split jump.
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       this->apply_jump(family::template long_jump<state_word>());
    }
 
  private:
    constexpr void
-   next_state() {
+   next_state() noexcept {
       family::transition(m_state);
    }
 };
@@ -1314,7 +1336,7 @@ class xoroshiro128_engine : public xoshiro_engine_base<
    using base::seed;
 
    static constexpr auto
-   characteristic_coefficients() -> array<state_word, 2u> {
+   characteristic_coefficients() noexcept -> array<state_word, 2u> {
       if constexpr (scrambler == xoshiro_scrambler::plusplus) {
          return {0x8dae7077'9760b081ull, 0x0031bcf2'f855d6e5ull};
       } else {
@@ -1332,31 +1354,31 @@ class xoroshiro128_engine : public xoshiro_engine_base<
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return result_type::min();
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 
    // Published stream-split jump.
    constexpr void
-   jump() {
+   jump() noexcept {
       this->apply_jump(family::template jump<state_word>());
    }
 
    // Larger published stream-split jump.
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       this->apply_jump(family::template long_jump<state_word>());
    }
 
  private:
    constexpr void
-   next_state() {
+   next_state() noexcept {
       family::transition(m_state);
    }
 };
@@ -1387,7 +1409,7 @@ class xoshiro256_engine : public xoshiro_engine_base<
    using base::seed;
 
    static constexpr auto
-   characteristic_coefficients() -> array<state_word, 4u> {
+   characteristic_coefficients() noexcept -> array<state_word, 4u> {
       return {
          0x9d116f2b'b0f0f001ull,
          0x0280002b'cefd1a5eull,
@@ -1406,31 +1428,31 @@ class xoshiro256_engine : public xoshiro_engine_base<
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return result_type::min();
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 
    // Published stream-split jump.
    constexpr void
-   jump() {
+   jump() noexcept {
       this->apply_jump(family::template jump<state_word>());
    }
 
    // Larger published stream-split jump.
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       this->apply_jump(family::template long_jump<state_word>());
    }
 
  private:
    constexpr void
-   next_state() {
+   next_state() noexcept {
       family::transition(m_state);
    }
 };
@@ -1461,7 +1483,7 @@ class xoshiro512_engine : public xoshiro_engine_base<
    using base::seed;
 
    static constexpr auto
-   characteristic_coefficients() -> array<state_word, 8u> {
+   characteristic_coefficients() noexcept -> array<state_word, 8u> {
       return {
          0xcf3cff0c'00000001ull, 0x7fdc78d8'86f00c63ull, 0xf05e63fc'a6d7b781ull,
          0x7a67058e'7bbab6f0ull, 0xf11eef83'2e32518full, 0x51ba7c47'edc758adull,
@@ -1479,31 +1501,31 @@ class xoshiro512_engine : public xoshiro_engine_base<
 
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return result_type::min();
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 
    // Published stream-split jump.
    constexpr void
-   jump() {
+   jump() noexcept {
       this->apply_jump(family::template jump<state_word>());
    }
 
    // Larger published stream-split jump.
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       this->apply_jump(family::template long_jump<state_word>());
    }
 
  private:
    constexpr void
-   next_state() {
+   next_state() noexcept {
       family::transition(m_state);
    }
 };
@@ -1525,23 +1547,25 @@ class xoroshiro1024_engine {
    static constexpr idx state_size = 16u;
 
  public:
-   constexpr xoroshiro1024_engine() {
+   constexpr xoroshiro1024_engine() noexcept {
       seed();
    }
 
-   constexpr explicit xoroshiro1024_engine(random_seed value) {
+   constexpr explicit xoroshiro1024_engine(random_seed value) noexcept {
       seed(value);
    }
 
    template <typename... Values>
       requires(sizeof...(Values) == state_size)
-   constexpr explicit xoroshiro1024_engine(Values... values)
+   constexpr explicit xoroshiro1024_engine(Values... values) noexcept
        : m_state(state_word(values)...) {
       prevent_zero_state();
    }
 
    constexpr void
-   seed(random_seed value = default_seed) {
+   seed(random_seed value = default_seed) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       splitmix64_engine mixer{result_type(value)};
       for (idx state_index = 0u; state_index < state_size; ++state_index) {
          m_state[state_index] = state_word(mixer());
@@ -1551,7 +1575,7 @@ class xoroshiro1024_engine {
    }
 
    static constexpr auto
-   characteristic_coefficients() -> array<state_word, 16u> {
+   characteristic_coefficients() noexcept -> array<state_word, 16u> {
       return {
          0x5cfeb8cc'48ddb211ull, 0xb73e379d'035a06ddull, 0x17d5100a'20a0350eull,
          0x7550223f'68f98cacull, 0x29d373b5'c5ed3459ull, 0x3689b412'ef70de48ull,
@@ -1583,7 +1607,8 @@ class xoroshiro1024_engine {
    template <typename Abi>
    [[nodiscard]]
    constexpr auto
-   generate_exact_batch() -> simd<result_type, Abi> {
+   generate_exact_batch() noexcept(!__has_feature(cxx_exceptions))
+      -> simd<result_type, Abi> {
       using batch_type = simd<result_type, Abi>;
       batch_type state_0;
       batch_type state_15;
@@ -1602,19 +1627,19 @@ class xoroshiro1024_engine {
  public:
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return result_type::min();
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return result_type::max();
    }
 
    // Skip this many outputs.
    constexpr void
-   discard(uint8 count) {
+   discard(uint8 count) noexcept {
       for (uint8 iteration = 0u; iteration < count; ++iteration) {
          next_state();
       }
@@ -1622,13 +1647,13 @@ class xoroshiro1024_engine {
 
    // Apply a jump polynomial.
    constexpr void
-   jump(array<state_word, state_size> const& polynomial) {
+   jump(array<state_word, state_size> const& polynomial) noexcept {
       apply_jump(polynomial);
    }
 
    // Skip 2^log2_distance outputs.
    constexpr void
-   jump_log2(uword log2_distance) {
+   jump_log2(uword log2_distance) noexcept {
       apply_jump(jump_polynomial(log2_distance, true));
    }
 
@@ -1636,8 +1661,9 @@ class xoroshiro1024_engine {
    // `distance_is_log2`.
    [[nodiscard]]
    static constexpr auto
-   jump_polynomial(uword distance, bool distance_is_log2)
-      -> array<state_word, state_size> {
+   jump_polynomial(uword distance, bool distance_is_log2) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> array<state_word, state_size> {
       using raw = raw_arithmetic_type<state_word>;
       array<raw, state_size> characteristic;
       auto const words = characteristic_coefficients();
@@ -1655,20 +1681,20 @@ class xoroshiro1024_engine {
 
    // Published stream-split jump.
    constexpr void
-   jump() {
+   jump() noexcept {
       apply_jump(xoroshiro1024_jump<state_word>());
    }
 
    // Larger published stream-split jump.
    constexpr void
-   long_jump() {
+   long_jump() noexcept {
       apply_jump(xoroshiro1024_long_jump<state_word>());
    }
 
  private:
    [[nodiscard]]
    constexpr auto
-   physical_index(idx logical) const -> idx {
+   physical_index(idx logical) const noexcept -> idx {
       idx result = logical + m_position;
       if (result >= state_size) {
          result = idx(result - state_size);
@@ -1677,7 +1703,7 @@ class xoroshiro1024_engine {
    }
 
    constexpr void
-   prevent_zero_state() {
+   prevent_zero_state() noexcept(!__has_feature(cxx_exceptions)) {
       state_word combined = 0u;
       for (idx state_index = 0u; state_index < state_size; ++state_index) {
          combined |= m_state[state_index];
@@ -1688,7 +1714,9 @@ class xoroshiro1024_engine {
    }
 
    constexpr void
-   apply_jump(array<state_word, 16u> const& polynomial) {
+   apply_jump(array<state_word, 16u> const& polynomial) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       array<state_word, 16u> state;
       state.fill(0u);
       for (idx polynomial_index = 0u; polynomial_index < state_size;
@@ -1711,7 +1739,7 @@ class xoroshiro1024_engine {
    }
 
    constexpr void
-   next_state() {
+   next_state() noexcept(!__has_feature(cxx_exceptions)) {
       idx const previous = m_position;
       ++m_position;
       if (m_position == state_size) {
@@ -1731,7 +1759,7 @@ class xoroshiro1024_engine {
 // https://prng.di.unimi.it/
 // Default engines are `**`. `*_pp_engine` is `++`. `+` is an explicit scramble.
 consteval auto
-xoshiro_scrambler_supported(xoshiro_scrambler scrambler) -> bool {
+xoshiro_scrambler_supported(xoshiro_scrambler scrambler) noexcept -> bool {
    return scrambler == xoshiro_scrambler::plus
           || scrambler == xoshiro_scrambler::plusplus
           || scrambler == xoshiro_scrambler::starstar;
@@ -1739,7 +1767,7 @@ xoshiro_scrambler_supported(xoshiro_scrambler scrambler) -> bool {
 
 template <typename T>
 consteval auto
-xoroshiro_scrambler_supported(xoshiro_scrambler scrambler) -> bool {
+xoroshiro_scrambler_supported(xoshiro_scrambler scrambler) noexcept -> bool {
    if constexpr (sizeof(random_scalar<T>) == 4u) {
       return scrambler == xoshiro_scrambler::star
              || scrambler == xoshiro_scrambler::starstar;
@@ -1751,7 +1779,8 @@ xoroshiro_scrambler_supported(xoshiro_scrambler scrambler) -> bool {
 }
 
 consteval auto
-xoroshiro1024_scrambler_supported(xoshiro_scrambler scrambler) -> bool {
+xoroshiro1024_scrambler_supported(xoshiro_scrambler scrambler) noexcept
+   -> bool {
    return scrambler == xoshiro_scrambler::plusplus
           || scrambler == xoshiro_scrambler::star
           || scrambler == xoshiro_scrambler::starstar;
@@ -1878,19 +1907,19 @@ class xoshiro_owned_engine {
 
    constexpr xoshiro_owned_engine() = default;
 
-   constexpr explicit xoshiro_owned_engine(random_seed value)
+   constexpr explicit xoshiro_owned_engine(random_seed value) noexcept
        : m_engine(value) {
    }
 
    template <typename... Values>
       requires(sizeof...(Values) > 1u)
               && requires(Values... values) { Engine(values...); }
-   constexpr explicit xoshiro_owned_engine(Values... values)
+   constexpr explicit xoshiro_owned_engine(Values... values) noexcept
        : m_engine(values...) {
    }
 
    constexpr void
-   seed(random_seed value = 1u) {
+   seed(random_seed value = 1u) noexcept {
       m_engine.seed(value);
    }
 
@@ -1938,7 +1967,7 @@ class xoshiro_owned_engine {
    template <typename Abi>
    [[nodiscard]]
    constexpr auto
-   generate_exact_batch()
+   generate_exact_batch() noexcept
       -> decltype(random_batch_access::exact<Abi>(declval<Engine&>())) {
       return random_batch_access::exact<Abi>(m_engine);
    }
@@ -1946,7 +1975,7 @@ class xoshiro_owned_engine {
    template <typename Abi>
    [[nodiscard]]
    constexpr auto
-   make_relaxed_session() const
+   make_relaxed_session() const noexcept
       -> decltype(random_batch_access::relaxed<Abi>(declval<Engine const&>())) {
       return random_batch_access::relaxed<Abi>(m_engine);
    }
@@ -1954,7 +1983,7 @@ class xoshiro_owned_engine {
    template <typename Abi>
    [[nodiscard]]
    static constexpr auto
-   relaxed_threshold()
+   relaxed_threshold() noexcept
       -> decltype(random_batch_access::relaxed_threshold<Abi, Engine>()) {
       return random_batch_access::relaxed_threshold<Abi, Engine>();
    }
@@ -1962,7 +1991,7 @@ class xoshiro_owned_engine {
  public:
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type
+   min() noexcept -> result_type
       requires requires { Engine::min(); }
    {
       return Engine::min();
@@ -1970,7 +1999,7 @@ class xoshiro_owned_engine {
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type
+   max() noexcept -> result_type
       requires requires { Engine::max(); }
    {
       return Engine::max();
@@ -1978,14 +2007,14 @@ class xoshiro_owned_engine {
 
    // Skip this many outputs.
    constexpr void
-   discard(uint8 count) {
+   discard(uint8 count) noexcept {
       m_engine.discard(count);
    }
 
    // Skip this many outputs backwards.
    template <typename Distance>
    constexpr void
-   backstep(Distance distance)
+   backstep(Distance distance) noexcept
       requires requires(Engine& engine) { engine.backstep(distance); }
    {
       m_engine.backstep(distance);
@@ -1993,7 +2022,7 @@ class xoshiro_owned_engine {
 
    // Published stream-split jump.
    constexpr void
-   jump()
+   jump() noexcept
       requires requires(Engine& engine) { engine.jump(); }
    {
       m_engine.jump();
@@ -2001,7 +2030,7 @@ class xoshiro_owned_engine {
 
    // Larger published stream-split jump.
    constexpr void
-   long_jump()
+   long_jump() noexcept
       requires requires(Engine& engine) { engine.long_jump(); }
    {
       m_engine.long_jump();
@@ -2010,7 +2039,7 @@ class xoshiro_owned_engine {
    // Apply a jump polynomial.
    template <typename Polynomial>
    constexpr void
-   jump(Polynomial const& polynomial)
+   jump(Polynomial const& polynomial) noexcept
       requires requires(Engine& engine) { engine.jump(polynomial); }
    {
       m_engine.jump(polynomial);
@@ -2018,7 +2047,7 @@ class xoshiro_owned_engine {
 
    // Skip 2^log2_distance outputs.
    constexpr void
-   jump_log2(uword log2_distance)
+   jump_log2(uword log2_distance) noexcept
       requires requires(Engine& engine) { engine.jump_log2(log2_distance); }
    {
       m_engine.jump_log2(log2_distance);
@@ -2028,7 +2057,7 @@ class xoshiro_owned_engine {
    // `distance_is_log2`.
    [[nodiscard]]
    static constexpr auto
-   jump_polynomial(uword distance, bool distance_is_log2)
+   jump_polynomial(uword distance, bool distance_is_log2) noexcept
       requires requires { Engine::jump_polynomial(distance, distance_is_log2); }
    {
       return Engine::jump_polynomial(distance, distance_is_log2);

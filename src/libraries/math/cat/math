@@ -13,25 +13,25 @@ class infinity_type {
    template <is_floating_point Float>
    [[nodiscard]]
    constexpr
-   operator Float() const {
+   operator Float() const noexcept {
       using raw_type = raw_arithmetic_type<Float>;
       raw_type const value = static_cast<raw_type>(__builtin_inf());
       return Float(m_negative ? -value : value);
    }
 
    constexpr auto
-   operator==(infinity_type const& other) const -> bool = default;
+   operator==(infinity_type const& other) const noexcept -> bool = default;
 
    template <is_floating_point Float>
    constexpr auto
-   operator==(Float value) const -> bool {
+   operator==(Float value) const noexcept -> bool {
       auto const raw_value = make_raw_arithmetic(value);
       return !is_finite(raw_value) && !is_nan(raw_value)
              && (__builtin_signbit(raw_value) != 0) == m_negative;
    }
 
    constexpr auto
-   operator<=>(infinity_type const& other) const -> strong_ordering {
+   operator<=>(infinity_type const& other) const noexcept -> strong_ordering {
       if (m_negative == other.m_negative) {
          return strong_ordering::equal;
       }
@@ -40,7 +40,7 @@ class infinity_type {
 
    template <is_floating_point Float>
    constexpr auto
-   operator<=>(Float value) const -> partial_ordering {
+   operator<=>(Float value) const noexcept -> partial_ordering {
       auto const raw_value = make_raw_arithmetic(value);
       if (is_nan(raw_value)) {
          return partial_ordering::unordered;
@@ -55,13 +55,13 @@ class infinity_type {
    }
 
    friend constexpr auto
-   operator-(infinity_type value) -> infinity_type {
+   operator-(infinity_type value) noexcept -> infinity_type {
       value.m_negative = !value.m_negative;
       return value;
    }
 
    friend constexpr auto
-   operator+(infinity_type value) -> infinity_type {
+   operator+(infinity_type value) noexcept -> infinity_type {
       return value;
    }
 

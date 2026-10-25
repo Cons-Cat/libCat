@@ -18,12 +18,12 @@ class mutex_native {
    mutex_native(mutex_native&&) = delete;
 
    auto
-   operator=(mutex_native const&) -> mutex_native& = delete;
+   operator=(mutex_native const&) noexcept -> mutex_native& = delete;
    auto
-   operator=(mutex_native&&) -> mutex_native& = delete;
+   operator=(mutex_native&&) noexcept -> mutex_native& = delete;
 
    void
-   lock() {
+   lock() noexcept(!__has_feature(cxx_exceptions)) {
       uint4 expected = unlocked;
       if (!m_futex.m_value.compare_exchange_strong(
              expected, locked, memory_order::acquire, memory_order::relaxed
@@ -34,7 +34,7 @@ class mutex_native {
 
    [[nodiscard]]
    auto
-   try_lock() -> bool {
+   try_lock() noexcept(!__has_feature(cxx_exceptions)) -> bool {
       uint4 expected = unlocked;
       return m_futex.m_value.compare_exchange_strong(
          expected, locked, memory_order::acquire, memory_order::relaxed
@@ -44,7 +44,8 @@ class mutex_native {
    template <is_duration Duration>
    [[nodiscard]]
    auto
-   try_lock_for(Duration timeout) -> bool {
+   try_lock_for(Duration timeout) noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
       clock_steady::time_point const now = clock_steady::now().assert();
       return try_lock_until(now + clock_steady::duration(timeout));
    }
@@ -52,7 +53,9 @@ class mutex_native {
    template <is_clock Clock, is_duration Duration>
    [[nodiscard]]
    auto
-   try_lock_until(time_point<Clock, Duration> timeout) -> bool {
+   try_lock_until(time_point<Clock, Duration> timeout) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       if (try_lock()) {
          return true;
       }
@@ -60,7 +63,7 @@ class mutex_native {
    }
 
    void
-   unlock() {
+   unlock() noexcept {
       if (m_futex.m_value.release().exchange(unlocked) == contended) {
          auto _ = m_futex.wake();
       }
@@ -73,7 +76,7 @@ class mutex_native {
 
    [[nodiscard]]
    auto
-   spin() const -> uint4 {
+   spin() const noexcept -> uint4 {
       int4 spins = 100;
       for (;;) {
          uint4 const state = m_futex.m_value.relaxed();
@@ -87,7 +90,7 @@ class mutex_native {
 
    [[gnu::cold, gnu::noinline]]
    void
-   lock_contended() {
+   lock_contended() noexcept(!__has_feature(cxx_exceptions)) {
       uint4 state = spin();
       if (state == unlocked) {
          if (
@@ -115,7 +118,9 @@ class mutex_native {
    template <is_clock Clock, is_duration Duration>
    [[nodiscard, gnu::cold, gnu::noinline]]
    auto
-   lock_contended_until(time_point<Clock, Duration> timeout) -> bool {
+   lock_contended_until(time_point<Clock, Duration> timeout) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       typename Clock::time_point const deadline =
          typename Clock::time_point(timeout);
       uint4 state = spin();
@@ -152,7 +157,7 @@ class mutex_native {
    }
 
    void
-   futex_wait() {
+   futex_wait() noexcept(!__has_feature(cxx_exceptions)) {
       scaredy result = m_futex.wait(contended);
       if (result.has_value()) {
          return;
@@ -165,7 +170,9 @@ class mutex_native {
 
    [[nodiscard]]
    auto
-   futex_wait(nix::futex_timespec const* _Nonnull p_timeout) -> bool {
+   futex_wait(nix::futex_timespec const* _Nonnull p_timeout) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       scaredy result = m_futex.wait(contended, p_timeout);
       if (result.has_value()) {
          return true;

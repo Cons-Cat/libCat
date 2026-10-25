@@ -15,7 +15,9 @@ namespace cat {
 
 template <typename Derived, typename T>
 constexpr auto
-container_interface<Derived, T>::subspan(idx start_index, idx end_index) &
+container_interface<Derived, T>::subspan(
+   idx start_index, idx end_index
+) & noexcept(!__has_feature(cxx_exceptions))
    requires(container_interface<Derived, T>::is_array_like)
 {
    Derived& self = static_cast<Derived&>(*this);
@@ -29,7 +31,9 @@ container_interface<Derived, T>::subspan(idx start_index, idx end_index) &
 
 template <typename Derived, typename T>
 constexpr auto
-container_interface<Derived, T>::subspan(idx start_index, idx end_index) const&
+container_interface<Derived, T>::subspan(
+   idx start_index, idx end_index
+) const& noexcept(!__has_feature(cxx_exceptions))
    requires(container_interface<Derived, T>::is_array_like)
 {
    Derived const& self = static_cast<Derived const&>(*this);
@@ -43,7 +47,9 @@ container_interface<Derived, T>::subspan(idx start_index, idx end_index) const&
 
 template <typename Derived, typename T>
 constexpr auto
-container_interface<Derived, T>::first(idx count) &
+container_interface<Derived, T>::first(idx count) & noexcept(
+   !__has_feature(cxx_exceptions)
+)
    requires(container_interface<Derived, T>::is_array_like)
 {
    return this->subspan(0u, count);
@@ -51,7 +57,9 @@ container_interface<Derived, T>::first(idx count) &
 
 template <typename Derived, typename T>
 constexpr auto
-container_interface<Derived, T>::first(idx count) const&
+container_interface<Derived, T>::first(idx count) const& noexcept(
+   !__has_feature(cxx_exceptions)
+)
    requires(container_interface<Derived, T>::is_array_like)
 {
    return this->subspan(0u, count);
@@ -59,7 +67,9 @@ container_interface<Derived, T>::first(idx count) const&
 
 template <typename Derived, typename T>
 constexpr auto
-container_interface<Derived, T>::last(idx count) &
+container_interface<Derived, T>::last(idx count) & noexcept(
+   !__has_feature(cxx_exceptions)
+)
    requires(container_interface<Derived, T>::is_array_like)
 {
    Derived& self = static_cast<Derived&>(*this);
@@ -71,7 +81,9 @@ container_interface<Derived, T>::last(idx count) &
 
 template <typename Derived, typename T>
 constexpr auto
-container_interface<Derived, T>::last(idx count) const&
+container_interface<Derived, T>::last(idx count) const& noexcept(
+   !__has_feature(cxx_exceptions)
+)
    requires(container_interface<Derived, T>::is_array_like)
 {
    Derived const& self = static_cast<Derived const&>(*this);

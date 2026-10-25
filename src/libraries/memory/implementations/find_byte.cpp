@@ -199,7 +199,7 @@ auto
 detail::find_memory_impl(
    byte const* _Nonnull p_haystack, byte const* _Nonnull p_needle,
    idx element_bytes, idx size
-) -> maybe<idx> {
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<idx> {
    if (size == 0u) {
       return nullopt;
    }

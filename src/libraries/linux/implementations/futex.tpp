@@ -81,7 +81,7 @@ template <class Kind>
 inline auto
 basic_futex<Kind>::wait(
    cat::uint4 const expected, futex_timespec const* _Nullable p_timeout
-) -> scaredy_nix<void> {
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<void> {
    scaredy_nix<cat::idx> const result = sys_futex(
       *this, make_futex_op(futex_command::wait, futex_options::private_process),
       expected, p_timeout, nullptr, cat::uint4{}
@@ -95,7 +95,7 @@ basic_futex<Kind>::wait(
 template <class Kind>
 [[nodiscard]]
 inline auto
-basic_futex<Kind>::wake() -> scaredy_nix<cat::idx> {
+basic_futex<Kind>::wake() noexcept -> scaredy_nix<cat::idx> {
    return sys_futex(
       *this, make_futex_op(futex_command::wake, futex_options::private_process),
       1u, nullptr, nullptr, 0u
@@ -105,7 +105,7 @@ basic_futex<Kind>::wake() -> scaredy_nix<cat::idx> {
 template <class Kind>
 [[nodiscard]]
 inline auto
-basic_futex<Kind>::wake_all() -> scaredy_nix<cat::idx> {
+basic_futex<Kind>::wake_all() noexcept -> scaredy_nix<cat::idx> {
    return sys_futex(
       *this, make_futex_op(futex_command::wake, futex_options::private_process),
       futex_bitset_match_any, nullptr, nullptr, 0u
@@ -118,7 +118,7 @@ inline auto
 basic_futex<Kind>::compare_requeue(
    cat::uint4 const wake_limit, cat::uint4 const requeue_limit,
    futex_word& target, cat::uint4 const expected_source_value
-) -> scaredy_nix<cat::idx> {
+) noexcept -> scaredy_nix<cat::idx> {
    return sys_futex(
       *this,
       make_futex_op(

@@ -15,14 +15,14 @@ namespace cat::detail {
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-sampling_unit(Generator& generator) -> Float {
+sampling_unit(Generator& generator) noexcept -> Float {
    uniform_float_distribution<Float> distribution;
    return distribution(generator);
 }
 
 template <is_floating_point Float>
 constexpr auto
-sampling_finite(Float value) -> bool {
+sampling_finite(Float value) noexcept -> bool {
    return is_finite(value);
 }
 
@@ -31,7 +31,7 @@ constexpr auto
 sampling_interval(
    array<Float, sampling_distribution_capacity> const& cumulative, idx size,
    Float value
-) -> idx {
+) noexcept(!__has_feature(cxx_exceptions)) -> idx {
    idx first = 0u;
    idx count = size;
    while (count != 0u) {
@@ -50,7 +50,7 @@ sampling_interval(
 template <typename Int>
    requires(is_integral<Int> || is_simd_integral<Int>)
 constexpr auto
-sampling_integer(idx value) -> Int {
+sampling_integer(idx value) noexcept -> Int {
    return Int(value);
 }
 

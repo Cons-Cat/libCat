@@ -2,7 +2,7 @@
 #include <cat/linux>
 
 void
-cat::breakpoint() {
+cat::breakpoint() noexcept {
    // TODO: Arm and Windows support.
 #ifdef __x86_64__
    // For x86-64, insert a breakpoint interrupt instruction.

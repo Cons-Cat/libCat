@@ -5,7 +5,7 @@ auto
 nix::sys_wait4(
    process_id waiting_on_id, cat::int4* _Nullable p_status_output,
    wait_options_flags options, void* _Nullable p_resource_usage
-) -> nix::scaredy_nix<nix::process_id> {
+) noexcept -> nix::scaredy_nix<nix::process_id> {
    // TODO: Use `p_status_output` for failure-handling.
    // https://filippo.io/linux-syscall-table/
    return nix::syscall_volatile<nix::process_id>(

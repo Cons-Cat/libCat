@@ -80,13 +80,13 @@ class
          fixed_size > 0 && sizeof...(Chars) == fixed_size
          && (__is_same(remove_cvref<Chars>, CharT) && ...)
       )
-   constexpr explicit basic_str_literal(Chars... chars)
+   constexpr explicit basic_str_literal(Chars... chars) noexcept
        : data_{chars..., CharT{}} {
    }
 
    template <__SIZE_TYPE__ extent>
       requires(extent == fixed_size + 1)
-   consteval basic_str_literal(CharT const (&text)[extent]) {
+   consteval basic_str_literal(CharT const (&text)[extent]) noexcept {
       for (__SIZE_TYPE__ index = 0; index <= fixed_size; ++index) {
          data_[index] = text[index];
       }
@@ -98,7 +98,9 @@ class
          extent == fixed_size + 1 && !__is_same(OtherChar, CharT)
          && requires(OtherChar character) { static_cast<CharT>(character); }
       )
-   consteval explicit basic_str_literal(OtherChar const (&text)[extent]) {
+   consteval explicit basic_str_literal(
+      OtherChar const (&text)[extent]
+   ) noexcept {
       for (__SIZE_TYPE__ index = 0; index <= fixed_size; ++index) {
          data_[index] = static_cast<CharT>(text[index]);
       }
@@ -113,7 +115,7 @@ class
             iterator != sentinel;
          } && __is_same(remove_cvref<decltype(*declval<Iterator&>())>, CharT)
       )
-   constexpr basic_str_literal(Iterator begin, Sentinel end) {
+   constexpr basic_str_literal(Iterator begin, Sentinel end) noexcept {
       for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
          if (begin == end) {
             __builtin_trap();
@@ -132,13 +134,13 @@ class
                   range.end();
                   range.size();
                }
-   constexpr explicit basic_str_literal(Range const& range)
+   constexpr explicit basic_str_literal(Range const& range) noexcept
        : basic_str_literal(range.begin(), range.end()) {
    }
 
    constexpr basic_str_literal(basic_str_literal const&) = default;
    constexpr auto
-   operator=(basic_str_literal const&) -> basic_str_literal& = default;
+   operator=(basic_str_literal const&) noexcept -> basic_str_literal& = default;
 
    static constexpr detail::str_literal_constant<fixed_size> size{};
    static constexpr detail::str_literal_constant<fixed_size> length{};
@@ -147,38 +149,38 @@ class
 
    [[nodiscard]]
    constexpr auto
-   begin() const [[clang::lifetimebound]] -> const_iterator {
+   begin() const noexcept [[clang::lifetimebound]] -> const_iterator {
       return data_;
    }
 
    [[nodiscard]]
    constexpr auto
-   end() const [[clang::lifetimebound]] -> const_iterator {
+   end() const noexcept [[clang::lifetimebound]] -> const_iterator {
       return data_ + fixed_size;
    }
 
    [[nodiscard]]
    constexpr auto
-   cbegin() const [[clang::lifetimebound]] -> const_iterator {
+   cbegin() const noexcept [[clang::lifetimebound]] -> const_iterator {
       return begin();
    }
 
    [[nodiscard]]
    constexpr auto
-   cend() const [[clang::lifetimebound]] -> const_iterator {
+   cend() const noexcept [[clang::lifetimebound]] -> const_iterator {
       return end();
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](__SIZE_TYPE__ position) const [[clang::lifetimebound]]
+   operator[](__SIZE_TYPE__ position) const noexcept [[clang::lifetimebound]]
    -> const_reference {
       return data_[position];
    }
 
    [[nodiscard]]
    constexpr auto
-   at(__SIZE_TYPE__ position) const [[clang::lifetimebound]]
+   at(__SIZE_TYPE__ position) const noexcept [[clang::lifetimebound]]
    -> const_reference {
       if (position >= fixed_size) {
          __builtin_trap();
@@ -188,7 +190,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   front() const [[clang::lifetimebound]] -> const_reference
+   front() const noexcept [[clang::lifetimebound]] -> const_reference
       requires(fixed_size > 0)
    {
       return data_[0];
@@ -196,14 +198,14 @@ class
 
    [[nodiscard]]
    constexpr auto
-   back() const [[clang::lifetimebound]] -> const_reference
+   back() const noexcept [[clang::lifetimebound]] -> const_reference
       requires(fixed_size > 0)
    {
       return data_[fixed_size - 1];
    }
 
    constexpr void
-   swap(basic_str_literal& other) {
+   swap(basic_str_literal& other) noexcept {
       for (__SIZE_TYPE__ index = 0; index <= fixed_size; ++index) {
          CharT temporary = data_[index];
          data_[index] = other.data_[index];
@@ -213,19 +215,19 @@ class
 
    [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   c_str() const [[clang::lifetimebound]] -> const_pointer {
+   c_str() const noexcept [[clang::lifetimebound]] -> const_pointer {
       return data_;
    }
 
    [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> const_pointer {
+   data() const noexcept [[clang::lifetimebound]] -> const_pointer {
       return data_;
    }
 
    [[nodiscard]]
    constexpr auto
-   view() const [[clang::lifetimebound]] -> view_type;
+   view() const noexcept [[clang::lifetimebound]] -> view_type;
 
    [[nodiscard]]
    constexpr
@@ -233,7 +235,7 @@ class
 
    [[nodiscard]]
    static constexpr auto
-   is_null_terminated() -> bool {
+   is_null_terminated() noexcept -> bool {
       return true;
    }
 
@@ -248,7 +250,7 @@ class
    operator+(
       basic_str_literal const& left,
       basic_str_literal<CharT, other_size> const& right
-   ) -> basic_str_literal<CharT, fixed_size + other_size> {
+   ) noexcept -> basic_str_literal<CharT, fixed_size + other_size> {
       CharT joined[fixed_size + other_size + 1]{};
       for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
          joined[index] = left[index];
@@ -261,7 +263,7 @@ class
 
    [[nodiscard]]
    friend constexpr auto
-   operator+(basic_str_literal const& left, CharT right)
+   operator+(basic_str_literal const& left, CharT right) noexcept
       -> basic_str_literal<CharT, fixed_size + 1> {
       CharT joined[fixed_size + 2]{};
       for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
@@ -273,7 +275,7 @@ class
 
    [[nodiscard]]
    friend constexpr auto
-   operator+(CharT left, basic_str_literal const& right)
+   operator+(CharT left, basic_str_literal const& right) noexcept
       -> basic_str_literal<CharT, fixed_size + 1> {
       CharT joined[fixed_size + 2]{left};
       for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
@@ -285,8 +287,9 @@ class
    template <__SIZE_TYPE__ extent>
    [[nodiscard]]
    consteval friend auto
-   operator+(basic_str_literal const& left, CharT const (&right)[extent])
-      -> basic_str_literal<CharT, fixed_size + extent - 1> {
+   operator+(
+      basic_str_literal const& left, CharT const (&right)[extent]
+   ) noexcept -> basic_str_literal<CharT, fixed_size + extent - 1> {
       [[assume(right[extent - 1] == CharT{})]];
       CharT joined[fixed_size + extent]{};
       for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
@@ -301,8 +304,9 @@ class
    template <__SIZE_TYPE__ extent>
    [[nodiscard]]
    consteval friend auto
-   operator+(CharT const (&left)[extent], basic_str_literal const& right)
-      -> basic_str_literal<CharT, extent - 1 + fixed_size> {
+   operator+(
+      CharT const (&left)[extent], basic_str_literal const& right
+   ) noexcept -> basic_str_literal<CharT, extent - 1 + fixed_size> {
       [[assume(left[extent - 1] == CharT{})]];
       CharT joined[extent + fixed_size]{};
       for (__SIZE_TYPE__ index = 0; index < extent - 1; ++index) {
@@ -320,7 +324,7 @@ class
    operator==(
       basic_str_literal const& left,
       basic_str_literal<CharT, other_size> const& right
-   ) -> bool {
+   ) noexcept -> bool {
       if constexpr (fixed_size != other_size) {
          return false;
       } else {
@@ -339,7 +343,7 @@ class
    operator<=>(
       basic_str_literal const& left,
       basic_str_literal<CharT, other_size> const& right
-   ) -> strong_ordering {
+   ) noexcept -> strong_ordering {
       constexpr __SIZE_TYPE__ common_size =
          fixed_size < other_size ? fixed_size : other_size;
       for (__SIZE_TYPE__ index = 0; index < common_size; ++index) {
@@ -362,8 +366,9 @@ class
    template <__SIZE_TYPE__ extent>
    [[nodiscard]]
    consteval friend auto
-   operator<=>(basic_str_literal const& left, CharT const (&right)[extent])
-      -> strong_ordering {
+   operator<=>(
+      basic_str_literal const& left, CharT const (&right)[extent]
+   ) noexcept -> strong_ordering {
       [[assume(right[extent - 1] == CharT{})]];
       constexpr __SIZE_TYPE__ right_size = extent - 1;
       constexpr __SIZE_TYPE__ common_size =
@@ -390,7 +395,7 @@ template <typename CharT, __SIZE_TYPE__ size>
 constexpr void
 swap(
    basic_str_literal<CharT, size>& left, basic_str_literal<CharT, size>& right
-) {
+) noexcept {
    left.swap(right);
 }
 

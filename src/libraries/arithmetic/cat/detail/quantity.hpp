@@ -19,26 +19,26 @@ struct symbol_text {
    basic_str_literal<char8_t, utf8_size> m_utf8;
    basic_str_literal<char, portable_size> m_ascii;
 
-   consteval symbol_text(char const (&text)[portable_size + 1])
+   consteval symbol_text(char const (&text)[portable_size + 1]) noexcept
        : m_utf8(text), m_ascii(text) {
    }
 
    consteval symbol_text(
       char8_t const (&utf8)[utf8_size + 1],
       char const (&portable)[portable_size + 1]
-   )
+   ) noexcept
        : m_utf8(utf8), m_ascii(portable) {
    }
 
    [[nodiscard]]
    constexpr auto
-   utf8() const -> auto const& {
+   utf8() const noexcept -> auto const& {
       return m_utf8;
    }
 
    [[nodiscard]]
    constexpr auto
-   portable() const -> auto const& {
+   portable() const noexcept -> auto const& {
       return m_ascii;
    }
 
@@ -47,7 +47,7 @@ struct symbol_text {
    friend consteval auto
    operator+(
       symbol_text left, symbol_text<right_utf8_size, right_portable_size> right
-   ) {
+   ) noexcept {
       char8_t utf8[utf8_size + right_utf8_size + 1]{};
       char portable[portable_size + right_portable_size + 1]{};
       for (__SIZE_TYPE__ index = 0; index < utf8_size; ++index) {
@@ -73,7 +73,7 @@ struct symbol_text {
    friend consteval auto
    operator==(
       symbol_text left, symbol_text<right_utf8_size, right_portable_size> right
-   ) -> bool {
+   ) noexcept -> bool {
       if constexpr (
          utf8_size != right_utf8_size || portable_size != right_portable_size
       ) {
@@ -98,8 +98,9 @@ template <__SIZE_TYPE__ size>
 symbol_text(char const (&)[size]) -> symbol_text<size - 1, size - 1>;
 
 template <__SIZE_TYPE__ utf8_size, __SIZE_TYPE__ portable_size>
-symbol_text(char8_t const (&)[utf8_size], char const (&)[portable_size])
-   -> symbol_text<utf8_size - 1, portable_size - 1>;
+symbol_text(
+   char8_t const (&)[utf8_size], char const (&)[portable_size]
+) noexcept -> symbol_text<utf8_size - 1, portable_size - 1>;
 
 template <symbol_text id>
 struct base_dimension {
@@ -109,12 +110,12 @@ struct base_dimension {
 namespace detail {
 
 consteval auto
-quantity_abs(int value) -> int {
+quantity_abs(int value) noexcept -> int {
    return value < 0 ? -value : value;
 }
 
 consteval auto
-quantity_gcd(int left, int right) -> int {
+quantity_gcd(int left, int right) noexcept -> int {
    left = quantity_abs(left);
    right = quantity_abs(right);
    while (right != 0) {
@@ -176,13 +177,13 @@ using quantity_select_type = quantity_select<condition, True, False>::type;
 
 template <typename T>
 consteval auto
-quantity_type_name() {
+quantity_type_name() noexcept {
    return basic_str_literal{__PRETTY_FUNCTION__};
 }
 
 template <typename Left, typename Right>
 consteval auto
-quantity_type_less() -> bool {
+quantity_type_less() noexcept -> bool {
    constexpr auto left = quantity_type_name<Left>();
    constexpr auto right = quantity_type_name<Right>();
    constexpr __SIZE_TYPE__ common_size =
@@ -341,7 +342,7 @@ using normalized_dimension = detail::normalized_dimension<DimensionValue>::type;
 template <is_dimension_specifier Left, is_dimension_specifier Right>
 [[nodiscard]]
 consteval auto
-operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
+operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) noexcept {
    return multiplied_dimension<
       normalized_dimension<Left>, normalized_dimension<Right>>{};
 }
@@ -349,7 +350,7 @@ operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
 template <is_dimension_specifier Left, is_dimension_specifier Right>
 [[nodiscard]]
 consteval auto
-operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
+operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) noexcept {
    return divided_dimension<
       normalized_dimension<Left>, normalized_dimension<Right>>{};
 }
@@ -359,7 +360,7 @@ template <
    requires(denominator != 0)
 [[nodiscard]]
 consteval auto
-pow([[maybe_unused]] DimensionValue dimension_value) {
+pow([[maybe_unused]] DimensionValue dimension_value) noexcept {
    return powered_dimension<
       normalized_dimension<DimensionValue>, numerator, denominator>{};
 }
@@ -367,21 +368,21 @@ pow([[maybe_unused]] DimensionValue dimension_value) {
 template <is_dimension_specifier DimensionValue>
 [[nodiscard]]
 consteval auto
-inverse(DimensionValue dimension_value) {
+inverse(DimensionValue dimension_value) noexcept {
    return pow<-1>(dimension_value);
 }
 
 template <is_dimension_specifier DimensionValue>
 [[nodiscard]]
 consteval auto
-sqrt(DimensionValue dimension_value) {
+sqrt(DimensionValue dimension_value) noexcept {
    return pow<1, 2>(dimension_value);
 }
 
 template <is_dimension_specifier DimensionValue>
 [[nodiscard]]
 consteval auto
-cbrt(DimensionValue dimension_value) {
+cbrt(DimensionValue dimension_value) noexcept {
    return pow<1, 3>(dimension_value);
 }
 
@@ -504,7 +505,7 @@ struct quantity_spec<first, arguments...> {
 
    [[nodiscard]]
    consteval
-   operator parent_type() const
+   operator parent_type() const noexcept
       requires(has_parent)
    {
       return first;
@@ -513,7 +514,7 @@ struct quantity_spec<first, arguments...> {
    template <typename Self, typename Unit>
    [[nodiscard]]
    consteval auto
-   operator[](this Self self, Unit unit_value) {
+   operator[](this Self self, Unit unit_value) noexcept {
       return make_reference(self, unit_value);
    }
 };
@@ -608,14 +609,14 @@ inline constexpr detail::quantity_kind<
 template <is_quantity_spec QuantitySpec>
 [[nodiscard]]
 consteval auto
-get_dimension([[maybe_unused]] QuantitySpec quantity_specification) {
+get_dimension([[maybe_unused]] QuantitySpec quantity_specification) noexcept {
    return typename QuantitySpec::dimension_type{};
 }
 
 template <is_quantity_spec Left, is_quantity_spec Right>
 [[nodiscard]]
 consteval auto
-operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
+operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) noexcept {
    using result_dimension = multiplied_dimension<
       typename Left::dimension_type, typename Right::dimension_type>;
    return derived_quantity_spec<result_dimension>{};
@@ -624,7 +625,7 @@ operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
 template <is_quantity_spec Left, is_quantity_spec Right>
 [[nodiscard]]
 consteval auto
-operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
+operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) noexcept {
    using result_dimension = divided_dimension<
       typename Left::dimension_type, typename Right::dimension_type>;
    return derived_quantity_spec<result_dimension>{};
@@ -634,7 +635,7 @@ template <int numerator, int denominator = 1, is_quantity_spec QuantitySpec>
    requires(denominator != 0)
 [[nodiscard]]
 consteval auto
-pow([[maybe_unused]] QuantitySpec quantity_specification) {
+pow([[maybe_unused]] QuantitySpec quantity_specification) noexcept {
    using result_dimension = powered_dimension<
       typename QuantitySpec::dimension_type, numerator, denominator>;
    return derived_quantity_spec<result_dimension>{};
@@ -643,21 +644,21 @@ pow([[maybe_unused]] QuantitySpec quantity_specification) {
 template <is_quantity_spec QuantitySpec>
 [[nodiscard]]
 consteval auto
-inverse(QuantitySpec quantity_specification) {
+inverse(QuantitySpec quantity_specification) noexcept {
    return pow<-1>(quantity_specification);
 }
 
 template <is_quantity_spec QuantitySpec>
 [[nodiscard]]
 consteval auto
-sqrt(QuantitySpec quantity_specification) {
+sqrt(QuantitySpec quantity_specification) noexcept {
    return pow<1, 2>(quantity_specification);
 }
 
 template <is_quantity_spec QuantitySpec>
 [[nodiscard]]
 consteval auto
-cbrt(QuantitySpec quantity_specification) {
+cbrt(QuantitySpec quantity_specification) noexcept {
    return pow<1, 3>(quantity_specification);
 }
 
@@ -881,7 +882,7 @@ namespace detail {
 inline constexpr long double pi_value = 0x1.921fb54442d18469898cc51701b8p+1L;
 
 consteval auto
-quantity_gcd(unsigned long long left, unsigned long long right)
+quantity_gcd(unsigned long long left, unsigned long long right) noexcept
    -> unsigned long long {
    while (right != 0) {
       auto const remainder = left % right;
@@ -925,7 +926,7 @@ operator*(
    [[maybe_unused]] magnitude<
       right_numerator, right_denominator, right_power, right_pi_power>
       right
-) {
+) noexcept {
    return normalized_magnitude<
       left_numerator * right_numerator, left_denominator * right_denominator,
       left_power + right_power, left_pi_power + right_pi_power>{};
@@ -944,7 +945,7 @@ operator/(
    [[maybe_unused]] magnitude<
       right_numerator, right_denominator, right_power, right_pi_power>
       right
-) {
+) noexcept {
    return normalized_magnitude<
       left_numerator * right_denominator, left_denominator * right_numerator,
       left_power - right_power, left_pi_power - right_pi_power>{};
@@ -962,8 +963,9 @@ inline constexpr magnitude<value> mag;
 namespace detail {
 
 consteval auto
-magnitude_integer_power(unsigned long long base, unsigned long long exponent)
-   -> unsigned long long {
+magnitude_integer_power(
+   unsigned long long base, unsigned long long exponent
+) noexcept -> unsigned long long {
    unsigned long long result = 1;
    while (exponent != 0) {
       if ((exponent & 1) != 0) {
@@ -977,7 +979,7 @@ magnitude_integer_power(unsigned long long base, unsigned long long exponent)
 
 template <auto value, int numerator, int denominator>
 consteval auto
-powered_magnitude() {
+powered_magnitude() noexcept {
    using magnitude_type = __typeof_unqual(value);
    if constexpr (denominator == 1) {
       constexpr auto absolute_power = numerator < 0 ? -numerator : numerator;
@@ -1007,7 +1009,7 @@ powered_magnitude() {
 
 template <auto value>
 consteval auto
-magnitude_value() -> long double {
+magnitude_value() noexcept -> long double {
    using magnitude_type = __typeof_unqual(value);
    long double result = static_cast<long double>(magnitude_type::numerator)
                         / magnitude_type::denominator;
@@ -1054,7 +1056,8 @@ inline constexpr auto mag_power = [] {
 template <is_unit_magnitude Left, is_unit_magnitude Right>
 [[nodiscard]]
 consteval auto
-operator==([[maybe_unused]] Left left, [[maybe_unused]] Right right) -> bool {
+operator==([[maybe_unused]] Left left, [[maybe_unused]] Right right) noexcept
+   -> bool {
    return detail::magnitude_value<Left{}>()
           == detail::magnitude_value<Right{}>();
 }
@@ -1062,7 +1065,7 @@ operator==([[maybe_unused]] Left left, [[maybe_unused]] Right right) -> bool {
 template <is_unit_magnitude Left, is_unit_magnitude Right>
 [[nodiscard]]
 consteval auto
-operator<=>([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
+operator<=>([[maybe_unused]] Left left, [[maybe_unused]] Right right) noexcept {
    return detail::magnitude_value<Left{}>()
           <=> detail::magnitude_value<Right{}>();
 }
@@ -1074,7 +1077,7 @@ template <int numerator, int denominator = 1, is_unit_magnitude Magnitude>
    )
 [[nodiscard]]
 consteval auto
-pow([[maybe_unused]] Magnitude magnitude_value) {
+pow([[maybe_unused]] Magnitude magnitude_value) noexcept {
    return detail::powered_magnitude<Magnitude{}, numerator, denominator>();
 }
 
@@ -1214,35 +1217,36 @@ struct prefixed_unit {
 template <is_quantity Quantity>
 [[nodiscard]]
 consteval auto
-get_quantity_spec([[maybe_unused]] Quantity quantity) {
+get_quantity_spec([[maybe_unused]] Quantity quantity) noexcept {
    return typename Quantity::quantity_spec_type{};
 }
 
 template <is_unit_specifier Unit>
 [[nodiscard]]
 consteval auto
-get_quantity_spec([[maybe_unused]] Unit unit) {
+get_quantity_spec([[maybe_unused]] Unit unit) noexcept {
    return typename Unit::quantity_spec_type{};
 }
 
 template <is_quantity Quantity>
 [[nodiscard]]
 consteval auto
-get_unit([[maybe_unused]] Quantity quantity) {
+get_unit([[maybe_unused]] Quantity quantity) noexcept {
    return typename Quantity::unit_type{};
 }
 
 template <is_unit_specifier Unit>
 [[nodiscard]]
 consteval auto
-get_unit(Unit unit) {
+get_unit(Unit unit) noexcept {
    return unit;
 }
 
 template <is_unit_specifier Left, is_unit_specifier Right>
 [[nodiscard]]
 consteval auto
-operator==([[maybe_unused]] Left left, [[maybe_unused]] Right right) -> bool {
+operator==([[maybe_unused]] Left left, [[maybe_unused]] Right right) noexcept
+   -> bool {
    return __is_same(Left, Right);
 }
 
@@ -1251,7 +1255,7 @@ operator==([[maybe_unused]] Left left, [[maybe_unused]] Right right) -> bool {
 template <is_unit_specifier Left, is_unit_specifier Right>
 [[nodiscard]]
 consteval auto
-is_equivalent([[maybe_unused]] Left left, [[maybe_unused]] Right right)
+is_equivalent([[maybe_unused]] Left left, [[maybe_unused]] Right right) noexcept
    -> bool {
    using left_quantity = reference_quantity<Left{}>;
    using right_quantity = reference_quantity<Right{}>;
@@ -1270,7 +1274,7 @@ template <is_quantity_spec QuantitySpec, is_unit_specifier UnitType>
 consteval auto
 make_reference(
    [[maybe_unused]] QuantitySpec quantity_specification, UnitType unit_value
-) {
+) noexcept {
    if constexpr (
       __is_same(QuantitySpec, __typeof_unqual(get_quantity_spec(unit_value)))
    ) {
@@ -1286,7 +1290,7 @@ make_reference(
 template <is_quantity_specifier R>
 [[nodiscard]]
 consteval auto
-get_dimension(R reference) {
+get_dimension(R reference) noexcept {
    using quantity_specification = __typeof_unqual(get_quantity_spec(reference));
    return typename quantity_specification::dimension_type{};
 }
@@ -1354,7 +1358,7 @@ namespace detail {
 
 template <typename Left, typename Right>
 consteval auto
-common_unit_magnitude() {
+common_unit_magnitude() noexcept {
    if constexpr (
       magnitude_value<Left::unit_magnitude>()
       <= magnitude_value<Right::unit_magnitude>()
@@ -1416,7 +1420,9 @@ using powered_quantity = reference<
 template <is_unit_magnitude Magnitude, is_quantity_specifier R>
 [[nodiscard]]
 consteval auto
-operator*(Magnitude magnitude_value, [[maybe_unused]] R reference_value) {
+operator*(
+   Magnitude magnitude_value, [[maybe_unused]] R reference_value
+) noexcept {
    using source_quantity = reference_quantity<R{}>;
    using result_quantity = reference<
       typename source_quantity::quantity_spec_type,
@@ -1435,14 +1441,14 @@ operator*(Magnitude magnitude_value, [[maybe_unused]] R reference_value) {
 template <is_quantity_specifier R, is_unit_magnitude Magnitude>
 [[nodiscard]]
 consteval auto
-operator*(R reference_value, Magnitude magnitude_value) {
+operator*(R reference_value, Magnitude magnitude_value) noexcept {
    return magnitude_value * reference_value;
 }
 
 template <is_quantity_specifier Left, is_quantity_specifier Right>
 [[nodiscard]]
 consteval auto
-operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
+operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) noexcept {
    using left_quantity = reference_quantity<Left{}>;
    using right_quantity = reference_quantity<Right{}>;
    using result_quantity = multiplied_quantity<left_quantity, right_quantity>;
@@ -1459,7 +1465,7 @@ operator*([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
 template <is_quantity_specifier Left, is_quantity_specifier Right>
 [[nodiscard]]
 consteval auto
-operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) {
+operator/([[maybe_unused]] Left left, [[maybe_unused]] Right right) noexcept {
    using left_quantity = reference_quantity<Left{}>;
    using right_quantity = reference_quantity<Right{}>;
    using result_quantity = divided_quantity<left_quantity, right_quantity>;
@@ -1501,21 +1507,21 @@ template <int numerator, int denominator = 1, is_quantity_specifier R>
 template <is_quantity_specifier R>
 [[nodiscard]]
 consteval auto
-inverse(R reference_value) {
+inverse(R reference_value) noexcept {
    return pow<-1>(reference_value);
 }
 
 template <is_quantity_specifier R>
 [[nodiscard]]
 consteval auto
-sqrt(R reference_value) {
+sqrt(R reference_value) noexcept {
    return pow<1, 2>(reference_value);
 }
 
 template <is_quantity_specifier R>
 [[nodiscard]]
 consteval auto
-cbrt(R reference_value) {
+cbrt(R reference_value) noexcept {
    return pow<1, 3>(reference_value);
 }
 
@@ -1597,7 +1603,7 @@ concept is_quantity_direct_conversion =
 template <is_quantity From, is_quantity To>
 [[nodiscard]]
 consteval auto
-is_integral_quantity_scale() -> bool {
+is_integral_quantity_scale() noexcept -> bool {
    constexpr auto conversion = From::unit_magnitude / To::unit_magnitude;
    using conversion_type = __typeof_unqual(conversion);
    if constexpr (conversion_type::pi_power != 0) {
@@ -1652,7 +1658,7 @@ using rebind_quantity_type =
 template <typename Raw>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-quantity_scale_factor(int exponent) -> Raw {
+quantity_scale_factor(int exponent) noexcept -> Raw {
    Raw result = 1;
    for (int i = 0; i < exponent; ++i) {
       result *= 10;
@@ -1663,7 +1669,7 @@ quantity_scale_factor(int exponent) -> Raw {
 template <typename Raw>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-quantity_pi_factor(int exponent) -> Raw {
+quantity_pi_factor(int exponent) noexcept -> Raw {
    Raw result = 1;
    if (exponent > 0) {
       for (int i = 0; i < exponent; ++i) {
@@ -1680,7 +1686,7 @@ quantity_pi_factor(int exponent) -> Raw {
 template <is_quantity To, is_arithmetic U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-quantity_value_in(U value) {
+quantity_value_in(U value) noexcept {
    using from = arithmetic_quantity<U>;
    auto const raw = make_raw_arithmetic(value);
    if constexpr (
@@ -1728,7 +1734,7 @@ quantity_value_in(U value) {
 template <auto quantity, is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-attach_quantity(T value) {
+attach_quantity(T value) noexcept {
    if constexpr (is_raw_integral<T>) {
       return basic_int<T, overflow_policies::undefined, quantity>(value);
    } else if constexpr (is_raw_floating_point<T>) {

@@ -1,7 +1,7 @@
 #include <cat/linux>
 
 auto
-nix::is_a_tty(file_descriptor file_descriptor) -> scaredy_nix<void> {
+nix::is_a_tty(file_descriptor file_descriptor) noexcept -> scaredy_nix<void> {
    // `&size` is an output parameter.
    tty_window_size size;
    return sys_ioctl(file_descriptor, io_requests::tiocgwinsz, &size);

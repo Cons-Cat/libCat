@@ -24,14 +24,15 @@ struct as_vectorized_chunk_reference {
 
    [[nodiscard]]
    constexpr
-   operator value_type() const {
+   operator value_type() const noexcept {
       value_type chunk{};
       chunk.load(p_data);
       return chunk;
    }
 
    constexpr auto
-   operator=(value_type const& chunk) -> as_vectorized_chunk_reference& {
+   operator=(value_type const& chunk) noexcept
+      -> as_vectorized_chunk_reference& {
       chunk.store(p_data);
       return *this;
    }
@@ -57,24 +58,24 @@ class vectorized_stepanov_iterator
    constexpr vectorized_stepanov_iterator(self_type const&) = default;
    constexpr vectorized_stepanov_iterator(self_type&&) = default;
 
-   constexpr explicit vectorized_stepanov_iterator(storage_pointer ptr)
+   constexpr explicit vectorized_stepanov_iterator(storage_pointer ptr) noexcept
        : p(ptr) {
    }
 
    [[nodiscard]]
    static constexpr auto
-   size() -> idx {
+   size() noexcept -> idx {
       return width;
    }
 
    constexpr void
-   advance(iword offset) {
+   advance(iword offset) noexcept {
       p += static_cast<decltype(p - p)>(offset * iword(width.raw));
    }
 
    [[nodiscard]]
    constexpr auto
-   distance_to(self_type const& other) const -> iword {
+   distance_to(self_type const& other) const noexcept -> iword {
       return iword(
          (other.p - p) / static_cast<decltype(other.p - p)>(width.raw)
       );
@@ -82,7 +83,7 @@ class vectorized_stepanov_iterator
 
    [[nodiscard]]
    constexpr auto
-   dereference() -> as_vectorized_chunk_reference<Lane, width>
+   dereference() noexcept -> as_vectorized_chunk_reference<Lane, width>
       requires(!is_const)
    {
       return {p};
@@ -90,7 +91,7 @@ class vectorized_stepanov_iterator
 
    [[nodiscard]]
    constexpr auto
-   dereference() const {
+   dereference() const noexcept {
       if constexpr (is_const) {
          value_type chunk{};
          chunk.load(p);
@@ -104,7 +105,7 @@ class vectorized_stepanov_iterator
 template <typename Lane, idx width>
 [[nodiscard]]
 constexpr auto
-as_vectorized(Lane const* _Nonnull p_lane)
+as_vectorized(Lane const* _Nonnull p_lane) noexcept
    -> vectorized_stepanov_iterator<Lane, width, true>
    requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
 {
@@ -114,7 +115,7 @@ as_vectorized(Lane const* _Nonnull p_lane)
 template <typename Lane, idx width>
 [[nodiscard]]
 constexpr auto
-as_vectorized(Lane* _Nonnull p_lane)
+as_vectorized(Lane* _Nonnull p_lane) noexcept
    -> vectorized_stepanov_iterator<Lane, width, false>
    requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
 {

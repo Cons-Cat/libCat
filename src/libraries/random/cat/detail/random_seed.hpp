@@ -10,13 +10,14 @@ namespace cat {
 class random_seed {
  public:
    template <is_unsigned_integral T>
-   constexpr random_seed(T value) : m_value(make_raw_arithmetic(value)) {
+   constexpr random_seed(T value) noexcept
+       : m_value(make_raw_arithmetic(value)) {
    }
 
    template <is_unsigned_integral T>
    [[nodiscard]]
    constexpr explicit
-   operator T() const {
+   operator T() const noexcept {
       return T(m_value);
    }
 

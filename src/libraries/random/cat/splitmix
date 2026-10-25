@@ -105,7 +105,7 @@ class splitmix_engine {
    template <typename Word>
    [[nodiscard]]
    static constexpr auto
-   mix(Word value) -> Word {
+   mix(Word value) noexcept -> Word {
       if constexpr (is_simd<Word>) {
          value = (value ^ (value >> 30u)) * uint8(0xbf58476d'1ce4e5b9ull);
          value = (value ^ (value >> 27u)) * uint8(0x94d049bb'133111ebull);
@@ -118,16 +118,16 @@ class splitmix_engine {
    }
 
  public:
-   constexpr splitmix_engine() {
+   constexpr splitmix_engine() noexcept {
       seed();
    }
 
-   constexpr explicit splitmix_engine(random_seed value) {
+   constexpr explicit splitmix_engine(random_seed value) noexcept {
       seed(value);
    }
 
    constexpr void
-   seed(random_seed value = default_seed) {
+   seed(random_seed value = default_seed) noexcept {
       if constexpr (is_simd<result_type>) {
          m_state = result_type(uint8(value)) + iota<result_type>(0u);
       } else {
@@ -174,7 +174,7 @@ class splitmix_engine {
    template <typename Abi>
    [[nodiscard]]
    constexpr auto
-   generate_exact_batch() -> simd<result_type, Abi>
+   generate_exact_batch() noexcept -> simd<result_type, Abi>
       requires(!is_simd<result_type>)
    {
       using batch_type = simd<result_type, Abi>;
@@ -187,37 +187,37 @@ class splitmix_engine {
  public:
    [[nodiscard]]
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return uint8::min();
    }
 
    [[nodiscard]]
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return uint8::max();
    }
 
    [[nodiscard]]
    static consteval auto
-   period_pow2() -> idx {
+   period_pow2() noexcept -> idx {
       return 64u;
    }
 
    // Skip this many outputs.
    constexpr void
-   discard(result_type count) {
+   discard(result_type count) noexcept {
       m_state += increment * count;
    }
 
    // Apply the arbitrary-distance jump described in the SplitMix paper.
    constexpr void
-   jump(result_type count) {
+   jump(result_type count) noexcept {
       discard(count);
    }
 
    // Skip 2^log2_distance outputs.
    constexpr void
-   jump_log2(uword log2_distance) {
+   jump_log2(uword log2_distance) noexcept {
       if (log2_distance < period_pow2()) {
          jump(result_type(uint8(1u).shift_left(log2_distance)));
       }
@@ -225,14 +225,15 @@ class splitmix_engine {
 
    // Skip this many outputs backwards.
    constexpr void
-   backstep(result_type count) {
+   backstep(result_type count) noexcept {
       m_state -= increment * count;
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator==(splitmix_engine const& left, splitmix_engine const& right)
-      -> bool {
+   operator==(
+      splitmix_engine const& left, splitmix_engine const& right
+   ) noexcept -> bool {
       return left.m_state == right.m_state;
    }
 

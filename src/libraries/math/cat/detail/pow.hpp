@@ -10,7 +10,7 @@ namespace detail {
 
 template <is_integral T, typename U>
 constexpr auto
-pow_integral(T base, U exponent) -> T {
+pow_integral(T base, U exponent) noexcept -> T {
    if (exponent < 0) {
       return 0;
    }
@@ -29,7 +29,7 @@ pow_integral(T base, U exponent) -> T {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-pow_is_integer(Float value) -> bool {
+pow_is_integer(Float value) noexcept -> bool {
    constexpr Float exact_integer_limit =
       is_same<Float, float> ? 0x1p24f : 0x1p53;
    if (value >= exact_integer_limit || value <= -exact_integer_limit) {
@@ -41,7 +41,7 @@ pow_is_integer(Float value) -> bool {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-pow_is_odd_integer(Float value) -> bool {
+pow_is_odd_integer(Float value) noexcept -> bool {
    constexpr Float exact_integer_limit =
       is_same<Float, float> ? 0x1p24f : 0x1p53;
    if (value >= exact_integer_limit || value <= -exact_integer_limit) {
@@ -53,7 +53,7 @@ pow_is_odd_integer(Float value) -> bool {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_pow(Float base, Float exponent) -> Float {
+emulated_pow(Float base, Float exponent) noexcept -> Float {
    if (exponent == 0 || base == 1) {
       return 1;
    }
@@ -99,7 +99,7 @@ template <is_integral T, is_integral U>
    requires is_dimensionless_arithmetic<T>
 [[nodiscard]]
 constexpr auto
-pow(T base, U exponent) -> T;
+pow(T base, U exponent) noexcept -> T;
 
 template <is_floating_point T, is_arithmetic U>
    requires(
@@ -108,7 +108,7 @@ template <is_floating_point T, is_arithmetic U>
    )
 [[nodiscard]]
 constexpr auto
-pow(T base, U exponent) -> T;
+pow(T base, U exponent) noexcept -> T;
 
 template <int numerator, int denominator = 1, is_arithmetic T>
    requires(
@@ -117,7 +117,7 @@ template <int numerator, int denominator = 1, is_arithmetic T>
    )
 [[nodiscard]]
 constexpr auto
-pow(T base) {
+pow(T base) noexcept {
    using raw_type = raw_arithmetic_type<T>;
    using result_quantity =
       powered_quantity<arithmetic_quantity<T>, numerator, denominator>;
@@ -136,7 +136,7 @@ template <is_integral T, is_integral U>
    requires is_dimensionless_arithmetic<T>
 [[nodiscard]]
 constexpr auto
-pow(T base, U exponent) -> T {
+pow(T base, U exponent) noexcept -> T {
    return detail::pow_integral(base, exponent);
 }
 
@@ -147,7 +147,7 @@ template <is_floating_point T, is_arithmetic U>
    )
 [[nodiscard]]
 constexpr auto
-pow(T base, U exponent) -> T {
+pow(T base, U exponent) noexcept -> T {
    using raw_type = raw_arithmetic_type<T>;
    if consteval {
       return T(

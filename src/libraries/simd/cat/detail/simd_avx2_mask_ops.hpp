@@ -26,7 +26,8 @@ namespace x64::detail {
 template <typename T, x64::is_avx_abi<T> Abi>
 [[nodiscard, gnu::target("avx2")]]
 inline auto
-avx2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT32_TYPE__ {
+avx2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) noexcept
+   -> __UINT32_TYPE__ {
    if constexpr (sizeof(T) == 1) {
       return static_cast<__UINT32_TYPE__>(__builtin_ia32_pmovmskb256(mask.raw));
    } else if constexpr (sizeof(T) == 4) {
@@ -55,7 +56,7 @@ avx2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT32_TYPE__ {
 
 [[nodiscard]]
 inline auto
-avx2_movmsk_full_lane_mask(cat::idx lane_count) -> __UINT32_TYPE__ {
+avx2_movmsk_full_lane_mask(cat::idx lane_count) noexcept -> __UINT32_TYPE__ {
    if (lane_count >= 32u) {
       return ~0u;
    }
@@ -69,7 +70,7 @@ avx2_movmsk_full_lane_mask(cat::idx lane_count) -> __UINT32_TYPE__ {
 template <typename T, x64::is_avx_abi<T> Abi>
 [[nodiscard, gnu::target("avx2"), gnu::always_inline, gnu::nodebug]]
 constexpr auto
-avx2_abi_masked_lane_bits(cat::simd_mask<T, Abi> const& mask)
+avx2_abi_masked_lane_bits(cat::simd_mask<T, Abi> const& mask) noexcept
    -> __UINT32_TYPE__ {
    return avx2_abi_mask_to_bitset(mask)
           & avx2_movmsk_full_lane_mask(Abi::lanes);
@@ -88,7 +89,7 @@ template <typename T, x64::is_avx_abi<T> Abi>
 struct mask_count_if_true<T, Abi> {
    [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& mask) -> idx {
+   invoke(simd_mask<T, Abi> const& mask) noexcept -> idx {
       // `popcount` on the movmsk lane-bit map.
       __UINT32_TYPE__ const masked_logical_lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(mask);
@@ -100,7 +101,7 @@ template <typename T, x64::is_avx_abi<T> Abi>
 struct mask_find_if_true<T, Abi> {
    [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& mask) -> idx {
+   invoke(simd_mask<T, Abi> const& mask) noexcept -> idx {
       // At least one true lane (`ctz` is well-defined when the movmsk word is
       // non-zero).
       __UINT32_TYPE__ const masked_logical_lane_bits =
@@ -114,7 +115,7 @@ template <typename T, x64::is_avx_abi<T> Abi>
 struct mask_find_last_if_true<T, Abi> {
    [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& mask) -> idx {
+   invoke(simd_mask<T, Abi> const& mask) noexcept -> idx {
       // At least one true lane (lane-bit word is non-zero).
       __UINT32_TYPE__ const masked_logical_lane_bits =
          ::x64::detail::avx2_abi_masked_lane_bits(mask);
@@ -127,7 +128,7 @@ template <typename T, x64::is_avx_abi<T> Abi>
 struct mask_all_of<T, Abi> {
    [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> mask) -> bool {
+   invoke(simd_mask<T, Abi> mask) noexcept -> bool {
       // Movmsk lane bits equal the active-lane mask iff every lane is true.
       return ::x64::detail::avx2_abi_masked_lane_bits(mask)
              == ::x64::detail::avx2_movmsk_full_lane_mask(Abi::lanes);
@@ -138,7 +139,7 @@ template <typename T, x64::is_avx_abi<T> Abi>
 struct mask_any_of<T, Abi> {
    [[nodiscard, gnu::target("avx2"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> mask) -> bool {
+   invoke(simd_mask<T, Abi> mask) noexcept -> bool {
       return ::x64::detail::avx2_abi_masked_lane_bits(mask) != 0u;
    }
 };

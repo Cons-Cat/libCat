@@ -49,22 +49,23 @@ class lognormal_distribution {
 
       constexpr explicit param_type(
          Float mean = 0.f, Float standard_deviation = 1.f
-      )
+      ) noexcept
           : m_mean(mean), m_standard_deviation(standard_deviation) {
       }
 
       constexpr auto
-      m() const -> Float {
+      m() const noexcept -> Float {
          return m_mean;
       }
 
       constexpr auto
-      s() const -> Float {
+      s() const noexcept -> Float {
          return m_standard_deviation;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       Float m_mean;
@@ -73,46 +74,48 @@ class lognormal_distribution {
 
    constexpr explicit lognormal_distribution(
       Float mean = 0.f, Float standard_deviation = 1.f
-   )
+   ) noexcept
        : m_parameter(mean, standard_deviation) {
    }
 
-   constexpr explicit lognormal_distribution(param_type const& parameter)
+   constexpr explicit lognormal_distribution(
+      param_type const& parameter
+   ) noexcept
        : m_parameter(parameter) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
       m_normal.reset();
    }
 
    constexpr auto
-   m() const -> Float {
+   m() const noexcept -> Float {
       return m_parameter.m();
    }
 
    constexpr auto
-   s() const -> Float {
+   s() const noexcept -> Float {
       return m_parameter.s();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameter;
    }
 
    constexpr void
-   param(param_type const& parameter) {
+   param(param_type const& parameter) noexcept {
       m_parameter = parameter;
    }
 
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0.f;
    }
 
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return limits<Float>::infinity();
    }
 
@@ -133,15 +136,16 @@ class lognormal_distribution {
    }
 
    friend constexpr auto
-   operator==(lognormal_distribution const&, lognormal_distribution const&)
-      -> bool = default;
+   operator==(
+      lognormal_distribution const&, lognormal_distribution const&
+   ) noexcept -> bool = default;
 
  private:
    friend class detail::distribution_batch_access;
 
    [[nodiscard]]
    constexpr auto
-   batch_available() const -> bool {
+   batch_available() const noexcept -> bool {
       return detail::distribution_batch_access::available(m_normal);
    }
 

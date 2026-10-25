@@ -45,8 +45,9 @@ enum class [[clang::enum_extensibility(
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_select(simd_mask<T, Abi> mask, simd<T, Abi> on_true, simd<T, Abi> on_false)
-   -> simd<T, Abi> {
+simd_select(
+   simd_mask<T, Abi> mask, simd<T, Abi> on_true, simd<T, Abi> on_false
+) noexcept -> simd<T, Abi> {
    // P2638R0 masked lane pick, now standardized as `std::simd_select`.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return simd<T, Abi>(
@@ -806,7 +807,7 @@ class simd_elementwise_factory_interface {
    constexpr auto
    operator[](
       simd_mask<typename Simd::scalar_type, typename Simd::abi_type> lane_mask
-   ) const -> decltype(auto) {
+   ) const noexcept -> decltype(auto) {
       return static_cast<Derived const*>(this)->bind_masked(lane_mask);
    }
 
@@ -826,7 +827,8 @@ struct make_simd_loaded_aligned_impl
 
    [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
-   invoke(Simd::value_type const* _Nonnull p_source) const -> maybe<Simd> {
+   invoke(Simd::value_type const* _Nonnull p_source) const noexcept
+      -> maybe<Simd> {
       if (!is_aligned(unconst(p_source), alignof(Simd))) {
          return maybe<Simd>{};
       }
@@ -839,7 +841,7 @@ struct make_simd_loaded_aligned_impl
    constexpr auto
    bind_masked(
       simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask
-   ) const
+   ) const noexcept
       -> simd_load_aligned_blend_masked_impl<
          typename Simd::scalar_type, typename Simd::abi_type> {
       return {mask};
@@ -857,7 +859,7 @@ struct make_simd_loaded_impl
 
    [[nodiscard, gnu::always_inline, gnu::flatten]]
    constexpr auto
-   invoke(Simd::value_type const* _Nonnull p_source) const -> Simd {
+   invoke(Simd::value_type const* _Nonnull p_source) const noexcept -> Simd {
       Simd result{};
       result.load(p_source);
       return result;
@@ -867,7 +869,7 @@ struct make_simd_loaded_impl
    constexpr auto
    bind_masked(
       simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask
-   ) const
+   ) const noexcept
       -> simd_load_blend_masked_impl<
          typename Simd::scalar_type, typename Simd::abi_type> {
       return {mask};
@@ -902,7 +904,7 @@ struct make_simd_partial_loaded_impl {
    constexpr auto
    operator[](
       simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask
-   ) const
+   ) const noexcept
       -> simd_partial_load_blend_masked_impl<
          simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {mask};
@@ -925,7 +927,7 @@ struct make_simd_filled_impl {
    constexpr auto
    operator[](
       simd_mask<typename Simd::scalar_type, typename Simd::abi_type> mask
-   ) const
+   ) const noexcept
       -> simd_fill_blend_masked_impl<
          simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {mask};
@@ -952,8 +954,9 @@ struct simd_iota_impl {
 
    [[nodiscard]]
    constexpr auto
-   operator[](Simd::mask_type lane_mask) const -> simd_iota_blend_masked_impl<
-      simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
+   operator[](Simd::mask_type lane_mask) const noexcept
+      -> simd_iota_blend_masked_impl<
+         simd_mask<typename Simd::scalar_type, typename Simd::abi_type>> {
       return {lane_mask};
    }
 };
@@ -1018,7 +1021,7 @@ class simd_elementwise_mask_factory_interface {
 
    [[nodiscard]]
    constexpr auto
-   operator[](SimdMask lane_blend_mask) const -> decltype(auto) {
+   operator[](SimdMask lane_blend_mask) const noexcept -> decltype(auto) {
       return static_cast<Derived const*>(this)->bind_masked(lane_blend_mask);
    }
 
@@ -1038,7 +1041,7 @@ struct make_simd_mask_filled_impl {
 
    [[nodiscard]]
    constexpr auto
-   operator[](SimdMask lane_blend_mask) const
+   operator[](SimdMask lane_blend_mask) const noexcept
       -> simd_mask_fill_blend_masked_impl<SimdMask> {
       return {lane_blend_mask};
    }
@@ -1055,7 +1058,7 @@ struct make_simd_mask_loaded_impl
 
    [[nodiscard]]
    constexpr auto
-   invoke(bool const* _Nonnull p_data) const -> SimdMask {
+   invoke(bool const* _Nonnull p_data) const noexcept -> SimdMask {
       SimdMask mask{};
       mask.load(p_data);
       return mask;
@@ -1063,7 +1066,7 @@ struct make_simd_mask_loaded_impl
 
    [[nodiscard]]
    constexpr auto
-   bind_masked(SimdMask lane_blend_mask) const
+   bind_masked(SimdMask lane_blend_mask) const noexcept
       -> simd_mask_load_blend_masked_impl<SimdMask> {
       return {lane_blend_mask};
    }
@@ -1075,7 +1078,7 @@ struct simd_load_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const {
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept {
       if constexpr (flag == simd_memory_flag::aligned) {
          return simd_load_aligned_blend_masked_impl<T, Abi>{lane_mask};
       } else {
@@ -1094,7 +1097,7 @@ struct simd_store_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept
       -> simd_store_to_masked_impl<simd_mask<T, Abi>> {
       return {lane_mask};
    }
@@ -1119,7 +1122,7 @@ struct simd_load_from_impl {
 
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept
       -> simd_load_from_blend_masked_impl<simd_mask<T, Abi>> {
       return {lane_mask};
    }
@@ -1140,7 +1143,7 @@ struct simd_store_to_impl {
 
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept
       -> simd_store_to_masked_impl<simd_mask<T, Abi>> {
       return {lane_mask};
    }
@@ -1162,7 +1165,7 @@ struct simd_elementwise_interface {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept
       -> simd_unary_masked_impl<Derived, simd_mask<T, Abi>> {
       return {self(), lane_mask};
    }
@@ -1183,7 +1186,7 @@ struct simd_elementwise_interface {
    template <typename Pred>
    [[nodiscard]]
    constexpr auto
-   operator[](Pred pred) const
+   operator[](Pred pred) const noexcept
       -> simd_unary_predicate_masked_impl<Derived, Pred> {
       return {self(), pred};
    }
@@ -1194,7 +1197,7 @@ struct simd_elementwise_interface {
 
    [[nodiscard]]
    constexpr Derived const&
-   self() const {
+   self() const noexcept {
       return static_cast<Derived const&>(*this);
    }
 };
@@ -1228,7 +1231,7 @@ struct simd_elementwise_binary_interface {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept
       -> simd_binary_masked_impl<Derived, simd_mask<T, Abi>> {
       return {self(), lane_mask};
    }
@@ -1246,7 +1249,7 @@ struct simd_elementwise_binary_interface {
    template <typename Pred>
    [[nodiscard]]
    constexpr auto
-   operator[](Pred pred) const
+   operator[](Pred pred) const noexcept
       -> simd_binary_predicate_masked_impl<Derived, Pred> {
       return {self(), pred};
    }
@@ -1256,7 +1259,7 @@ struct simd_elementwise_binary_interface {
    constexpr auto
    invoke_masked(
       simd<T, Abi> left, simd<T, Abi> right, simd_mask<T, Abi> mask
-   ) const -> simd<T, Abi>
+   ) const noexcept -> simd<T, Abi>
       requires(!simd_binary_derived_supplies_invoke_masked<Derived>)
    {
       if constexpr (!is_void<AbiBinaryMaskedOpTag>) {
@@ -1279,7 +1282,7 @@ struct simd_elementwise_binary_interface {
 
    [[nodiscard]]
    constexpr Derived const&
-   self() const {
+   self() const noexcept {
       return static_cast<Derived const&>(*this);
    }
 };
@@ -1300,7 +1303,7 @@ struct simd_elementwise_ternary_interface {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept
       -> simd_ternary_masked_impl<Derived, simd_mask<T, Abi>> {
       return {self(), lane_mask};
    }
@@ -1318,7 +1321,7 @@ struct simd_elementwise_ternary_interface {
    template <typename Pred>
    [[nodiscard]]
    constexpr auto
-   operator[](Pred pred) const
+   operator[](Pred pred) const noexcept
       -> simd_ternary_predicate_masked_impl<Derived, Pred> {
       return {self(), pred};
    }
@@ -1328,7 +1331,7 @@ struct simd_elementwise_ternary_interface {
    constexpr auto
    invoke_masked(
       simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z, simd_mask<T, Abi> mask
-   ) const -> simd<T, Abi>
+   ) const noexcept -> simd<T, Abi>
       requires(!simd_ternary_derived_supplies_invoke_masked<Derived>)
    {
       if constexpr (!is_void<AbiTernaryMaskedOpTag>) {
@@ -1351,7 +1354,7 @@ struct simd_elementwise_ternary_interface {
 
    [[nodiscard]]
    constexpr Derived const&
-   self() const {
+   self() const noexcept {
       return static_cast<Derived const&>(*this);
    }
 };
@@ -1369,7 +1372,7 @@ struct simd_elementwise_binary_mixed_interface {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept
       -> simd_binary_mixed_masked_impl<Derived, simd_mask<T, Abi>> {
       return {self(), lane_mask};
    }
@@ -1380,7 +1383,7 @@ struct simd_elementwise_binary_mixed_interface {
 
    [[nodiscard]]
    constexpr Derived const&
-   self() const {
+   self() const noexcept {
       return static_cast<Derived const&>(*this);
    }
 };
@@ -1397,7 +1400,7 @@ struct simd_elementwise_unary_int_interface {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept
       -> simd_unary_int_masked_impl<Derived, simd_mask<T, Abi>> {
       return {self(), lane_mask};
    }
@@ -1408,7 +1411,7 @@ struct simd_elementwise_unary_int_interface {
 
    [[nodiscard]]
    constexpr Derived const&
-   self() const {
+   self() const noexcept {
       return static_cast<Derived const&>(*this);
    }
 };
@@ -1420,7 +1423,7 @@ struct simd_sin_impl : simd_elementwise_interface<simd_sin_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_sin, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_sin, T, Abi>(input);
       } else {
@@ -1432,7 +1435,7 @@ struct simd_sin_impl : simd_elementwise_interface<simd_sin_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1450,7 +1453,7 @@ struct simd_cos_impl : simd_elementwise_interface<simd_cos_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_cos, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_cos, T, Abi>(input);
       } else {
@@ -1462,7 +1465,7 @@ struct simd_cos_impl : simd_elementwise_interface<simd_cos_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1480,7 +1483,7 @@ struct simd_tan_impl : simd_elementwise_interface<simd_tan_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_tan, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_tan, T, Abi>(input);
       } else {
@@ -1492,7 +1495,7 @@ struct simd_tan_impl : simd_elementwise_interface<simd_tan_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1510,7 +1513,7 @@ struct simd_asin_impl : simd_elementwise_interface<simd_asin_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_asin, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_asin, T, Abi>(input);
       } else {
@@ -1522,7 +1525,7 @@ struct simd_asin_impl : simd_elementwise_interface<simd_asin_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1540,7 +1543,7 @@ struct simd_acos_impl : simd_elementwise_interface<simd_acos_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_acos, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_acos, T, Abi>(input);
       } else {
@@ -1552,7 +1555,7 @@ struct simd_acos_impl : simd_elementwise_interface<simd_acos_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1570,7 +1573,7 @@ struct simd_atan_impl : simd_elementwise_interface<simd_atan_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_atan, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_atan, T, Abi>(input);
       } else {
@@ -1582,7 +1585,7 @@ struct simd_atan_impl : simd_elementwise_interface<simd_atan_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1600,7 +1603,7 @@ struct simd_sinh_impl : simd_elementwise_interface<simd_sinh_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_sinh, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_sinh, T, Abi>(input);
       } else {
@@ -1612,7 +1615,7 @@ struct simd_sinh_impl : simd_elementwise_interface<simd_sinh_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1630,7 +1633,7 @@ struct simd_cosh_impl : simd_elementwise_interface<simd_cosh_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_cosh, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_cosh, T, Abi>(input);
       } else {
@@ -1642,7 +1645,7 @@ struct simd_cosh_impl : simd_elementwise_interface<simd_cosh_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1660,7 +1663,7 @@ struct simd_tanh_impl : simd_elementwise_interface<simd_tanh_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_tanh, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_tanh, T, Abi>(input);
       } else {
@@ -1672,7 +1675,7 @@ struct simd_tanh_impl : simd_elementwise_interface<simd_tanh_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1690,7 +1693,7 @@ struct simd_ceil_impl : simd_elementwise_interface<simd_ceil_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_ceil, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_ceil, T, Abi>(input);
       } else {
@@ -1702,7 +1705,7 @@ struct simd_ceil_impl : simd_elementwise_interface<simd_ceil_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       return ceil(x);
    }
 };
@@ -1714,7 +1717,7 @@ struct simd_floor_impl : simd_elementwise_interface<simd_floor_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_floor, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_floor, T, Abi>(input);
       } else {
@@ -1726,7 +1729,7 @@ struct simd_floor_impl : simd_elementwise_interface<simd_floor_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       return floor(x);
    }
 };
@@ -1738,7 +1741,7 @@ struct simd_log_impl : simd_elementwise_interface<simd_log_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_log, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_log, T, Abi>(input);
       } else {
@@ -1750,7 +1753,7 @@ struct simd_log_impl : simd_elementwise_interface<simd_log_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1769,7 +1772,7 @@ struct simd_log2_impl : simd_elementwise_interface<simd_log2_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_log2, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_log2, T, Abi>(input);
       } else {
@@ -1781,7 +1784,7 @@ struct simd_log2_impl : simd_elementwise_interface<simd_log2_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1802,7 +1805,7 @@ struct simd_log10_impl : simd_elementwise_interface<simd_log10_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_log10, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_log10, T, Abi>(input);
       } else {
@@ -1814,7 +1817,7 @@ struct simd_log10_impl : simd_elementwise_interface<simd_log10_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1835,7 +1838,7 @@ struct simd_exp_impl : simd_elementwise_interface<simd_exp_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_exp, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_exp, T, Abi>(input);
       } else {
@@ -1847,7 +1850,7 @@ struct simd_exp_impl : simd_elementwise_interface<simd_exp_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1866,7 +1869,7 @@ struct simd_exp2_impl : simd_elementwise_interface<simd_exp2_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_exp2, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_exp2, T, Abi>(input);
       } else {
@@ -1878,7 +1881,7 @@ struct simd_exp2_impl : simd_elementwise_interface<simd_exp2_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1899,7 +1902,7 @@ struct simd_exp10_impl : simd_elementwise_interface<simd_exp10_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_exp10, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_exp10, T, Abi>(input);
       } else {
@@ -1911,7 +1914,7 @@ struct simd_exp10_impl : simd_elementwise_interface<simd_exp10_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1929,7 +1932,7 @@ struct simd_roundeven_impl : simd_elementwise_interface<simd_roundeven_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_roundeven, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_roundeven, T, Abi>(
             input
@@ -1943,7 +1946,7 @@ struct simd_roundeven_impl : simd_elementwise_interface<simd_roundeven_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1963,7 +1966,7 @@ struct simd_round_impl : simd_elementwise_interface<simd_round_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_round, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_round, T, Abi>(input);
       } else {
@@ -1975,7 +1978,7 @@ struct simd_round_impl : simd_elementwise_interface<simd_round_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -1993,7 +1996,7 @@ struct simd_trunc_impl : simd_elementwise_interface<simd_trunc_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_trunc, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_trunc, T, Abi>(input);
       } else {
@@ -2005,7 +2008,7 @@ struct simd_trunc_impl : simd_elementwise_interface<simd_trunc_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -2023,7 +2026,7 @@ struct simd_nearbyint_impl : simd_elementwise_interface<simd_nearbyint_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_nearbyint, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_nearbyint, T, Abi>(
             input
@@ -2037,7 +2040,7 @@ struct simd_nearbyint_impl : simd_elementwise_interface<simd_nearbyint_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -2057,7 +2060,7 @@ struct simd_rint_impl : simd_elementwise_interface<simd_rint_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_rint, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_rint, T, Abi>(input);
       } else {
@@ -2069,7 +2072,7 @@ struct simd_rint_impl : simd_elementwise_interface<simd_rint_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(
@@ -2088,7 +2091,7 @@ struct simd_canonicalize_impl
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (
          has_simd_abi_unary_full<simd_abi::op_canonicalize, T, Abi>
       ) {
@@ -2104,7 +2107,7 @@ struct simd_canonicalize_impl
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(__builtin_canonicalizef(
@@ -2124,7 +2127,7 @@ struct simd_abs_impl : simd_elementwise_interface<simd_abs_impl> {
       requires((is_integral<T> && is_signed<T>) || is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_abs, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_abs, T, Abi>(input);
       } else {
@@ -2136,7 +2139,7 @@ struct simd_abs_impl : simd_elementwise_interface<simd_abs_impl> {
       requires((is_integral<T> && is_signed<T>) || is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       if constexpr (is_floating_point<T>) {
          using raw_type = raw_arithmetic_type<T>;
          if constexpr (is_same<raw_type, float>) {
@@ -2158,7 +2161,7 @@ struct simd_bitreverse_impl : simd_elementwise_interface<simd_bitreverse_impl> {
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       // P2638R0 per-lane bit-reverse on integral lanes.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       if constexpr (has_simd_abi_unary_full<simd_abi::op_bitreverse, T, Abi>) {
@@ -2174,7 +2177,7 @@ struct simd_bitreverse_impl : simd_elementwise_interface<simd_bitreverse_impl> {
       requires(is_unsigned_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       // P2638R0 Per-lane bit-reverse (fallback lane hook).
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       using unsigned_type = make_unsigned_type<T>;
@@ -2200,7 +2203,8 @@ struct simd_pow_impl : simd_elementwise_binary_interface<simd_pow_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const noexcept
+      -> simd<T, Abi> {
       if constexpr (has_simd_abi_binary_full<simd_abi::op_pow, T, Abi>) {
          return simd_abi_apply_binary_full<simd_abi::op_pow, T, Abi>(
             left, right
@@ -2214,7 +2218,7 @@ struct simd_pow_impl : simd_elementwise_binary_interface<simd_pow_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T left, T right) const -> T {
+   invoke_lanewise(T left, T right) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       if constexpr (is_same<raw_type, float>) {
          return T(__builtin_powf(
@@ -2255,7 +2259,7 @@ struct simd_pow_impl : simd_elementwise_binary_interface<simd_pow_impl> {
          requires(is_floating_point<T>)                                     \
       [[nodiscard]]                                                         \
       constexpr auto                                                        \
-      invoke_lanewise(T left, T right) const -> T {                         \
+      invoke_lanewise(T left, T right) const noexcept -> T {                \
          using raw_type = raw_arithmetic_type<T>;                           \
          if constexpr (is_same<raw_type, float>) {                          \
             return T(                                                       \
@@ -2291,7 +2295,8 @@ struct simd_minimumnum_impl
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const noexcept
+      -> simd<T, Abi> {
       if constexpr (has_simd_abi_binary_full<simd_abi::op_minimumnum, T, Abi>) {
          return simd_abi_apply_binary_full<simd_abi::op_minimumnum, T, Abi>(
             left, right
@@ -2307,7 +2312,7 @@ struct simd_minimumnum_impl
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T left, T right) const -> T {
+   invoke_lanewise(T left, T right) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       return T(__builtin_fminimum_num(
          static_cast<raw_type>(make_raw_arithmetic(left)),
@@ -2324,7 +2329,8 @@ struct simd_maximumnum_impl
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const noexcept
+      -> simd<T, Abi> {
       if constexpr (has_simd_abi_binary_full<simd_abi::op_maximumnum, T, Abi>) {
          return simd_abi_apply_binary_full<simd_abi::op_maximumnum, T, Abi>(
             left, right
@@ -2340,7 +2346,7 @@ struct simd_maximumnum_impl
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T left, T right) const -> T {
+   invoke_lanewise(T left, T right) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       return T(__builtin_fmaximum_num(
          static_cast<raw_type>(make_raw_arithmetic(left)),
@@ -2357,7 +2363,8 @@ struct simd_add_sat_impl : simd_elementwise_binary_interface<
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const noexcept
+      -> simd<T, Abi> {
       if constexpr (has_simd_abi_binary_full<simd_abi::op_add_sat, T, Abi>) {
          return simd_abi_apply_binary_full<simd_abi::op_add_sat, T, Abi>(
             left, right
@@ -2373,7 +2380,7 @@ struct simd_add_sat_impl : simd_elementwise_binary_interface<
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T left, T right) const -> T {
+   invoke_lanewise(T left, T right) const noexcept -> T {
       return static_cast<T>(__builtin_add_sat(left, right));
    }
 };
@@ -2386,7 +2393,8 @@ struct simd_sub_sat_impl : simd_elementwise_binary_interface<
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const noexcept
+      -> simd<T, Abi> {
       if constexpr (has_simd_abi_binary_full<simd_abi::op_sub_sat, T, Abi>) {
          return simd_abi_apply_binary_full<simd_abi::op_sub_sat, T, Abi>(
             left, right
@@ -2402,7 +2410,7 @@ struct simd_sub_sat_impl : simd_elementwise_binary_interface<
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T left, T right) const -> T {
+   invoke_lanewise(T left, T right) const noexcept -> T {
       return static_cast<T>(__builtin_sub_sat(left, right));
    }
 };
@@ -2547,7 +2555,7 @@ struct simd_sqrt_impl : simd_elementwise_interface<simd_sqrt_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (has_simd_abi_unary_full<simd_abi::op_sqrt, T, Abi>) {
          return simd_abi_apply_unary_full<simd_abi::op_sqrt, T, Abi>(input);
       } else {
@@ -2559,7 +2567,7 @@ struct simd_sqrt_impl : simd_elementwise_interface<simd_sqrt_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       return T(cat::sqrt(static_cast<raw_type>(make_raw_arithmetic(x))));
    }
@@ -2569,7 +2577,7 @@ template <typename T>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-simd_rsqrt_lane(T x) -> T {
+simd_rsqrt_lane(T x) noexcept -> T {
    using raw_type = raw_arithmetic_type<T>;
    raw_type const rx = static_cast<raw_type>(make_raw_arithmetic(x));
    return T(
@@ -2586,7 +2594,7 @@ struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       if constexpr (
          simd_float_precision_policy<T> == precision_policies::fast
          && has_simd_abi_unary_full<simd_abi::op_rsqrt, T, Abi>
@@ -2604,7 +2612,7 @@ struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       return simd_rsqrt_lane(x);
    }
 };
@@ -2613,7 +2621,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard, gnu::always_inline]]
 constexpr auto
-simd_dot_associative(simd<T, Abi> left, simd<T, Abi> right) -> T {
+simd_dot_associative(simd<T, Abi> left, simd<T, Abi> right) noexcept -> T {
    auto const product = left.raw * right.raw;
    if constexpr (Abi::lanes == 1u) {
       return product[0u];
@@ -2676,7 +2684,7 @@ struct simd_dot_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept
       -> simd_dot_masked_impl<simd_mask<T, Abi>> {
       return {lane_mask};
    }
@@ -2718,7 +2726,7 @@ struct simd_normalize_impl {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   operator[](simd_mask<T, Abi> lane_mask) const
+   operator[](simd_mask<T, Abi> lane_mask) const noexcept
       -> simd_normalize_masked_impl<simd_mask<T, Abi>> {
       return {lane_mask};
    }
@@ -2728,7 +2736,7 @@ template <typename T>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-simd_nroot_lane(T x, iword n) -> T {
+simd_nroot_lane(T x, iword n) noexcept -> T {
    if (n <= 1) {
       return x;
    }
@@ -2766,7 +2774,7 @@ template <typename T>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-simd_rnroot_lane(T x, iword n) -> T {
+simd_rnroot_lane(T x, iword n) noexcept -> T {
    if (n <= 0) {
       return x;
    }
@@ -2793,7 +2801,7 @@ template <typename T>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-simd_rcbrt_lane(T x) -> T {
+simd_rcbrt_lane(T x) noexcept -> T {
    return simd_rnroot_lane(x, 3);
 }
 
@@ -2801,7 +2809,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-simd_nroot_generic(simd<T, Abi> input, iword n) -> simd<T, Abi> {
+simd_nroot_generic(simd<T, Abi> input, iword n) noexcept -> simd<T, Abi> {
    if (n <= 1) {
       return input;
    }
@@ -2834,7 +2842,7 @@ struct simd_nroot_impl : simd_elementwise_unary_int_interface<simd_nroot_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input, iword n) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input, iword n) const noexcept -> simd<T, Abi> {
       return simd_nroot_generic(input, n);
    }
 
@@ -2842,7 +2850,7 @@ struct simd_nroot_impl : simd_elementwise_unary_int_interface<simd_nroot_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x, iword n) const -> T {
+   invoke_lanewise(T x, iword n) const noexcept -> T {
       return simd_nroot_lane(x, n);
    }
 };
@@ -2854,7 +2862,7 @@ struct simd_cbrt_impl : simd_elementwise_interface<simd_cbrt_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       return simd_nroot_impl{}.invoke_full(input, 3);
    }
 
@@ -2862,7 +2870,7 @@ struct simd_cbrt_impl : simd_elementwise_interface<simd_cbrt_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       return simd_nroot_lane(x, 3);
    }
 };
@@ -2874,7 +2882,7 @@ struct simd_rcbrt_impl : simd_elementwise_interface<simd_rcbrt_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       simd<T, Abi> const cbrt = simd_cbrt_impl{}.invoke_full(input);
       simd<T, Abi> const one{T(1)};
       return simd<T, Abi>(
@@ -2886,7 +2894,7 @@ struct simd_rcbrt_impl : simd_elementwise_interface<simd_rcbrt_impl> {
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       return simd_rcbrt_lane(x);
    }
 };
@@ -2899,7 +2907,7 @@ struct simd_rnroot_impl
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input, iword n) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input, iword n) const noexcept -> simd<T, Abi> {
       if (n <= 0) {
          return input;
       }
@@ -2920,7 +2928,7 @@ struct simd_rnroot_impl
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x, iword n) const -> T {
+   invoke_lanewise(T x, iword n) const noexcept -> T {
       return simd_rnroot_lane(x, n);
    }
 };
@@ -2933,7 +2941,7 @@ struct simd_popcount_impl : simd_elementwise_interface<simd_popcount_impl> {
       requires(is_unsigned_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       return input.popcount();
    }
 
@@ -2942,7 +2950,7 @@ struct simd_popcount_impl : simd_elementwise_interface<simd_popcount_impl> {
       requires(is_unsigned_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x) const -> T {
+   invoke_lanewise(T x) const noexcept -> T {
       // `cat/maybe` is an extremely difficult circular include for
       // `cat/arithmetic`,
       return T(__builtin_popcountg(make_raw_arithmetic(x)));
@@ -3059,7 +3067,7 @@ template <typename T, typename Abi>
    requires(is_fixed_size_simd_abi<Abi, T>)
 [[nodiscard, gnu::target("avx2")]]
 auto
-simd_compress_wide(simd<T, Abi> input, simd_mask<T, Abi> selector)
+simd_compress_wide(simd<T, Abi> input, simd_mask<T, Abi> selector) noexcept
    -> simd<T, Abi> {
    using native_abi = x64::avx_abi<T>;
    using native_simd = simd<T, native_abi>;
@@ -3206,7 +3214,7 @@ struct simd_rotate_left_impl
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input, iword count) const noexcept -> simd<T, Abi> {
       if constexpr (is_signed<T>) {
          auto const value = simd_to_unsigned_raw(input);
          auto const counts = simd_to_unsigned_raw(simd<T, Abi>(T(count)));
@@ -3231,7 +3239,7 @@ struct simd_rotate_left_impl
       requires(!is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T operand, iword count) const -> T {
+   invoke_lanewise(T operand, iword count) const noexcept -> T {
       // `cat/maybe` is an extremely difficult circular include for `cat/simd`,
       // so use the intrinsic directly.
       using raw_type = raw_arithmetic_type<T>;
@@ -3254,7 +3262,7 @@ struct simd_rotate_right_impl
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> input, iword count) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> input, iword count) const noexcept -> simd<T, Abi> {
       if constexpr (is_signed<T>) {
          auto const value = simd_to_unsigned_raw(input);
          auto const counts = simd_to_unsigned_raw(simd<T, Abi>(T(count)));
@@ -3279,7 +3287,7 @@ struct simd_rotate_right_impl
       requires(!is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T operand, iword count) const -> T {
+   invoke_lanewise(T operand, iword count) const noexcept -> T {
       // `cat/maybe` is an extremely difficult circular include for `cat/simd`,
       // so use the intrinsic directly.
       using raw_type = raw_arithmetic_type<T>;
@@ -3302,7 +3310,8 @@ struct simd_min_impl : simd_elementwise_binary_interface<simd_min_impl> {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const noexcept
+      -> simd<T, Abi> {
       if constexpr (is_floating_point<T>) {
          if constexpr (has_simd_abi_binary_full<simd_abi::op_minimum, T, Abi>) {
             return simd_abi_apply_binary_full<simd_abi::op_minimum, T, Abi>(
@@ -3325,7 +3334,7 @@ struct simd_min_impl : simd_elementwise_binary_interface<simd_min_impl> {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T left, T right) const -> T {
+   invoke_lanewise(T left, T right) const noexcept -> T {
       if constexpr (is_floating_point<T>) {
          using raw_type = raw_arithmetic_type<T>;
          if constexpr (is_same<raw_type, float>) {
@@ -3350,7 +3359,8 @@ struct simd_max_impl : simd_elementwise_binary_interface<simd_max_impl> {
    template <typename T, typename Abi>
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> left, simd<T, Abi> right) const noexcept
+      -> simd<T, Abi> {
       if constexpr (is_floating_point<T>) {
          if constexpr (has_simd_abi_binary_full<simd_abi::op_maximum, T, Abi>) {
             return simd_abi_apply_binary_full<simd_abi::op_maximum, T, Abi>(
@@ -3373,7 +3383,7 @@ struct simd_max_impl : simd_elementwise_binary_interface<simd_max_impl> {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T left, T right) const -> T {
+   invoke_lanewise(T left, T right) const noexcept -> T {
       if constexpr (is_floating_point<T>) {
          using raw_type = raw_arithmetic_type<T>;
          if constexpr (is_same<raw_type, float>) {
@@ -3400,7 +3410,7 @@ struct simd_fma_impl
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
+   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const noexcept
       -> simd<T, Abi> {
       // P2638R0 fused multiply-add on every lane.
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
@@ -3414,7 +3424,7 @@ struct simd_fma_impl
       requires(is_floating_point<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x, T y, T z) const -> T {
+   invoke_lanewise(T x, T y, T z) const noexcept -> T {
       // P2638R0 fused multiply-add (scalar lane hook). Hardware FMA on x86-64
       // (vfmadd...) and NEON (vfma...) is single-rounded regardless of the
       // surrounding precision policy.
@@ -3433,7 +3443,7 @@ struct simd_fshl_impl
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
+   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const noexcept
       -> simd<T, Abi> {
       if constexpr (has_simd_abi_ternary_full<simd_abi::op_fshl, T, Abi>) {
          return simd_abi_apply_ternary_full<simd_abi::op_fshl, T, Abi>(x, y, z);
@@ -3445,7 +3455,7 @@ struct simd_fshl_impl
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x, T y, T z) const -> T {
+   invoke_lanewise(T x, T y, T z) const noexcept -> T {
       using unsigned_type = make_unsigned_type<T>;
       unsigned_type const hi = static_cast<unsigned_type>(x);
       unsigned_type const lo = static_cast<unsigned_type>(y);
@@ -3464,7 +3474,7 @@ struct simd_fshr_impl
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const
+   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const noexcept
       -> simd<T, Abi> {
       if constexpr (has_simd_abi_ternary_full<simd_abi::op_fshr, T, Abi>) {
          return simd_abi_apply_ternary_full<simd_abi::op_fshr, T, Abi>(x, y, z);
@@ -3476,7 +3486,7 @@ struct simd_fshr_impl
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x, T y, T z) const -> T {
+   invoke_lanewise(T x, T y, T z) const noexcept -> T {
       using unsigned_type = make_unsigned_type<T>;
       unsigned_type const hi = static_cast<unsigned_type>(x);
       unsigned_type const lo = static_cast<unsigned_type>(y);
@@ -3495,7 +3505,8 @@ struct simd_ldexp_impl
       requires(is_floating_point<T> && is_integral<IntT>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> x, simd<IntT, Abi> y) const -> simd<T, Abi> {
+   invoke_full(simd<T, Abi> x, simd<IntT, Abi> y) const noexcept
+      -> simd<T, Abi> {
       if constexpr (
          has_simd_abi_binary_mixed<simd_abi::op_ldexp, T, IntT, Abi>
       ) {
@@ -3510,7 +3521,7 @@ struct simd_ldexp_impl
       requires(is_floating_point<T> && is_integral<IntT>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x, IntT y) const -> T {
+   invoke_lanewise(T x, IntT y) const noexcept -> T {
       using raw_type = raw_arithmetic_type<T>;
       int const exp = static_cast<int>(make_raw_arithmetic(y));
       if constexpr (is_same<raw_type, float>) {
@@ -3637,7 +3648,7 @@ template <typename T>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-simd_fma_lane(T x, T y, T z) -> T {
+simd_fma_lane(T x, T y, T z) noexcept -> T {
    return detail::simd_fma_impl{}.invoke_lanewise(x, y, z);
 }
 
@@ -3645,7 +3656,7 @@ template <typename T>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-simd_fshl_lane(T x, T y, T z) -> T {
+simd_fshl_lane(T x, T y, T z) noexcept -> T {
    return detail::simd_fshl_impl{}.invoke_lanewise(x, y, z);
 }
 
@@ -3653,7 +3664,7 @@ template <typename T>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-simd_fshr_lane(T x, T y, T z) -> T {
+simd_fshr_lane(T x, T y, T z) noexcept -> T {
    return detail::simd_fshr_impl{}.invoke_lanewise(x, y, z);
 }
 
@@ -3661,7 +3672,7 @@ template <typename T, typename IntT>
    requires(is_floating_point<T> && is_integral<IntT>)
 [[nodiscard]]
 constexpr auto
-simd_ldexp_lane(T x, IntT y) -> T {
+simd_ldexp_lane(T x, IntT y) noexcept -> T {
    return detail::simd_ldexp_impl{}.invoke_lanewise(x, y);
 }
 
@@ -3670,7 +3681,7 @@ simd_ldexp_lane(T x, IntT y) -> T {
 template <typename Simd, typename U>
 [[nodiscard]]
 constexpr auto
-iota(U start) -> Simd {
+iota(U start) noexcept -> Simd {
    return detail::simd_iota_impl<Simd>{}(start);
 }
 
@@ -3680,14 +3691,14 @@ template <is_simd Simd, typename U>
    requires(is_convertible<U, typename Simd::scalar_type>)
 [[nodiscard]]
 constexpr auto
-make_simd_filled(U value) -> Simd {
+make_simd_filled(U value) noexcept -> Simd {
    return detail::make_simd_filled_impl<Simd>{}(static_cast<U&&>(value));
 }
 
 template <is_simd_mask SimdMask>
 [[nodiscard]]
 constexpr auto
-make_simd_mask_filled(bool value) -> SimdMask {
+make_simd_mask_filled(bool value) noexcept -> SimdMask {
    return detail::make_simd_mask_filled_impl<SimdMask>{}(value);
 }
 
@@ -3853,7 +3864,7 @@ template <typename T, typename Abi>
    requires(is_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-abs(simd<T, Abi> value) -> simd<T, Abi> {
+abs(simd<T, Abi> value) noexcept -> simd<T, Abi> {
    if constexpr (is_unsigned_integral<T>) {
       return value;
    } else {
@@ -3865,7 +3876,7 @@ template <typename T, typename Abi>
    requires(is_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-clamp(simd<T, Abi> value, simd<T, Abi> minimum, simd<T, Abi> maximum)
+clamp(simd<T, Abi> value, simd<T, Abi> minimum, simd<T, Abi> maximum) noexcept
    -> simd<T, Abi> {
    return simd_min(simd_max(value, minimum), maximum);
 }
@@ -3874,7 +3885,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-ceil(simd<T, Abi> value) -> simd<T, Abi> {
+ceil(simd<T, Abi> value) noexcept -> simd<T, Abi> {
    return simd_ceil(value);
 }
 
@@ -3882,7 +3893,7 @@ template <typename T, typename Abi>
    requires(is_integral<T>)
 [[nodiscard]]
 constexpr auto
-ceil(simd<T, Abi> value) -> simd<T, Abi> {
+ceil(simd<T, Abi> value) noexcept -> simd<T, Abi> {
    return value;
 }
 
@@ -3890,7 +3901,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-floor(simd<T, Abi> value) -> simd<T, Abi> {
+floor(simd<T, Abi> value) noexcept -> simd<T, Abi> {
    return simd_floor(value);
 }
 
@@ -3898,7 +3909,7 @@ template <typename T, typename Abi>
    requires(is_integral<T>)
 [[nodiscard]]
 constexpr auto
-floor(simd<T, Abi> value) -> simd<T, Abi> {
+floor(simd<T, Abi> value) noexcept -> simd<T, Abi> {
    return value;
 }
 
@@ -3908,7 +3919,7 @@ template <typename T, typename Abi>
    requires(is_arithmetic<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-dot(simd<T, Abi> left, simd<T, Abi> right) -> T {
+dot(simd<T, Abi> left, simd<T, Abi> right) noexcept -> T {
    return simd_dot(left, right);
 }
 
@@ -3922,7 +3933,7 @@ constexpr auto
 dot(
    simd<T, Abi> value_1, simd<T, Abi> value_2, simd<T, Abi> value_3,
    simd<T, Abi> value_4, Remaining... remaining
-) -> T {
+) noexcept -> T {
    return dot(value_1, value_2) + dot(value_3, value_4, remaining...);
 }
 
@@ -3930,7 +3941,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-exp(simd<T, Abi> argument) -> simd<T, Abi> {
+exp(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_exp(argument);
 }
 
@@ -3938,7 +3949,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-fma(simd<T, Abi> value, simd<T, Abi> multiplier, simd<T, Abi> addend)
+fma(simd<T, Abi> value, simd<T, Abi> multiplier, simd<T, Abi> addend) noexcept
    -> simd<T, Abi> {
    return simd_fma(value, multiplier, addend);
 }
@@ -3947,7 +3958,7 @@ template <typename T, typename Abi, is_arithmetic U, is_arithmetic V>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-fma(simd<T, Abi> value, U multiplier, V addend) -> simd<T, Abi> {
+fma(simd<T, Abi> value, U multiplier, V addend) noexcept -> simd<T, Abi> {
    simd<T, Abi> multiplier_vector{static_cast<T>(multiplier)};
    simd<T, Abi> addend_vector{static_cast<T>(addend)};
    return fma(value, multiplier_vector, addend_vector);
@@ -3959,7 +3970,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-log(simd<T, Abi> argument) -> simd<T, Abi> {
+log(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_log(argument);
 }
 
@@ -3967,7 +3978,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-sqrt(simd<T, Abi> argument) -> simd<T, Abi> {
+sqrt(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_sqrt(argument);
 }
 
@@ -3975,7 +3986,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-rsqrt(simd<T, Abi> argument) -> simd<T, Abi> {
+rsqrt(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_rsqrt(argument);
 }
 
@@ -3983,7 +3994,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-nroot(simd<T, Abi> argument, iword root) -> simd<T, Abi> {
+nroot(simd<T, Abi> argument, iword root) noexcept -> simd<T, Abi> {
    return simd_nroot(argument, root);
 }
 
@@ -3991,7 +4002,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-cbrt(simd<T, Abi> argument) -> simd<T, Abi> {
+cbrt(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_cbrt(argument);
 }
 
@@ -3999,7 +4010,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-rnroot(simd<T, Abi> argument, iword root) -> simd<T, Abi> {
+rnroot(simd<T, Abi> argument, iword root) noexcept -> simd<T, Abi> {
    return simd_rnroot(argument, root);
 }
 
@@ -4007,7 +4018,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-rcbrt(simd<T, Abi> argument) -> simd<T, Abi> {
+rcbrt(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_rcbrt(argument);
 }
 
@@ -4017,7 +4028,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-raw_sin(simd<T, Abi> argument) -> simd<T, Abi> {
+raw_sin(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_sin(argument);
 }
 
@@ -4025,7 +4036,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-raw_cos(simd<T, Abi> argument) -> simd<T, Abi> {
+raw_cos(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_cos(argument);
 }
 
@@ -4033,7 +4044,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-raw_tan(simd<T, Abi> argument) -> simd<T, Abi> {
+raw_tan(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_tan(argument);
 }
 
@@ -4043,7 +4054,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T> && is_dimensionless_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-asin(simd<T, Abi> argument) {
+asin(simd<T, Abi> argument) noexcept {
    using result_lane =
       __typeof_unqual(detail::attach_quantity<units::radian>(T{}));
    using result_type = fixed_size_simd<result_lane, Abi::lanes>;
@@ -4054,7 +4065,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T> && is_dimensionless_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-acos(simd<T, Abi> argument) {
+acos(simd<T, Abi> argument) noexcept {
    using result_lane =
       __typeof_unqual(detail::attach_quantity<units::radian>(T{}));
    using result_type = fixed_size_simd<result_lane, Abi::lanes>;
@@ -4065,7 +4076,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T> && is_dimensionless_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-atan(simd<T, Abi> argument) {
+atan(simd<T, Abi> argument) noexcept {
    using result_lane =
       __typeof_unqual(detail::attach_quantity<units::radian>(T{}));
    using result_type = fixed_size_simd<result_lane, Abi::lanes>;
@@ -4076,7 +4087,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T> && is_dimensionless_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-atan2(simd<T, Abi> y, simd<T, Abi> x) {
+atan2(simd<T, Abi> y, simd<T, Abi> x) noexcept {
    using result_lane =
       __typeof_unqual(detail::attach_quantity<units::radian>(T{}));
    using result_type = fixed_size_simd<result_lane, Abi::lanes>;
@@ -4087,7 +4098,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-sinh(simd<T, Abi> argument) -> simd<T, Abi> {
+sinh(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_sinh(argument);
 }
 
@@ -4095,7 +4106,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-cosh(simd<T, Abi> argument) -> simd<T, Abi> {
+cosh(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_cosh(argument);
 }
 
@@ -4103,7 +4114,7 @@ template <typename T, typename Abi>
    requires(is_floating_point<T>)
 [[nodiscard]]
 constexpr auto
-tanh(simd<T, Abi> argument) -> simd<T, Abi> {
+tanh(simd<T, Abi> argument) noexcept -> simd<T, Abi> {
    return simd_tanh(argument);
 }
 
@@ -4111,7 +4122,7 @@ template <typename T, typename Abi>
    requires(is_arithmetic<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-min(simd<T, Abi> value) -> simd<T, Abi> {
+min(simd<T, Abi> value) noexcept -> simd<T, Abi> {
    return value;
 }
 
@@ -4122,7 +4133,7 @@ template <typename T, typename Abi, typename... Remaining>
    )
 [[nodiscard]]
 constexpr auto
-min(simd<T, Abi> first, simd<T, Abi> second, Remaining... remaining)
+min(simd<T, Abi> first, simd<T, Abi> second, Remaining... remaining) noexcept
    -> simd<T, Abi> {
    simd<T, Abi> result = simd_min(first, second);
    ((result = simd_min(result, remaining)), ...);
@@ -4136,7 +4147,8 @@ template <typename T, typename Abi, is_arithmetic U, typename... Remaining>
    )
 [[nodiscard]]
 constexpr auto
-min(simd<T, Abi> first, U second, Remaining... remaining) -> simd<T, Abi> {
+min(simd<T, Abi> first, U second, Remaining... remaining) noexcept
+   -> simd<T, Abi> {
    simd<T, Abi> second_vector = second;
    simd<T, Abi> const selected = simd_min(first, second_vector);
    if constexpr (sizeof...(Remaining) == 0u) {
@@ -4150,7 +4162,7 @@ template <typename T, typename Abi>
    requires(is_arithmetic<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-max(simd<T, Abi> value) -> simd<T, Abi> {
+max(simd<T, Abi> value) noexcept -> simd<T, Abi> {
    return value;
 }
 
@@ -4161,7 +4173,7 @@ template <typename T, typename Abi, typename... Remaining>
    )
 [[nodiscard]]
 constexpr auto
-max(simd<T, Abi> first, simd<T, Abi> second, Remaining... remaining)
+max(simd<T, Abi> first, simd<T, Abi> second, Remaining... remaining) noexcept
    -> simd<T, Abi> {
    simd<T, Abi> result = simd_max(first, second);
    ((result = simd_max(result, remaining)), ...);
@@ -4175,7 +4187,8 @@ template <typename T, typename Abi, is_arithmetic U, typename... Remaining>
    )
 [[nodiscard]]
 constexpr auto
-max(simd<T, Abi> first, U second, Remaining... remaining) -> simd<T, Abi> {
+max(simd<T, Abi> first, U second, Remaining... remaining) noexcept
+   -> simd<T, Abi> {
    simd<T, Abi> second_vector = second;
    simd<T, Abi> const selected = simd_max(first, second_vector);
    if constexpr (sizeof...(Remaining) == 0u) {
@@ -4191,7 +4204,7 @@ template <typename T, typename Abi>
    requires(is_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-product(simd<T, Abi> value) -> simd<T, Abi> {
+product(simd<T, Abi> value) noexcept -> simd<T, Abi> {
    return value;
 }
 
@@ -4202,7 +4215,7 @@ template <typename T, typename Abi, typename... Remaining>
    )
 [[nodiscard]]
 constexpr auto
-product(simd<T, Abi> first, Remaining... remaining) -> simd<T, Abi> {
+product(simd<T, Abi> first, Remaining... remaining) noexcept -> simd<T, Abi> {
    return (first * ... * remaining);
 }
 
@@ -4213,7 +4226,8 @@ template <typename T, typename Abi, is_arithmetic U, typename... Remaining>
    )
 [[nodiscard]]
 constexpr auto
-product(simd<T, Abi> first, U second, Remaining... remaining) -> simd<T, Abi> {
+product(simd<T, Abi> first, U second, Remaining... remaining) noexcept
+   -> simd<T, Abi> {
    simd<T, Abi> second_vector = second;
    simd<T, Abi> const selected = first * second_vector;
    if constexpr (sizeof...(Remaining) == 0u) {
@@ -4227,7 +4241,7 @@ template <typename T, typename Abi>
    requires(is_arithmetic<T>)
 [[nodiscard]]
 constexpr auto
-sum(simd<T, Abi> value) -> simd<T, Abi> {
+sum(simd<T, Abi> value) noexcept -> simd<T, Abi> {
    return value;
 }
 
@@ -4238,7 +4252,7 @@ template <typename T, typename Abi, typename... Remaining>
    )
 [[nodiscard]]
 constexpr auto
-sum(simd<T, Abi> first, Remaining... remaining) -> simd<T, Abi> {
+sum(simd<T, Abi> first, Remaining... remaining) noexcept -> simd<T, Abi> {
    return (first + ... + remaining);
 }
 
@@ -4249,7 +4263,8 @@ template <typename T, typename Abi, is_arithmetic U, typename... Remaining>
    )
 [[nodiscard]]
 constexpr auto
-sum(simd<T, Abi> first, U second, Remaining... remaining) -> simd<T, Abi> {
+sum(simd<T, Abi> first, U second, Remaining... remaining) noexcept
+   -> simd<T, Abi> {
    simd<T, Abi> second_vector = second;
    simd<T, Abi> const selected = first + second_vector;
    if constexpr (sizeof...(Remaining) == 0u) {

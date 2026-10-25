@@ -97,12 +97,13 @@ namespace cat::detail {
 // `allocator_null` while empty, which is never dispatched through.
 template <typename T, vec_flags flags>
 constexpr auto
-raii_vec_has_value(raii::basic_vec<T, allocator_dyn, flags> const& value)
-   -> bool;
+raii_vec_has_value(
+   raii::basic_vec<T, allocator_dyn, flags> const& value
+) noexcept(false) -> bool;
 
 template <typename T, vec_flags flags>
 constexpr auto
-raii_vec_nullopt() -> raii::basic_vec<T, allocator_dyn, flags>;
+raii_vec_nullopt() noexcept(false) -> raii::basic_vec<T, allocator_dyn, flags>;
 }  // namespace cat::detail
 
 namespace cat::raii {
@@ -135,13 +136,13 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
               "`.clone()` or move instead!");
 
    auto
-   operator=(basic_vec const&)
+   operator=(basic_vec const&) noexcept(false)
       -> basic_vec& = delete ("Implicit copying of `cat::raii::basic_vec` is "
                               "forbidden. Call `.clone()` or move instead!");
 
    [[clang::reinitializes]]
    constexpr auto
-   operator=(basic_vec&& other) -> basic_vec& {
+   operator=(basic_vec&& other) noexcept(false) -> basic_vec& {
       if (this == __builtin_addressof(other)) {
          return *this;
       }
@@ -171,7 +172,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    //                          bounds!");
 
    constexpr void
-   swap(basic_vec& other) {
+   swap(basic_vec& other) noexcept(!__has_feature(cxx_exceptions)) {
       cat::assert(m_allocator == other.m_allocator);
       m_core.swap(other.m_core);
    }
@@ -222,26 +223,26 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    // Returns `nullptr` when this `vec` is default-constructed or moved-from.
    [[nodiscard]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> T* _Nullable {
+   data() noexcept [[clang::lifetimebound]] -> T* _Nullable {
       return m_core.data();
    }
 
    // Returns `nullptr` when this `vec` is default-constructed or moved-from.
    [[nodiscard]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> T const* _Nullable {
+   data() const noexcept [[clang::lifetimebound]] -> T const* _Nullable {
       return m_core.data();
    }
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_core.size();
    }
 
    [[nodiscard]]
    constexpr auto
-   capacity() const -> idx {
+   capacity() const noexcept -> idx {
       return m_core.capacity();
    }
 
@@ -262,7 +263,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    // Destroy every element of this `vec` and deallocate its storage.
    [[clang::reinitializes]]
    constexpr void
-   reset() {
+   reset() noexcept(!__has_feature(cxx_exceptions)) {
       this->free();
    }
 
@@ -412,7 +413,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    // by the address space rather than any allocator's actual ceiling.
    [[nodiscard]]
    static constexpr auto
-   max_size() -> idx {
+   max_size() noexcept -> idx {
       return cat::basic_vec<T, flags>::max_size();
    }
 

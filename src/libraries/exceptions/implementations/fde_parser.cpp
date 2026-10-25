@@ -10,11 +10,13 @@ auto
 decode_eh_pointer(
    byte_cursor& cursor, dw_eh_pe encoding, uword program_counter,
    eh_pointer_bases eh_pointer_bases
-) -> uword {
+) noexcept(!__has_feature(cxx_exceptions)) -> uword {
    if (encoding == dw_eh_pe::omit) {
       return 0u;
    }
 
+   // Signed encodings are sign-extended, and offsets wrap like the address
+   // arithmetic they encode.
    uword raw = 0u;
    uword const here_address = program_counter;
    switch (encoding & dw_eh_pe::format_mask) {
@@ -34,13 +36,13 @@ decode_eh_pointer(
          raw = cursor.read<uint8>();
          break;
       case dw_eh_pe::sleb128:
-         raw = narrow_cast<uword>(cursor.read_sleb128()).assert();
+         raw = __builtin_bit_cast(uword, int8(cursor.read_sleb128()));
          break;
       case dw_eh_pe::sdata2:
-         raw = narrow_cast<uword>(cursor.read<int2>()).assert();
+         raw = __builtin_bit_cast(uword, int8(cursor.read<int2>()));
          break;
       case dw_eh_pe::sdata4:
-         raw = narrow_cast<uword>(cursor.read<int4>()).assert();
+         raw = __builtin_bit_cast(uword, int8(cursor.read<int4>()));
          break;
       case dw_eh_pe::sdata8:
          raw = cursor.read<uint8>();

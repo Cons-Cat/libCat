@@ -20,21 +20,22 @@ class demangled_name {
    demangled_name(demangled_name&& other);
 
    auto
-   operator=(demangled_name const&) -> demangled_name& = delete;
+   operator=(demangled_name const&) noexcept -> demangled_name& = delete;
 
    auto
-   operator=(demangled_name&& other) -> demangled_name&;
+   operator=(demangled_name&& other) noexcept(!__has_feature(cxx_exceptions))
+      -> demangled_name&;
 
-   ~demangled_name();
+   ~demangled_name() noexcept(!__has_feature(cxx_exceptions));
 
    [[nodiscard]]
    auto
-   view() const [[clang::lifetimebound]] -> str_view {
+   view() const noexcept [[clang::lifetimebound]] -> str_view {
       return {m_p_data, m_size};
    }
 
    [[nodiscard]]
-   operator str_view() const [[clang::lifetimebound]] {
+   operator str_view() const noexcept [[clang::lifetimebound]] {
       return view();
    }
 
@@ -48,27 +49,28 @@ class demangled_name {
 
    [[nodiscard]]
    auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_size;
    }
 
    [[nodiscard]]
    auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return m_size == 0u;
    }
 
    [[nodiscard]]
    auto
-   back() const -> char {
+   back() const noexcept -> char {
       return m_p_data[m_size.raw - 1u];
    }
 
    auto
-   append(char value) -> maybe<void>;
+   append(char value) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void>;
 
    auto
-   append(str_view value) -> maybe<void>;
+   append(str_view value) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void>;
 
    auto
    grow(idx minimum_capacity) -> bool;
@@ -90,8 +92,9 @@ demangle(basic_allocator_dyn<dyn_reallocate> allocator, str_view mangled)
 template <is_allocator Allocator>
 [[nodiscard]]
 auto
-demangle(allocator_ref<Allocator> allocator, str_view mangled)
-   -> maybe<demangled_name> {
+demangle(allocator_ref<Allocator> allocator, str_view mangled) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<demangled_name> {
    if constexpr (is_same<Allocator, basic_allocator_dyn<dyn_reallocate>>) {
       return demangle(allocator.get_allocator(), mangled);
    } else {
@@ -104,7 +107,8 @@ demangle(allocator_ref<Allocator> allocator, str_view mangled)
 template <is_allocator Allocator>
 [[nodiscard]]
 auto
-demangle(Allocator& allocator, str_view mangled) -> maybe<demangled_name> {
+demangle(Allocator& allocator, str_view mangled) noexcept
+   -> maybe<demangled_name> {
    return demangle(allocator_ref(allocator), mangled);
 }
 

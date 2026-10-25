@@ -110,9 +110,18 @@ allocator_interface<Derived>::meta_alloc_inline_stack_allocate(
    }
 
    if constexpr (is_multiple) {
-      for (idx i = 0u; i < allocation_count; ++i) {
-         new (reinterpret_cast<T* _Nonnull>(&stack_handle) + i) T;
+      T* _Nonnull const p_objects =
+         reinterpret_cast<T* _Nonnull>(&stack_handle);
+      idx constructed;
+      detail::exception_defer guard([&] {
+         for (idx i; i < constructed; ++i) {
+            p_objects[i].~T();
+         }
+      });
+      for (; constructed < allocation_count; ++constructed) {
+         new (p_objects + constructed) T;
       }
+      guard.commit();
       stack_handle.set_inline_objects_live();
    } else {
       if constexpr (is_zeroed) {
@@ -189,7 +198,7 @@ template <typename Derived>
 constexpr auto
 allocator_interface<Derived>::meta_alloc_aligned(
    ualign allocation_alignment, idx allocation_bytes
-) -> maybe_ptr<void> {
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe_ptr<void> {
    maybe_ptr<void> maybe_memory;
 
    if constexpr (has_aligned_allocate) {
@@ -295,14 +304,25 @@ allocator_interface<Derived>::meta_alloc_construct(
       zero_memory_scalar_explicit(p_allocation, prepared_bytes);
    }
 
-   // Construct the `T`s inside the allocator.
-   for (auto i = 0ull; i < allocation_count; ++i) {
+   // Construct the `T`s inside the allocator. If a constructor throws, destroy
+   // the ones already built and release the memory.
+   idx constructed;
+   detail::exception_defer guard([&] {
+      for (idx i; i < constructed; ++i) {
+         p_allocation[i].~T();
+      }
+      detail::release_allocator_storage(
+         this->self(), p_allocation, prepared_bytes
+      );
+   });
+   for (; constructed < allocation_count; ++constructed) {
       if constexpr (is_zeroed) {
-         new (p_allocation + i) T;
+         new (p_allocation + constructed) T;
       } else {
-         new (p_allocation + i) T($fwd(arguments)...);
+         new (p_allocation + constructed) T($fwd(arguments)...);
       }
    }
+   guard.commit();
 
    if constexpr (is_inline) {
       using handle_type = alias_types::handle_type;
@@ -497,7 +517,7 @@ template <
 constexpr auto
 allocator_interface<Derived>::meta_alloc(
    ualign allocation_alignment, idx allocation_count, Args&&... arguments
-) {
+) noexcept(false) {
    constexpr bool is_inline = (inline_size != 0);
 
    if constexpr (has_max_allocation_bytes) {

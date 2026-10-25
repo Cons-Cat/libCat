@@ -31,7 +31,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    template <idx, is_unsigned_integral... Arguments>
       requires(detail::are_bitset_arguments_same_size<Arguments...>)
    friend constexpr auto
-   make_bitset(Arguments... arguments);
+   make_bitset(Arguments... arguments) noexcept(!__has_feature(cxx_exceptions));
 
    // Store the smallest number of bytes needed for `bits_count`. If that is 8
    // bytes or fewer, use that many bytes. If it is larger, use an array of
@@ -92,24 +92,26 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    constexpr bitset(bitset&&) = default;
 
    constexpr auto
-   operator=(bitset const&) -> bitset& = default;
+   operator=(bitset const&) noexcept -> bitset& = default;
    constexpr auto
-   operator=(bitset&&) -> bitset& = default;
+   operator=(bitset&&) noexcept -> bitset& = default;
 
    [[nodiscard]]
    static constexpr auto
-   size() -> idx {
+   size() noexcept -> idx {
       return bits_count;
    }
 
    constexpr void
-   swap(bitset& other) {
+   swap(bitset& other) noexcept {
       m_data.swap(other.m_data);
    }
 
    // Construct a `bitset` from a bit-string at compile time.
    template <__SIZE_TYPE__ bitstring_size>
-   consteval bitset(char const (&bitstring)[bitstring_size]) {
+   consteval bitset(char const (&bitstring)[bitstring_size]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       [[assume(bitstring[bitstring_size - 1] == '\0')]];
       bitset<bits_count> new_bitset;
       for (__SIZE_TYPE__ i = 0; i < bits_count; ++i) {
@@ -123,14 +125,14 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // without a viable `operator==`. Compare the storage array directly.
    [[nodiscard]]
    constexpr auto
-   operator==(bitset const& other) const -> bool {
+   operator==(bitset const& other) const noexcept -> bool {
       return m_data == other.m_data;
    }
 
    // Count set bits in this bitset.
    [[nodiscard]]
    constexpr auto
-   popcount() const -> idx {
+   popcount() const noexcept -> idx {
       return cat::popcount(
          span<array_type_element const>{m_data.data(), m_data.size()}
       );
@@ -138,15 +140,15 @@ bitset : public bitwise_interface<bitset<bits_count>>,
 
    [[nodiscard]]
    constexpr auto
-   has_single_bit() const -> bool {
+   has_single_bit() const noexcept -> bool {
       return popcount() == 1u;
    }
 
    // Index into this bit-set from the right-most bit.
    [[nodiscard]]
    constexpr auto
-   operator[](idx index_bit) [[clang::lifetimebound]]
-   -> bit_reference<array_type_element> {
+   operator[](idx index_bit) noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> bit_reference<array_type_element> {
       assert(index_bit < bits_count);
 
       idx const array_word = idx(
@@ -166,8 +168,8 @@ bitset : public bitwise_interface<bitset<bits_count>>,
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx index_bit) const [[clang::lifetimebound]]
-   -> bit_reference<array_type_element> {
+   operator[](idx index_bit) const noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> bit_reference<array_type_element> {
       return (*unconst(this))[index_bit];
    }
 
@@ -194,7 +196,8 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // `bitwise_interface` generates `operator&` and `operator&=` from this.
    [[nodiscard]]
    constexpr auto
-   bit_and(bitset const& other) const -> bitset {
+   bit_and(bitset const& other) const noexcept(!__has_feature(cxx_exceptions))
+      -> bitset {
       bitset result;
       for (idx i; i < storage_array_size; ++i) {
          result.m_data[i] = m_data[i] & other.m_data[i];
@@ -205,7 +208,8 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // `bitwise_interface` generates `operator|` and `operator|=` from this.
    [[nodiscard]]
    constexpr auto
-   bit_or(bitset const& other) const -> bitset {
+   bit_or(bitset const& other) const noexcept(!__has_feature(cxx_exceptions))
+      -> bitset {
       bitset result;
       for (idx i; i < storage_array_size; ++i) {
          result.m_data[i] = m_data[i] | other.m_data[i];
@@ -217,7 +221,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // reset to zero afterwards to preserve the class invariant.
    [[nodiscard]]
    constexpr auto
-   bit_complement() const -> bitset {
+   bit_complement() const noexcept(!__has_feature(cxx_exceptions)) -> bitset {
       bitset result;
       for (idx i; i < storage_array_size; ++i) {
          result.m_data[i] = ~m_data[i];
@@ -230,7 +234,9 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // define `operator^`, so compute on the raw underlying integers.
    [[nodiscard]]
    friend constexpr auto
-   operator^(bitset const& lhs, bitset const& rhs) -> bitset {
+   operator^(bitset const& lhs, bitset const& rhs) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset {
       bitset result;
       for (idx i; i < storage_array_size; ++i) {
          result.m_data[i] =
@@ -240,7 +246,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    }
 
    friend constexpr auto
-   operator^=(bitset& self, bitset const& other) -> bitset& {
+   operator^=(bitset& self, bitset const& other) noexcept -> bitset& {
       self = self ^ other;
       return self;
    }
@@ -248,33 +254,33 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // Evaluate true if every bit in this bitset is 1.
    [[nodiscard]]
    constexpr auto
-   all_of() const -> bool {
+   all_of() const noexcept -> bool {
       return popcount() == bits_count;
    }
 
    // Evaluate true if at least one bit in this bitset is 1.
    [[nodiscard]]
    constexpr auto
-   any_of() const -> bool {
+   any_of() const noexcept -> bool {
       return popcount() != 0u;
    }
 
    // Evaluate true if every bit in this bitset is 0.
    [[nodiscard]]
    constexpr auto
-   none_of() const -> bool {
+   none_of() const noexcept -> bool {
       return !(any_of());
    }
 
    [[nodiscard]]
    constexpr auto
-   bit_width() const -> idx {
+   bit_width() const noexcept -> idx {
       return idx(bits_count - countl_zero());
    }
 
    [[nodiscard]]
    constexpr auto
-   countl_zero() const -> idx {
+   countl_zero() const noexcept -> idx {
       idx count;
       for (auto&& bytes : m_data) {
          idx next_count = cat::countl_zero(bytes);
@@ -290,7 +296,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
 
    [[nodiscard]]
    constexpr auto
-   countl_one() const -> idx {
+   countl_one() const noexcept -> idx {
       idx count;
       for (auto&& bytes : m_data) {
          idx next_count = cat::countl_one(bytes);
@@ -375,7 +381,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
 
    // Clear every bit (all logical indices `0..bits_count`) to 0.
    constexpr auto
-   clear() -> bitset& {
+   clear() noexcept -> bitset& {
       for (auto& word : m_data) {
          word = array_type_element(0u);
       }
@@ -385,7 +391,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // Set every bit (all logical indices `0..bits_count`) to `value`. Padding
    // bits are left at 0 so the class invariant holds.
    constexpr auto
-   fill(bit_value value = true) -> bitset& {
+   fill(bit_value value = true) noexcept -> bitset& {
       if (value) {
          if constexpr (bits_count != 0u) {
             for (auto& word : m_data) {
@@ -402,7 +408,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // Set every even-indexed bit (logical indices 0, 2, 4, ...) to 1. Bits at
    // odd logical indices are left unchanged.
    constexpr auto
-   set_even() -> bitset& {
+   set_even() noexcept -> bitset& {
       if constexpr (bits_count != 0u) {
          for (auto& word : m_data) {
             word |= even_bits_pattern;
@@ -415,7 +421,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // Set every odd-indexed bit (logical indices 1, 3, 5, ...) to 1. Bits at
    // even logical indices are left unchanged.
    constexpr auto
-   set_odd() -> bitset& {
+   set_odd() noexcept -> bitset& {
       if constexpr (bits_count != 0u) {
          for (auto& word : m_data) {
             word |= odd_bits_pattern;
@@ -428,7 +434,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // Clear every even-indexed bit (logical indices 0, 2, 4, ...) to 0. Bits at
    // odd logical indices are left unchanged.
    constexpr auto
-   unset_even() -> bitset& {
+   unset_even() noexcept -> bitset& {
       if constexpr (bits_count != 0u) {
          // AND cannot set padding bits, so no post-clear is needed.
          for (auto& word : m_data) {
@@ -441,7 +447,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // Clear every odd-indexed bit (logical indices 1, 3, 5, ...) to 0. Bits at
    // even logical indices are left unchanged.
    constexpr auto
-   unset_odd() -> bitset& {
+   unset_odd() noexcept -> bitset& {
       if constexpr (bits_count != 0u) {
          for (auto& word : m_data) {
             word &= ~odd_bits_pattern;
@@ -563,7 +569,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    }
 
    constexpr void
-   reverse_inplace() {
+   reverse_inplace() noexcept(!__has_feature(cxx_exceptions)) {
       auto first = bit_stepanov_iterator(m_data.rbegin(), leading_skipped_bits);
       cat::stepanov_reverse_inplace(first, first + bits_count);
    }
@@ -574,43 +580,43 @@ bitset : public bitwise_interface<bitset<bits_count>>,
 
    [[nodiscard]]
    constexpr auto
-   begin() -> iterator {
+   begin() noexcept -> iterator {
       return iterator(m_data.begin());
    }
 
    [[nodiscard]]
    constexpr auto
-   end() -> iterator {
+   end() noexcept -> iterator {
       return iterator(m_data.end());
    }
 
    [[nodiscard]]
    constexpr auto
-   begin() const -> const_iterator {
+   begin() const noexcept -> const_iterator {
       return const_iterator(m_data.begin());
    }
 
    [[nodiscard]]
    constexpr auto
-   end() const -> const_iterator {
+   end() const noexcept -> const_iterator {
       return const_iterator(m_data.end());
    }
 
    [[nodiscard]]
    constexpr auto
-   cbegin() const -> const_iterator {
+   cbegin() const noexcept -> const_iterator {
       return const_iterator(m_data.cbegin());
    }
 
    [[nodiscard]]
    constexpr auto
-   cend() const -> const_iterator {
+   cend() const noexcept -> const_iterator {
       return const_iterator(m_data.cend());
    }
 
    [[nodiscard]]
    constexpr auto
-   rbegin() -> reverse_iterator {
+   rbegin() noexcept -> reverse_iterator {
       return reverse_iterator(
          m_data.end(), limits<array_type_element>::bits - 1u
       );
@@ -618,13 +624,13 @@ bitset : public bitwise_interface<bitset<bits_count>>,
 
    [[nodiscard]]
    constexpr auto
-   rend() -> reverse_iterator {
+   rend() noexcept -> reverse_iterator {
       return reverse_iterator(m_data.begin());
    }
 
    [[nodiscard]]
    constexpr auto
-   rbegin() const -> const_reverse_iterator {
+   rbegin() const noexcept -> const_reverse_iterator {
       return reverse_iterator(
          m_data.end(), limits<array_type_element>::bits - 1u
       );
@@ -632,13 +638,13 @@ bitset : public bitwise_interface<bitset<bits_count>>,
 
    [[nodiscard]]
    constexpr auto
-   rend() const -> const_reverse_iterator {
+   rend() const noexcept -> const_reverse_iterator {
       return const_reverse_iterator(m_data.begin());
    }
 
    [[nodiscard]]
    constexpr auto
-   crbegin() const -> const_reverse_iterator {
+   crbegin() const noexcept -> const_reverse_iterator {
       return const_reverse_iterator(
          m_data.end(), limits<array_type_element>::bits - 1u
       );
@@ -646,7 +652,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
 
    [[nodiscard]]
    constexpr auto
-   crend() const -> const_reverse_iterator {
+   crend() const noexcept -> const_reverse_iterator {
       return const_reverse_iterator(m_data.begin());
    }
 
@@ -669,7 +675,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // to restore the class invariant after a bitwise-OR that may have set
    // padding bits.
    constexpr auto
-   clear_padding_bits() -> void {
+   clear_padding_bits() noexcept(!__has_feature(cxx_exceptions)) -> void {
       if constexpr (leading_skipped_bits != 0u) {
          constexpr array_type_element keep_mask = ~array_type_element(
             (array_type_element(1u) << leading_skipped_bits) - 1u
@@ -721,12 +727,12 @@ constexpr bit_span<Storage>::bit_span(
 }
 
 template <idx bits_count>
-bit_span(bitset<bits_count>&)
-   -> bit_span<typename bitset<bits_count>::storage_type>;
+bit_span(bitset<bits_count>&) noexcept(!__has_feature(cxx_exceptions))
+   ->bit_span<typename bitset<bits_count>::storage_type>;
 
 template <idx bits_count>
-bit_span(bitset<bits_count> const&)
-   -> bit_span<typename bitset<bits_count>::storage_type const>;
+bit_span(bitset<bits_count> const&) noexcept(!__has_feature(cxx_exceptions))
+   ->bit_span<typename bitset<bits_count>::storage_type const>;
 
 template <idx bits_count, is_unsigned_integral... Arguments>
 // Ensure that all `types` are the same size. e.g., `uint4` and unsigned are
@@ -734,7 +740,7 @@ template <idx bits_count, is_unsigned_integral... Arguments>
    requires(detail::are_bitset_arguments_same_size<Arguments...>)
 [[nodiscard]]
 constexpr auto
-make_bitset(Arguments... arguments) {
+make_bitset(Arguments... arguments) noexcept(!__has_feature(cxx_exceptions)) {
    // TODO: Assert that the input fits in `bits_count`.
    static_assert(
       sizeof...(Arguments) == bitset<bits_count>::array_type::size(),
@@ -761,7 +767,7 @@ make_bitset(Arguments... arguments) {
 template <idx bits_count>
 [[nodiscard]]
 constexpr auto
-make_bitset_filled(bit_value value) {
+make_bitset_filled(bit_value value) noexcept {
    bitset<bits_count> new_bitset;
    new_bitset.fill(value);
    return new_bitset;
@@ -796,7 +802,7 @@ make_bitset_filled_random(Generator&& generator, Distribution&& distribution)
 template <idx bits_count>
 [[nodiscard]]
 constexpr auto
-make_bitset_even() {
+make_bitset_even() noexcept {
    bitset<bits_count> new_bitset;
    new_bitset.set_even();
    return new_bitset;
@@ -807,7 +813,7 @@ make_bitset_even() {
 template <idx bits_count>
 [[nodiscard]]
 constexpr auto
-make_bitset_odd() {
+make_bitset_odd() noexcept {
    bitset<bits_count> new_bitset;
    new_bitset.set_odd();
    return new_bitset;

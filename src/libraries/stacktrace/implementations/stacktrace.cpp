@@ -37,8 +37,9 @@ is_plausible_instruction(void* p_instruction) -> bool {
 }  // namespace
 
 auto
-stacktrace::current(allocator_dyn allocator, idx skip, idx max_depth)
-   -> maybe<stacktrace> {
+stacktrace::current(allocator_dyn allocator, idx skip, idx max_depth) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<stacktrace> {
    stacktrace trace(allocator);
    if (max_depth == 0u) {
       return move(trace);

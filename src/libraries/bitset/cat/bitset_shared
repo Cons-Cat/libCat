@@ -50,7 +50,7 @@ class bitset_shared {
       constexpr reference(reference const&) = default;
 
       constexpr auto
-      operator=(reference const& other) -> reference& {
+      operator=(reference const& other) noexcept -> reference& {
          if (this != &other) {
             auto _ = assign(other.test());
          }
@@ -58,72 +58,79 @@ class bitset_shared {
       }
 
       constexpr auto
-      operator=(bool value) -> reference& {
+      operator=(bool value) noexcept -> reference& {
          auto _ = assign(value);
          return *this;
       }
 
       constexpr
-      operator bool() const {
+      operator bool() const noexcept {
          return test();
       }
 
       [[nodiscard]]
       constexpr auto
-      test(memory_order order = memory_order::seq_cst) const -> bool {
+      test(memory_order order = memory_order::seq_cst) const noexcept(
+         !__has_feature(cxx_exceptions)
+      ) -> bool {
          return has_bit(m_word->load(order));
       }
 
       [[nodiscard]]
       constexpr auto
-      assign(bool value, memory_order order = memory_order::seq_cst) const
-         -> bool {
+      assign(
+         bool value, memory_order order = memory_order::seq_cst
+      ) const noexcept -> bool {
          return value ? set(order) : reset(order);
       }
 
       [[nodiscard]]
       constexpr auto
-      set(memory_order order = memory_order::seq_cst) const -> bool {
+      set(memory_order order = memory_order::seq_cst) const noexcept -> bool {
          return has_bit(m_word->fetch_or(m_mask, order));
       }
 
       [[nodiscard]]
       constexpr auto
-      reset(memory_order order = memory_order::seq_cst) const -> bool {
+      reset(memory_order order = memory_order::seq_cst) const noexcept -> bool {
          return has_bit(m_word->fetch_and(~m_mask, order));
       }
 
       [[nodiscard]]
       constexpr auto
-      flip(memory_order order = memory_order::seq_cst) const -> bool {
+      flip(memory_order order = memory_order::seq_cst) const noexcept -> bool {
          return has_bit(m_word->fetch_xor(m_mask, order));
       }
 
       constexpr void
-      wait(bool old, memory_order order = memory_order::seq_cst) const {
+      wait(bool old, memory_order order = memory_order::seq_cst) const noexcept(
+         !__has_feature(cxx_exceptions)
+      ) {
          wait_for_bit(*m_word, m_mask, old, order);
       }
 
       constexpr void
-      notify_one() const {
+      notify_one() const noexcept {
          notify_word(*m_word);
       }
 
       constexpr void
-      notify_all() const {
+      notify_all() const noexcept {
          notify_word(*m_word);
       }
 
     private:
       friend class bitset_shared;
 
-      constexpr reference(atomic<storage_type>& word, storage_type mask)
+      constexpr reference(
+         atomic<storage_type>& word, storage_type mask
+      ) noexcept
           : m_word(&word), m_mask(mask) {
       }
 
       [[nodiscard]]
       constexpr auto
-      has_bit(storage_type word) const -> bool {
+      has_bit(storage_type word) const noexcept -> bool {
          return (word & m_mask) != storage_type(0u);
       }
 
@@ -133,26 +140,31 @@ class bitset_shared {
 
    constexpr bitset_shared() = default;
 
-   constexpr bitset_shared(bitset_shared const& other) {
+   constexpr bitset_shared(bitset_shared const& other) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].store(other.m_data[word.raw].load());
       }
    }
 
-   constexpr bitset_shared(bitset_shared&& other) : bitset_shared(other) {
+   constexpr bitset_shared(bitset_shared&& other) noexcept
+       : bitset_shared(other) {
    }
 
-   constexpr bitset_shared(bitset<bits_count> const& bits) {
+   constexpr bitset_shared(bitset<bits_count> const& bits) noexcept {
       store(bits, memory_order::relaxed);
    }
 
    template <__SIZE_TYPE__ bitstring_size>
-   consteval bitset_shared(char const (&bitstring)[bitstring_size])
+   consteval bitset_shared(char const (&bitstring)[bitstring_size]) noexcept
        : bitset_shared(bitset<bits_count>(bitstring)) {
    }
 
    constexpr auto
-   operator=(bitset_shared const& other) -> bitset_shared& {
+   operator=(bitset_shared const& other) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared& {
       if (this != &other) {
          for (idx word; word < storage_array_size; ++word) {
             m_data[word.raw].store(other.m_data[word.raw].load());
@@ -162,12 +174,12 @@ class bitset_shared {
    }
 
    constexpr auto
-   operator=(bitset_shared&& other) -> bitset_shared& {
+   operator=(bitset_shared&& other) noexcept -> bitset_shared& {
       return *this = other;
    }
 
    constexpr auto
-   operator=(bitset<bits_count> const& bits) -> bitset_shared& {
+   operator=(bitset<bits_count> const& bits) noexcept -> bitset_shared& {
       store(bits);
       return *this;
    }
@@ -186,20 +198,22 @@ class bitset_shared {
 
    [[nodiscard]]
    static constexpr auto
-   size() -> idx {
+   size() noexcept -> idx {
       return bits_count;
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) [[clang::lifetimebound]] -> reference {
+   operator[](idx index) noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> reference {
       assert(index < bits_count);
       return reference(m_data[storage_index(index).raw], bit_mask(index));
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) const -> bool {
+   operator[](idx index) const noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
       return test(index);
    }
 
@@ -214,7 +228,7 @@ class bitset_shared {
 
    [[nodiscard]]
    constexpr auto
-   at(idx index) const -> maybe<bool> {
+   at(idx index) const noexcept(!__has_feature(cxx_exceptions)) -> maybe<bool> {
       if (index < bits_count) {
          return test(index);
       }
@@ -223,7 +237,9 @@ class bitset_shared {
 
    [[nodiscard]]
    constexpr auto
-   test(idx index, memory_order order = memory_order::seq_cst) const -> bool {
+   test(idx index, memory_order order = memory_order::seq_cst) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       assert(index < bits_count);
       storage_type const word = m_data[storage_index(index).raw].load(order);
       return (word & bit_mask(index)) != storage_type(0u);
@@ -251,20 +267,22 @@ class bitset_shared {
    }
 
    constexpr void
-   wait(idx index, bool old, memory_order order = memory_order::seq_cst) const {
+   wait(
+      idx index, bool old, memory_order order = memory_order::seq_cst
+   ) const noexcept(!__has_feature(cxx_exceptions)) {
       assert(index < bits_count);
       idx const word = storage_index(index);
       wait_for_bit(m_data[word.raw], bit_mask(index), old, order);
    }
 
    constexpr void
-   notify_one(idx index) {
+   notify_one(idx index) noexcept(!__has_feature(cxx_exceptions)) {
       assert(index < bits_count);
       notify_word(m_data[storage_index(index).raw]);
    }
 
    constexpr void
-   notify_all(idx index) {
+   notify_all(idx index) noexcept(!__has_feature(cxx_exceptions)) {
       assert(index < bits_count);
       notify_word(m_data[storage_index(index).raw]);
    }
@@ -272,8 +290,9 @@ class bitset_shared {
    // Each storage word is loaded independently.
    [[nodiscard]]
    constexpr auto
-   load(memory_order order = memory_order::seq_cst) const
-      -> bitset<bits_count> {
+   load(memory_order order = memory_order::seq_cst) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset<bits_count> {
       array<storage_type, storage_array_size> words;
       for (idx word; word < storage_array_size; ++word) {
          words[word.raw] = m_data[word.raw].load(order);
@@ -289,14 +308,14 @@ class bitset_shared {
 
    [[nodiscard]]
    explicit constexpr
-   operator bitset<bits_count>() const {
+   operator bitset<bits_count>() const noexcept {
       return load();
    }
 
    constexpr void
    store(
       bitset<bits_count> const& bits, memory_order order = memory_order::seq_cst
-   ) {
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       array<storage_type, storage_array_size> const words =
          words_from_bitset(bits);
       for (idx word; word < storage_array_size; ++word) {
@@ -309,7 +328,7 @@ class bitset_shared {
    constexpr auto
    equals(
       bitset_shared const& other, memory_order order = memory_order::seq_cst
-   ) const -> bool {
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> bool {
       if (this == &other) {
          return true;
       }
@@ -325,7 +344,7 @@ class bitset_shared {
 
    [[nodiscard]]
    constexpr auto
-   operator==(bitset_shared const& other) const -> bool {
+   operator==(bitset_shared const& other) const noexcept -> bool {
       return equals(other);
    }
 
@@ -334,7 +353,7 @@ class bitset_shared {
    constexpr auto
    bit_and(
       bitset_shared const& other, memory_order order = memory_order::seq_cst
-   ) const -> bitset_shared {
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> bitset_shared {
       bitset_shared result;
       for (idx word; word < storage_array_size; ++word) {
          result.m_data[word.raw].store(
@@ -349,7 +368,7 @@ class bitset_shared {
    constexpr auto
    bit_or(
       bitset_shared const& other, memory_order order = memory_order::seq_cst
-   ) const -> bitset_shared {
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> bitset_shared {
       bitset_shared result;
       for (idx word; word < storage_array_size; ++word) {
          result.m_data[word.raw].store(
@@ -362,8 +381,9 @@ class bitset_shared {
 
    [[nodiscard]]
    constexpr auto
-   bit_complement(memory_order order = memory_order::seq_cst) const
-      -> bitset_shared {
+   bit_complement(memory_order order = memory_order::seq_cst) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared {
       bitset_shared result;
       for (idx word; word < storage_array_size; ++word) {
          result.m_data[word.raw].store(
@@ -375,22 +395,23 @@ class bitset_shared {
 
    [[nodiscard]]
    friend constexpr auto
-   operator&(bitset_shared const& lhs, bitset_shared const& rhs)
+   operator&(bitset_shared const& lhs, bitset_shared const& rhs) noexcept
       -> bitset_shared {
       return lhs.bit_and(rhs);
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator|(bitset_shared const& lhs, bitset_shared const& rhs)
+   operator|(bitset_shared const& lhs, bitset_shared const& rhs) noexcept
       -> bitset_shared {
       return lhs.bit_or(rhs);
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator^(bitset_shared const& lhs, bitset_shared const& rhs)
-      -> bitset_shared {
+   operator^(bitset_shared const& lhs, bitset_shared const& rhs) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared {
       bitset_shared result;
       for (idx word; word < storage_array_size; ++word) {
          result.m_data[word.raw].store(
@@ -405,12 +426,14 @@ class bitset_shared {
 
    [[nodiscard]]
    friend constexpr auto
-   operator~(bitset_shared const& self) -> bitset_shared {
+   operator~(bitset_shared const& self) noexcept -> bitset_shared {
       return self.bit_complement();
    }
 
    constexpr auto
-   operator&=(bitset_shared const& other) -> bitset_shared& {
+   operator&=(bitset_shared const& other) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_and(other.m_data[word.raw].load());
       }
@@ -418,7 +441,9 @@ class bitset_shared {
    }
 
    constexpr auto
-   operator|=(bitset_shared const& other) -> bitset_shared& {
+   operator|=(bitset_shared const& other) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_or(other.m_data[word.raw].load());
       }
@@ -426,7 +451,9 @@ class bitset_shared {
    }
 
    constexpr auto
-   operator^=(bitset_shared const& other) -> bitset_shared& {
+   operator^=(bitset_shared const& other) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_xor(other.m_data[word.raw].load());
       }
@@ -435,7 +462,9 @@ class bitset_shared {
 
    [[nodiscard]]
    constexpr auto
-   popcount(memory_order order = memory_order::seq_cst) const -> idx {
+   popcount(memory_order order = memory_order::seq_cst) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> idx {
       idx count;
       for (idx word; word < storage_array_size; ++word) {
          count += cat::popcount(m_data[word.raw].load(order));
@@ -445,13 +474,16 @@ class bitset_shared {
 
    [[nodiscard]]
    constexpr auto
-   has_single_bit(memory_order order = memory_order::seq_cst) const -> bool {
+   has_single_bit(memory_order order = memory_order::seq_cst) const noexcept
+      -> bool {
       return popcount(order) == 1u;
    }
 
    [[nodiscard]]
    constexpr auto
-   any_of(memory_order order = memory_order::seq_cst) const -> bool {
+   any_of(memory_order order = memory_order::seq_cst) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       for (idx word; word < storage_array_size; ++word) {
          if (m_data[word.raw].load(order) != storage_type(0u)) {
             return true;
@@ -462,48 +494,56 @@ class bitset_shared {
 
    [[nodiscard]]
    constexpr auto
-   none_of(memory_order order = memory_order::seq_cst) const -> bool {
+   none_of(memory_order order = memory_order::seq_cst) const noexcept -> bool {
       return !any_of(order);
    }
 
    [[nodiscard]]
    constexpr auto
-   all_of(memory_order order = memory_order::seq_cst) const -> bool {
+   all_of(memory_order order = memory_order::seq_cst) const noexcept -> bool {
       return popcount(order) == bits_count;
    }
 
    [[nodiscard]]
    constexpr auto
-   bit_width(memory_order order = memory_order::seq_cst) const -> idx {
+   bit_width(memory_order order = memory_order::seq_cst) const noexcept -> idx {
       return load(order).bit_width();
    }
 
    [[nodiscard]]
    constexpr auto
-   countl_zero(memory_order order = memory_order::seq_cst) const -> idx {
+   countl_zero(memory_order order = memory_order::seq_cst) const noexcept
+      -> idx {
       return load(order).countl_zero();
    }
 
    [[nodiscard]]
    constexpr auto
-   countl_one(memory_order order = memory_order::seq_cst) const -> idx {
+   countl_one(memory_order order = memory_order::seq_cst) const noexcept
+      -> idx {
       return load(order).countl_one();
    }
 
    [[nodiscard]]
    constexpr auto
-   countr_zero(memory_order order = memory_order::seq_cst) const -> idx {
+   countr_zero(memory_order order = memory_order::seq_cst) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> idx {
       return load(order).countr_zero();
    }
 
    [[nodiscard]]
    constexpr auto
-   countr_one(memory_order order = memory_order::seq_cst) const -> idx {
+   countr_one(memory_order order = memory_order::seq_cst) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> idx {
       return load(order).countr_one();
    }
 
    constexpr auto
-   clear(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+   clear(memory_order order = memory_order::seq_cst) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].store(storage_type(0u), order);
       }
@@ -511,7 +551,9 @@ class bitset_shared {
    }
 
    constexpr auto
-   fill(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+   fill(memory_order order = memory_order::seq_cst) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].store(sanitize(word, storage_type::max()), order);
       }
@@ -519,13 +561,15 @@ class bitset_shared {
    }
 
    constexpr auto
-   fill(bool value, memory_order order = memory_order::seq_cst)
+   fill(bool value, memory_order order = memory_order::seq_cst) noexcept
       -> bitset_shared& {
       return value ? fill(order) : clear(order);
    }
 
    constexpr auto
-   set_even(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+   set_even(memory_order order = memory_order::seq_cst) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_or(sanitize(word, even_bits_pattern), order);
       }
@@ -533,7 +577,9 @@ class bitset_shared {
    }
 
    constexpr auto
-   set_odd(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+   set_odd(memory_order order = memory_order::seq_cst) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_or(sanitize(word, odd_bits_pattern), order);
       }
@@ -541,7 +587,9 @@ class bitset_shared {
    }
 
    constexpr auto
-   unset_even(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+   unset_even(memory_order order = memory_order::seq_cst) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_and(~even_bits_pattern, order);
       }
@@ -549,7 +597,9 @@ class bitset_shared {
    }
 
    constexpr auto
-   unset_odd(memory_order order = memory_order::seq_cst) -> bitset_shared& {
+   unset_odd(memory_order order = memory_order::seq_cst) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_and(~odd_bits_pattern, order);
       }
@@ -558,21 +608,23 @@ class bitset_shared {
 
    [[nodiscard]]
    constexpr auto
-   rotate_left(iword shift, memory_order order = memory_order::seq_cst) const
-      -> bitset_shared {
+   rotate_left(
+      iword shift, memory_order order = memory_order::seq_cst
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> bitset_shared {
       return bitset_shared(load(order).rotate_left(shift));
    }
 
    [[nodiscard]]
    constexpr auto
-   rotate_right(iword shift, memory_order order = memory_order::seq_cst) const
-      -> bitset_shared {
+   rotate_right(
+      iword shift, memory_order order = memory_order::seq_cst
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> bitset_shared {
       return bitset_shared(load(order).rotate_right(shift));
    }
 
    // Reversal reads and publishes independent word snapshots.
    constexpr void
-   reverse_inplace() {
+   reverse_inplace() noexcept {
       bitset<bits_count> reversed = load();
       reversed.reverse_inplace();
       store(reversed);
@@ -580,8 +632,9 @@ class bitset_shared {
 
    [[nodiscard]]
    constexpr auto
-   load(idx word, memory_order order = memory_order::seq_cst) const
-      -> storage_type {
+   load(idx word, memory_order order = memory_order::seq_cst) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> storage_type {
       assert(word < storage_array_size);
       return m_data[word.raw].load(order);
    }
@@ -589,7 +642,7 @@ class bitset_shared {
    constexpr void
    store(
       idx word, storage_type value, memory_order order = memory_order::seq_cst
-   ) {
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       assert(word < storage_array_size);
       m_data[word.raw].store(sanitize(word, value), order);
    }
@@ -597,7 +650,7 @@ class bitset_shared {
    constexpr auto
    exchange(
       idx word, storage_type value, memory_order order = memory_order::seq_cst
-   ) -> storage_type {
+   ) noexcept(!__has_feature(cxx_exceptions)) -> storage_type {
       assert(word < storage_array_size);
       return m_data[word.raw].exchange(sanitize(word, value), order);
    }
@@ -606,7 +659,7 @@ class bitset_shared {
    compare_exchange_weak(
       idx word, storage_type& expected, storage_type desired,
       memory_order success_order, memory_order failure_order
-   ) -> bool {
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
       assert(word < storage_array_size);
       assert_compare_exchange_orders(success_order, failure_order);
       return m_data[word.raw].compare_exchange_weak(
@@ -618,7 +671,7 @@ class bitset_shared {
    compare_exchange_weak(
       idx word, storage_type& expected, storage_type desired,
       memory_order order = memory_order::seq_cst
-   ) -> bool {
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
       assert(word < storage_array_size);
       assert_compare_exchange_orders(
          order, detail::cmpexch_failure_order(order)
@@ -632,7 +685,7 @@ class bitset_shared {
    compare_exchange_strong(
       idx word, storage_type& expected, storage_type desired,
       memory_order success_order, memory_order failure_order
-   ) -> bool {
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
       assert(word < storage_array_size);
       assert_compare_exchange_orders(success_order, failure_order);
       return m_data[word.raw].compare_exchange_strong(
@@ -644,7 +697,7 @@ class bitset_shared {
    compare_exchange_strong(
       idx word, storage_type& expected, storage_type desired,
       memory_order order = memory_order::seq_cst
-   ) -> bool {
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
       assert(word < storage_array_size);
       assert_compare_exchange_orders(
          order, detail::cmpexch_failure_order(order)
@@ -657,7 +710,7 @@ class bitset_shared {
    constexpr auto
    fetch_or(
       idx word, storage_type value, memory_order order = memory_order::seq_cst
-   ) -> storage_type {
+   ) noexcept(!__has_feature(cxx_exceptions)) -> storage_type {
       assert(word < storage_array_size);
       return m_data[word.raw].fetch_or(sanitize(word, value), order);
    }
@@ -665,7 +718,7 @@ class bitset_shared {
    constexpr auto
    fetch_and(
       idx word, storage_type value, memory_order order = memory_order::seq_cst
-   ) -> storage_type {
+   ) noexcept(!__has_feature(cxx_exceptions)) -> storage_type {
       assert(word < storage_array_size);
       return m_data[word.raw].fetch_and(sanitize(word, value), order);
    }
@@ -673,7 +726,7 @@ class bitset_shared {
    constexpr auto
    fetch_xor(
       idx word, storage_type value, memory_order order = memory_order::seq_cst
-   ) -> storage_type {
+   ) noexcept(!__has_feature(cxx_exceptions)) -> storage_type {
       assert(word < storage_array_size);
       return m_data[word.raw].fetch_xor(sanitize(word, value), order);
    }
@@ -690,8 +743,9 @@ class bitset_shared {
 
    [[nodiscard]]
    static constexpr auto
-   words_from_bitset(bitset<bits_count> const& bits)
-      -> array<storage_type, storage_array_size> {
+   words_from_bitset(bitset<bits_count> const& bits) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> array<storage_type, storage_array_size> {
       array<storage_type, storage_array_size> words = {};
       for (idx index; index < bits_count; ++index) {
          if (bits[index]) {
@@ -705,7 +759,7 @@ class bitset_shared {
    wait_for_bit(
       atomic<storage_type> const& word, storage_type mask, bool old,
       memory_order order
-   ) {
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       detail::assert_load_order(order);
       storage_type observed = word.load(order);
       while (((observed & mask) != storage_type(0u)) == old) {
@@ -715,7 +769,7 @@ class bitset_shared {
    }
 
    static constexpr void
-   notify_word(atomic<storage_type>& word) {
+   notify_word(atomic<storage_type>& word) noexcept {
       // Another packed bit must not consume the only wake.
       word.notify_all();
    }
@@ -723,7 +777,7 @@ class bitset_shared {
    static constexpr void
    assert_compare_exchange_orders(
       memory_order success_order, memory_order failure_order
-   ) {
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       memory_order const success = success_order & detail::mask;
       memory_order const failure = failure_order & detail::mask;
 
@@ -751,7 +805,7 @@ class bitset_shared {
 
    [[nodiscard]]
    static constexpr auto
-   storage_index(idx index) -> idx {
+   storage_index(idx index) noexcept -> idx {
       return idx(
          storage_array_size - 1u - ((index + leading_skipped_bits) / word_bits)
       );
@@ -759,7 +813,7 @@ class bitset_shared {
 
    [[nodiscard]]
    static constexpr auto
-   bit_mask(idx index) -> storage_type {
+   bit_mask(idx index) noexcept -> storage_type {
       uword offset = index + leading_skipped_bits;
       if constexpr (storage_array_size > 1u) {
          offset.raw &= word_bits.raw - 1u;
@@ -769,7 +823,7 @@ class bitset_shared {
 
    [[nodiscard]]
    static constexpr auto
-   sanitize(idx word, storage_type value) -> storage_type {
+   sanitize(idx word, storage_type value) noexcept -> storage_type {
       if (word == storage_array_size - 1u) {
          return value & padding_mask;
       }
@@ -780,14 +834,16 @@ class bitset_shared {
 };
 
 template <__SIZE_TYPE__ bits_count>
-bitset_shared(char const (&bitstring)[bits_count])
+bitset_shared(char const (&bitstring)[bits_count]) noexcept
    -> bitset_shared<idx(bits_count - 1u)>;
 
 template <idx bits_count, is_unsigned_integral... Arguments>
    requires(detail::are_bitset_arguments_same_size<Arguments...>)
 [[nodiscard]]
 constexpr auto
-make_bitset_shared(Arguments... arguments) -> bitset_shared<bits_count> {
+make_bitset_shared(Arguments... arguments) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bitset_shared<bits_count> {
    return bitset_shared<bits_count>(make_bitset<bits_count>(arguments...));
 }
 

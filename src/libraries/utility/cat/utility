@@ -18,7 +18,7 @@ template <typename T>
    requires detail::is_member_swappable<T>
 [[gnu::nodebug]]
 constexpr void
-swap(T& left, T& right) {
+swap(T& left, T& right) noexcept(noexcept(left.swap(right))) {
    left.swap(right);
 }
 
@@ -30,7 +30,9 @@ template <typename T>
             })
 [[gnu::nodebug]]
 constexpr void
-swap(T& left, T& right) {
+swap(T& left, T& right) noexcept(
+   is_nothrow_move_constructible<T> && is_nothrow_move_assignable<T>
+) {
    T temp = move(left);
    left = move(right);
    right = move(temp);
@@ -50,14 +52,14 @@ swap(T (&left)[extent], T (&right)[extent]) noexcept(
 
 template <typename T>
 constexpr auto
-unconst(T const& value) -> T& {
+unconst(T const& value) noexcept -> T& {
    return const_cast<T&>(value);
 }
 
 template <typename T>
 [[gnu::returns_nonnull]]
 constexpr auto
-unconst(T const* _Nonnull p_value) -> T* _Nonnull {
+unconst(T const* _Nonnull p_value) noexcept -> T* _Nonnull {
    return const_cast<T*>(p_value);
 }
 
@@ -183,14 +185,14 @@ using index_sequence_over_values = make_index_sequence<sizeof...(values)>;
 template <typename T>
    requires(is_enum<T>)
 constexpr auto
-to_underlying(T any_enum) {
+to_underlying(T any_enum) noexcept {
    return static_cast<underlying_type<T>>(any_enum);
 }
 
 template <typename T>
 [[nodiscard, gnu::nodebug]]
 constexpr auto
-as_const(T& value) -> cat::add_const<T>& {
+as_const(T& value) noexcept -> cat::add_const<T>& {
    return value;
 }
 
@@ -198,10 +200,8 @@ template <typename T>
 constexpr void
 as_const(T const&&) = delete;
 
-// requires is_invocable<Callback, Args...>
 template <typename Callback, typename... Args>
    requires is_invocable<Callback, Args...>
-// noexcept(is_nothrow_invocable<Callback, Args...>)
 constexpr auto
 invoke(Callback&& callback, Args&&... arguments) noexcept(noexcept(
    __builtin_invoke(forward<Callback>(callback), forward<Args>(arguments)...)
@@ -217,9 +217,9 @@ invoke(Callback&& callback, Args&&... arguments) noexcept(noexcept(
 template <typename ReturnT, typename Callback, typename... Args>
 // requires is_invocable_r<ReturnT, Callback, Args...>
 constexpr auto
-invoke_r(Callback&& callback, Args&&... arguments) -> ReturnT
-// noexcept(is_nothrow_invocable_r<ReturnT, Callback, Args...>)
-{
+invoke_r(Callback&& callback, Args&&... arguments) noexcept(
+   noexcept(static_cast<ReturnT>(invoke($fwd(callback), $fwd(arguments)...)))
+) -> ReturnT {
    if constexpr (is_void<ReturnT>) {
       invoke($fwd(callback), $fwd(arguments)...);
    } else {

@@ -24,7 +24,7 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
    friend class allocator_resizeable;
 
  public:
-   constexpr allocator_inplace() {
+   constexpr allocator_inplace() noexcept {
       poison_memory_region(m_storage.data(), arena_bytes);
    }
 
@@ -36,13 +36,13 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
 
    // Clear any leftover poison so the buffer's stack storage does not stay
    // poisoned after this allocator dies and its stack slot is reused.
-   constexpr ~allocator_inplace() {
+   constexpr ~allocator_inplace() noexcept {
       unpoison_memory_region(m_storage.data(), arena_bytes);
    }
 
    // Release the outstanding allocation, making the buffer available again.
    constexpr void
-   reset() {
+   reset() noexcept {
       poison_memory_region(m_storage.data(), arena_bytes);
       m_is_allocated = false;
    }
@@ -52,7 +52,7 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
    // fits after over-alignment padding settles on whatever remains of the
    // buffer past that padding.
    auto
-   allocation_bytes(ualign alignment, idx allocation_bytes)
+   allocation_bytes(ualign alignment, idx allocation_bytes) noexcept
       -> maybe_non_zero<idx> {
       if (m_is_allocated) {
          // Over-allocated.
@@ -74,7 +74,7 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(idx allocation_bytes) -> void* _Nullable {
+   allocate(idx allocation_bytes) noexcept -> void* _Nullable {
       if (!m_is_allocated && allocation_bytes <= arena_bytes) {
          // Mark future over-allocation.
          m_is_allocated = true;
@@ -89,7 +89,8 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
    // as the request still fits past that padding.
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   aligned_allocate(ualign alignment, idx allocation_bytes) -> void* _Nullable {
+   aligned_allocate(ualign alignment, idx allocation_bytes) noexcept
+      -> void* _Nullable {
       if (m_is_allocated) {
          // Future over-allocation.
          return nullptr;
@@ -110,14 +111,15 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
 
    [[clang::ownership_takes(libcat, 2)]]
    void
-   deallocate(void const* _Nonnull /*unused*/, uword /*unused*/) {
+   deallocate(void const* _Nonnull /*unused*/, uword /*unused*/) noexcept {
       m_is_allocated = false;
    }
 
    // Resize the one outstanding allocation in place. The buffer is already
    // reserved, so this keeps the same address when the new size still fits.
    auto
-   reallocate(span<byte> allocation, idx new_bytes) -> void* _Nullable {
+   reallocate(span<byte> allocation, idx new_bytes) noexcept
+      -> void* _Nullable {
       if (!m_is_allocated) {
          return nullptr;
       }
@@ -144,13 +146,13 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
 
    [[nodiscard]]
    constexpr auto
-   bytes_used() const -> idx {
+   bytes_used() const noexcept -> idx {
       return m_is_allocated ? arena_bytes : 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   bytes_capacity() const -> idx {
+   bytes_capacity() const noexcept -> idx {
       return arena_bytes;
    }
 
@@ -162,7 +164,7 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
 template <idx arena_bytes>
 [[nodiscard]]
 constexpr auto
-make_allocator_inplace() -> allocator_inplace<arena_bytes> {
+make_allocator_inplace() noexcept -> allocator_inplace<arena_bytes> {
    return {};
 }
 

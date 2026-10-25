@@ -9,7 +9,8 @@ namespace x64::detail {
 template <typename T, is_sse_abi<T> Abi>
 [[nodiscard, gnu::target("sse2"), gnu::nodebug]]
 constexpr auto
-sse2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT32_TYPE__ {
+sse2_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) noexcept
+   -> __UINT32_TYPE__ {
    if constexpr (sizeof(T) == 1) {
       return static_cast<__UINT32_TYPE__>(__builtin_ia32_pmovmskb128(mask.raw));
    } else if constexpr (sizeof(T) == 4) {

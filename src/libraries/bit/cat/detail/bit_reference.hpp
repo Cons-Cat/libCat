@@ -10,11 +10,11 @@ class bit_reference {
    constexpr bit_reference(bit_reference<Storage> const&) = default;
    constexpr bit_reference(bit_reference<Storage>&&) = default;
 
-   constexpr bit_reference(bit_value& other)
+   constexpr bit_reference(bit_value& other) noexcept
        : m_p_storage(addressof(detail::get_bit_value(other))), m_bit_mask(1u) {
    }
 
-   constexpr bit_reference(bit_value const& other)
+   constexpr bit_reference(bit_value const& other) noexcept
        : m_p_storage(addressof(detail::get_bit_value(other))), m_bit_mask(1u) {
    }
 
@@ -22,10 +22,11 @@ class bit_reference {
    constexpr bit_reference(bit_value&& other) = delete;
 
    constexpr auto
-   operator=(bit_reference<Storage> const& other) & -> bit_reference& = default;
+   operator=(bit_reference<Storage> const& other) & noexcept
+      -> bit_reference& = default;
 
    constexpr auto
-   operator=(bit_reference<Storage>&& other) & -> bit_reference& {
+   operator=(bit_reference<Storage>&& other) & noexcept -> bit_reference& {
       m_p_storage = other.m_p_storage;
       m_bit_mask = other.m_bit_mask;
       return *this;
@@ -33,14 +34,14 @@ class bit_reference {
 
    // Assign a true or false value to this bit.
    constexpr auto
-   operator=(Storage value) -> bit_reference& {
+   operator=(Storage value) noexcept -> bit_reference& {
       this->assign(value);
       return *this;
    }
 
    // Assign a true or false value to this bit.
    constexpr auto
-   operator=(bool value) -> bit_reference&
+   operator=(bool value) noexcept -> bit_reference&
       requires(!is_same<Storage, bool>)
    {
       this->assign(value);
@@ -52,20 +53,20 @@ class bit_reference {
    friend constexpr auto
    operator==(
       bit_reference<Storage> const& self, bit_reference<Storage> const& other
-   ) -> bool {
+   ) noexcept -> bool {
       return self.is_set() == other;
    }
 
    // Because `bit_reference` and `bit_value` convert to `bool`, this comparison
    // works between all the above.
    friend constexpr auto
-   operator==(bit_reference<Storage> const& self, bool other) -> bool {
+   operator==(bit_reference<Storage> const& self, bool other) noexcept -> bool {
       return self.is_set() == other;
    }
 
    // Implicitly convert this bit to a true or false value.
    constexpr
-   operator bool() const {
+   operator bool() const noexcept {
       return this->is_set();
    }
 
@@ -81,7 +82,7 @@ class bit_reference {
    constexpr void
    rebind(
       Storage& reference [[clang::lifetime_capture_by_this]], Storage mask
-   ) {
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       assert(has_single_bit(mask));
       m_p_storage = addressof(reference);
       m_bit_mask = mask;
@@ -89,7 +90,7 @@ class bit_reference {
 
    // Assign a true or false value to this bit.
    constexpr auto
-   assign(bool value) -> bit_reference& {
+   assign(bool value) noexcept -> bit_reference& {
       value ? this->set() : this->unset();
       return *this;
    }
@@ -97,7 +98,8 @@ class bit_reference {
    // Assign another bit's value to this bit.
    template <is_unsigned_integral T>
    constexpr auto
-   assign(Storage value) -> bit_reference& {
+   assign(Storage value) noexcept(!__has_feature(cxx_exceptions))
+      -> bit_reference& {
       assert(has_single_bit(value));
       value & 1u ? set() : unset();
       return *this;
@@ -105,34 +107,34 @@ class bit_reference {
 
    // Flag this bit on.
    constexpr auto
-   set() -> bit_reference& {
+   set() noexcept -> bit_reference& {
       *m_p_storage |= m_bit_mask;
       return *this;
    }
 
    // Flag this bit off.
    constexpr auto
-   unset() -> bit_reference& {
+   unset() noexcept -> bit_reference& {
       *m_p_storage &= ~m_bit_mask;
       return *this;
    }
 
    // Flag this bit as the opposite of its current state.
    constexpr auto
-   flip() -> bit_reference& {
+   flip() noexcept -> bit_reference& {
       *m_p_storage ^= m_bit_mask;
       return *this;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_set() const -> bool {
+   is_set() const noexcept -> bool {
       return (*m_p_storage & m_bit_mask) != 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   mask() const -> Storage const& {
+   mask() const noexcept -> Storage const& {
       return m_bit_mask;
    }
 
@@ -141,14 +143,18 @@ class bit_reference {
    friend class bit_ptr<Storage>;
    template <is_unsigned_integral FriendStorage, is_unsigned_integral Mask>
    friend constexpr auto
-   make_bit_reference_from_mask(FriendStorage& reference, Mask mask)
-      -> bit_reference<FriendStorage>;
+   make_bit_reference_from_mask(FriendStorage& reference, Mask mask) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bit_reference<FriendStorage>;
    friend constexpr auto
-   make_bit_reference_from_offset<Storage>(Storage& reference, uword offset)
-      -> bit_reference<Storage>;
+   make_bit_reference_from_offset<Storage>(
+      Storage& reference, uword offset
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bit_reference<Storage>;
 
    // This constructor is only used by the free factory functions.
-   constexpr bit_reference(Storage& in_storage, Storage in_mask)
+   constexpr bit_reference(Storage& in_storage, Storage in_mask) noexcept(
+      !__has_feature(cxx_exceptions)
+   )
        : m_p_storage(addressof(in_storage)), m_bit_mask(in_mask) {
       assert(has_single_bit(in_mask));
    }
@@ -180,7 +186,7 @@ bit_reference(bit_value const&) -> bit_reference<bool const>;
 template <is_unsigned_integral Storage>
    requires(!is_const<Storage>)
 constexpr void
-swap(bit_reference<Storage> left, bit_reference<Storage> right) {
+swap(bit_reference<Storage> left, bit_reference<Storage> right) noexcept {
    bool const left_value = left;
    left = right;
    right = left_value;
@@ -188,15 +194,17 @@ swap(bit_reference<Storage> left, bit_reference<Storage> right) {
 
 template <is_unsigned_integral Storage, is_unsigned_integral Mask>
 constexpr auto
-make_bit_reference_from_mask(Storage& reference, Mask mask)
-   -> bit_reference<Storage> {
+make_bit_reference_from_mask(Storage& reference, Mask mask) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bit_reference<Storage> {
    return bit_reference<Storage>(reference, Storage(mask));
 }
 
 template <is_unsigned_integral Storage>
 constexpr auto
-make_bit_reference_from_offset(Storage& reference, uword offset)
-   -> bit_reference<Storage> {
+make_bit_reference_from_offset(Storage& reference, uword offset) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bit_reference<Storage> {
    assert(offset < limits<Storage>::bits);
    return bit_reference<Storage>(reference, Storage(1u) << offset);
 }

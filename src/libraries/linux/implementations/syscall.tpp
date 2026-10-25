@@ -9,7 +9,9 @@
 
 template <typename T, typename... Args>
 auto
-nix::syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
+nix::syscall(cat::iword call, Args... parameters) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> nix::scaredy_nix<T>
    requires(sizeof...(Args) < 7)
 {
    constexpr cat::idx length = sizeof...(Args);
@@ -56,8 +58,9 @@ nix::syscall(cat::iword call, Args... parameters) -> nix::scaredy_nix<T>
 // effects.
 template <typename T, typename... Args>
 auto
-nix::syscall_volatile(cat::iword call, Args... parameters)
-   -> nix::scaredy_nix<T>
+nix::syscall_volatile(cat::iword call, Args... parameters) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> nix::scaredy_nix<T>
    requires(sizeof...(Args) < 7)
 {
    constexpr cat::idx length = sizeof...(Args);

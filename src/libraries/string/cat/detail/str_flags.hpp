@@ -18,14 +18,14 @@ struct str_flags {
 
    [[nodiscard]]
    friend constexpr auto
-   operator|(str_flags left, str_flags right) -> str_flags {
+   operator|(str_flags left, str_flags right) noexcept -> str_flags {
       return str_flags{
          left.is_null_terminated || right.is_null_terminated,
       };
    }
 
  private:
-   constexpr str_flags(bool is_null_terminated)
+   constexpr str_flags(bool is_null_terminated) noexcept
        : is_null_terminated(is_null_terminated) {
    }
 };

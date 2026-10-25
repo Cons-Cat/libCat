@@ -12,7 +12,8 @@ template <typename Container>
 struct to_impl {
    template <is_iterable Iterable>
    friend constexpr auto
-   operator|(Iterable&& incoming, to_impl /*to_impl*/) -> Container {
+   operator|(Iterable&& incoming, to_impl /*to_impl*/) noexcept(false)
+      -> Container {
       Container result{};
       auto&& range = unwrap_ref(incoming);
 

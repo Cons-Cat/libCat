@@ -10,7 +10,7 @@
 inline auto
 cat::detail::compare_strings_detail(
    str_view const string_1, str_view const string_2
-) -> bool {
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    if (string_1.size() != string_2.size()) {
       return false;
    }

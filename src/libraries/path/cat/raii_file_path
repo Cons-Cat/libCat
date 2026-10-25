@@ -56,11 +56,12 @@ template <str_vec_flags flags>
 constexpr auto
 raii_file_path_has_value(
    raii::basic_file_path<allocator_dyn, flags> const& value
-) -> bool;
+) noexcept(false) -> bool;
 
 template <str_vec_flags flags>
 constexpr auto
-raii_file_path_nullopt() -> raii::basic_file_path<allocator_dyn, flags>;
+raii_file_path_nullopt() noexcept(false)
+   -> raii::basic_file_path<allocator_dyn, flags>;
 }  // namespace cat::detail
 
 namespace cat::raii {
@@ -83,7 +84,7 @@ basic_file_path
 
    constexpr basic_file_path(
       allocator_ref<Allocator> allocator [[clang::lifetimebound]]
-   )
+   ) noexcept
        : m_path(), m_allocator(allocator) {
    }
 
@@ -93,13 +94,14 @@ basic_file_path
       "`.clone()` or move instead."
    );
    auto
-   operator=(basic_file_path const&) -> basic_file_path& = delete (
-      "Implicit copying of `cat::raii::basic_file_path` is forbidden. Call "
-      "`.clone()` or move instead."
-   );
+   operator=(basic_file_path const&) noexcept(false)
+      -> basic_file_path& = delete (
+         "Implicit copying of `cat::raii::basic_file_path` is forbidden. Call "
+         "`.clone()` or move instead."
+      );
 
    constexpr auto
-   operator=(basic_file_path&& other) -> basic_file_path& {
+   operator=(basic_file_path&& other) noexcept(false) -> basic_file_path& {
       if (this == __builtin_addressof(other)) {
          return *this;
       }
@@ -109,79 +111,79 @@ basic_file_path
       return *this;
    }
 
-   constexpr ~basic_file_path() {
+   constexpr ~basic_file_path() noexcept {
       m_path.free(m_allocator);
    }
 
    [[nodiscard]]
    constexpr auto
-   operator==(basic_file_path const& other) const -> bool {
+   operator==(basic_file_path const& other) const noexcept -> bool {
       return m_path == other.m_path;
    }
 
    [[nodiscard]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> char* _Nullable {
+   data() noexcept [[clang::lifetimebound]] -> char* _Nullable {
       return m_path.data();
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> char const* _Nullable {
+   data() const noexcept [[clang::lifetimebound]] -> char const* _Nullable {
       return m_path.data();
    }
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_path.size();
    }
 
    [[nodiscard]]
    constexpr auto
-   capacity() const -> idx {
+   capacity() const noexcept -> idx {
       return m_path.capacity();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_null_terminated() const -> bool {
+   is_null_terminated() const noexcept -> bool {
       return true;
    }
 
    [[nodiscard]]
    constexpr auto
-   view() const [[clang::lifetimebound]] -> str_view {
+   view() const noexcept [[clang::lifetimebound]] -> str_view {
       return m_path.view();
    }
 
    [[nodiscard]]
    constexpr auto
-   native_handle() [[clang::lifetimebound]] -> zstr_span {
+   native_handle() noexcept [[clang::lifetimebound]] -> zstr_span {
       return m_path.native_handle();
    }
 
    [[nodiscard]]
    constexpr auto
-   native_handle() const [[clang::lifetimebound]] -> zstr_view {
+   native_handle() const noexcept [[clang::lifetimebound]] -> zstr_view {
       return m_path.native_handle();
    }
 
    [[nodiscard]]
    constexpr
-   operator zstr_span() [[clang::lifetimebound]] {
+   operator zstr_span() noexcept [[clang::lifetimebound]] {
       return native_handle();
    }
 
    [[nodiscard]]
    constexpr
-   operator zstr_view() const [[clang::lifetimebound]] {
+   operator zstr_view() const noexcept [[clang::lifetimebound]] {
       return native_handle();
    }
 
    [[nodiscard]]
    constexpr auto
-   reserve(idx minimum_capacity) -> maybe<void>
+   reserve(idx minimum_capacity) noexcept -> maybe<void>
       requires(!m_flags.vec.is_fixed_size)
    {
       return m_path.reserve(m_allocator, minimum_capacity);
@@ -189,29 +191,30 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   resize(idx new_size) -> maybe<void> {
+   resize(idx new_size) noexcept -> maybe<void> {
       return m_path.resize(m_allocator, new_size);
    }
 
    constexpr void
-   clear() {
+   clear() noexcept {
       m_path.clear();
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
       m_path.free(m_allocator);
    }
 
    [[nodiscard]]
    constexpr auto
-   allocator(this auto&& self) -> allocator_ref<Allocator> {
+   allocator(this auto&& self) noexcept -> allocator_ref<Allocator> {
       return self.m_allocator;
    }
 
    [[nodiscard]]
    constexpr auto
-   clone() const& -> maybe<basic_file_path> {
+   clone() const& noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<basic_file_path> {
       return clone(m_allocator);
    }
 
@@ -232,9 +235,8 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   clone(
-      allocator_dyn allocator
-   ) const& -> maybe<basic_file_path<allocator_dyn, flags>> {
+   clone(allocator_dyn allocator) const& noexcept
+      -> maybe<basic_file_path<allocator_dyn, flags>> {
       return clone<allocator_dyn>(allocator);
    }
 
@@ -246,122 +248,123 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   is_absolute() const -> bool {
+   is_absolute() const noexcept -> bool {
       return m_path.is_absolute();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_relative() const -> bool {
+   is_relative() const noexcept -> bool {
       return m_path.is_relative();
    }
 
    [[nodiscard]]
    constexpr auto
-   root_name() const -> str_view {
+   root_name() const noexcept -> str_view {
       return m_path.root_name();
    }
 
    [[nodiscard]]
    constexpr auto
-   root_directory() const -> str_view {
+   root_directory() const noexcept -> str_view {
       return m_path.root_directory();
    }
 
    [[nodiscard]]
    constexpr auto
-   root_path() const -> str_view {
+   root_path() const noexcept -> str_view {
       return m_path.root_path();
    }
 
    [[nodiscard]]
    constexpr auto
-   relative_path() const -> str_view {
+   relative_path() const noexcept -> str_view {
       return m_path.relative_path();
    }
 
    [[nodiscard]]
    constexpr auto
-   parent_path() const -> str_view {
+   parent_path() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
       return m_path.parent_path();
    }
 
    [[nodiscard]]
    constexpr auto
-   filename() const -> str_view {
+   filename() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
       return m_path.filename();
    }
 
    [[nodiscard]]
    constexpr auto
-   stem() const -> str_view {
+   stem() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
       return m_path.stem();
    }
 
    [[nodiscard]]
    constexpr auto
-   extension() const -> str_view {
+   extension() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
       return m_path.extension();
    }
 
    [[nodiscard]]
    constexpr auto
-   has_root_name() const -> bool {
+   has_root_name() const noexcept -> bool {
       return m_path.has_root_name();
    }
 
    [[nodiscard]]
    constexpr auto
-   has_root_directory() const -> bool {
+   has_root_directory() const noexcept -> bool {
       return m_path.has_root_directory();
    }
 
    [[nodiscard]]
    constexpr auto
-   has_root_path() const -> bool {
+   has_root_path() const noexcept -> bool {
       return m_path.has_root_path();
    }
 
    [[nodiscard]]
    constexpr auto
-   has_relative_path() const -> bool {
+   has_relative_path() const noexcept -> bool {
       return m_path.has_relative_path();
    }
 
    [[nodiscard]]
    constexpr auto
-   has_parent_path() const -> bool {
+   has_parent_path() const noexcept -> bool {
       return m_path.has_parent_path();
    }
 
    [[nodiscard]]
    constexpr auto
-   has_filename() const -> bool {
+   has_filename() const noexcept -> bool {
       return m_path.has_filename();
    }
 
    [[nodiscard]]
    constexpr auto
-   has_stem() const -> bool {
+   has_stem() const noexcept -> bool {
       return m_path.has_stem();
    }
 
    [[nodiscard]]
    constexpr auto
-   has_extension() const -> bool {
+   has_extension() const noexcept -> bool {
       return m_path.has_extension();
    }
 
    [[nodiscard]]
    constexpr auto
-   components() const -> path_components {
+   components() const noexcept -> path_components {
       return m_path.components();
    }
 
    template <is_path_segment Segment>
    [[nodiscard]]
    constexpr auto
-   append(Segment const& segment) -> maybe<void> {
+   append(Segment const& segment) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void> {
       return m_path.append(m_allocator, segment);
    }
 
@@ -431,7 +434,9 @@ template <
    is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_ref<Allocator> allocator, Segment const& segment)
+make_file_path(
+   allocator_ref<Allocator> allocator, Segment const& segment
+) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<basic_file_path<Allocator, flags>> {
    basic_file_path<Allocator, flags> result(allocator);
    str_view const value = detail::path_segment_view(segment);
@@ -447,7 +452,7 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_dyn allocator, Segment const& segment)
+make_file_path(allocator_dyn allocator, Segment const& segment) noexcept
    -> maybe<basic_file_path<allocator_dyn, flags>> {
    return raii::make_file_path<allocator_dyn, flags>(allocator, segment);
 }
@@ -456,7 +461,7 @@ template <
    is_allocator Allocator, str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_ref<Allocator> allocator)
+make_file_path(allocator_ref<Allocator> allocator) noexcept
    -> maybe<basic_file_path<Allocator, flags>> {
    return raii::make_file_path<Allocator, flags>(allocator, str_view{});
 }
@@ -464,7 +469,7 @@ make_file_path(allocator_ref<Allocator> allocator)
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_dyn allocator)
+make_file_path(allocator_dyn allocator) noexcept
    -> maybe<basic_file_path<allocator_dyn, flags>> {
    return raii::make_file_path<allocator_dyn, flags>(allocator);
 }
@@ -472,7 +477,9 @@ make_file_path(allocator_dyn allocator)
 template <is_allocator Allocator, str_vec_flags flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-operator/(basic_file_path<Allocator, flags> const& left, Segment const& right)
+operator/(
+   basic_file_path<Allocator, flags> const& left, Segment const& right
+) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<basic_file_path<Allocator, flags>> {
    basic_file_path<Allocator, flags> result = $prop(left.clone());
    $prop(result.append(right));

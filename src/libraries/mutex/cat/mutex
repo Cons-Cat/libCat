@@ -75,30 +75,37 @@ concept is_mutex_fair =
 template <is_allocator Allocator>
 [[nodiscard]]
 auto
-alloc_mutex_runtime(allocator_ref<Allocator> allocator, idx thread_count)
-   -> maybe<void>;
+alloc_mutex_runtime(
+   allocator_ref<Allocator> allocator, idx thread_count
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void>;
 
 [[nodiscard]]
 auto
-alloc_mutex_runtime(allocator_dyn allocator, idx thread_count) -> maybe<void>;
+alloc_mutex_runtime(allocator_dyn allocator, idx thread_count) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<void>;
 
 // Call only after all `cat::mutex` users are quiescent.
 template <is_allocator Allocator>
 void
-free_mutex_runtime(allocator_ref<Allocator> allocator);
+free_mutex_runtime(allocator_ref<Allocator> allocator) noexcept(
+   !__has_feature(cxx_exceptions)
+);
 
 // Call only after all `cat::mutex` users are quiescent.
 void
-free_mutex_runtime(allocator_dyn allocator);
+free_mutex_runtime(allocator_dyn allocator) noexcept;
 
 // Call only after all `cat::mutex` users are quiescent.
 template <is_allocator Allocator>
 void
-cfree_mutex_runtime(allocator_ref<Allocator> allocator);
+cfree_mutex_runtime(allocator_ref<Allocator> allocator) noexcept(
+   !__has_feature(cxx_exceptions)
+);
 
 // Call only after all `cat::mutex` users are quiescent.
 void
-cfree_mutex_runtime(allocator_dyn allocator);
+cfree_mutex_runtime(allocator_dyn allocator) noexcept;
 
 }  // namespace cat
 
@@ -114,12 +121,12 @@ class mutex {
    mutex(mutex&&) = delete;
 
    auto
-   operator=(mutex const&) -> mutex& = delete;
+   operator=(mutex const&) noexcept -> mutex& = delete;
    auto
-   operator=(mutex&&) -> mutex& = delete;
+   operator=(mutex&&) noexcept -> mutex& = delete;
 
    void
-   lock() {
+   lock() noexcept(!__has_feature(cxx_exceptions)) {
       uint1 expected = 0;
       if (!m_state.compare_exchange_weak(
              expected, locked_bit, memory_order::acquire, memory_order::relaxed
@@ -130,7 +137,7 @@ class mutex {
 
    [[nodiscard]]
    auto
-   try_lock() -> bool {
+   try_lock() noexcept(!__has_feature(cxx_exceptions)) -> bool {
       uint1 state = m_state.load(memory_order::relaxed);
       for (;;) {
          if ((state & locked_bit) != 0) {
@@ -150,7 +157,8 @@ class mutex {
    template <is_duration Duration>
    [[nodiscard]]
    auto
-   try_lock_for(Duration timeout) -> bool {
+   try_lock_for(Duration timeout) noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
       clock_steady::time_point const now = clock_steady::now().assert();
       return try_lock_until(now + clock_steady::duration(timeout));
    }
@@ -158,7 +166,7 @@ class mutex {
    template <is_clock Clock, is_duration Duration>
    [[nodiscard]]
    auto
-   try_lock_until(time_point<Clock, Duration> timeout) -> bool {
+   try_lock_until(time_point<Clock, Duration> timeout) noexcept -> bool {
       if (try_lock()) {
          return true;
       }
@@ -166,7 +174,7 @@ class mutex {
    }
 
    void
-   yield_to_waiters() {
+   yield_to_waiters() noexcept(!__has_feature(cxx_exceptions)) {
       if ((m_state.load(memory_order::relaxed) & parked_bit) != 0) {
          unlock_slow<true>();
          lock();
@@ -174,7 +182,7 @@ class mutex {
    }
 
    void
-   unlock() {
+   unlock() noexcept(!__has_feature(cxx_exceptions)) {
       uint1 expected = locked_bit;
       if (!m_state.compare_exchange_strong(
              expected, 0, memory_order::release, memory_order::relaxed
@@ -184,7 +192,7 @@ class mutex {
    }
 
    void
-   unlock_fair() {
+   unlock_fair() noexcept(!__has_feature(cxx_exceptions)) {
       uint1 expected = locked_bit;
       if (!m_state.compare_exchange_strong(
              expected, 0, memory_order::release, memory_order::relaxed
@@ -200,7 +208,7 @@ class mutex {
    class spin_wait {
     public:
       auto
-      spin() -> bool {
+      spin() noexcept(!__has_feature(cxx_exceptions)) -> bool {
          if (m_counter >= 10) {
             return false;
          }
@@ -214,7 +222,7 @@ class mutex {
       }
 
       void
-      reset() {
+      reset() noexcept {
          m_counter = 0;
       }
 
@@ -223,14 +231,16 @@ class mutex {
    };
 
    auto
-   lock_slow() -> bool {
+   lock_slow() noexcept(!__has_feature(cxx_exceptions)) -> bool {
       return lock_slow(maybe<clock_steady::time_point>(nullopt));
    }
 
    template <is_clock Clock, is_duration Duration>
    [[gnu::noinline]]
    auto
-   lock_slow(time_point<Clock, Duration> timeout) -> bool {
+   lock_slow(time_point<Clock, Duration> timeout) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
       return lock_slow(maybe<time_point<Clock, Duration>>(timeout));
    }
 
@@ -316,7 +326,7 @@ class mutex {
    template <bool force_fair = false>
    [[gnu::noinline]]
    void
-   unlock_slow() {
+   unlock_slow() noexcept(!__has_feature(cxx_exceptions)) {
       uword const key = __builtin_bit_cast(uword, this);
       detail::mutex_parking_lot::unpark_one(
          key, [this](detail::mutex_parking_lot::unpark_result const result) {
@@ -349,42 +359,42 @@ class mutex {
 template <is_mutex_fair Mutex = mutex>
 class mutex_fair {
  public:
-   constexpr explicit mutex_fair(Mutex& mutex [[clang::lifetimebound]])
+   constexpr explicit mutex_fair(Mutex& mutex [[clang::lifetimebound]]) noexcept
        : m_p_mutex(addressof(mutex)) {
    }
 
    void
-   lock() {
+   lock() noexcept {
       m_p_mutex->lock();
    }
 
    [[nodiscard]]
    auto
-   try_lock() -> bool {
+   try_lock() noexcept -> bool {
       return m_p_mutex->try_lock();
    }
 
    template <is_duration Duration>
    [[nodiscard]]
    auto
-   try_lock_for(Duration timeout) -> bool {
+   try_lock_for(Duration timeout) noexcept -> bool {
       return m_p_mutex->try_lock_for(timeout);
    }
 
    template <is_clock Clock, is_duration Duration>
    [[nodiscard]]
    auto
-   try_lock_until(time_point<Clock, Duration> timeout) -> bool {
+   try_lock_until(time_point<Clock, Duration> timeout) noexcept -> bool {
       return m_p_mutex->try_lock_until(timeout);
    }
 
    void
-   unlock() {
+   unlock() noexcept {
       m_p_mutex->unlock_fair();
    }
 
    void
-   unlock_fair() {
+   unlock_fair() noexcept {
       m_p_mutex->unlock_fair();
    }
 

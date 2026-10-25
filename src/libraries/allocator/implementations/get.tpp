@@ -76,7 +76,7 @@ template <typename Derived>
 template <typename T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::get_ptr(T& memory) -> auto {
+allocator_interface<Derived>::get_ptr(T& memory) noexcept -> auto {
    // Omitting `[[clang::lifetimebound]]` on this parameter avoids Clang 23
    // `-Wreturn-stack-address` false positives on the `cat::span` branch when
    // `get(memory).data()` still refers to storage owned by `memory`.
@@ -94,7 +94,7 @@ template <typename Derived>
 template <typename T>
 [[nodiscard]]
 constexpr auto
-allocator_interface<Derived>::get_ptr(T const& memory) -> auto {
+allocator_interface<Derived>::get_ptr(T const& memory) noexcept -> auto {
    // Omitting `[[clang::lifetimebound]]` on this parameter avoids Clang 23
    // `-Wreturn-stack-address` false positives on the `cat::span` branch when
    // `get(memory).data()` still refers to storage owned by `memory`.

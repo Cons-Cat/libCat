@@ -5,7 +5,7 @@
 // `write()` forwards its arguments to a failable stdout syscall. It returns the
 // number of bytes that it wrote.
 auto
-nix::sys_write(file_descriptor file_descriptor, cat::str_view string)
+nix::sys_write(file_descriptor file_descriptor, cat::str_view string) noexcept
    -> nix::scaredy_nix<cat::idx> {
    // https://filippo.io/linux-syscall-table/
    return nix::syscall_volatile<cat::idx>(

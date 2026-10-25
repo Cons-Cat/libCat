@@ -50,22 +50,23 @@ class negative_binomial_distribution {
 
       constexpr explicit param_type(
          result_type successes = 1, Float probability = 0.5
-      )
+      ) noexcept
           : m_successes(successes), m_probability(probability) {
       }
 
       constexpr auto
-      k() const -> result_type {
+      k() const noexcept -> result_type {
          return m_successes;
       }
 
       constexpr auto
-      p() const -> Float {
+      p() const noexcept -> Float {
          return m_probability;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       result_type m_successes;
@@ -74,45 +75,47 @@ class negative_binomial_distribution {
 
    constexpr explicit negative_binomial_distribution(
       result_type successes = 1, Float probability = 0.5
-   )
+   ) noexcept
        : m_parameters(successes, probability) {
    }
 
-   constexpr explicit negative_binomial_distribution(param_type parameters)
+   constexpr explicit negative_binomial_distribution(
+      param_type parameters
+   ) noexcept
        : m_parameters(parameters) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    constexpr auto
-   k() const -> result_type {
+   k() const noexcept -> result_type {
       return m_parameters.k();
    }
 
    constexpr auto
-   p() const -> Float {
+   p() const noexcept -> Float {
       return m_parameters.p();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameters;
    }
 
    constexpr void
-   param(param_type parameters) {
+   param(param_type parameters) noexcept {
       m_parameters = parameters;
    }
 
    constexpr auto
-   min() const -> result_type {
+   min() const noexcept -> result_type {
       return 0u;
    }
 
    constexpr auto
-   max() const -> result_type {
+   max() const noexcept -> result_type {
       return limits<result_type>::max();
    }
 

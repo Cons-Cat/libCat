@@ -15,7 +15,7 @@ template <typename Simd>
 void
 copy_memory_large(
    byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    iword bytes_remaining = bytes;
 
    cat::uintptr<char> p_source_handle{

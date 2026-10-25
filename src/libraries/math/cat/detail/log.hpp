@@ -12,7 +12,7 @@ namespace cat::detail {
 template <is_raw_floating_point Float>
 [[nodiscard]]
 constexpr auto
-emulated_log(Float argument) -> Float {
+emulated_log(Float argument) noexcept -> Float {
    if (is_nan(argument)) {
       return argument;
    }
@@ -74,7 +74,7 @@ template <is_floating_point Float>
    requires is_dimensionless_arithmetic<Float>
 [[nodiscard]]
 constexpr auto
-log(Float argument) -> Float {
+log(Float argument) noexcept -> Float {
    if consteval {
       return Float(detail::emulated_log(make_raw_arithmetic(argument)));
    }

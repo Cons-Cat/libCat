@@ -150,7 +150,7 @@ struct is_divisible_by_impl;
 template <typename T, typename U>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-is_divisible_by_apply(T value, U divisor) -> bool {
+is_divisible_by_apply(T value, U divisor) noexcept -> bool {
    if (divisor == 0) {
       return value == 0;
    }

@@ -57,7 +57,9 @@ using musl_counter_storage = conditional<is_shared, atomic<uword>, uword>;
 
 template <bool is_shared>
 void
-musl_add_counter(musl_counter_storage<is_shared>& counter, uword amount) {
+musl_add_counter(
+   musl_counter_storage<is_shared>& counter, uword amount
+) noexcept(!__has_feature(cxx_exceptions)) {
    if constexpr (is_shared) {
       uword const old = counter.relaxed().fetch_add(amount);
       verify(old <= limits<uword>::max() - amount);
@@ -69,7 +71,9 @@ musl_add_counter(musl_counter_storage<is_shared>& counter, uword amount) {
 
 template <bool is_shared>
 void
-musl_subtract_counter(musl_counter_storage<is_shared>& counter, uword amount) {
+musl_subtract_counter(
+   musl_counter_storage<is_shared>& counter, uword amount
+) noexcept(!__has_feature(cxx_exceptions)) {
    if constexpr (is_shared) {
       uword const old = counter.relaxed().fetch_sub(amount);
       verify(old >= amount);
@@ -179,10 +183,10 @@ struct musl_context {
    deallocate_pages(byte const* p_memory, uword bytes);
 
    auto
-   allocate_meta() -> meta<is_shared>* _Nullable;
+   allocate_meta() noexcept(false) -> meta<is_shared>* _Nullable;
 
    auto
-   get_meta(byte const* p_allocation) -> meta<is_shared>*;
+   get_meta(byte const* p_allocation) noexcept(false) -> meta<is_shared>*;
 
    void
    step_sequence();
@@ -197,37 +201,41 @@ struct musl_context {
    decay_bounces(uint4 size_class);
 
    auto
-   is_bouncing(uint4 size_class) const -> bool;
+   is_bouncing(uint4 size_class) const noexcept(false) -> bool;
 
    auto
-   try_available(meta<is_shared>* _Nullable* p_metadata) -> uint4;
+   try_available(meta<is_shared>* _Nullable* p_metadata) noexcept(false)
+      -> uint4;
 
    auto
-   allocate_slot(uint4 size_class, uword request) -> maybe_non_negative<int4>;
+   allocate_slot(uint4 size_class, uword request) noexcept(false)
+      -> maybe_non_negative<int4>;
 
    auto
-   allocate_group(uint4 size_class, uword request)
+   allocate_group(uint4 size_class, uword request) noexcept(false)
       -> meta<is_shared>* _Nullable;
 
    auto
    allocate_memory_unaccounted(
       uword bytes, uword* _Nullable p_feedback_bytes = nullptr
-   ) -> byte* _Nullable;
+   ) noexcept(false) -> byte* _Nullable;
 
    [[gnu::always_inline]]
    auto
-   allocate_memory(uword bytes, uword* _Nullable p_feedback_bytes = nullptr)
-      -> byte* _Nullable;
+   allocate_memory(
+      uword bytes, uword* _Nullable p_feedback_bytes = nullptr
+   ) noexcept(false) -> byte* _Nullable;
 
    auto
-   okay_to_free(meta<is_shared>* p_metadata) -> bool;
+   okay_to_free(meta<is_shared>* p_metadata) noexcept(false) -> bool;
 
    auto
-   nontrivial_free(meta<is_shared>* p_metadata, uint4 index)
+   nontrivial_free(meta<is_shared>* p_metadata, uint4 index) noexcept(false)
       -> musl_map_info<is_shared>;
 
    auto
-   free_group(meta<is_shared>* p_metadata) -> musl_map_info<is_shared>;
+   free_group(meta<is_shared>* p_metadata) noexcept(false)
+      -> musl_map_info<is_shared>;
 
    void
    finish_unmap(musl_map_info<is_shared> mapping);
@@ -236,30 +244,31 @@ struct musl_context {
    deallocate_locked(
       byte* p_allocation, meta<is_shared>* p_metadata, uint4 index,
       uword old_bytes
-   ) -> musl_map_info<is_shared>;
+   ) noexcept(false) -> musl_map_info<is_shared>;
 
    auto
    deallocate_fast(
       byte* p_allocation, meta<is_shared>* p_metadata, uint4 index,
       uword old_bytes
-   ) -> bool;
+   ) noexcept(false) -> bool;
 
    auto
-   prepare_free(byte* p_allocation) -> tuple<meta<is_shared>*, uint4, uword>;
+   prepare_free(byte* p_allocation) noexcept(false)
+      -> tuple<meta<is_shared>*, uint4, uword>;
 
    auto
-   is_all_zero(byte* p_allocation) -> bool;
+   is_all_zero(byte* p_allocation) noexcept(false) -> bool;
 
    auto
    aligned_allocate(
       uword alignment, uword bytes, uword* _Nullable p_feedback_bytes = nullptr
-   ) -> byte* _Nullable;
+   ) noexcept(false) -> byte* _Nullable;
 
    auto
    resize_in_place(
       byte*& p_allocation, uword old_allocation_bytes, uword new_bytes,
       bool may_move, uword* _Nullable p_feedback_bytes = nullptr
-   ) -> bool;
+   ) noexcept(false) -> bool;
 
    void
    release_mappings();
@@ -326,7 +335,9 @@ make_context(uint8 secret = 0u) -> musl_context<is_shared>* _Nullable {
 
 template <bool is_shared>
 void
-queue(meta<is_shared>* _Nullable* p_head, meta<is_shared>* p_metadata) {
+queue(meta<is_shared>* _Nullable* p_head, meta<is_shared>* p_metadata) noexcept(
+   false
+) {
    verify(p_metadata->p_next == nullptr);
    verify(p_metadata->p_previous == nullptr);
    if (*p_head != nullptr) {
@@ -344,7 +355,9 @@ queue(meta<is_shared>* _Nullable* p_head, meta<is_shared>* p_metadata) {
 
 template <bool is_shared>
 void
-dequeue(meta<is_shared>* _Nullable* p_head, meta<is_shared>* p_metadata) {
+dequeue(
+   meta<is_shared>* _Nullable* p_head, meta<is_shared>* p_metadata
+) noexcept(!__has_feature(cxx_exceptions)) {
    verify(*p_head != nullptr);
    verify(p_metadata->p_next != nullptr);
    if (p_metadata->p_next != p_metadata) {
@@ -388,7 +401,9 @@ clear_meta(meta<is_shared>* p_metadata) {
 
 template <bool is_shared>
 void
-musl_context<is_shared>::deallocate_pages(byte const* p_memory, uword bytes) {
+musl_context<is_shared>::deallocate_pages(
+   byte const* p_memory, uword bytes
+) noexcept(!__has_feature(cxx_exceptions)) {
    nix::sys_munmap({p_memory, idx(bytes)}).verify();
 }
 
@@ -401,7 +416,8 @@ musl_context<is_shared>::free_meta(meta<is_shared>* p_metadata) {
 
 template <bool is_shared>
 auto
-musl_context<is_shared>::allocate_meta() -> meta<is_shared>* _Nullable {
+musl_context<is_shared>::allocate_meta() noexcept(false)
+   -> meta<is_shared>* _Nullable {
    auto& context = *this;
    if (
       meta<is_shared>* const p_reused =
@@ -493,7 +509,9 @@ all_slots_mask(meta<is_shared> const& metadata) -> uint4 {
 
 template <bool is_shared>
 auto
-activate_group(meta<is_shared>* p_metadata) -> uint4 {
+activate_group(meta<is_shared>* p_metadata) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> uint4 {
    verify(musl_load_mask<is_shared>(p_metadata->available_mask) == 0u);
    uint4 const active =
       (uint4{2u} << uint4{p_metadata->p_memory->active_idx}) - 1u;
@@ -534,8 +552,9 @@ slot_index(byte const* p_allocation) -> uint4 {
 
 template <bool is_shared>
 auto
-musl_context<is_shared>::get_meta(byte const* p_allocation)
-   -> meta<is_shared>* {
+musl_context<is_shared>::get_meta(byte const* p_allocation) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> meta<is_shared>* {
    auto& context = *this;
    auto const* const p_encoded = encoded_bytes(p_allocation);
    verify((bit_cast<uword::raw_type>(p_allocation) & (musl_quanta - 1u)) == 0u);
@@ -601,7 +620,9 @@ stride(meta<is_shared> const* p_metadata) -> uword {
 }
 
 auto
-nominal_size(byte const* p_allocation, byte const* p_end) -> uword {
+nominal_size(byte const* p_allocation, byte const* p_end) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> uword {
    auto const* const p_encoded_allocation = encoded_bytes(p_allocation);
    auto const* const p_encoded_end = encoded_bytes(p_end);
    uword reserved = uint1{p_encoded_allocation[-3]} >> 5u;
@@ -623,7 +644,9 @@ nominal_size(byte const* p_allocation, byte const* p_end) -> uword {
 }
 
 void
-set_size(byte* p_allocation, byte* p_end, uword bytes) {
+set_size(byte* p_allocation, byte* p_end, uword bytes) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    auto* const p_encoded_allocation = encoded_bytes(p_allocation);
    auto* const p_encoded_end = encoded_bytes(p_end);
    uword reserved = uword(p_end - p_allocation) - bytes;
@@ -660,7 +683,7 @@ auto
 enframe(
    meta<is_shared>* p_metadata, uint4 index, uword bytes, uint4 counter,
    uword* _Nullable p_feedback_bytes
-) -> byte* {
+) noexcept(!__has_feature(cxx_exceptions)) -> byte* {
    uword const slot_stride = stride(p_metadata);
    uword const slack = (slot_stride - musl_in_band - bytes) / musl_quanta;
    byte* p_allocation = p_metadata->p_memory->storage + slot_stride * index;
@@ -792,8 +815,9 @@ musl_context<is_shared>::is_bouncing(uint4 size_class) const -> bool {
 
 template <bool is_shared>
 auto
-musl_context<is_shared>::try_available(meta<is_shared>* _Nullable* p_metadata)
-   -> uint4 {
+musl_context<is_shared>::try_available(
+   meta<is_shared>* _Nullable* p_metadata
+) noexcept(!__has_feature(cxx_exceptions)) -> uint4 {
    meta<is_shared>* p_current = *p_metadata;
    if (p_current == nullptr) {
       return 0u;
@@ -1204,7 +1228,7 @@ template <bool is_shared>
 auto
 musl_context<is_shared>::nontrivial_free(
    meta<is_shared>* p_metadata, uint4 index
-) -> musl_map_info<is_shared> {
+) noexcept(!__has_feature(cxx_exceptions)) -> musl_map_info<is_shared> {
    auto& context = *this;
    uint4 const self = uint4{1u} << index;
    uint4 const size_class = static_cast<uint4>(p_metadata->size_class);
@@ -1264,7 +1288,7 @@ template <bool is_shared>
 auto
 musl_context<is_shared>::deallocate_fast(
    byte* p_allocation, meta<is_shared>* p_metadata, uint4 index, uword old_bytes
-) -> bool {
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    uint4 const self = uint4{1u} << index;
    uint4 const all = all_slots_mask(*p_metadata);
    poison_memory_region(p_allocation, old_bytes);
@@ -1359,7 +1383,7 @@ template <bool is_shared>
 auto
 musl_context<is_shared>::aligned_allocate(
    uword alignment, uword bytes, uword* _Nullable p_feedback_bytes
-) -> byte* _Nullable {
+) noexcept(!__has_feature(cxx_exceptions)) -> byte* _Nullable {
    auto& context = *this;
    if (bytes == 0u) {
       bytes = 1u;
@@ -1450,7 +1474,7 @@ auto
 musl_context<is_shared>::resize_in_place(
    byte*& p_allocation, uword old_allocation_bytes, uword new_bytes,
    bool may_move, uword* _Nullable p_feedback_bytes
-) -> bool {
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    auto& context = *this;
    meta<is_shared>* const p_metadata = get_meta(p_allocation);
    uint4 const index = slot_index(p_allocation);
@@ -1586,7 +1610,9 @@ namespace cat {
 
 template <bool is_shared>
 auto
-basic_allocator_musl<is_shared>::ensure_context() -> context* _Nullable {
+basic_allocator_musl<is_shared>::ensure_context() noexcept(
+   !__has_feature(cxx_exceptions)
+) -> context* _Nullable {
    context* p_context = m_p_context.acquire();
    if (p_context != nullptr) {
       return p_context;
@@ -1610,7 +1636,7 @@ basic_allocator_musl<is_shared>::ensure_context() -> context* _Nullable {
 template <bool is_shared>
 basic_allocator_musl<is_shared>::basic_allocator_musl(
    basic_allocator_musl&& other
-) noexcept {
+) noexcept(!__has_feature(cxx_exceptions)) {
    m_secret = other.m_secret;
    other.m_secret = 0u;
    m_p_context.store(
@@ -1623,7 +1649,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::operator=(
    basic_allocator_musl&& other
-) noexcept -> basic_allocator_musl& {
+) noexcept(!__has_feature(cxx_exceptions)) -> basic_allocator_musl& {
    if (this != &other) {
       reset();
       m_secret = other.m_secret;
@@ -1637,7 +1663,9 @@ basic_allocator_musl<is_shared>::operator=(
 }
 
 template <bool is_shared>
-basic_allocator_musl<is_shared>::~basic_allocator_musl() {
+basic_allocator_musl<is_shared>::~basic_allocator_musl() noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    reset();
 }
 
@@ -1662,7 +1690,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::allocation_bytes(
    ualign alignment, idx requested_bytes
-) -> maybe_non_zero<idx> {
+) noexcept -> maybe_non_zero<idx> {
    uword const alignment_bytes = alignment;
    uword const bytes = requested_bytes == 0u ? 1u : requested_bytes;
    if (
@@ -1678,8 +1706,9 @@ basic_allocator_musl<is_shared>::allocation_bytes(
 
 template <bool is_shared>
 auto
-basic_allocator_musl<is_shared>::allocate(idx requested_bytes)
-   -> void* _Nullable {
+basic_allocator_musl<is_shared>::allocate(idx requested_bytes) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> void* _Nullable {
    context* const p_context = ensure_context();
    if (p_context == nullptr) {
       return nullptr;
@@ -1691,7 +1720,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::aligned_allocate(
    ualign alignment, idx requested_bytes
-) -> void* _Nullable {
+) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nullable {
    context* const p_context = ensure_context();
    if (p_context == nullptr) {
       return nullptr;
@@ -1701,8 +1730,9 @@ basic_allocator_musl<is_shared>::aligned_allocate(
 
 template <bool is_shared>
 auto
-basic_allocator_musl<is_shared>::allocate_feedback(idx requested_bytes)
-   -> maybe_sized_allocation<void*> {
+basic_allocator_musl<is_shared>::allocate_feedback(
+   idx requested_bytes
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe_sized_allocation<void*> {
    context* const p_context = ensure_context();
    if (p_context == nullptr) {
       return nullopt;
@@ -1720,7 +1750,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::aligned_allocate_feedback(
    ualign alignment, idx requested_bytes
-) -> maybe_sized_allocation<void*> {
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe_sized_allocation<void*> {
    context* const p_context = ensure_context();
    if (p_context == nullptr) {
       return nullopt;
@@ -1736,8 +1766,9 @@ basic_allocator_musl<is_shared>::aligned_allocate_feedback(
 
 template <bool is_shared>
 auto
-basic_allocator_musl<is_shared>::allocate_zeroed(idx requested_bytes)
-   -> void* _Nullable {
+basic_allocator_musl<is_shared>::allocate_zeroed(idx requested_bytes) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> void* _Nullable {
    context* const p_context = ensure_context();
    if (p_context == nullptr) {
       return nullptr;
@@ -1752,8 +1783,9 @@ basic_allocator_musl<is_shared>::allocate_zeroed(idx requested_bytes)
 
 template <bool is_shared>
 auto
-basic_allocator_musl<is_shared>::allocate_zeroed_feedback(idx requested_bytes)
-   -> maybe_sized_allocation<void*> {
+basic_allocator_musl<is_shared>::allocate_zeroed_feedback(
+   idx requested_bytes
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe_sized_allocation<void*> {
    maybe_sized_allocation<void*> result = allocate_feedback(requested_bytes);
    if (result.has_value()) {
       context* const p_context = m_p_context.acquire();
@@ -1773,7 +1805,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::aligned_allocate_zeroed(
    ualign alignment, idx requested_bytes
-) -> void* _Nullable {
+) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nullable {
    context* const p_context = ensure_context();
    if (p_context == nullptr) {
       return nullptr;
@@ -1791,7 +1823,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::aligned_allocate_zeroed_feedback(
    ualign alignment, idx requested_bytes
-) -> maybe_sized_allocation<void*> {
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe_sized_allocation<void*> {
    maybe_sized_allocation<void*> result =
       aligned_allocate_feedback(alignment, requested_bytes);
    if (result.has_value()) {
@@ -1812,7 +1844,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::recorded_allocation_bytes(
    void const* p_storage
-) -> idx {
+) noexcept(!__has_feature(cxx_exceptions)) -> idx {
    context* const p_context = m_p_context.acquire();
    verify(p_context != nullptr);
    auto* const p_allocation =
@@ -1830,7 +1862,7 @@ template <bool is_shared>
 void
 basic_allocator_musl<is_shared>::deallocate(
    void const* p_storage, idx allocation_bytes
-) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    context* const p_context = m_p_context.acquire();
    verify(p_context != nullptr);
    auto* const p_allocation =
@@ -1857,8 +1889,9 @@ basic_allocator_musl<is_shared>::deallocate(
 
 template <bool is_shared>
 auto
-basic_allocator_musl<is_shared>::grow(span<byte> allocation, idx new_bytes)
-   -> maybe<void> {
+basic_allocator_musl<is_shared>::grow(
+   span<byte> allocation, idx new_bytes
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
    context* const p_context = m_p_context.acquire();
    verify(p_context != nullptr);
    byte* p_allocation = allocation.data();
@@ -1873,7 +1906,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::grow_feedback(
    span<byte> allocation, idx new_bytes
-) -> maybe_non_zero<idx> {
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe_non_zero<idx> {
    context* const p_context = m_p_context.acquire();
    verify(p_context != nullptr);
    byte* p_allocation = allocation.data();
@@ -1892,7 +1925,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::reallocate_memory(
    span<byte> allocation, idx new_bytes, uword* _Nullable p_feedback_bytes
-) -> void* _Nullable {
+) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nullable {
    context* const p_context = m_p_context.acquire();
    verify(p_context != nullptr);
    byte* p_allocation = allocation.data();
@@ -1930,7 +1963,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::reallocate(
    span<byte> allocation, idx new_bytes
-) -> void* _Nullable {
+) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nullable {
    return reallocate_memory(allocation, new_bytes, nullptr);
 }
 
@@ -1938,7 +1971,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::reallocate_feedback(
    span<byte> allocation, idx new_bytes
-) -> maybe_sized_allocation<void*> {
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe_sized_allocation<void*> {
    uword usable_bytes;
    auto* const p_result =
       bit_cast<byte*>(reallocate_memory(allocation, new_bytes, &usable_bytes));
@@ -1950,7 +1983,9 @@ basic_allocator_musl<is_shared>::reallocate_feedback(
 
 template <bool is_shared>
 auto
-basic_allocator_musl<is_shared>::bytes_used() const -> idx {
+basic_allocator_musl<is_shared>::bytes_used() const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> idx {
    context const* const p_context = m_p_context.acquire();
    if (p_context == nullptr) {
       return 0u;
@@ -1964,7 +1999,9 @@ basic_allocator_musl<is_shared>::bytes_used() const -> idx {
 
 template <bool is_shared>
 auto
-basic_allocator_musl<is_shared>::bytes_capacity() const -> idx {
+basic_allocator_musl<is_shared>::bytes_capacity() const noexcept(
+   !__has_feature(cxx_exceptions)
+) -> idx {
    context const* const p_context = m_p_context.acquire();
    if (p_context == nullptr) {
       return 0u;
@@ -1980,7 +2017,7 @@ template <bool is_shared>
 auto
 basic_allocator_musl<is_shared>::is_equivalent(
    basic_allocator_musl const& other
-) const -> bool {
+) const noexcept -> bool {
    if (this == &other) {
       return true;
    }

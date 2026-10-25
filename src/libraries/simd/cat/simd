@@ -310,7 +310,7 @@ using simd_mask_lane_bits_type = conditional<
 template <typename T>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-simd_lane_to_storage(T lane) -> simd_vector_element<T> {
+simd_lane_to_storage(T lane) noexcept -> simd_vector_element<T> {
    if constexpr (is_same<T, bool>) {
       return static_cast<unsigned char>(lane ? 1u : 0u);
    }
@@ -323,7 +323,7 @@ simd_lane_to_storage(T lane) -> simd_vector_element<T> {
 template <typename T>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-simd_lane_from_raw(simd_vector_element<T> slot) -> T {
+simd_lane_from_raw(simd_vector_element<T> slot) noexcept -> T {
    if constexpr (is_same<T, bool>) {
       return static_cast<bool>(slot);
    }
@@ -489,7 +489,7 @@ class
 #pragma clang diagnostic ignored "-Wpsabi"
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr simd(raw_type values)
+   constexpr simd(raw_type values) noexcept
        : raw(values) {
    }
 
@@ -514,7 +514,7 @@ class
    // rejected by failed constant evaluation on a violated `[[assume]]`.
    template <typename U>
       requires detail::is_simd_consteval_broadcast_arg<remove_cvref<U>, T>
-   consteval simd(U value) {
+   consteval simd(U value) noexcept {
       // These semantics are described by P3844R2.
       [[assume(
          detail::has_simd_broadcast_consteval_value<remove_cvref<U>, T>(value)
@@ -545,7 +545,7 @@ class
 
    // `simd` from `simd_mask` by way of unary + on the mask.
    template <typename U, typename AbiM>
-   constexpr simd(simd_mask<U, AbiM> const& k)
+   constexpr simd(simd_mask<U, AbiM> const& k) noexcept
       requires(is_same<
                simd<T, Abi>,
                simd<
@@ -630,7 +630,7 @@ class
    // the results in a new `simd`.
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator>(simd const& operand) const -> simd_mask<T, abi_type> {
+   operator>(simd const& operand) const noexcept -> simd_mask<T, abi_type> {
       return this->raw > operand.raw;
    }
 
@@ -640,7 +640,7 @@ class
    // store the results in a new `simd`.
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator>=(simd const& operand) const -> simd_mask<T, abi_type> {
+   operator>=(simd const& operand) const noexcept -> simd_mask<T, abi_type> {
       return this->raw >= operand.raw;
    }
 
@@ -648,7 +648,7 @@ class
    // results in a new `simd`.
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator<(simd const& operand) const -> simd_mask<T, abi_type> {
+   operator<(simd const& operand) const noexcept -> simd_mask<T, abi_type> {
       return this->raw < operand.raw;
    }
 
@@ -656,7 +656,7 @@ class
    // store the results in a new `simd`.
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator<=(simd const& operand) const -> simd_mask<T, abi_type> {
+   operator<=(simd const& operand) const noexcept -> simd_mask<T, abi_type> {
       return this->raw <= operand.raw;
    }
 
@@ -668,7 +668,8 @@ class
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator>(simd<U, OtherAbi> const& operand) const -> simd_mask<T, abi_type> {
+   operator>(simd<U, OtherAbi> const& operand) const noexcept
+      -> simd_mask<T, abi_type> {
       return this->raw > operand.raw;
    }
 
@@ -680,7 +681,7 @@ class
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator>=(simd<U, OtherAbi> const& operand) const
+   operator>=(simd<U, OtherAbi> const& operand) const noexcept
       -> simd_mask<T, abi_type> {
       return this->raw >= operand.raw;
    }
@@ -693,7 +694,8 @@ class
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator<(simd<U, OtherAbi> const& operand) const -> simd_mask<T, abi_type> {
+   operator<(simd<U, OtherAbi> const& operand) const noexcept
+      -> simd_mask<T, abi_type> {
       return this->raw < operand.raw;
    }
 
@@ -705,7 +707,7 @@ class
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator<=(simd<U, OtherAbi> const& operand) const
+   operator<=(simd<U, OtherAbi> const& operand) const noexcept
       -> simd_mask<T, abi_type> {
       return this->raw <= operand.raw;
    }
@@ -715,41 +717,43 @@ class
    // forces saturating forms. Integer lanes whose lane type carries a
    // `policy` use that by default on `simd` without an accessor.
    constexpr auto
-   undef() & -> detail::simd_overflow_reference<
-      T, Abi, overflow_policies::undefined>
+   undef() & noexcept
+      -> detail::simd_overflow_reference<T, Abi, overflow_policies::undefined>
       requires(is_integral<T> && !is_bool<T>);
    constexpr auto
-   wrap() & -> detail::simd_overflow_reference<T, Abi, overflow_policies::wrap>
+   wrap() & noexcept
+      -> detail::simd_overflow_reference<T, Abi, overflow_policies::wrap>
       requires(is_integral<T> && !is_bool<T>);
    constexpr auto
-   sat() & -> detail::simd_overflow_reference<
-      T, Abi, overflow_policies::saturate>
+   sat() & noexcept
+      -> detail::simd_overflow_reference<T, Abi, overflow_policies::saturate>
       requires(is_integral<T> && !is_bool<T>);
 
    constexpr auto
-   precise() & -> detail::simd_precision_reference<
-      simd, precision_policies::precise>
+   precise() & noexcept
+      -> detail::simd_precision_reference<simd, precision_policies::precise>
       requires(is_floating_point<T>);
 
    constexpr auto
-   precise() const& -> detail::simd_precision_reference<
+   precise() const& noexcept -> detail::simd_precision_reference<
       simd const, precision_policies::precise>
       requires(is_floating_point<T>);
 
    constexpr auto
-   fast() & -> detail::simd_precision_reference<simd, precision_policies::fast>
+   fast() & noexcept
+      -> detail::simd_precision_reference<simd, precision_policies::fast>
       requires(is_floating_point<T>);
 
    constexpr auto
-   fast() const& -> detail::simd_precision_reference<
-      simd const, precision_policies::fast>
+   fast() const& noexcept
+      -> detail::simd_precision_reference<simd const, precision_policies::fast>
       requires(is_floating_point<T>);
 
    // TODO: These should be `friend`.
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator+(simd const& operand) const -> simd
+   operator+(simd const& operand) const noexcept -> simd
       requires(!is_bool<T>)
    {
       if constexpr (is_floating_point<T>) {
@@ -761,7 +765,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator+=(simd const& operand) -> simd&
+   operator+=(simd const& operand) noexcept -> simd&
       requires(!is_bool<T>)
    {
       *this = *this + operand;
@@ -797,14 +801,14 @@ class
       )
    [[gnu::always_inline]]
    constexpr auto
-   operator+=(simd<U, OtherAbi> const& operand) -> simd& {
+   operator+=(simd<U, OtherAbi> const& operand) noexcept -> simd& {
       *this = *this + operand;
       return *this;
    }
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator-(simd const& operand) const -> simd
+   operator-(simd const& operand) const noexcept -> simd
       requires(!is_bool<T>)
    {
       if constexpr (is_floating_point<T>) {
@@ -816,7 +820,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator-=(simd const& operand) -> simd&
+   operator-=(simd const& operand) noexcept -> simd&
       requires(!is_bool<T>)
    {
       *this = *this - operand;
@@ -852,14 +856,14 @@ class
       )
    [[gnu::always_inline]]
    constexpr auto
-   operator-=(simd<U, OtherAbi> const& operand) -> simd& {
+   operator-=(simd<U, OtherAbi> const& operand) noexcept -> simd& {
       *this = *this - operand;
       return *this;
    }
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator*(simd const& operand) const
+   operator*(simd const& operand) const noexcept
       requires(!is_bool<T>)
    {
       using result_scalar = remove_cvref<decltype(declval<T>() * declval<T>())>;
@@ -879,7 +883,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator*=(simd const& operand) -> simd&
+   operator*=(simd const& operand) noexcept -> simd&
       requires(
          !is_bool<T>
          && is_same<
@@ -919,14 +923,14 @@ class
       )
    [[gnu::always_inline]]
    constexpr auto
-   operator*=(simd<U, OtherAbi> const& operand) -> simd& {
+   operator*=(simd<U, OtherAbi> const& operand) noexcept -> simd& {
       *this = *this * operand;
       return *this;
    }
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   fma(simd const& multiplier, simd const& addend) const -> simd
+   fma(simd const& multiplier, simd const& addend) const noexcept -> simd
       requires(!is_bool<T>)
    {
       if constexpr (is_floating_point<T>) {
@@ -949,7 +953,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator/(simd const& operand) const
+   operator/(simd const& operand) const noexcept
       requires(!is_bool<T>)
    {
       using result_scalar = remove_cvref<decltype(declval<T>() / declval<T>())>;
@@ -969,7 +973,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator/=(simd const& operand) -> simd&
+   operator/=(simd const& operand) noexcept -> simd&
       requires(
          !is_bool<T>
          && is_same<
@@ -1009,7 +1013,7 @@ class
       )
    [[gnu::always_inline]]
    constexpr auto
-   operator/=(simd<U, OtherAbi> const& operand) -> simd& {
+   operator/=(simd<U, OtherAbi> const& operand) noexcept -> simd& {
       *this = *this / operand;
       return *this;
    }
@@ -1142,7 +1146,7 @@ class
    // of negating `min()`.
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator-() const -> simd
+   operator-() const noexcept -> simd
       requires(
          !is_bool<T>
          && (is_floating_point<T> || is_signed<raw_arithmetic_type<T>>)
@@ -1160,7 +1164,7 @@ class
    // `basic_int`).
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator~() const -> simd
+   operator~() const noexcept -> simd
       requires(is_unsigned_integral<raw_arithmetic_type<T>> && !is_bool<T>)
    {
       return simd(~this->raw);
@@ -1168,7 +1172,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator++() -> simd&
+   operator++() noexcept -> simd&
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       *this = *this + simd(static_cast<T>(1));
@@ -1177,7 +1181,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator++(int) -> simd
+   operator++(int) noexcept -> simd
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       simd const old = *this;
@@ -1187,7 +1191,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator--() -> simd&
+   operator--() noexcept -> simd&
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       *this = *this - simd(static_cast<T>(1));
@@ -1196,7 +1200,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator--(int) -> simd
+   operator--(int) noexcept -> simd
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       simd const old = *this;
@@ -1210,7 +1214,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator&(simd const& operand) const -> simd {
+   operator&(simd const& operand) const noexcept -> simd {
       return this->raw & operand.raw;
    }
 
@@ -1218,7 +1222,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator&=(simd const& operand) -> simd& {
+   operator&=(simd const& operand) noexcept -> simd& {
       this->raw = this->raw & operand.raw;
       return *this;
    }
@@ -1229,7 +1233,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator|(simd const& operand) const -> simd {
+   operator|(simd const& operand) const noexcept -> simd {
       return this->raw | operand.raw;
    }
 
@@ -1237,14 +1241,14 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator|=(simd const& operand) -> simd& {
+   operator|=(simd const& operand) noexcept -> simd& {
       this->raw = this->raw | operand.raw;
       return *this;
    }
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator%(simd const& operand) const -> simd
+   operator%(simd const& operand) const noexcept -> simd
       requires(!is_bool<T>)
    {
       return detail::simd_integral_mod_policy(*this, operand);
@@ -1252,7 +1256,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator%=(simd const& operand) -> simd&
+   operator%=(simd const& operand) noexcept -> simd&
       requires(!is_bool<T>)
    {
       *this = *this % operand;
@@ -1261,7 +1265,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator<<(simd const& operand) const -> simd
+   operator<<(simd const& operand) const noexcept -> simd
       requires(!is_bool<T>)
    {
       return detail::simd_integral_shl_policy(*this, operand);
@@ -1269,7 +1273,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator<<=(simd const& operand) -> simd&
+   operator<<=(simd const& operand) noexcept -> simd&
       requires(!is_bool<T>)
    {
       *this = detail::simd_integral_shl_policy(*this, operand);
@@ -1278,7 +1282,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator>>(simd const& operand) const -> simd
+   operator>>(simd const& operand) const noexcept -> simd
       requires(!is_bool<T>)
    {
       return detail::simd_integral_shr_policy(*this, operand);
@@ -1286,7 +1290,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator>>=(simd const& operand) -> simd&
+   operator>>=(simd const& operand) noexcept -> simd&
       requires(!is_bool<T>)
    {
       *this = detail::simd_integral_shr_policy(*this, operand);
@@ -1299,7 +1303,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator^(simd const& operand) const -> simd {
+   operator^(simd const& operand) const noexcept -> simd {
       return this->raw ^ operand.raw;
    }
 
@@ -1307,7 +1311,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator^=(simd const& operand) -> simd& {
+   operator^=(simd const& operand) noexcept -> simd& {
       this->raw = this->raw ^ operand.raw;
       return *this;
    }
@@ -1316,7 +1320,7 @@ class
    // values, never references.
    [[nodiscard, gnu::no_sanitize("bounds"), gnu::always_inline]]
    constexpr auto
-   operator[](idx index) const -> T {
+   operator[](idx index) const noexcept -> T {
       return detail::simd_lane_from_raw<T>(raw[index.raw]);
    }
 
@@ -1324,7 +1328,7 @@ class
    // equality (`bool`).
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   equal_lanes(simd const& operand) const -> simd_mask<T, abi_type> {
+   equal_lanes(simd const& operand) const noexcept -> simd_mask<T, abi_type> {
       return this->raw == operand.raw;
    }
 
@@ -1336,7 +1340,7 @@ class
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   equal_lanes(simd<U, OtherAbi> const& operand) const
+   equal_lanes(simd<U, OtherAbi> const& operand) const noexcept
       -> simd_mask<T, abi_type> {
       return this->raw == operand.raw;
    }
@@ -1345,7 +1349,7 @@ class
    // inequality (`bool`).
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   unequal_lanes(simd const& operand) const -> simd_mask<T, abi_type> {
+   unequal_lanes(simd const& operand) const noexcept -> simd_mask<T, abi_type> {
       return this->raw != operand.raw;
    }
 
@@ -1357,14 +1361,14 @@ class
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   unequal_lanes(simd<U, OtherAbi> const& operand) const
+   unequal_lanes(simd<U, OtherAbi> const& operand) const noexcept
       -> simd_mask<T, abi_type> {
       return this->raw != operand.raw;
    }
 
    [[gnu::always_inline]]
    constexpr auto
-   set_lane(idx index, scalar_type value) -> void {
+   set_lane(idx index, scalar_type value) noexcept -> void {
       raw[index.raw] = detail::simd_lane_to_storage(value);
    }
 
@@ -1390,7 +1394,7 @@ class
    // Count set bits in each unsigned integer lane.
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   popcount() const -> simd
+   popcount() const noexcept -> simd
       requires(is_unsigned_integral<T> && !is_bool<T>)
    {
       return simd(__builtin_elementwise_popcount(this->raw));
@@ -1400,7 +1404,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_add() const -> simd<T, simd_abi::fixed_size<T, 1u>>
+   reduce_add() const noexcept -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -1417,7 +1421,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   sum() const -> T
+   sum() const noexcept -> T
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       if constexpr (is_floating_point<T>) {
@@ -1429,7 +1433,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_mul() const -> simd<T, simd_abi::fixed_size<T, 1u>>
+   reduce_mul() const noexcept -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_integral<T> && !is_bool<T> && !has_quantity<T>)
    {
       // P0918R1 parallel reductions on vector packs.
@@ -1441,7 +1445,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   multiply() const -> T
+   multiply() const noexcept -> T
       requires(is_integral<T> && !is_bool<T> && !has_quantity<T>)
    {
       return __builtin_reduce_mul(this->raw);
@@ -1449,7 +1453,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_and() const -> simd<T, simd_abi::fixed_size<T, 1u>>
+   reduce_and() const noexcept -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_integral<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -1460,7 +1464,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_or() const -> simd<T, simd_abi::fixed_size<T, 1u>>
+   reduce_or() const noexcept -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_integral<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -1471,7 +1475,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_xor() const -> simd<T, simd_abi::fixed_size<T, 1u>>
+   reduce_xor() const noexcept -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_integral<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -1482,7 +1486,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_max() const -> simd<T, simd_abi::fixed_size<T, 1u>>
+   reduce_max() const noexcept -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -1493,7 +1497,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_min() const -> simd<T, simd_abi::fixed_size<T, 1u>>
+   reduce_min() const noexcept -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -1504,7 +1508,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_maximum() const -> simd<T, simd_abi::fixed_size<T, 1u>>
+   reduce_maximum() const noexcept -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_floating_point<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -1515,7 +1519,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_minimum() const -> simd<T, simd_abi::fixed_size<T, 1u>>
+   reduce_minimum() const noexcept -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_floating_point<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -1526,7 +1530,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_assoc_fadd() const -> simd<T, simd_abi::fixed_size<T, 1u>>
+   reduce_assoc_fadd() const noexcept -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_floating_point<T>)
    {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0918r1.pdf
@@ -1537,7 +1541,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_assoc_fadd(scalar_type seed) const
+   reduce_assoc_fadd(scalar_type seed) const noexcept
       -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_floating_point<T>)
    {
@@ -1554,7 +1558,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   reduce_in_order_fadd(scalar_type seed) const
+   reduce_in_order_fadd(scalar_type seed) const noexcept
       -> simd<T, simd_abi::fixed_size<T, 1u>>
       requires(is_floating_point<T>)
    {
@@ -1573,7 +1577,7 @@ class
    template <typename U>
       requires(is_constructible<scalar_type, U>)
    constexpr auto
-   fill(U value) -> simd& {
+   fill(U value) noexcept -> simd& {
       scalar_type const fill_value = static_cast<scalar_type>(value);
       memory_lane const lane = detail::simd_lane_to_storage(fill_value);
       this->raw = raw_type(lane);
@@ -1583,7 +1587,7 @@ class
    // Load a vector from aligned `data` (also called a "gather").
    [[gnu::always_inline]]
    constexpr auto
-   load_aligned(value_type const* _Nonnull p_data) -> simd& {
+   load_aligned(value_type const* _Nonnull p_data) noexcept -> simd& {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             this->set_lane(i, static_cast<T>(p_data[i]));
@@ -1607,7 +1611,7 @@ class
    // than `.load_aligned()`.
    [[gnu::always_inline]]
    constexpr auto
-   load(value_type const* _Nonnull p_data) -> simd& {
+   load(value_type const* _Nonnull p_data) noexcept -> simd& {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             this->set_lane(i, static_cast<T>(p_data[i]));
@@ -1626,7 +1630,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   load_non_temporal(value_type const* _Nonnull p_data) -> simd&
+   load_non_temporal(value_type const* _Nonnull p_data) noexcept -> simd&
       requires(raw_storage_has_no_padding)
    {
       if consteval {
@@ -1692,7 +1696,7 @@ class
 
    [[gnu::always_inline]]
    constexpr void
-   store_non_temporal(value_type* _Nonnull p_data) const
+   store_non_temporal(value_type* _Nonnull p_data) const noexcept
       requires(raw_storage_has_no_padding)
    {
       if consteval {
@@ -1707,7 +1711,7 @@ class
    // TODO: SVE has a masked non-temporal store instruction. How should we
    // support this?
    constexpr void
-   store_non_temporal(value_type* _Nonnull) const
+   store_non_temporal(value_type* _Nonnull) const noexcept
       requires(!raw_storage_has_no_padding)
    = delete ("Padded `simd` cannot be stored non-temporally! Use `.store()` or "
              "`.store_aligned()` instead.");
@@ -1716,7 +1720,8 @@ class
    // `count..lanes-1` are zero-filled. If `count` exceeds `lanes`, only `lanes`
    // scalars are read.
    constexpr auto
-   partial_load(value_type const* _Nonnull p_data, idx count) -> simd& {
+   partial_load(value_type const* _Nonnull p_data, idx count) noexcept
+      -> simd& {
       this->fill(scalar_type{});
       idx const n = count < abi_type::lanes ? count : abi_type::lanes;
       for (idx i = 0u; i < n; ++i) {
@@ -1737,41 +1742,41 @@ class
 
    [[nodiscard]]
    static constexpr auto
-   size() -> idx {
+   size() noexcept -> idx {
       return abi_type::lanes;
    }
 
    // Make `cat::simd` iterable like a container.
    [[nodiscard]]
    constexpr auto
-   begin_pos() const -> idx {
+   begin_pos() const noexcept -> idx {
       return 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   end_pos() const -> idx {
+   end_pos() const noexcept -> idx {
       return size();
    }
 
    constexpr void
-   inc_pos(idx& position) const {
+   inc_pos(idx& position) const noexcept {
       ++position;
    }
 
    constexpr void
-   dec_pos(idx& position) const {
+   dec_pos(idx& position) const noexcept {
       position = idx(position.raw - 1u);
    }
 
    constexpr void
-   offset_pos(idx& position, iword offset) const {
+   offset_pos(idx& position, iword offset) const noexcept {
       position = idx(static_cast<idx::raw_type>((position + offset).raw));
    }
 
    [[nodiscard]]
    constexpr auto
-   distance(idx left, idx right) const -> iword {
+   distance(idx left, idx right) const noexcept -> iword {
       return right - left;
    }
 
@@ -1784,43 +1789,43 @@ class
    // Implement Stepanov iteration as well, as per P3983R1.
    [[nodiscard]]
    constexpr auto
-   begin() -> iterator {
+   begin() noexcept -> iterator {
       return iterator(this, 0u);
    }
 
    [[nodiscard]]
    constexpr auto
-   begin() const -> const_iterator {
+   begin() const noexcept -> const_iterator {
       return const_iterator(this, 0u);
    }
 
    [[nodiscard]]
    constexpr auto
-   cbegin() const -> const_iterator {
+   cbegin() const noexcept -> const_iterator {
       return begin();
    }
 
    [[nodiscard]]
    constexpr auto
-   end() const -> default_sentinel_t {
+   end() const noexcept -> default_sentinel_t {
       return default_sentinel;
    }
 
    [[nodiscard]]
    constexpr auto
-   cend() const -> default_sentinel_t {
+   cend() const noexcept -> default_sentinel_t {
       return end();
    }
 
    [[nodiscard, gnu::always_inline, gnu::returns_nonnull]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> T* _Nonnull {
+   data() noexcept [[clang::lifetimebound]] -> T* _Nonnull {
       return __builtin_bit_cast(T*, &raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::returns_nonnull]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> T* _Nonnull {
+   data() const noexcept [[clang::lifetimebound]] -> T* _Nonnull {
       return __builtin_bit_cast(T const*, &raw);
    }
 
@@ -1854,7 +1859,7 @@ template <is_arithmetic U, typename T, typename Abi>
    requires(detail::simd_broadcast_really_convertible_to<U, T>())
 [[nodiscard]]
 constexpr auto
-operator+(U lhs, simd<T, Abi> const& rhs) -> simd<T, Abi> {
+operator+(U lhs, simd<T, Abi> const& rhs) noexcept -> simd<T, Abi> {
    return rhs + lhs;
 }
 
@@ -1863,7 +1868,7 @@ template <is_arithmetic U, typename T, typename Abi>
    requires(detail::simd_broadcast_really_convertible_to<U, T>())
 [[nodiscard]]
 constexpr auto
-operator-(U lhs, simd<T, Abi> const& rhs) -> simd<T, Abi> {
+operator-(U lhs, simd<T, Abi> const& rhs) noexcept -> simd<T, Abi> {
    return simd<T, Abi>(lhs) - rhs;
 }
 
@@ -1872,7 +1877,7 @@ template <is_arithmetic U, typename T, typename Abi>
    requires(detail::simd_broadcast_really_convertible_to<U, T>())
 [[nodiscard]]
 constexpr auto
-operator*(U lhs, simd<T, Abi> const& rhs) -> simd<T, Abi> {
+operator*(U lhs, simd<T, Abi> const& rhs) noexcept -> simd<T, Abi> {
    return simd<T, Abi>(lhs) * rhs;
 }
 
@@ -1881,7 +1886,7 @@ template <is_arithmetic U, typename T, typename Abi>
    requires(detail::simd_broadcast_really_convertible_to<U, T>())
 [[nodiscard]]
 constexpr auto
-operator/(U lhs, simd<T, Abi> const& rhs) -> simd<T, Abi> {
+operator/(U lhs, simd<T, Abi> const& rhs) noexcept -> simd<T, Abi> {
    return simd<T, Abi>(lhs) / rhs;
 }
 
@@ -1896,8 +1901,8 @@ namespace cat {
 template <typename T, typename Abi>
    requires(is_same<typename Abi::scalar_type, T>)
 constexpr auto
-simd<T, Abi>::undef() & -> detail::simd_overflow_reference<
-   T, Abi, overflow_policies::undefined>
+simd<T, Abi>::undef() & noexcept
+   -> detail::simd_overflow_reference<T, Abi, overflow_policies::undefined>
    requires(is_integral<T> && !is_bool<T>)
 {
    return detail::simd_overflow_reference<T, Abi, overflow_policies::undefined>(
@@ -1908,8 +1913,8 @@ simd<T, Abi>::undef() & -> detail::simd_overflow_reference<
 template <typename T, typename Abi>
    requires(is_same<typename Abi::scalar_type, T>)
 constexpr auto
-simd<T, Abi>::wrap() & -> detail::simd_overflow_reference<
-   T, Abi, overflow_policies::wrap>
+simd<T, Abi>::wrap() & noexcept
+   -> detail::simd_overflow_reference<T, Abi, overflow_policies::wrap>
    requires(is_integral<T> && !is_bool<T>)
 {
    return detail::simd_overflow_reference<T, Abi, overflow_policies::wrap>(
@@ -1920,8 +1925,8 @@ simd<T, Abi>::wrap() & -> detail::simd_overflow_reference<
 template <typename T, typename Abi>
    requires(is_same<typename Abi::scalar_type, T>)
 constexpr auto
-simd<T, Abi>::sat() & -> detail::simd_overflow_reference<
-   T, Abi, overflow_policies::saturate>
+simd<T, Abi>::sat() & noexcept
+   -> detail::simd_overflow_reference<T, Abi, overflow_policies::saturate>
    requires(is_integral<T> && !is_bool<T>)
 {
    return detail::simd_overflow_reference<T, Abi, overflow_policies::saturate>(
@@ -1938,7 +1943,7 @@ namespace cat {
 template <typename T, typename Abi>
    requires(is_same<typename Abi::scalar_type, T>)
 constexpr auto
-simd<T, Abi>::precise() & -> detail::simd_precision_reference<
+simd<T, Abi>::precise() & noexcept -> detail::simd_precision_reference<
    simd<T, Abi>, precision_policies::precise>
    requires(is_floating_point<T>)
 {
@@ -1949,7 +1954,7 @@ simd<T, Abi>::precise() & -> detail::simd_precision_reference<
 template <typename T, typename Abi>
    requires(is_same<typename Abi::scalar_type, T>)
 constexpr auto
-simd<T, Abi>::precise() const& -> detail::simd_precision_reference<
+simd<T, Abi>::precise() const& noexcept -> detail::simd_precision_reference<
    simd<T, Abi> const, precision_policies::precise>
    requires(is_floating_point<T>)
 {
@@ -1960,8 +1965,8 @@ simd<T, Abi>::precise() const& -> detail::simd_precision_reference<
 template <typename T, typename Abi>
    requires(is_same<typename Abi::scalar_type, T>)
 constexpr auto
-simd<T, Abi>::fast() & -> detail::simd_precision_reference<
-   simd<T, Abi>, precision_policies::fast>
+simd<T, Abi>::fast() & noexcept
+   -> detail::simd_precision_reference<simd<T, Abi>, precision_policies::fast>
    requires(is_floating_point<T>)
 {
    return detail::simd_precision_reference<
@@ -1971,7 +1976,7 @@ simd<T, Abi>::fast() & -> detail::simd_precision_reference<
 template <typename T, typename Abi>
    requires(is_same<typename Abi::scalar_type, T>)
 constexpr auto
-simd<T, Abi>::fast() const& -> detail::simd_precision_reference<
+simd<T, Abi>::fast() const& noexcept -> detail::simd_precision_reference<
    simd<T, Abi> const, precision_policies::fast>
    requires(is_floating_point<T>)
 {
@@ -2024,7 +2029,7 @@ class
 #pragma clang diagnostic ignored "-Wpsabi"
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr simd_mask(raw_type value)
+   constexpr simd_mask(raw_type value) noexcept
        : raw(value) {
    }
 
@@ -2034,13 +2039,13 @@ class
          && !is_same<comparison_raw_type, raw_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr simd_mask(Raw value)
+   constexpr simd_mask(Raw value) noexcept
        : raw(__builtin_bit_cast(raw_type, value)) {
    }
 
 #pragma clang diagnostic pop
 
-   constexpr simd_mask(bool value) {
+   constexpr simd_mask(bool value) noexcept {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3844r2.pdf
       this->fill(value);
    }
@@ -2071,7 +2076,9 @@ class
    // Construct from a constant list, such as `value_list` or
    // `integer_sequence`.
    template <bool... lane_bools>
-   constexpr simd_mask(value_type_list<bool, lane_bools...> const /*unused*/)
+   constexpr simd_mask(
+      value_type_list<bool, lane_bools...> const /*unused*/
+   ) noexcept
       requires(sizeof...(lane_bools) == abi_type::lanes.raw)
    {
       this->raw = raw_type{};
@@ -2154,7 +2161,8 @@ class
    // complements bitwise & / | on `raw` below).
    [[nodiscard]]
    friend constexpr auto
-   operator&&(simd_mask const& lhs, simd_mask const& rhs) -> simd_mask {
+   operator&&(simd_mask const& lhs, simd_mask const& rhs) noexcept
+      -> simd_mask {
       simd_mask out{};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          out.set_lane(i, lhs[i] && rhs[i]);
@@ -2164,7 +2172,8 @@ class
 
    [[nodiscard]]
    friend constexpr auto
-   operator||(simd_mask const& lhs, simd_mask const& rhs) -> simd_mask {
+   operator||(simd_mask const& lhs, simd_mask const& rhs) noexcept
+      -> simd_mask {
       simd_mask out{};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          out.set_lane(i, lhs[i] || rhs[i]);
@@ -2174,7 +2183,7 @@ class
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator&(mask_type const& operand) const -> mask_type {
+   operator&(mask_type const& operand) const noexcept -> mask_type {
       if constexpr (is_integral<lane_scalar>) {
          return mask_type(this->raw & operand.raw);
       } else {
@@ -2191,14 +2200,14 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator&=(mask_type const& operand) -> mask_type& {
+   operator&=(mask_type const& operand) noexcept -> mask_type& {
       *this = *this & operand;
       return *this;
    }
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator|(mask_type const& operand) const -> mask_type {
+   operator|(mask_type const& operand) const noexcept -> mask_type {
       if constexpr (is_integral<lane_scalar>) {
          return mask_type(this->raw | operand.raw);
       } else {
@@ -2215,14 +2224,14 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator|=(mask_type const& operand) -> mask_type& {
+   operator|=(mask_type const& operand) noexcept -> mask_type& {
       *this = *this | operand;
       return *this;
    }
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator^(mask_type const& operand) const -> mask_type {
+   operator^(mask_type const& operand) const noexcept -> mask_type {
       if constexpr (is_integral<lane_scalar>) {
          return mask_type(this->raw ^ operand.raw);
       } else {
@@ -2239,14 +2248,14 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator^=(mask_type const& operand) -> mask_type& {
+   operator^=(mask_type const& operand) noexcept -> mask_type& {
       *this = *this ^ operand;
       return *this;
    }
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator%(mask_type const& operand) const -> mask_type {
+   operator%(mask_type const& operand) const noexcept -> mask_type {
       if constexpr (is_integral<lane_scalar>) {
          return mask_type(this->raw % operand.raw);
       } else {
@@ -2263,14 +2272,14 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator%=(mask_type const& operand) -> mask_type& {
+   operator%=(mask_type const& operand) noexcept -> mask_type& {
       *this = *this % operand;
       return *this;
    }
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator<<(mask_type const& operand) const -> mask_type {
+   operator<<(mask_type const& operand) const noexcept -> mask_type {
       if constexpr (is_integral<lane_scalar>) {
          return mask_type(this->raw << operand.raw);
       } else {
@@ -2287,14 +2296,14 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator<<=(mask_type const& operand) -> mask_type& {
+   operator<<=(mask_type const& operand) noexcept -> mask_type& {
       *this = *this << operand;
       return *this;
    }
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
-   operator>>(mask_type const& operand) const -> mask_type {
+   operator>>(mask_type const& operand) const noexcept -> mask_type {
       if constexpr (is_integral<lane_scalar>) {
          return mask_type(this->raw >> operand.raw);
       } else {
@@ -2311,7 +2320,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator>>=(mask_type const& operand) -> mask_type& {
+   operator>>=(mask_type const& operand) noexcept -> mask_type& {
       *this = *this >> operand;
       return *this;
    }
@@ -2320,13 +2329,13 @@ class
    // ABI-defined but `operator[]` always yields abstract `bool`.
    [[nodiscard, gnu::no_sanitize("bounds"), gnu::always_inline]]
    constexpr auto
-   operator[](idx index) const -> bool {
+   operator[](idx index) const noexcept -> bool {
       return mask_traits::decode_lane(raw, index);
    }
 
    [[gnu::always_inline]]
    constexpr auto
-   set_lane(idx index, bool value) -> void {
+   set_lane(idx index, bool value) noexcept -> void {
       mask_traits::encode_lane(raw, index, value);
    }
 
@@ -2402,7 +2411,7 @@ class
 
    [[nodiscard, gnu::no_sanitize("bounds"), gnu::always_inline]]
    constexpr auto
-   lane_byte(idx index) const -> unsigned char const& {
+   lane_byte(idx index) const noexcept -> unsigned char const& {
       return *(
          reinterpret_cast<unsigned char const*>(&raw)
          + (index.raw * sizeof(lane_scalar))
@@ -2412,21 +2421,21 @@ class
    // Evaluate true if every lane is non-zero.
    [[nodiscard]]
    constexpr auto
-   all_of() const -> bool {
+   all_of() const noexcept -> bool {
       return simd_all_of(*this);
    }
 
    // Evaluate true if any lanes are non-zero.
    [[nodiscard]]
    constexpr auto
-   any_of() const -> bool {
+   any_of() const noexcept -> bool {
       return simd_any_of(*this);
    }
 
    // Evaluate true if every lane is zero.
    [[nodiscard]]
    constexpr auto
-   none_of() const -> bool {
+   none_of() const noexcept -> bool {
       return !(this->any_of());
    }
 
@@ -2481,7 +2490,7 @@ class
 
    template <typename UInt>
       requires(is_unsigned_integral<UInt> && !is_bool<UInt>)
-   explicit constexpr simd_mask(UInt pattern_bits) {
+   explicit constexpr simd_mask(UInt pattern_bits) noexcept {
       this->raw = raw_type{};
       uword const bits = static_cast<uword>(pattern_bits);
       for (idx i = 0u; i < abi_type::lanes; ++i) {
@@ -2491,7 +2500,7 @@ class
 
    // Fill all lanes with `value`. This is also known as a "splat" operation.
    constexpr auto
-   fill(bool value) -> mask_type {
+   fill(bool value) noexcept -> mask_type {
       this->raw = raw_type{};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          this->set_lane(i, value);
@@ -2503,7 +2512,7 @@ class
    // from memory into mask lanes. Not a `raw_type` object representation. Use
    // `raw` assignment for that).
    constexpr auto
-   load(bool const* _Nonnull p_lane_bools) -> mask_type& {
+   load(bool const* _Nonnull p_lane_bools) noexcept -> mask_type& {
       this->raw = raw_type{};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          this->set_lane(i, p_lane_bools[i]);
@@ -2513,41 +2522,41 @@ class
 
    [[nodiscard]]
    static constexpr auto
-   size() -> idx {
+   size() noexcept -> idx {
       return abi_type::lanes;
    }
 
    // Make `cat::simd_mask` iterable like a container.
    [[nodiscard]]
    constexpr auto
-   begin_pos() const -> idx {
+   begin_pos() const noexcept -> idx {
       return 0u;
    }
 
    [[nodiscard]]
    constexpr auto
-   end_pos() const -> idx {
+   end_pos() const noexcept -> idx {
       return size();
    }
 
    constexpr void
-   inc_pos(idx& position) const {
+   inc_pos(idx& position) const noexcept {
       ++position;
    }
 
    constexpr void
-   dec_pos(idx& position) const {
+   dec_pos(idx& position) const noexcept {
       position = idx(position.raw - 1u);
    }
 
    constexpr void
-   offset_pos(idx& position, iword offset) const {
+   offset_pos(idx& position, iword offset) const noexcept {
       position = idx(static_cast<idx::raw_type>(position + offset));
    }
 
    [[nodiscard]]
    constexpr auto
-   distance(idx left, idx right) const -> iword {
+   distance(idx left, idx right) const noexcept -> iword {
       return right - left;
    }
 
@@ -2560,43 +2569,44 @@ class
    // Implement Stepanov iteration as well, as per P3983R1.
    [[nodiscard]]
    constexpr auto
-   begin() -> iterator {
+   begin() noexcept -> iterator {
       return iterator(this, 0u);
    }
 
    [[nodiscard]]
    constexpr auto
-   begin() const -> const_iterator {
+   begin() const noexcept -> const_iterator {
       return const_iterator(this, 0u);
    }
 
    [[nodiscard]]
    constexpr auto
-   cbegin() const -> const_iterator {
+   cbegin() const noexcept -> const_iterator {
       return begin();
    }
 
    [[nodiscard]]
    constexpr auto
-   end() const -> default_sentinel_t {
+   end() const noexcept -> default_sentinel_t {
       return default_sentinel;
    }
 
    [[nodiscard]]
    constexpr auto
-   cend() const -> default_sentinel_t {
+   cend() const noexcept -> default_sentinel_t {
       return end();
    }
 
    [[nodiscard, gnu::always_inline, gnu::returns_nonnull]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> lane_scalar* _Nonnull {
+   data() noexcept [[clang::lifetimebound]] -> lane_scalar* _Nonnull {
       return __builtin_bit_cast(lane_scalar*, &raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::returns_nonnull]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> lane_scalar const* _Nonnull {
+   data() const noexcept [[clang::lifetimebound]]
+   -> lane_scalar const* _Nonnull {
       return __builtin_bit_cast(lane_scalar const*, &raw);
    }
 
@@ -2628,7 +2638,7 @@ class
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-popcount(simd<T, Abi> const& input) -> simd<T, Abi>
+popcount(simd<T, Abi> const& input) noexcept -> simd<T, Abi>
    requires(is_unsigned_integral<T> && !is_bool<T>)
 {
    return input.popcount();
@@ -2637,7 +2647,7 @@ popcount(simd<T, Abi> const& input) -> simd<T, Abi>
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-popcount(simd_mask<T, Abi> const& mask) -> int {
+popcount(simd_mask<T, Abi> const& mask) noexcept -> int {
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return static_cast<int>(mask.count_if_true());
 }
@@ -2816,7 +2826,7 @@ inline constexpr detail::simd_reduce_in_order_fadd_impl
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_equal_lanes(simd<T, Abi> const& a, simd<T, Abi> const& b)
+simd_equal_lanes(simd<T, Abi> const& a, simd<T, Abi> const& b) noexcept
    -> simd_mask<T, Abi> {
    return a.equal_lanes(b);
 }
@@ -2824,7 +2834,7 @@ simd_equal_lanes(simd<T, Abi> const& a, simd<T, Abi> const& b)
 template <typename T, typename Abi>
 [[nodiscard]]
 constexpr auto
-simd_unequal_lanes(simd<T, Abi> const& a, simd<T, Abi> const& b)
+simd_unequal_lanes(simd<T, Abi> const& a, simd<T, Abi> const& b) noexcept
    -> simd_mask<T, Abi> {
    return a.unequal_lanes(b);
 }
@@ -2893,34 +2903,34 @@ enum class [[clang::enum_extensibility(open)]] prefetch_hint : int {
 
 template <prefetch_hint hint>
 void
-prefetch(void const* _Nonnull p_source) {
+prefetch(void const* _Nonnull p_source) noexcept {
    __builtin_prefetch(
       p_source, static_cast<int>(hint) & 0x4 >> 2, static_cast<int>(hint) & 0x3
    );
 }
 
 void
-prefetch_for_one_read(auto const* _Nonnull p_vector) {
+prefetch_for_one_read(auto const* _Nonnull p_vector) noexcept {
    prefetch<prefetch_hint::non_temporal>(p_vector);
 }
 
 void
-prefetch_close(auto const* _Nonnull p_vector) {
+prefetch_close(auto const* _Nonnull p_vector) noexcept {
    prefetch<prefetch_hint::temporal_0>(p_vector);
 }
 
 void
-prefetch_mid(auto const* _Nonnull p_vector) {
+prefetch_mid(auto const* _Nonnull p_vector) noexcept {
    prefetch<prefetch_hint::temporal_1>(p_vector);
 }
 
 void
-prefetch_far(auto const* _Nonnull p_vector) {
+prefetch_far(auto const* _Nonnull p_vector) noexcept {
    prefetch<prefetch_hint::temporal_2>(p_vector);
 }
 
 void
-prefetch_for_modify(auto const* _Nonnull p_vector) {
+prefetch_for_modify(auto const* _Nonnull p_vector) noexcept {
    prefetch<prefetch_hint::temporal_0>(p_vector);
 }
 
@@ -2954,7 +2964,7 @@ simd_any_of(simd_mask<T, Abi> mask) -> bool {
 template <typename T>
 [[nodiscard]]
 auto
-simd_any_of(simd_mask<T, simd_abi::native<T>> mask) -> bool {
+simd_any_of(simd_mask<T, simd_abi::native<T>> mask) noexcept -> bool {
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return simd_any_of(
       simd_mask<T, typename simd_abi::native<T>::target_abi>(mask.raw)
@@ -2965,7 +2975,7 @@ simd_any_of(simd_mask<T, simd_abi::native<T>> mask) -> bool {
 template <typename T>
 [[nodiscard]]
 auto
-simd_all_of(simd_mask<T, simd_abi::native<T>> mask) -> bool {
+simd_all_of(simd_mask<T, simd_abi::native<T>> mask) noexcept -> bool {
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
    return simd_all_of(
       simd_mask<T, typename simd_abi::native<T>::target_abi>(mask.raw)
@@ -3022,7 +3032,7 @@ template <typename T, typename Abi>
 struct mask_count_if_true {
    [[nodiscard]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& m) -> idx {
+   invoke(simd_mask<T, Abi> const& m) noexcept -> idx {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       idx n = 0u;
       for (idx i = 0u; i < Abi::lanes; ++i) {
@@ -3039,7 +3049,7 @@ template <typename T, typename Abi>
 struct mask_find_if_true {
    [[nodiscard]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& m) -> idx {
+   invoke(simd_mask<T, Abi> const& m) noexcept -> idx {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       for (idx i = 0u; i < Abi::lanes; ++i) {
          if (m[i]) {
@@ -3055,7 +3065,7 @@ template <typename T, typename Abi>
 struct mask_find_last_if_true {
    [[nodiscard]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& m) -> idx {
+   invoke(simd_mask<T, Abi> const& m) noexcept -> idx {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2638r0.pdf
       idx max_i = 0u;
       for (idx i = 0u; i < Abi::lanes; ++i) {
@@ -3072,7 +3082,7 @@ template <typename T, typename Abi>
 struct mask_all_of {
    [[nodiscard]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& mask) -> bool {
+   invoke(simd_mask<T, Abi> const& mask) noexcept -> bool {
       if consteval {
          for (idx i = 0u; i < Abi::lanes; ++i) {
             if (!mask[i]) {
@@ -3092,7 +3102,7 @@ template <typename T, typename Abi>
 struct mask_any_of {
    [[nodiscard]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& mask) -> bool {
+   invoke(simd_mask<T, Abi> const& mask) noexcept -> bool {
       if consteval {
          for (idx i = 0u; i < Abi::lanes; ++i) {
             if (mask[i]) {

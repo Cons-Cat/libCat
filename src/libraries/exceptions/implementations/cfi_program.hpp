@@ -81,7 +81,7 @@ struct fde_info {
 // offset. Returns false on malformed input.
 [[nodiscard]]
 auto
-parse_fde(byte const* _Nonnull p_fde, fde_info& out_fde) -> bool;
+parse_fde(byte const* _Nonnull p_fde, fde_info& out_fde) noexcept(!__has_feature(cxx_exceptions)) -> bool;
 
 // Returns false if interpretation runs off the end or hits an
 // unsupported opcode. The state is the DWARF snapshot at exactly
@@ -98,6 +98,6 @@ compute_state_at(
 auto
 step_frame(
    cfi_state const& state, cie_info const& cie, register_context& registers
-) -> maybe_non_zero<uword>;
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe_non_zero<uword>;
 
 }  // namespace cat::detail::cfi

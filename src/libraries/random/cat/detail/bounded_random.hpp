@@ -11,7 +11,8 @@ namespace cat::detail {
 
 template <is_unsigned_integral T, typename Next>
 constexpr auto
-lemire_bounded(T bound, Next&& next) -> T {
+lemire_bounded(T bound, Next&& next) noexcept(!__has_feature(cxx_exceptions))
+   -> T {
    using raw_type = raw_arithmetic_type<T>;
    raw_type const limit = make_raw_arithmetic(bound);
    raw_type raw = make_raw_arithmetic(next());
@@ -34,7 +35,7 @@ lemire_bounded(T bound, Next&& next) -> T {
 template <is_simd_unsigned_integral T>
    requires(sizeof(typename T::value_type) <= 8u)
 constexpr auto
-lemire_multiply_high(T left, T right) -> T {
+lemire_multiply_high(T left, T right) noexcept -> T {
    using lane_type = T::value_type;
    constexpr lane_type half_bits = sizeof(lane_type) * 4u;
    constexpr lane_type half_mask = (lane_type(1u) << half_bits) - lane_type(1u);
@@ -53,7 +54,8 @@ lemire_multiply_high(T left, T right) -> T {
 template <is_simd_unsigned_integral T, typename Next>
    requires(sizeof(typename T::value_type) <= 8u)
 constexpr auto
-lemire_bounded(T bound, Next&& next) -> T {
+lemire_bounded(T bound, Next&& next) noexcept(!__has_feature(cxx_exceptions))
+   -> T {
    using mask_type = T::mask_type;
    T const zero = 0u;
    mask_type const unbounded = bound.equal_lanes(zero);

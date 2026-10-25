@@ -75,7 +75,9 @@ namespace detail {
 
 template <is_uniform_random_bit_generator Generator>
 constexpr auto
-random_engine_word(Generator& generator) {
+random_engine_word(Generator& generator) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    auto const value = generator();
    auto const minimum = Generator::min();
    return make_unsigned(value - minimum);
@@ -83,7 +85,7 @@ random_engine_word(Generator& generator) {
 
 template <idx digits, idx engine_bits, is_unsigned_integral Unsigned>
 constexpr auto
-random_canonical_calls(Unsigned span) -> idx {
+random_canonical_calls(Unsigned span) noexcept -> idx {
    if (span == 0u) {
       return idx(digits + engine_bits - 1u) / engine_bits;
    }
@@ -104,7 +106,7 @@ random_canonical_calls(Unsigned span) -> idx {
 
 template <is_uniform_random_bit_generator Generator, is_unsigned_integral T>
 constexpr auto
-random_bounded(Generator& generator, T bound) -> T {
+random_bounded(Generator& generator, T bound) noexcept -> T {
    using unsigned_type = make_unsigned_type<T>;
    unsigned_type const raw_bound = bound;
    if (raw_bound == 0u) {
@@ -117,7 +119,7 @@ random_bounded(Generator& generator, T bound) -> T {
 
 template <is_unsigned_integral T>
 constexpr auto
-random_mix_seed(T value) -> T {
+random_mix_seed(T value) noexcept -> T {
    using raw = raw_arithmetic_type<T>;
    using unsigned_type = make_unsigned_type<raw>;
    unsigned_type mixed = make_raw_arithmetic(value);
@@ -140,7 +142,7 @@ random_mix_seed(T value) -> T {
 template <
    is_floating_point Float, idx bits, is_uniform_random_bit_generator Generator>
 constexpr auto
-generate_canonical(Generator& generator) -> Float {
+generate_canonical(Generator& generator) noexcept -> Float {
    using raw_float = raw_arithmetic_type<Float>;
    using raw_result = raw_arithmetic_type<typename Generator::result_type>;
    using unsigned_type = make_unsigned_type<raw_result>;
@@ -169,7 +171,7 @@ generate_canonical(Generator& generator) -> Float {
 
 template <is_floating_point Float, is_uniform_random_bit_generator Generator>
 constexpr auto
-generate_canonical(Generator& generator) -> Float {
+generate_canonical(Generator& generator) noexcept -> Float {
    return generate_canonical<Float, limits<Float>::digits>(generator);
 }
 
@@ -177,35 +179,37 @@ namespace detail {
 
 template <is_uniform_random_bit_generator Generator>
 constexpr auto
-distribution_engine_word(Generator& generator);
+distribution_engine_word(Generator& generator) noexcept(
+   !__has_feature(cxx_exceptions)
+);
 
 template <is_uniform_random_bit_generator Generator>
 constexpr auto
-distribution_random_bit(Generator& generator) -> bool;
+distribution_random_bit(Generator& generator) noexcept -> bool;
 
 template <is_uniform_random_bit_generator Generator, is_unsigned_integral T>
 constexpr auto
-distribution_random_bounded(Generator& generator, T bound) -> T;
+distribution_random_bounded(Generator& generator, T bound) noexcept -> T;
 
 template <typename Int, typename Unsigned>
    requires(is_integral<Int> || is_simd_integral<Int>)
 constexpr auto
-distribution_int_from_bits(Unsigned value) -> Int;
+distribution_int_from_bits(Unsigned value) noexcept -> Int;
 
 template <typename Float>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-distribution_next_toward(Float value, Float toward) -> Float;
+distribution_next_toward(Float value, Float toward) noexcept -> Float;
 
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-distribution_generate_canonical(Generator& generator) -> Float;
+distribution_generate_canonical(Generator& generator) noexcept -> Float;
 
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-distribution_unit(Generator& generator) -> Float;
+distribution_unit(Generator& generator) noexcept -> Float;
 
 template <typename Int, typename Float>
    requires(
@@ -213,7 +217,7 @@ template <typename Int, typename Float>
       && (is_floating_point<Float> || is_simd_floating_point<Float>)
    )
 constexpr auto
-distribution_integer(Float value) -> Int;
+distribution_integer(Float value) noexcept -> Int;
 
 template <typename Int, typename Float>
    requires(
@@ -221,50 +225,50 @@ template <typename Int, typename Float>
       && (is_floating_point<Float> || is_simd_floating_point<Float>)
    )
 constexpr auto
-geometric_sample(Float probability, Float unit) -> Int;
+geometric_sample(Float probability, Float unit) noexcept -> Int;
 
 template <typename Int>
    requires(is_integral<Int> || is_simd_integral<Int>)
 constexpr void
-distribution_add(Int& result, Int value);
+distribution_add(Int& result, Int value) noexcept;
 
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-sampling_unit(Generator& generator) -> Float;
+sampling_unit(Generator& generator) noexcept -> Float;
 
 inline constexpr idx sampling_distribution_capacity = 64u;
 
 template <is_floating_point Float>
 constexpr auto
-sampling_finite(Float value) -> bool;
+sampling_finite(Float value) noexcept -> bool;
 
 template <is_floating_point Float>
 constexpr auto
 sampling_interval(
    array<Float, sampling_distribution_capacity> const& cumulative, idx size,
    Float value
-) -> idx;
+) noexcept(!__has_feature(cxx_exceptions)) -> idx;
 
 template <typename Int>
    requires(is_integral<Int> || is_simd_integral<Int>)
 constexpr auto
-sampling_integer(idx value) -> Int;
+sampling_integer(idx value) noexcept -> Int;
 
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-random_positive_canonical(Generator& generator) -> Float;
+random_positive_canonical(Generator& generator) noexcept -> Float;
 
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-random_standard_normal(Generator& generator) -> Float;
+random_standard_normal(Generator& generator) noexcept -> Float;
 
 template <typename Float, is_uniform_random_bit_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
-random_gamma(Generator& generator, Float alpha, Float beta) -> Float;
+random_gamma(Generator& generator, Float alpha, Float beta) noexcept -> Float;
 
 }  // namespace detail
 
@@ -275,17 +279,17 @@ class seed_sequence {
    constexpr seed_sequence() = default;
 
    template <is_iterable Range>
-   constexpr seed_sequence(Range&& range) {
+   constexpr seed_sequence(Range&& range) noexcept {
       assign(range);
    }
 
-   constexpr seed_sequence(initializer_list<uint4> values) {
+   constexpr seed_sequence(initializer_list<uint4> values) noexcept {
       assign(values);
    }
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_size;
    }
 
@@ -294,7 +298,7 @@ class seed_sequence {
                   read_at_unchecked(output, position) = uint4{};
                }
    constexpr void
-   generate(Output& output) const {
+   generate(Output& output) const noexcept(!__has_feature(cxx_exceptions)) {
       auto const first = begin_pos(output);
       auto const last = end_pos(output);
       idx const output_size = distance(output, first, last);
@@ -371,14 +375,14 @@ class seed_sequence {
 
    [[nodiscard]]
    constexpr auto
-   values() const -> span<uint4 const> {
+   values() const noexcept -> span<uint4 const> {
       return {m_values.data(), m_size};
    }
 
  private:
    template <is_iterable Range>
    constexpr void
-   assign(Range&& range) {
+   assign(Range&& range) noexcept(!__has_feature(cxx_exceptions)) {
       iterate(range).run_while([&](auto&& value) -> bool {
          if (m_size == m_values.size()) {
             return false;
@@ -522,14 +526,14 @@ namespace detail {
 
 template <typename Engine>
 auto
-convenience_engine() -> Engine& {
+convenience_engine() noexcept(!__has_feature(cxx_exceptions)) -> Engine& {
    static thread_local Engine engine(nix::sys_urandom_engine{}());
    return engine;
 }
 
 template <typename Distribution, typename Engine>
 auto
-random_bool() -> bool {
+random_bool() noexcept -> bool {
    return Distribution{}(convenience_engine<Engine>());
 }
 
@@ -555,7 +559,7 @@ using default_random_engine = default_random_engine_type<T>::type;
 template <typename T, typename Engine = detail::default_random_engine<T>>
    requires(is_arithmetic<T> || is_simd_arithmetic<T>)
 auto
-random(T lower_bound, T upper_bound) -> T {
+random(T lower_bound, T upper_bound) noexcept -> T {
    if constexpr (is_integral<T> || is_simd_integral<T>) {
       return uniform_int_distribution<T>(lower_bound, upper_bound)(
          detail::convenience_engine<Engine>()
@@ -570,7 +574,7 @@ random(T lower_bound, T upper_bound) -> T {
 template <typename T, typename Engine = detail::default_random_engine<T>>
    requires(is_arithmetic<T> || is_simd_arithmetic<T>)
 auto
-random() -> T {
+random() noexcept -> T {
    if constexpr (is_simd<T>) {
       using lane_type = T::value_type;
       if constexpr (is_integral<lane_type>) {
@@ -589,7 +593,7 @@ random() -> T {
 
 template <typename Engine = convenience_random_engine>
 auto
-random() -> bool {
+random() noexcept -> bool {
    return detail::random_bool<bernoulli_distribution<float8>, Engine>();
 }
 
@@ -600,7 +604,7 @@ template <
       is_floating_point<Probability> || is_simd_floating_point<Probability>
    )
 auto
-random(Probability probability) {
+random(Probability probability) noexcept {
    return bernoulli_distribution<Probability>(probability)(
       detail::convenience_engine<Engine>()
    );
@@ -610,7 +614,8 @@ template <
    is_random_access_collection Range,
    typename Engine = convenience_random_engine>
 auto
-random(Range&& range) -> decltype(auto) {
+random(Range&& range) noexcept(!__has_feature(cxx_exceptions))
+   -> decltype(auto) {
    auto position = begin_pos(range);
    auto const stop = end_pos(range);
    iword const count = distance(range, position, stop);
@@ -622,7 +627,8 @@ random(Range&& range) -> decltype(auto) {
 
 template <typename T, typename Engine = convenience_random_engine>
 auto
-random(initializer_list<T> values) -> T {
+random(initializer_list<T> values) noexcept(!__has_feature(cxx_exceptions))
+   -> T {
    auto position = begin_pos(values);
    auto const stop = end_pos(values);
    iword const count = distance(values, position, stop);
@@ -634,7 +640,7 @@ random(initializer_list<T> values) -> T {
 template <typename T, typename Engine = detail::default_random_engine<T>>
    requires(is_arithmetic<T> || is_simd_arithmetic<T>)
 auto
-randn(T mean = 0, T standard_deviation = 1) -> T {
+randn(T mean = 0, T standard_deviation = 1) noexcept -> T {
    return normal_distribution<T>(mean, standard_deviation)(
       detail::convenience_engine<Engine>()
    );
@@ -642,13 +648,13 @@ randn(T mean = 0, T standard_deviation = 1) -> T {
 
 template <typename Engine = convenience_random_engine>
 void
-seed(random_seed value) {
+seed(random_seed value) noexcept {
    detail::convenience_engine<Engine>().seed(value);
 }
 
 template <typename Engine = convenience_random_engine>
 void
-seed() {
+seed() noexcept(!__has_feature(cxx_exceptions)) {
    detail::convenience_engine<Engine>().seed(nix::sys_urandom_engine{}());
 }
 
@@ -674,7 +680,7 @@ template <typename Value>
 auto
 append_field(
    format_context& context, str_view label, Value const& value, bool& first
-) -> scaredy_format<void> {
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
    if (!first) {
       scaredy_format<void> result = context.append(", ");
       if (result.is_empty()) {
@@ -695,8 +701,9 @@ append_field(
 
 template <typename Param>
 auto
-format_distribution_param(Param const& parameters, format_context& context)
-   -> scaredy_format<void> {
+format_distribution_param(
+   Param const& parameters, format_context& context
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
    scaredy_format<void> result = context.append('(');
    if (result.is_empty()) {
       return result;
@@ -804,8 +811,9 @@ format_distribution_param(Param const& parameters, format_context& context)
 template <typename CharT>
 struct formatter<seed_sequence, CharT> : formatter_base<CharT> {
    auto
-   format(seed_sequence const& value, format_context& context) const
-      -> scaredy_format<void> {
+   format(seed_sequence const& value, format_context& context) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy_format<void> {
       scaredy_format<void> result = context.append("seed_sequence");
       if (result.is_empty()) {
          return result;
@@ -820,8 +828,9 @@ template <detail::is_distribution_param Param, typename CharT>
    requires(is_same<CharT, char>)  // TODO: Relax this constraint.
 struct formatter<Param, CharT> : formatter_base<CharT> {
    auto
-   format(Param const& value, format_context& context) const
-      -> scaredy_format<void> {
+   format(Param const& value, format_context& context) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy_format<void> {
       scaredy_format<void> result = context.append("param");
       if (result.is_empty()) {
          return result;
@@ -834,7 +843,7 @@ template <detail::is_random_distribution Distribution, typename CharT>
    requires(is_same<CharT, char>)  // TODO: Relax this constraint.
 struct formatter<Distribution, CharT> : formatter_base<CharT> {
    auto
-   format(Distribution const& value, format_context& context) const
+   format(Distribution const& value, format_context& context) const noexcept
       -> scaredy_format<void> {
       return detail::format_distribution_param(value.param(), context);
    }

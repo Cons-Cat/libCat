@@ -9,7 +9,7 @@ namespace cat {
 template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
-clamp(T value, T minimum, T maximum) -> T {
+clamp(T value, T minimum, T maximum) noexcept -> T {
    T lower_bound = value < minimum ? minimum : value;
    return lower_bound > maximum ? maximum : lower_bound;
 }

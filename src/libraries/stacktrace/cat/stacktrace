@@ -49,25 +49,26 @@ class stacktrace_entry {
 
    constexpr stacktrace_entry() = default;
 
-   explicit constexpr stacktrace_entry(native_handle_type p_native)
+   explicit constexpr stacktrace_entry(native_handle_type p_native) noexcept
        : m_p_native(p_native) {
    }
 
    [[nodiscard]]
    constexpr auto
-   native_handle() const -> native_handle_type {
+   native_handle() const noexcept -> native_handle_type {
       return m_p_native;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return m_p_native == nullptr;
    }
 
    [[nodiscard]]
    constexpr auto
-   operator==(stacktrace_entry const& other) const -> bool = default;
+   operator==(stacktrace_entry const& other) const noexcept(false)
+      -> bool = default;
 
    [[nodiscard]]
    constexpr auto
@@ -92,21 +93,22 @@ class stacktrace
    constexpr stacktrace() =
       delete ("`cat::stacktrace` cannot be created without an allocator!");
 
-   constexpr explicit stacktrace(allocator_dyn allocator)
+   constexpr explicit stacktrace(allocator_dyn allocator) noexcept
        : m_frames(allocator) {
    }
 
    constexpr stacktrace(stacktrace&&) = default;
 
    constexpr auto
-   operator=(stacktrace&&) -> stacktrace& = default;
+   operator=(stacktrace&&) noexcept(!__has_feature(cxx_exceptions))
+      -> stacktrace& = default;
 
    constexpr stacktrace(stacktrace const&) =
       delete ("Implicit copying of `cat::stacktrace` is forbidden. Call "
               "`.clone()` or move instead!");
 
    auto
-   operator=(stacktrace const&)
+   operator=(stacktrace const&) noexcept
       -> stacktrace& = delete ("Implicit copying of `cat::stacktrace` is "
                                "forbidden. Call `.clone()` or move instead!");
 
@@ -116,19 +118,20 @@ class stacktrace
    // `allocator` cannot store a trace deeper than `inline_frames`.
    [[nodiscard, gnu::noinline, clang::disable_tail_calls]]
    static auto
-   current(allocator_dyn allocator, idx skip = 0u, idx max_depth = idx::max())
-      -> maybe<stacktrace>;
+   current(
+      allocator_dyn allocator, idx skip = 0u, idx max_depth = idx::max()
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<stacktrace>;
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_frames.size();
    }
 
    // Number of frames this trace can hold before it grows again.
    [[nodiscard]]
    constexpr auto
-   capacity() const -> idx {
+   capacity() const noexcept -> idx {
       return m_frames.capacity();
    }
 
@@ -136,50 +139,52 @@ class stacktrace
    // space rather than any allocator's actual ceiling.
    [[nodiscard]]
    static constexpr auto
-   max_size() -> idx {
+   max_size() noexcept -> idx {
       return storage::max_size();
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx index) const [[clang::lifetimebound]]
-   -> stacktrace_entry const& {
+   operator[](idx index) const noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> stacktrace_entry const& {
       assert(index < size());
       return m_frames[index];
    }
 
    [[nodiscard]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> stacktrace_entry* _Nullable {
+   data() noexcept [[clang::lifetimebound]] -> stacktrace_entry* _Nullable {
       return m_frames.data();
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> stacktrace_entry const* _Nullable {
+   data() const noexcept [[clang::lifetimebound]]
+   -> stacktrace_entry const* _Nullable {
       return m_frames.data();
    }
 
    constexpr void
-   swap(stacktrace& other) {
+   swap(stacktrace& other) noexcept(!__has_feature(cxx_exceptions)) {
       m_frames.swap(other.m_frames);
    }
 
    // Deep-copy this trace through its own allocator.
    [[nodiscard]]
    constexpr auto
-   clone() const -> maybe<stacktrace> {
+   clone() const noexcept(!__has_feature(cxx_exceptions)) -> maybe<stacktrace> {
       return stacktrace($prop(m_frames.clone()));
    }
 
    [[nodiscard]]
    constexpr auto
-   operator==(stacktrace const& other) const -> bool {
+   operator==(stacktrace const& other) const noexcept -> bool {
       return m_frames == other.m_frames;
    }
 
  private:
-   constexpr explicit stacktrace(storage&& frames) : m_frames(move(frames)) {
+   constexpr explicit stacktrace(storage&& frames) noexcept
+       : m_frames(move(frames)) {
    }
 
    storage m_frames;
@@ -212,25 +217,26 @@ struct frame_origin {
 auto
 resolve_stacktrace_frame(
    symbolizer const* _Nullable p_symbolizer, stacktrace_entry entry
-) -> frame_origin;
+) noexcept(!__has_feature(cxx_exceptions)) -> frame_origin;
 
 [[nodiscard]]
 auto
 format_stacktrace_frame(
    symbolizer const* _Nullable p_symbolizer, idx number, stacktrace_entry entry,
    format_context& context, bool debug
-) -> scaredy_format<void>;
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void>;
 
 [[nodiscard]]
 auto
-format_stacktrace_entry_context(stacktrace_entry entry, format_context& context)
-   -> scaredy_format<void>;
+format_stacktrace_entry_context(
+   stacktrace_entry entry, format_context& context
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void>;
 
 [[nodiscard]]
 inline auto
 format_stacktrace_entry(
    stacktrace_entry entry, format_context& context, bool debug
-) -> scaredy_format<void> {
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
    if (!debug) {
       return format_nested(context, entry.native_handle());
    }
@@ -242,7 +248,7 @@ template <typename CharT>
    requires(is_same<CharT, char>)
 struct formatter<stacktrace_entry, CharT> : debug_formatter<CharT> {
    auto
-   format(stacktrace_entry value, format_context& context) const
+   format(stacktrace_entry value, format_context& context) const noexcept
       -> scaredy_format<void> {
       return detail::format_stacktrace_entry(value, context, this->debug);
    }
@@ -257,8 +263,9 @@ template <typename Frames>
    )
 struct formatter<Frames, char> : debug_formatter<char> {
    auto
-   format(Frames const& value, format_context& context) const
-      -> scaredy_format<void> {
+   format(Frames const& value, format_context& context) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy_format<void> {
       scaredy_format<void> result = context.append("Stack trace:\n");
       if (result.is_empty()) {
          return result;

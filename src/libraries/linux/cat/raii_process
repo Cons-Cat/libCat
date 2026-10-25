@@ -19,7 +19,7 @@ class basic_process {
 
    basic_process(
       cat::allocator_ref<Allocator> allocator [[clang::lifetimebound]]
-   )
+   ) noexcept
        : m_core(), m_allocator(allocator) {
    }
 
@@ -46,7 +46,7 @@ class basic_process {
       return *this;
    }
 
-   ~basic_process() {
+   ~basic_process() noexcept {
       if (m_core.is_empty()) {
          return;
       }
@@ -55,7 +55,7 @@ class basic_process {
    }
 
    constexpr void
-   add_clone_flag(clone_flags extra) {
+   add_clone_flag(clone_flags extra) noexcept {
       m_core.add_clone_flag(extra);
    }
 
@@ -70,25 +70,25 @@ class basic_process {
 
    [[nodiscard]]
    auto
-   wait() const -> scaredy_nix<process_id> {
+   wait() const noexcept -> scaredy_nix<process_id> {
       return m_core.wait();
    }
 
    [[nodiscard]]
    constexpr auto
-   is_empty() const -> bool {
+   is_empty() const noexcept -> bool {
       return m_core.is_empty();
    }
 
    [[clang::reinitializes]]
    void
-   free() {
+   free() noexcept {
       m_core.free(m_allocator);
    }
 
    [[clang::reinitializes]]
    void
-   cfree() {
+   cfree() noexcept {
       m_core.cfree(m_allocator);
    }
 

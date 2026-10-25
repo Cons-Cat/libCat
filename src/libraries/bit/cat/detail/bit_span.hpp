@@ -21,7 +21,8 @@ class bit_span;
 template <is_unsigned_integral Storage>
 [[nodiscard]]
 constexpr auto
-popcount(bit_span<Storage> bits) -> idx;
+popcount(bit_span<Storage> bits) noexcept(!__has_feature(cxx_exceptions))
+   -> idx;
 
 namespace detail {
 template <typename WordStorage>
@@ -73,13 +74,13 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    constexpr bit_span(bit_span const&) = default;
    constexpr bit_span(bit_span&&) = default;
 
-   constexpr bit_span(decltype(nullptr)) {
+   constexpr bit_span(decltype(nullptr)) noexcept {
    }
 
    constexpr bit_span(
       Storage* _Nullable p_storage [[clang::lifetimebound]], idx bit_offset,
       idx bit_count
-   )
+   ) noexcept
        : m_p_storage(p_storage),
          m_bit_offset(bit_offset),
          m_bit_size(bit_count) {
@@ -102,7 +103,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
       )
    constexpr explicit bit_span(
       WordStorage& storage [[clang::lifetimebound]]
-   )
+   ) noexcept
        : bit_span(
             storage.data(), bit_offset_for(storage), bit_count_for(storage)
          ) {
@@ -117,31 +118,31 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
       WordStorage& storage [[clang::lifetimebound]]
       ,
       idx bit_offset, idx bit_count
-   )
+   ) noexcept
        : bit_span(storage.data(), bit_offset, bit_count) {
    }
 
    constexpr auto
-   operator=(bit_span const&) -> bit_span& = default;
+   operator=(bit_span const&) noexcept -> bit_span& = default;
 
    constexpr auto
-   operator=(bit_span&&) -> bit_span& = default;
+   operator=(bit_span&&) noexcept -> bit_span& = default;
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       return m_bit_size;
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const -> Storage* _Nullable {
+   data() const noexcept -> Storage* _Nullable {
       return m_p_storage;
    }
 
    [[nodiscard]]
    constexpr auto
-   begin() const -> iterator {
+   begin() const noexcept -> iterator {
       return iterator(
          word_iterator(m_bit_offset / limits<Storage>::bits, m_p_storage),
          m_bit_offset % limits<Storage>::bits
@@ -150,7 +151,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    [[nodiscard]]
    constexpr auto
-   end() const -> iterator {
+   end() const noexcept -> iterator {
       idx const bit_end = m_bit_offset + m_bit_size;
       return iterator(
          word_iterator(bit_end / limits<Storage>::bits, m_p_storage),
@@ -160,7 +161,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    [[nodiscard]]
    constexpr auto
-   cbegin() const -> const_iterator {
+   cbegin() const noexcept -> const_iterator {
       return const_iterator(
          const_word_iterator(m_bit_offset / limits<Storage>::bits, m_p_storage),
          m_bit_offset % limits<Storage>::bits
@@ -169,7 +170,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    [[nodiscard]]
    constexpr auto
-   cend() const -> const_iterator {
+   cend() const noexcept -> const_iterator {
       idx const bit_end = m_bit_offset + m_bit_size;
       return const_iterator(
          const_word_iterator(bit_end / limits<Storage>::bits, m_p_storage),
@@ -179,7 +180,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    [[nodiscard]]
    constexpr auto
-   rbegin() const -> reverse_iterator {
+   rbegin() const noexcept(!__has_feature(cxx_exceptions)) -> reverse_iterator {
       assert(m_bit_size > 0u);
       iterator iter = end();
       --iter;
@@ -188,7 +189,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    [[nodiscard]]
    constexpr auto
-   rend() const -> reverse_iterator {
+   rend() const noexcept -> reverse_iterator {
       iterator iter = begin();
       --iter;
       return reverse_iterator(iter);
@@ -196,7 +197,8 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    [[nodiscard]]
    constexpr auto
-   crbegin() const -> const_reverse_iterator {
+   crbegin() const noexcept(!__has_feature(cxx_exceptions))
+      -> const_reverse_iterator {
       assert(m_bit_size > 0u);
       const_iterator iter = cend();
       --iter;
@@ -205,7 +207,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    [[nodiscard]]
    constexpr auto
-   crend() const -> const_reverse_iterator {
+   crend() const noexcept -> const_reverse_iterator {
       const_iterator iter = cbegin();
       --iter;
       return const_reverse_iterator(iter);
@@ -213,20 +215,22 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    [[nodiscard]]
    constexpr auto
-   bit_offset() const -> idx {
+   bit_offset() const noexcept -> idx {
       return m_bit_offset;
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx bit_index) const [[clang::lifetimebound]] -> reference {
+   operator[](idx bit_index) const noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> reference {
       assert(bit_index < m_bit_size);
       return *make_bit_ptr_from_offset(m_p_storage, m_bit_offset + bit_index);
    }
 
    [[nodiscard]]
    constexpr auto
-   slice(idx first, idx last) const -> bit_span {
+   slice(idx first, idx last) const noexcept(!__has_feature(cxx_exceptions))
+      -> bit_span {
       assert(first <= last);
       assert(last <= m_bit_size);
       return bit_span(m_p_storage, m_bit_offset + first, idx(last - first));
@@ -235,13 +239,13 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    // Count set bits in this bit span.
    [[nodiscard]]
    constexpr auto
-   popcount() const -> idx {
+   popcount() const noexcept -> idx {
       return cat::popcount(*this);
    }
 
    [[nodiscard]]
    constexpr auto
-   has_single_bit() const -> bool {
+   has_single_bit() const noexcept -> bool {
       return popcount() == 1u;
    }
 
@@ -301,7 +305,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    [[nodiscard]]
    constexpr auto
-   bit_width() const -> idx {
+   bit_width() const noexcept(!__has_feature(cxx_exceptions)) -> idx {
       return idx(m_bit_size - countl_zero());
    }
 
@@ -314,12 +318,13 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    }
 
    constexpr auto
-   clear() const -> bit_span {
+   clear() const noexcept(!__has_feature(cxx_exceptions)) -> bit_span {
       return fill(false);
    }
 
    constexpr auto
-   copy_from(bit_span source) const -> bit_span {
+   copy_from(bit_span source) const noexcept(!__has_feature(cxx_exceptions))
+      -> bit_span {
       assert(source.size() == m_bit_size);
       if (
          (m_bit_offset % limits<Storage>::bits) == 0u
@@ -349,7 +354,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    }
 
    constexpr auto
-   move_from(bit_span source) const -> bit_span {
+   move_from(bit_span source) const noexcept -> bit_span {
       return copy_from(source);
    }
 
@@ -397,13 +402,14 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    }
 
    constexpr auto
-   reverse_inplace() const -> bit_span {
+   reverse_inplace() const noexcept -> bit_span {
       cat::stepanov_reverse_inplace(begin(), end());
       return *this;
    }
 
    constexpr auto
-   rotate_left(idx count) const -> bit_span {
+   rotate_left(idx count) const noexcept(!__has_feature(cxx_exceptions))
+      -> bit_span {
       if (m_bit_size == 0u) {
          return *this;
       }
@@ -418,7 +424,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    }
 
    constexpr auto
-   rotate_right(idx count) const -> bit_span {
+   rotate_right(idx count) const noexcept -> bit_span {
       if (m_bit_size == 0u) {
          return *this;
       }
@@ -443,7 +449,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    template <typename WordStorage>
    [[nodiscard]]
    static constexpr auto
-   bit_count_for(WordStorage& storage) -> idx {
+   bit_count_for(WordStorage& storage) noexcept -> idx {
       if constexpr (requires { storage.word_count(); }) {
          return storage.size();
       } else {
@@ -454,7 +460,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    template <typename WordStorage>
    [[nodiscard]]
    static constexpr auto
-   bit_offset_for([[maybe_unused]] WordStorage& storage) -> idx {
+   bit_offset_for([[maybe_unused]] WordStorage& storage) noexcept -> idx {
       if constexpr (requires { WordStorage::leading_skipped_bits; }) {
          return WordStorage::leading_skipped_bits;
       } else {
@@ -475,7 +481,7 @@ template <typename WordStorage>
 bit_span(WordStorage&) -> bit_span<bit_span_storage_type<WordStorage>>;
 
 template <typename WordStorage>
-bit_span(WordStorage&, idx, idx)
+bit_span(WordStorage&, idx, idx) noexcept
    -> bit_span<bit_span_storage_type<WordStorage>>;
 
 namespace detail {
@@ -489,7 +495,8 @@ concept bit_span_constructible =
 template <is_unsigned_integral Storage>
 [[nodiscard]]
 constexpr auto
-popcount(bit_span<Storage> bits) -> idx {
+popcount(bit_span<Storage> bits) noexcept(!__has_feature(cxx_exceptions))
+   -> idx {
    if (bits.size() == 0u) {
       return 0u;
    }
@@ -527,14 +534,14 @@ template <typename Bits>
    requires(detail::bit_span_constructible<Bits>)
 [[nodiscard]]
 constexpr auto
-popcount(Bits& bits) -> idx {
+popcount(Bits& bits) noexcept -> idx {
    return popcount(bit_span(bits));
 }
 
 template <is_unsigned_integral Storage>
 [[nodiscard]]
 constexpr auto
-has_single_bit(bit_span<Storage> bits) -> bool {
+has_single_bit(bit_span<Storage> bits) noexcept -> bool {
    return bits.has_single_bit();
 }
 
@@ -542,14 +549,14 @@ template <typename Bits>
    requires(detail::bit_span_constructible<Bits>)
 [[nodiscard]]
 constexpr auto
-has_single_bit(Bits& bits) -> bool {
+has_single_bit(Bits& bits) noexcept -> bool {
    return has_single_bit(bit_span(bits));
 }
 
 template <is_unsigned_integral Storage>
 [[nodiscard]]
 constexpr auto
-bit_width(bit_span<Storage> bits) -> idx {
+bit_width(bit_span<Storage> bits) noexcept -> idx {
    return bits.bit_width();
 }
 
@@ -557,14 +564,15 @@ template <typename Bits>
    requires(detail::bit_span_constructible<Bits>)
 [[nodiscard]]
 constexpr auto
-bit_width(Bits& bits) -> idx {
+bit_width(Bits& bits) noexcept -> idx {
    return bit_width(bit_span(bits));
 }
 
 template <is_unsigned_integral Storage>
 [[nodiscard]]
 constexpr auto
-countl_zero(bit_span<Storage> bits) -> idx {
+countl_zero(bit_span<Storage> bits) noexcept(!__has_feature(cxx_exceptions))
+   -> idx {
    return bits.countl_zero();
 }
 
@@ -572,14 +580,14 @@ template <typename Bits>
    requires(detail::bit_span_constructible<Bits>)
 [[nodiscard]]
 constexpr auto
-countl_zero(Bits& bits) -> idx {
+countl_zero(Bits& bits) noexcept -> idx {
    return countl_zero(bit_span(bits));
 }
 
 template <is_unsigned_integral Storage>
 [[nodiscard]]
 constexpr auto
-countl_one(bit_span<Storage> bits) -> idx {
+countl_one(bit_span<Storage> bits) noexcept -> idx {
    return bits.countl_one();
 }
 
@@ -587,14 +595,14 @@ template <typename Bits>
    requires(detail::bit_span_constructible<Bits>)
 [[nodiscard]]
 constexpr auto
-countl_one(Bits& bits) -> idx {
+countl_one(Bits& bits) noexcept -> idx {
    return countl_one(bit_span(bits));
 }
 
 template <is_unsigned_integral Storage>
 [[nodiscard]]
 constexpr auto
-countr_zero(bit_span<Storage> bits) -> idx {
+countr_zero(bit_span<Storage> bits) noexcept -> idx {
    return bits.countr_zero();
 }
 
@@ -602,14 +610,14 @@ template <typename Bits>
    requires(detail::bit_span_constructible<Bits>)
 [[nodiscard]]
 constexpr auto
-countr_zero(Bits& bits) -> idx {
+countr_zero(Bits& bits) noexcept -> idx {
    return countr_zero(bit_span(bits));
 }
 
 template <is_unsigned_integral Storage>
 [[nodiscard]]
 constexpr auto
-countr_one(bit_span<Storage> bits) -> idx {
+countr_one(bit_span<Storage> bits) noexcept -> idx {
    return bits.countr_one();
 }
 
@@ -617,7 +625,7 @@ template <typename Bits>
    requires(detail::bit_span_constructible<Bits>)
 [[nodiscard]]
 constexpr auto
-countr_one(Bits& bits) -> idx {
+countr_one(Bits& bits) noexcept -> idx {
    return countr_one(bit_span(bits));
 }
 

@@ -31,7 +31,7 @@ struct mask_lane {
    // as false, and likewise for true).
    [[nodiscard]]
    static constexpr auto
-   decode_lane(raw_type const& raw, idx i) -> bool {
+   decode_lane(raw_type const& raw, idx i) noexcept -> bool {
       lane_scalar const slot = raw[static_cast<unsigned>(i.raw)];
       if constexpr (is_integral<lane_scalar>) {
          return slot != lane_scalar{};
@@ -41,7 +41,7 @@ struct mask_lane {
    }
 
    static constexpr void
-   encode_lane(raw_type& raw, idx i, bool value) {
+   encode_lane(raw_type& raw, idx i, bool value) noexcept {
       unsigned const lane = static_cast<unsigned>(i.raw);
       if (value) {
          if constexpr (is_integral<lane_scalar>) {

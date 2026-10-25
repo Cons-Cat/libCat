@@ -9,7 +9,7 @@ namespace x64::detail {
 template <typename T, x64::is_avx512_abi<T> Abi>
 [[nodiscard, gnu::always_inline]]
 constexpr auto
-avx512_abi_mask_to_bitset_consteval(cat::simd_mask<T, Abi> const& mask)
+avx512_abi_mask_to_bitset_consteval(cat::simd_mask<T, Abi> const& mask) noexcept
    -> __UINT64_TYPE__ {
    __UINT64_TYPE__ result = 0u;
    for (cat::idx i = 0u; i < Abi::lanes; ++i) {
@@ -23,7 +23,8 @@ avx512_abi_mask_to_bitset_consteval(cat::simd_mask<T, Abi> const& mask)
 template <typename T, x64::is_avx512_abi<T> Abi>
 [[nodiscard, gnu::target("avx512f,avx512bw,avx512dq"), gnu::nodebug]]
 inline auto
-avx512_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT64_TYPE__ {
+avx512_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) noexcept
+   -> __UINT64_TYPE__ {
    if constexpr (sizeof(T) == 1u) {
       using raw = cat::simd<signed char, avx512_abi<signed char>>::raw_type;
       return static_cast<__UINT64_TYPE__>(
@@ -49,7 +50,7 @@ avx512_abi_mask_to_bitset(cat::simd_mask<T, Abi> mask) -> __UINT64_TYPE__ {
 
 [[nodiscard]]
 inline auto
-avx512_full_lane_mask(cat::idx lane_count) -> __UINT64_TYPE__ {
+avx512_full_lane_mask(cat::idx lane_count) noexcept -> __UINT64_TYPE__ {
    if (lane_count == 64u) {
       return ~0ull;
    }
@@ -60,7 +61,7 @@ template <typename T, x64::is_avx512_abi<T> Abi>
 [[nodiscard, gnu::target("avx512f,avx512bw,avx512dq"), gnu::always_inline,
   gnu::nodebug]]
 constexpr auto
-avx512_abi_masked_lane_bits(cat::simd_mask<T, Abi> const& mask)
+avx512_abi_masked_lane_bits(cat::simd_mask<T, Abi> const& mask) noexcept
    -> __UINT64_TYPE__ {
    if consteval {
       return avx512_abi_mask_to_bitset_consteval(mask);
@@ -76,7 +77,7 @@ template <typename T, x64::is_avx512_abi<T> Abi>
 struct mask_to_bitset<T, Abi> {
    [[nodiscard, gnu::target("avx512f,avx512bw,avx512dq"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> mask) -> __UINT64_TYPE__ {
+   invoke(simd_mask<T, Abi> mask) noexcept -> __UINT64_TYPE__ {
       if consteval {
          return x64::detail::avx512_abi_mask_to_bitset_consteval(mask);
       }
@@ -88,7 +89,7 @@ template <typename T, x64::is_avx512_abi<T> Abi>
 struct mask_count_if_true<T, Abi> {
    [[nodiscard, gnu::target("avx512f,avx512bw,avx512dq"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& mask) -> idx {
+   invoke(simd_mask<T, Abi> const& mask) noexcept -> idx {
       return idx{
          __builtin_popcountg(x64::detail::avx512_abi_masked_lane_bits(mask))
       };
@@ -99,7 +100,7 @@ template <typename T, x64::is_avx512_abi<T> Abi>
 struct mask_find_if_true<T, Abi> {
    [[nodiscard, gnu::target("avx512f,avx512bw,avx512dq"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& mask) -> idx {
+   invoke(simd_mask<T, Abi> const& mask) noexcept -> idx {
       return countr_zero(x64::detail::avx512_abi_masked_lane_bits(mask));
    }
 };
@@ -108,7 +109,7 @@ template <typename T, x64::is_avx512_abi<T> Abi>
 struct mask_find_last_if_true<T, Abi> {
    [[nodiscard, gnu::target("avx512f,avx512bw,avx512dq"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& mask) -> idx {
+   invoke(simd_mask<T, Abi> const& mask) noexcept -> idx {
       return 63u - countl_zero(x64::detail::avx512_abi_masked_lane_bits(mask));
    }
 };
@@ -117,7 +118,7 @@ template <typename T, x64::is_avx512_abi<T> Abi>
 struct mask_all_of<T, Abi> {
    [[nodiscard, gnu::target("avx512f,avx512bw,avx512dq"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& mask) -> bool {
+   invoke(simd_mask<T, Abi> const& mask) noexcept -> bool {
       return x64::detail::avx512_abi_masked_lane_bits(mask)
              == x64::detail::avx512_full_lane_mask(Abi::lanes);
    }
@@ -127,7 +128,7 @@ template <typename T, x64::is_avx512_abi<T> Abi>
 struct mask_any_of<T, Abi> {
    [[nodiscard, gnu::target("avx512f,avx512bw,avx512dq"), gnu::nodebug]]
    static constexpr auto
-   invoke(simd_mask<T, Abi> const& mask) -> bool {
+   invoke(simd_mask<T, Abi> const& mask) noexcept -> bool {
       return x64::detail::avx512_abi_masked_lane_bits(mask) != 0u;
    }
 };

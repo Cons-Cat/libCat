@@ -46,23 +46,24 @@ class fisher_f_distribution {
 
       constexpr explicit param_type(
          Float numerator_degrees = 1.f, Float denominator_degrees = 1.f
-      )
+      ) noexcept
           : m_numerator_degrees(numerator_degrees),
             m_denominator_degrees(denominator_degrees) {
       }
 
       constexpr auto
-      m() const -> Float {
+      m() const noexcept -> Float {
          return m_numerator_degrees;
       }
 
       constexpr auto
-      n() const -> Float {
+      n() const noexcept -> Float {
          return m_denominator_degrees;
       }
 
       friend constexpr auto
-      operator==(param_type const&, param_type const&) -> bool = default;
+      operator==(param_type const&, param_type const&) noexcept
+         -> bool = default;
 
     private:
       Float m_numerator_degrees;
@@ -71,45 +72,47 @@ class fisher_f_distribution {
 
    constexpr explicit fisher_f_distribution(
       Float numerator_degrees = 1.f, Float denominator_degrees = 1.f
-   )
+   ) noexcept
        : m_parameter(numerator_degrees, denominator_degrees) {
    }
 
-   constexpr explicit fisher_f_distribution(param_type const& parameter)
+   constexpr explicit fisher_f_distribution(
+      param_type const& parameter
+   ) noexcept
        : m_parameter(parameter) {
    }
 
    constexpr void
-   reset() {
+   reset() noexcept {
    }
 
    constexpr auto
-   m() const -> Float {
+   m() const noexcept -> Float {
       return m_parameter.m();
    }
 
    constexpr auto
-   n() const -> Float {
+   n() const noexcept -> Float {
       return m_parameter.n();
    }
 
    constexpr auto
-   param() const -> param_type {
+   param() const noexcept -> param_type {
       return m_parameter;
    }
 
    constexpr void
-   param(param_type const& parameter) {
+   param(param_type const& parameter) noexcept {
       m_parameter = parameter;
    }
 
    static constexpr auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return 0.f;
    }
 
    static constexpr auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return limits<Float>::infinity();
    }
 

@@ -18,38 +18,38 @@ class discard_block_engine {
 
    constexpr discard_block_engine() = default;
 
-   constexpr explicit discard_block_engine(Engine engine)
+   constexpr explicit discard_block_engine(Engine engine) noexcept
        : m_engine(move(engine)) {
    }
 
-   constexpr explicit discard_block_engine(random_seed value)
+   constexpr explicit discard_block_engine(random_seed value) noexcept
        : m_engine(value) {
    }
 
    constexpr void
-   seed() {
+   seed() noexcept {
       m_engine.seed();
       m_used = 0u;
    }
 
    constexpr void
-   seed(random_seed value) {
+   seed(random_seed value) noexcept {
       m_engine.seed(value);
       m_used = 0u;
    }
 
    constexpr auto
-   base() const -> Engine const& {
+   base() const noexcept -> Engine const& {
       return m_engine;
    }
 
    static consteval auto
-   min() -> result_type {
+   min() noexcept -> result_type {
       return Engine::min();
    }
 
    static consteval auto
-   max() -> result_type {
+   max() noexcept -> result_type {
       return Engine::max();
    }
 
@@ -64,7 +64,7 @@ class discard_block_engine {
    }
 
    constexpr void
-   discard(uint8 count) {
+   discard(uint8 count) noexcept {
       while (count != 0u) {
          static_cast<void>((*this)());
          --count;
@@ -72,7 +72,7 @@ class discard_block_engine {
    }
 
    friend constexpr auto
-   operator==(discard_block_engine const&, discard_block_engine const&)
+   operator==(discard_block_engine const&, discard_block_engine const&) noexcept
       -> bool = default;
 
  private:

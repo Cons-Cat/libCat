@@ -15,7 +15,7 @@ struct unary_distribution_batch_traits {
       typename... Parameters>
    [[nodiscard]]
    static constexpr auto
-   generate_with(Generator& generator, Parameters... parameters) {
+   generate_with(Generator& generator, Parameters... parameters) noexcept {
       using result = distribution_batch_simd<Scalar, Abi>;
       distribution_batch_engine<Generator, Abi> batch_engine(generator);
       Distribution<result> distribution{result(parameters)...};
@@ -28,7 +28,9 @@ struct distribution_batch_traits<bernoulli_distribution<Float>> {
    template <typename Abi, is_uniform_random_bit_generator Generator>
    [[nodiscard]]
    static constexpr auto
-   generate(bernoulli_distribution<Float>& distribution, Generator& generator) {
+   generate(
+      bernoulli_distribution<Float>& distribution, Generator& generator
+   ) noexcept {
       using result = distribution_batch_simd<Float, Abi>;
       distribution_batch_engine<Generator, Abi> batch_engine(generator);
       return bernoulli_distribution<result>(result(distribution.p()))(
@@ -44,7 +46,7 @@ struct distribution_batch_traits<binomial_distribution<Int, Float>> {
    static constexpr auto
    generate(
       binomial_distribution<Int, Float>& distribution, Generator& generator
-   ) {
+   ) noexcept {
       using result = distribution_batch_simd<Int, Abi>;
       using engine_result = make_unsigned_type<Int>;
       distribution_batch_engine<Generator, Abi, engine_result> batch_engine(
@@ -63,7 +65,9 @@ struct distribution_batch_traits<cauchy_distribution<Float>>
    template <typename Abi, is_uniform_random_bit_generator Generator>
    [[nodiscard]]
    static constexpr auto
-   generate(cauchy_distribution<Float>& distribution, Generator& generator) {
+   generate(
+      cauchy_distribution<Float>& distribution, Generator& generator
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.a(), distribution.b()
       );
@@ -78,7 +82,7 @@ struct distribution_batch_traits<chi_squared_distribution<Float>>
    static constexpr auto
    generate(
       chi_squared_distribution<Float>& distribution, Generator& generator
-   ) {
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.n()
       );
@@ -90,7 +94,9 @@ struct distribution_batch_traits<discrete_distribution<Int>> {
    template <typename Abi, is_uniform_random_bit_generator Generator>
    [[nodiscard]]
    static constexpr auto
-   generate(discrete_distribution<Int>& distribution, Generator& generator) {
+   generate(
+      discrete_distribution<Int>& distribution, Generator& generator
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       using result = distribution_batch_simd<Int, Abi>;
       using engine_result = make_unsigned_type<Int>;
       distribution_batch_engine<Generator, Abi, engine_result> batch_engine(
@@ -110,7 +116,7 @@ struct distribution_batch_traits<exponential_distribution<Float>>
    static constexpr auto
    generate(
       exponential_distribution<Float>& distribution, Generator& generator
-   ) {
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.lambda()
       );
@@ -125,7 +131,7 @@ struct distribution_batch_traits<extreme_value_distribution<Float>>
    static constexpr auto
    generate(
       extreme_value_distribution<Float>& distribution, Generator& generator
-   ) {
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.a(), distribution.b()
       );
@@ -138,7 +144,9 @@ struct distribution_batch_traits<fisher_f_distribution<Float>>
    template <typename Abi, is_uniform_random_bit_generator Generator>
    [[nodiscard]]
    static constexpr auto
-   generate(fisher_f_distribution<Float>& distribution, Generator& generator) {
+   generate(
+      fisher_f_distribution<Float>& distribution, Generator& generator
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.m(), distribution.n()
       );
@@ -151,7 +159,9 @@ struct distribution_batch_traits<gamma_distribution<Float>>
    template <typename Abi, is_uniform_random_bit_generator Generator>
    [[nodiscard]]
    static constexpr auto
-   generate(gamma_distribution<Float>& distribution, Generator& generator) {
+   generate(
+      gamma_distribution<Float>& distribution, Generator& generator
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.alpha(), distribution.beta()
       );
@@ -165,7 +175,7 @@ struct distribution_batch_traits<geometric_distribution<Int, Float>> {
    static constexpr auto
    generate(
       geometric_distribution<Int, Float>& distribution, Generator& generator
-   ) {
+   ) noexcept {
       using result = distribution_batch_simd<Int, Abi>;
       using engine_result = make_unsigned_type<Int>;
       distribution_batch_engine<Generator, Abi, engine_result> batch_engine(
@@ -183,7 +193,9 @@ struct distribution_batch_traits<lognormal_distribution<Float>>
    template <typename Abi, is_uniform_random_bit_generator Generator>
    [[nodiscard]]
    static constexpr auto
-   generate(lognormal_distribution<Float>& distribution, Generator& generator) {
+   generate(
+      lognormal_distribution<Float>& distribution, Generator& generator
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.m(), distribution.s()
       );
@@ -198,7 +210,7 @@ struct distribution_batch_traits<negative_binomial_distribution<Int, Float>> {
    generate(
       negative_binomial_distribution<Int, Float>& distribution,
       Generator& generator
-   ) {
+   ) noexcept {
       using result = distribution_batch_simd<Int, Abi>;
       using engine_result = make_unsigned_type<Int>;
       distribution_batch_engine<Generator, Abi, engine_result> batch_engine(
@@ -217,7 +229,9 @@ struct distribution_batch_traits<normal_distribution<Float>>
    template <typename Abi, is_uniform_random_bit_generator Generator>
    [[nodiscard]]
    static constexpr auto
-   generate(normal_distribution<Float>& distribution, Generator& generator) {
+   generate(
+      normal_distribution<Float>& distribution, Generator& generator
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.mean(), distribution.stddev()
       );
@@ -231,7 +245,7 @@ struct distribution_batch_traits<piecewise_constant_distribution<Float>> {
    static constexpr auto
    generate(
       piecewise_constant_distribution<Float>& distribution, Generator& generator
-   ) {
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       using result = distribution_batch_simd<Float, Abi>;
       distribution_batch_engine<Generator, Abi> batch_engine(generator);
       return piecewise_constant_distribution<
@@ -248,7 +262,7 @@ struct distribution_batch_traits<piecewise_linear_distribution<Float>> {
    static constexpr auto
    generate(
       piecewise_linear_distribution<Float>& distribution, Generator& generator
-   ) {
+   ) noexcept(!__has_feature(cxx_exceptions)) {
       using result = distribution_batch_simd<Float, Abi>;
       distribution_batch_engine<Generator, Abi> batch_engine(generator);
       return piecewise_linear_distribution<
@@ -265,7 +279,7 @@ struct distribution_batch_traits<poisson_distribution<Int, Float>> {
    static constexpr auto
    generate(
       poisson_distribution<Int, Float>& distribution, Generator& generator
-   ) {
+   ) noexcept {
       using result = distribution_batch_simd<Int, Abi>;
       using engine_result = make_unsigned_type<Int>;
       distribution_batch_engine<Generator, Abi, engine_result> batch_engine(
@@ -283,7 +297,9 @@ struct distribution_batch_traits<student_t_distribution<Float>>
    template <typename Abi, is_uniform_random_bit_generator Generator>
    [[nodiscard]]
    static constexpr auto
-   generate(student_t_distribution<Float>& distribution, Generator& generator) {
+   generate(
+      student_t_distribution<Float>& distribution, Generator& generator
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.n()
       );
@@ -298,7 +314,7 @@ struct distribution_batch_traits<uniform_float_distribution<Float>>
    static constexpr auto
    generate(
       uniform_float_distribution<Float>& distribution, Generator& generator
-   ) {
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.a(), distribution.b()
       );
@@ -310,7 +326,9 @@ struct distribution_batch_traits<uniform_int_distribution<Int>> {
    template <typename Abi, is_uniform_random_bit_generator Generator>
    [[nodiscard]]
    static constexpr auto
-   generate(uniform_int_distribution<Int>& distribution, Generator& generator) {
+   generate(
+      uniform_int_distribution<Int>& distribution, Generator& generator
+   ) noexcept {
       using result = distribution_batch_simd<Int, Abi>;
       using engine_result = make_unsigned_type<Int>;
       distribution_batch_engine<Generator, Abi, engine_result> batch_engine(
@@ -329,7 +347,9 @@ struct distribution_batch_traits<weibull_distribution<Float>>
    template <typename Abi, is_uniform_random_bit_generator Generator>
    [[nodiscard]]
    static constexpr auto
-   generate(weibull_distribution<Float>& distribution, Generator& generator) {
+   generate(
+      weibull_distribution<Float>& distribution, Generator& generator
+   ) noexcept {
       return distribution_batch_traits::template generate_with<Abi>(
          generator, distribution.a(), distribution.b()
       );

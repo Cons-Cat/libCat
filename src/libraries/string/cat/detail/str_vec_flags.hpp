@@ -14,42 +14,47 @@ struct str_vec_flags {
 
    constexpr str_vec_flags() = default;
 
-   constexpr str_vec_flags(str_flags flags) : str(flags) {
+   constexpr str_vec_flags(str_flags flags) noexcept : str(flags) {
    }
 
-   constexpr str_vec_flags(vec_flags flags) : vec(flags) {
+   constexpr str_vec_flags(vec_flags flags) noexcept : vec(flags) {
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator|(str_vec_flags left, str_vec_flags right) -> str_vec_flags {
+   operator|(str_vec_flags left, str_vec_flags right) noexcept
+      -> str_vec_flags {
       return str_vec_flags{left.str | right.str, left.vec | right.vec};
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator|(str_flags left, str_vec_flags right) -> str_vec_flags {
+   operator|(str_flags left, str_vec_flags right) noexcept -> str_vec_flags {
       return str_vec_flags{left | right.str, right.vec};
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator|(str_vec_flags left, str_flags right) -> str_vec_flags {
+   operator|(str_vec_flags left, str_flags right) noexcept -> str_vec_flags {
       return str_vec_flags{left.str | right, left.vec};
    }
 
    friend constexpr auto
-   operator|(str_flags string_flags, vec_flags vector_flags) -> str_vec_flags;
+   operator|(str_flags string_flags, vec_flags vector_flags) noexcept
+      -> str_vec_flags;
 
  private:
-   constexpr str_vec_flags(str_flags string_flags, vec_flags vector_flags)
+   constexpr str_vec_flags(
+      str_flags string_flags, vec_flags vector_flags
+   ) noexcept
        : str(string_flags), vec(vector_flags) {
    }
 };
 
 [[nodiscard]]
 constexpr auto
-operator|(str_flags string_flags, vec_flags vector_flags) -> str_vec_flags {
+operator|(str_flags string_flags, vec_flags vector_flags) noexcept
+   -> str_vec_flags {
    return str_vec_flags{string_flags, vector_flags};
 }
 
@@ -77,7 +82,7 @@ concept is_char_utf8_interconvertible =
 namespace detail {
 template <typename Left, typename Right>
 consteval auto
-encoding_compatible_string_char_impl() -> bool {
+encoding_compatible_string_char_impl() noexcept -> bool {
    using left_char = remove_const<Left>;
    using right_char = remove_const<Right>;
    if constexpr (sizeof(left_char) != sizeof(right_char)) {
@@ -100,7 +105,7 @@ encoding_compatible_string_char_impl() -> bool {
 
 template <typename Left, typename Right>
 consteval auto
-encoding_compatible_char_impl() -> bool {
+encoding_compatible_char_impl() noexcept -> bool {
    if constexpr (is_string_char<Left> && is_string_char<Right>) {
       return encoding_compatible_string_char_impl<Left, Right>();
    } else {

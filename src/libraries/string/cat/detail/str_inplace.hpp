@@ -170,7 +170,7 @@ class
          : str_flags{};
 
  public:
-   constexpr basic_str_inplace() {
+   constexpr basic_str_inplace() noexcept {
       this->write_terminator();
    }
 
@@ -179,8 +179,9 @@ class
    template <idx other_capacity, str_vec_flags other_flags>
       requires(!flags.vec.is_fixed_size && other_capacity <= inline_capacity)
    constexpr auto
-   operator=(basic_str_inplace<CharT, other_capacity, other_flags> const& other)
-      -> basic_str_inplace& {
+   operator=(
+      basic_str_inplace<CharT, other_capacity, other_flags> const& other
+   ) noexcept -> basic_str_inplace& {
       this->m_size = other.size();
       for (idx index; index < other.size(); ++index) {
          m_data[index] = other[index];
@@ -195,7 +196,7 @@ class
          flags.vec.is_fixed_size ? extent == inline_capacity + 1u
                                  : extent <= inline_capacity + 1u
       )
-   consteval basic_str_inplace(CharT const (&string)[extent]) {
+   consteval basic_str_inplace(CharT const (&string)[extent]) noexcept {
       [[assume(string[extent.raw - 1u] == CharT{'\0'})]];
       idx const content_size = idx(extent - 1u);
       if constexpr (!flags.vec.is_fixed_size) {
@@ -213,7 +214,7 @@ class
          && encoding_compatible_char<CharT, OtherChar>
          && (flags.vec.is_fixed_size ? extent == inline_capacity + 1u : extent <= inline_capacity + 1u)
       )
-   consteval basic_str_inplace(OtherChar const (&string)[extent]) {
+   consteval basic_str_inplace(OtherChar const (&string)[extent]) noexcept {
       [[assume(string[extent.raw - 1u] == OtherChar{'\0'})]];
       idx const content_size = idx(extent - 1u);
 
@@ -241,7 +242,7 @@ class
    constexpr auto
    operator==(
       basic_str_inplace<CharT, other_capacity, other_flags> const& other
-   ) const -> bool {
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> bool {
       if (size() != other.size()) {
          return false;
       }
@@ -258,7 +259,7 @@ class
    constexpr auto
    operator<=>(
       basic_str_inplace<CharT, other_capacity, other_flags> const& other
-   ) const {
+   ) const noexcept {
       return span<CharT const>(data(), size())
              <=> span<CharT const>(other.data(), other.size());
    }
@@ -266,7 +267,7 @@ class
    template <idx extent>
    [[nodiscard]]
    constexpr auto
-   operator==(CharT const (&other)[extent]) const -> bool {
+   operator==(CharT const (&other)[extent]) const noexcept -> bool {
       idx const other_size = idx(extent - 1u);
       if (size() != other_size) {
          return false;
@@ -282,20 +283,21 @@ class
    template <idx extent>
    [[nodiscard]]
    friend constexpr auto
-   operator==(CharT const (&left)[extent], basic_str_inplace const& right)
-      -> bool {
+   operator==(
+      CharT const (&left)[extent], basic_str_inplace const& right
+   ) noexcept -> bool {
       return right == left;
    }
 
    constexpr auto
-   operator==(CharT const other) const -> bool
+   operator==(CharT const other) const noexcept -> bool
       requires(inline_capacity == 1u)
    {
       return size() == 1u && m_data[0] == other;
    }
 
    constexpr void
-   swap(basic_str_inplace& other) {
+   swap(basic_str_inplace& other) noexcept {
       for (idx index; index < inline_capacity + flags.str.is_null_terminated;
            ++index) {
          cat::swap(m_data[index], other.m_data[index]);
@@ -307,19 +309,19 @@ class
 
    [[gnu::returns_nonnull]]
    constexpr auto
-   data() [[clang::lifetimebound]] -> CharT* _Nonnull {
+   data() noexcept [[clang::lifetimebound]] -> CharT* _Nonnull {
       return m_data;
    }
 
    [[nodiscard, gnu::returns_nonnull]]
    constexpr auto
-   data() const [[clang::lifetimebound]] -> CharT const* _Nonnull {
+   data() const noexcept [[clang::lifetimebound]] -> CharT const* _Nonnull {
       return m_data;
    }
 
    [[nodiscard]]
    constexpr auto
-   size() const -> idx {
+   size() const noexcept -> idx {
       if constexpr (flags.vec.is_fixed_size) {
          return inline_capacity;
       } else {
@@ -329,19 +331,19 @@ class
 
    [[nodiscard]]
    static constexpr auto
-   capacity() -> idx {
+   capacity() noexcept -> idx {
       return inline_capacity;
    }
 
    [[nodiscard]]
    static constexpr auto
-   max_size() -> idx {
+   max_size() noexcept -> idx {
       return inline_capacity;
    }
 
    [[nodiscard]]
    constexpr auto
-   is_null_terminated() const -> bool {
+   is_null_terminated() const noexcept -> bool {
       if constexpr (flags.str.is_null_terminated) {
          return true;
       } else if (size() == 0u) {
@@ -353,7 +355,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   c_str() const [[clang::lifetimebound]]
+   c_str() const noexcept [[clang::lifetimebound]]
    -> CharT const* _Nonnull requires(flags.str.is_null_terminated) {
                                return m_data;
                             }
@@ -368,7 +370,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   resize(idx new_size, CharT value = CharT{'\0'}) -> maybe<void>
+   resize(idx new_size, CharT value = CharT{'\0'}) noexcept -> maybe<void>
       requires(!flags.vec.is_fixed_size)
    {
       if (new_size > inline_capacity) {
@@ -384,7 +386,8 @@ class
 
    [[nodiscard]]
    constexpr auto
-   push_back(CharT value) -> maybe<CharT&>
+   push_back(CharT value) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<CharT&>
       requires(!flags.vec.is_fixed_size)
    {
       if (size() == inline_capacity) {
@@ -394,7 +397,8 @@ class
    }
 
    constexpr auto
-   unchecked_push_back(CharT value) -> CharT&
+   unchecked_push_back(CharT value) noexcept(!__has_feature(cxx_exceptions))
+      -> CharT&
       requires(!flags.vec.is_fixed_size)
    {
       cat::assert(size() < inline_capacity);
@@ -408,7 +412,7 @@ class
    template <idx extent>
    [[nodiscard]]
    constexpr auto
-   append(CharT const (&string)[extent]) -> maybe<void>
+   append(CharT const (&string)[extent]) noexcept -> maybe<void>
       requires(!flags.vec.is_fixed_size)
    {
       idx const count = idx(extent - 1u);
@@ -430,7 +434,7 @@ class
       )
    [[nodiscard]]
    constexpr auto
-   append(OtherChar const (&string)[extent]) -> maybe<void> {
+   append(OtherChar const (&string)[extent]) noexcept -> maybe<void> {
       idx const count = idx(extent - 1u);
       if (count > inline_capacity - size()) {
          return nullopt;
@@ -469,7 +473,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   pop_back() -> maybe<CharT>
+   pop_back() noexcept -> maybe<CharT>
       requires(!flags.vec.is_fixed_size)
    {
       if (this->is_empty()) {
@@ -482,7 +486,7 @@ class
    }
 
    constexpr void
-   clear()
+   clear() noexcept
       requires(!flags.vec.is_fixed_size)
    {
       this->m_size = 0u;
@@ -490,7 +494,7 @@ class
    }
 
    constexpr void
-   erase(idx index)
+   erase(idx index) noexcept(!__has_feature(cxx_exceptions))
       requires(!flags.vec.is_fixed_size)
    {
       cat::assert(index < size());
@@ -502,7 +506,7 @@ class
    }
 
    constexpr void
-   erase(idx first, idx last)
+   erase(idx first, idx last) noexcept(!__has_feature(cxx_exceptions))
       requires(!flags.vec.is_fixed_size)
    {
       cat::assert(first <= last);
@@ -523,7 +527,7 @@ class
    operator+(
       basic_str_inplace const& self,
       basic_str_inplace<CharT, other_capacity, other_flags> const& other_string
-   )
+   ) noexcept(!__has_feature(cxx_exceptions))
       -> basic_str_inplace<
          CharT, inline_capacity + other_capacity, concatenation_flags> {
       basic_str_inplace<
@@ -542,7 +546,7 @@ class
    friend constexpr auto
    operator+(
       basic_str_inplace const& self, CharT const (&other_string)[other_length]
-   ) {
+   ) noexcept {
       [[assume(other_string[other_length.raw - 1u] == '\0')]];
       return self
              + basic_str_inplace<
@@ -555,7 +559,7 @@ class
    friend constexpr auto
    operator+(
       CharT const (&other_string)[other_length], basic_str_inplace const& self
-   ) {
+   ) noexcept {
       [[assume(other_string[other_length.raw - 1u] == '\0')]];
       return basic_str_inplace<
                 CharT, idx(other_length - 1u), concatenation_flags>{
@@ -590,7 +594,7 @@ class
 
  private:
    constexpr void
-   write_terminator() {
+   write_terminator() noexcept {
       if constexpr (flags.str.is_null_terminated) {
          m_data[size()] = CharT{'\0'};
       }
@@ -615,29 +619,29 @@ struct formatter<basic_str_inplace<CharT, inline_capacity, flags>, char>;
 
 // Deduce the length of string literals without a null-terminator.
 template <idx len>
-basic_str_inplace(char const (&str)[len])
+basic_str_inplace(char const (&str)[len]) noexcept
    -> basic_str_inplace<char, idx(len - 1u)>;
 
 template <idx len>
-basic_str_inplace(char8_t const (&str)[len])
+basic_str_inplace(char8_t const (&str)[len]) noexcept
    -> basic_str_inplace<char8_t, idx(len - 1u)>;
 
 template <idx len>
-basic_str_inplace(char16_t const (&str)[len])
+basic_str_inplace(char16_t const (&str)[len]) noexcept
    -> basic_str_inplace<char16_t, idx(len - 1u)>;
 
 template <idx len>
-basic_str_inplace(char32_t const (&str)[len])
+basic_str_inplace(char32_t const (&str)[len]) noexcept
    -> basic_str_inplace<char32_t, idx(len - 1u)>;
 
 template <idx len>
-basic_str_inplace(wchar_t const (&str)[len])
+basic_str_inplace(wchar_t const (&str)[len]) noexcept
    -> basic_str_inplace<wchar_t, idx(len - 1u)>;
 
 template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1u) <= padded_length)
 consteval auto
-make_str_inplace(char const (&string)[deduced_length])
+make_str_inplace(char const (&string)[deduced_length]) noexcept
    -> str_inplace<padded_length> {
    [[assume(string[deduced_length.raw - 1u] == '\0')]];
    str_inplace<padded_length> new_string;
@@ -648,7 +652,7 @@ make_str_inplace(char const (&string)[deduced_length])
 template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1u) <= padded_length)
 consteval auto
-make_wstr_inplace(wchar_t const (&string)[deduced_length])
+make_wstr_inplace(wchar_t const (&string)[deduced_length]) noexcept
    -> wstr_inplace<padded_length> {
    [[assume(string[deduced_length.raw - 1u] == L'\0')]];
    wstr_inplace<padded_length> new_string;
@@ -659,7 +663,7 @@ make_wstr_inplace(wchar_t const (&string)[deduced_length])
 template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1u) <= padded_length)
 consteval auto
-make_zstr_inplace(char const (&string)[deduced_length])
+make_zstr_inplace(char const (&string)[deduced_length]) noexcept
    -> zstr_inplace<padded_length> {
    [[assume(string[deduced_length.raw - 1u] == '\0')]];
    zstr_inplace<padded_length> new_string;
@@ -670,7 +674,7 @@ make_zstr_inplace(char const (&string)[deduced_length])
 template <idx padded_length, idx deduced_length>
    requires((deduced_length - 1u) <= padded_length)
 consteval auto
-make_wzstr_inplace(wchar_t const (&string)[deduced_length])
+make_wzstr_inplace(wchar_t const (&string)[deduced_length]) noexcept
    -> wzstr_inplace<padded_length> {
    [[assume(string[deduced_length.raw - 1u] == L'\0')]];
    wzstr_inplace<padded_length> new_string;
@@ -681,8 +685,9 @@ make_wzstr_inplace(wchar_t const (&string)[deduced_length])
 template <idx inline_capacity>
 [[nodiscard]]
 constexpr auto
-make_str_inplace_filled(idx count, char value)
-   -> maybe<str_inplace<inline_capacity>> {
+make_str_inplace_filled(idx count, char value) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<str_inplace<inline_capacity>> {
    str_inplace<inline_capacity> result;
    $prop(result.resize(count, value));
    return result;
@@ -691,8 +696,9 @@ make_str_inplace_filled(idx count, char value)
 template <idx inline_capacity>
 [[nodiscard]]
 constexpr auto
-make_zstr_inplace_filled(idx count, char value)
-   -> maybe<zstr_inplace<inline_capacity>> {
+make_zstr_inplace_filled(idx count, char value) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<zstr_inplace<inline_capacity>> {
    zstr_inplace<inline_capacity> result;
    $prop(result.resize(count, value));
    return result;
@@ -701,8 +707,9 @@ make_zstr_inplace_filled(idx count, char value)
 template <idx inline_capacity>
 [[nodiscard]]
 constexpr auto
-make_wstr_inplace_filled(idx count, wchar_t value)
-   -> maybe<wstr_inplace<inline_capacity>> {
+make_wstr_inplace_filled(idx count, wchar_t value) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<wstr_inplace<inline_capacity>> {
    wstr_inplace<inline_capacity> result;
    $prop(result.resize(count, value));
    return result;
@@ -711,8 +718,9 @@ make_wstr_inplace_filled(idx count, wchar_t value)
 template <idx inline_capacity>
 [[nodiscard]]
 constexpr auto
-make_wzstr_inplace_filled(idx count, wchar_t value)
-   -> maybe<wzstr_inplace<inline_capacity>> {
+make_wzstr_inplace_filled(idx count, wchar_t value) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<wzstr_inplace<inline_capacity>> {
    wzstr_inplace<inline_capacity> result;
    $prop(result.resize(count, value));
    return result;
@@ -721,7 +729,8 @@ make_wzstr_inplace_filled(idx count, wchar_t value)
 template <idx fixed_size>
 [[nodiscard]]
 constexpr auto
-make_str_inplace_fixed_filled(char value) -> str_inplace_fixed<fixed_size> {
+make_str_inplace_fixed_filled(char value) noexcept
+   -> str_inplace_fixed<fixed_size> {
    str_inplace_fixed<fixed_size> result;
    result.fill(value);
    return result;
@@ -730,7 +739,8 @@ make_str_inplace_fixed_filled(char value) -> str_inplace_fixed<fixed_size> {
 template <idx fixed_size>
 [[nodiscard]]
 constexpr auto
-make_zstr_inplace_fixed_filled(char value) -> zstr_inplace_fixed<fixed_size> {
+make_zstr_inplace_fixed_filled(char value) noexcept
+   -> zstr_inplace_fixed<fixed_size> {
    zstr_inplace_fixed<fixed_size> result;
    result.fill(value);
    return result;
@@ -739,7 +749,7 @@ make_zstr_inplace_fixed_filled(char value) -> zstr_inplace_fixed<fixed_size> {
 template <idx fixed_size>
 [[nodiscard]]
 constexpr auto
-make_wstr_inplace_fixed_filled(wchar_t value)
+make_wstr_inplace_fixed_filled(wchar_t value) noexcept
    -> wstr_inplace_fixed<fixed_size> {
    wstr_inplace_fixed<fixed_size> result;
    result.fill(value);
@@ -749,7 +759,7 @@ make_wstr_inplace_fixed_filled(wchar_t value)
 template <idx fixed_size>
 [[nodiscard]]
 constexpr auto
-make_wzstr_inplace_fixed_filled(wchar_t value)
+make_wzstr_inplace_fixed_filled(wchar_t value) noexcept
    -> wzstr_inplace_fixed<fixed_size> {
    wzstr_inplace_fixed<fixed_size> result;
    result.fill(value);
