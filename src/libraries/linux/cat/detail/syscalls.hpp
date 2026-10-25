@@ -1429,6 +1429,14 @@ struct signal_info {
    cat::int4 errno_code;
    cat::int4 code;
 
+   // `si_addr`. Only meaningful for `segmentation_violation`, `bus`,
+   // `illegal_instruction`, and `floating_point_error`.
+   [[nodiscard]]
+   auto
+   fault_address() const noexcept -> void* _Nullable {
+      return __builtin_bit_cast(void*, m_fields[0]);
+   }
+
  private:
    [[maybe_unused]]
    cat::int4 m_padding;

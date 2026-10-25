@@ -1,0 +1,403 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// In libCat's aim to produce highly fail-safe applications, typed and ergonomic
+// signal handling is highly encouraged.
+//
+// Our signal handling design is very directly inspired by P2069.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p2069r0.pdf
+//
+// `signal_guard()` invokes a callable and matches a set of signal flags (such
+// as `cat::signal_set::segment_fault`) to signals raised by that callable. If
+// such a signal is matched, it invokes a predicate callback to handle that, and
+// this handler callback may be expected to either fix or ignore the issue and
+// resume execution. Then, if that reports the signal was not addressed, a third
+// callback is invoked to gracefully abort.
+
+// TODO: Support structured expressions in addition to POSIX signals.
+
+#include <cat/bit>
+#include <cat/format>
+#include <cat/meta>
+#include <cat/new>
+#include <cat/runtime>
+#include <cat/string>
+#include <cat/utility>
+
+namespace cat {
+
+// The guardable signals. POSIX signals use their POSIX numbers.
+enum class [[clang::enum_extensibility(closed)]] signal_kind : uint1::raw_type {
+   none = 0,
+   interrupt = 2,                // `SIGINT`
+   illegal_instruction = 4,      // `SIGILL`
+   abort_process = 6,            // `SIGABRT`
+   undefined_memory_access = 7,  // `SIGBUS`
+   floating_point_error = 8,     // `SIGFPE`
+   segmentation_fault = 11,      // `SIGSEGV`
+   broken_pipe = 13,             // `SIGPIPE`
+   // C++ signals are raised by libCat rather than by the platform.
+   out_of_memory = 32,  // TODO: We don't use this yet.
+   termination = 33,    // `cat::terminate()` was called.
+};
+
+enum class [[clang::flag_enum]] signal_set : uint8::raw_type {
+   none = 0,
+   interrupt = 1ull << 2u,
+   illegal_instruction = 1ull << 4u,
+   abort_process = 1ull << 6u,
+   undefined_memory_access = 1ull << 7u,
+   floating_point_error = 1ull << 8u,
+   segmentation_fault = 1ull << 11u,
+   broken_pipe = 1ull << 13u,
+   out_of_memory = 1ull << 32u,
+   termination = 1ull << 33u,
+};
+
+// A user-defined value.
+union raised_signal_info_value {
+   int4 int_value;
+   void* _Nullable p_value;
+
+   constexpr raised_signal_info_value() : p_value(nullptr) {
+   }
+
+   // Accepts raw and libCat integers that convert to `int4`.
+   template <typename Integer>
+      requires(is_convertible<Integer, int4>)
+   constexpr raised_signal_info_value(Integer value) : int_value(value) {
+   }
+
+   constexpr raised_signal_info_value(void* _Nullable p_pointer)
+       : p_value(p_pointer) {
+   }
+};
+
+// A platform-independent subset of `siginfo_t`.
+struct raised_signal_info {
+   // Written on entry to the guarded section.
+   jmp_buffer buffer;
+   signal_kind signal;
+   // `si_errno` on POSIX, or an `NTSTATUS` on NT.
+   int4 error_code;
+   // The memory location which caused the fault, if any.
+   void* _Nullable p_address;
+   raised_signal_info_value value;
+   // `siginfo_t*` on POSIX, or `PEXCEPTION_RECORD` on NT.
+   void* _Nullable p_raw_info;
+   // `ucontext_t*` on POSIX, or `PCONTEXT` on NT. Null once the guarded
+   // section is abandoned, because the context no longer exists.
+   void* _Nullable p_raw_context;
+};
+
+// Thrown by the default recovery handler of `signal_guard()`.
+struct signal_raised {
+   signal_kind signal;
+
+   [[nodiscard]]
+   auto
+   what() const noexcept -> str_view;
+};
+
+// Installs the global handlers for the signals in `guarded`, where the
+// platform requires it. Each signal is reference counted, so instances may be
+// created and destroyed from any thread, in any order. Signals that no guard
+// or decider claims are passed to the handler that was installed before.
+//
+// This is not thread-safe with respect to other code that modifies global
+// signal handlers. Destroying the last instance for a signal terminates if
+// other code has replaced libCat's handler.
+class signal_guard_install {
+ public:
+   explicit signal_guard_install(signal_set guarded) noexcept(
+      !__has_feature(cxx_exceptions)
+   );
+   ~signal_guard_install() noexcept(!__has_feature(cxx_exceptions));
+
+   signal_guard_install(signal_guard_install const&) = delete;
+   signal_guard_install(signal_guard_install&& other) noexcept;
+   auto
+   operator=(signal_guard_install const&) -> signal_guard_install& = delete;
+   auto
+   operator=(signal_guard_install&& other) noexcept -> signal_guard_install&;
+
+ private:
+   signal_set m_guarded;
+};
+
+namespace detail {
+// Deciders run in signal context, where an exception cannot propagate, so
+// one escaping a decider terminates.
+using signal_decider_function = bool (*_Nonnull)(
+   void* _Nonnull p_decider, raised_signal_info* _Nonnull p_info
+) noexcept;
+
+// Deciders run inside a signal handler, which an exception cannot unwind out
+// of, so a throwing decider terminates.
+template <typename Decider>
+auto
+call_signal_decider(
+   void* _Nonnull p_decider, raised_signal_info* _Nonnull p_info
+) noexcept -> bool {
+   return (*static_cast<Decider*>(p_decider))(p_info);
+}
+
+// An entry in the thread-local stack of guards. It is pushed after its
+// `jmp_buffer` is written, and popped when it is destroyed or abandoned.
+struct signal_guard_frame {
+   raised_signal_info info;
+   signal_set guarded;
+   signal_decider_function p_decide;
+   void* _Nonnull p_decider;
+   signal_guard_frame* _Nullable p_previous;
+
+   void
+   push() noexcept;
+
+   ~signal_guard_frame();
+};
+
+// An entry in the global list of continuation deciders.
+struct signal_global_decider_node {
+   signal_set guarded;
+   signal_decider_function p_decide;
+   void* _Nonnull p_decider;
+   raised_signal_info_value value;
+   signal_global_decider_node* _Nullable p_next;
+};
+
+void
+add_signal_global_decider(
+   signal_global_decider_node& node, bool call_first
+) noexcept;
+
+void
+remove_signal_global_decider(signal_global_decider_node& node) noexcept;
+
+void
+replace_signal_global_decider(
+   signal_global_decider_node& old_node, signal_global_decider_node& new_node
+) noexcept;
+}  // namespace detail
+
+// A global continuation decider. It is called for a signal in `guarded` only
+// after every thread-local guard declines it. It returns `true` to resume
+// execution, or `false` to pass the signal to the next decider. It runs in
+// signal context, so it may only call async-signal-safe functions.
+//
+// Registering is thread-safe with respect to other registrations, but not
+// reentrant. Do not create or destroy deciders from within a decider.
+template <typename Decider>
+class signal_guard_global_decider {
+ public:
+   template <typename Callback>
+      requires(is_constructible<Decider, Callback>
+               && is_invocable<Decider&, raised_signal_info*>)
+   signal_guard_global_decider(
+      signal_set guarded, Callback&& callback, bool call_first,
+      raised_signal_info_value value = {}
+   ) noexcept(is_nothrow_constructible<Decider, Callback>)
+       : m_install(guarded),
+         m_decider($fwd(callback)),
+         m_node{
+            .guarded = guarded,
+            .p_decide = detail::call_signal_decider<Decider>,
+            .p_decider = __builtin_addressof(m_decider),
+            .value = value,
+            .p_next = nullptr,
+         } {
+      detail::add_signal_global_decider(m_node, call_first);
+   }
+
+   ~signal_guard_global_decider() {
+      if (m_node.guarded != signal_set::none) {
+         detail::remove_signal_global_decider(m_node);
+      }
+   }
+
+   signal_guard_global_decider(signal_guard_global_decider const&) = delete;
+
+   signal_guard_global_decider(
+      signal_guard_global_decider&& other
+   ) noexcept(is_nothrow_constructible<Decider, Decider>)
+       : m_install(move(other.m_install)),
+         m_decider(move(other.m_decider)),
+         m_node(other.m_node) {
+      m_node.p_decider = __builtin_addressof(m_decider);
+      if (m_node.guarded != signal_set::none) {
+         detail::replace_signal_global_decider(other.m_node, m_node);
+         other.m_node.guarded = signal_set::none;
+      }
+   }
+
+   auto
+   operator=(signal_guard_global_decider const&)
+      -> signal_guard_global_decider& = delete;
+
+   // `Decider` is commonly a lambda, which cannot be assigned, so this
+   // unregisters `*this` and move-constructs it from `other` instead.
+   auto
+   operator=(signal_guard_global_decider&& other) noexcept(
+      is_nothrow_constructible<Decider, Decider>
+   ) -> signal_guard_global_decider& {
+      if (this != __builtin_addressof(other)) {
+         this->~signal_guard_global_decider();
+         new (this) signal_guard_global_decider(move(other));
+      }
+      return *this;
+   }
+
+ private:
+   signal_guard_install m_install;
+   Decider m_decider;
+   detail::signal_global_decider_node m_node;
+};
+
+template <typename Callback>
+signal_guard_global_decider(signal_set, Callback&&, bool)
+   -> signal_guard_global_decider<__typeof_unqual(Callback)>;
+
+template <typename Callback>
+signal_guard_global_decider(
+   signal_set, Callback&&, bool, raised_signal_info_value
+) -> signal_guard_global_decider<__typeof_unqual(Callback)>;
+
+// Call the currently installed handler for `signal`, or raise an NT
+// structured exception. Returns `false` if no handler was called, because the
+// handler is `SIG_IGN` or, for a C++ signal, because nothing claimed it. A
+// defaulted handler is invoked by unblocking `signal` and sending it to the
+// calling thread.
+auto
+thread_raise_signal(
+   signal_kind signal, void* _Nullable p_raw_info = nullptr,
+   void* _Nullable p_raw_context = nullptr
+) noexcept(!__has_feature(cxx_exceptions)) -> bool;
+
+namespace detail {
+// `signal_guard()` is `noexcept` when calling `callback` and `handler`, and
+// converting the result of `handler`, are. Abandoning `callback` is not an
+// exception.
+template <typename Callback, typename Handler, typename... Args>
+inline constexpr bool is_nothrow_signal_guard =
+   is_nothrow_invocable<Callback, Args...>
+   && is_nothrow_invocable<Handler, raised_signal_info const*>
+   && (is_void<typeof(declval<Callback>()(declval<Args>()...))> || is_nothrow_constructible<typeof(declval<Callback>()(declval<Args>()...)), typeof(declval<Handler>()(declval<raised_signal_info const*>()))>);
+}  // namespace detail
+
+// Call `callback(arguments...)` with the signals in `guarded` guarded on the
+// calling thread only, and return its result.
+//
+// If one of those signals is raised meanwhile, `decider` is called with it in
+// signal context, so it may only call async-signal-safe functions. If it
+// fixes the cause, it returns `true` to resume execution. Otherwise it
+// returns `false`, and `callback` is abandoned immediately without unwinding
+// its stack. The thread returns to its state just before `callback` was
+// called, and the result of calling `handler` with the signal is returned.
+// This guard is removed by then, but an enclosing guard may be active.
+//
+// Any state `callback` was in the middle of changing is lost. Objects of
+// automatic storage duration that are not `volatile` have unspecified values.
+// `callback` should avoid side effects that `handler` cannot repair.
+//
+// If no `signal_guard_install` exists yet for `guarded`, one is temporarily
+// created, which is slow. Prefer creating one during static initialization.
+template <
+   typename Callback, typename Handler, typename Decider, typename... Args>
+   requires(
+      is_invocable<Callback, Args...>
+      && is_invocable<Handler, raised_signal_info const*>
+      && is_invocable<Decider, raised_signal_info*>
+      && (is_void<typeof(declval<Callback>()(declval<Args>()...))> || is_constructible<typeof(declval<Callback>()(declval<Args>()...)), typeof(declval<Handler>()(declval<raised_signal_info const*>()))>)
+   )
+auto
+signal_guard(
+   signal_set guarded, Callback&& callback, Handler&& handler,
+   Decider&& decider, Args&&... arguments
+) noexcept(detail::is_nothrow_signal_guard<Callback, Handler, Args...>)
+   -> typeof(callback($fwd(arguments)...)) {
+   signal_guard_install const install(guarded);
+   detail::signal_guard_frame frame{
+      .info = {},
+      .guarded = guarded,
+      .p_decide = detail::call_signal_decider<__typeof_unqual(decider)>,
+      .p_decider = __builtin_addressof(decider),
+      .p_previous = nullptr,
+   };
+   if (setjmp(frame.info.buffer) == 0) {
+      frame.push();
+      return $fwd(callback)($fwd(arguments)...);
+   }
+   return $fwd(handler)(&frame.info);
+}
+
+// Defaults `decider` to abandoning `callback` and calling `handler`.
+template <typename Callback, typename Handler>
+   requires(
+      is_invocable<Callback> && is_invocable<Handler, raised_signal_info const*>
+   )
+auto
+signal_guard(
+   signal_set guarded, Callback&& callback, Handler&& handler
+) noexcept(detail::is_nothrow_signal_guard<Callback, Handler>)
+   -> typeof(callback()) {
+   return signal_guard(
+      guarded, $fwd(callback), $fwd(handler),
+      [](raised_signal_info*) noexcept -> bool {
+         return false;
+      }
+   );
+}
+
+// Defaults `handler` to throwing `signal_raised`.
+template <typename Callback, typename... Args>
+   requires(is_invocable<Callback, Args...>)
+auto
+signal_guard(signal_set guarded, Callback&& callback, Args&&... arguments)
+   -> typeof(callback($fwd(arguments)...)) {
+   using result_type = typeof(callback($fwd(arguments)...));
+   return signal_guard(
+      guarded, $fwd(callback),
+      [](raised_signal_info const* p_info) -> result_type {
+#if __has_feature(cxx_exceptions)
+         throw signal_raised{p_info->signal};
+#else
+         static_cast<void>(p_info);
+         terminate();
+#endif
+      },
+      [](raised_signal_info*) noexcept -> bool {
+         return false;
+      },
+      $fwd(arguments)...
+   );
+}
+
+// Formats as `what()`, like `std::formatter<std::exception>`.
+template <typename CharT>
+   requires(is_same<CharT, char>)
+struct formatter<signal_raised, CharT> : formatter<str_view, CharT> {
+   auto
+   format(signal_raised const& value, format_context& context) const
+      -> scaredy_format<void> {
+      return formatter<str_view, CharT>::format(value.what(), context);
+   }
+};
+
+// Formats as the signal's name, rather than its number.
+template <typename CharT>
+   requires(is_same<CharT, char>)
+struct formatter<signal_kind, CharT> : formatter<str_view, CharT> {
+   auto
+   format(signal_kind value, format_context& context) const
+      -> scaredy_format<void> {
+      return formatter<str_view, CharT>::format(
+         signal_raised{value}.what(), context
+      );
+   }
+};
+
+}  // namespace cat
+
+template <>
+struct cat::enum_flag_trait<cat::signal_set> : cat::true_trait {};

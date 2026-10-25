@@ -10,7 +10,7 @@ set(CAT_INCLUDE_SUBDIRS
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
   tuple vec map ring enum iterable dyn random timer chrono mutex quantity
-  stacktrace demangle exceptions)
+  stacktrace demangle exceptions signal_guard)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -59,6 +59,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/exceptions/implementations/cxa_exception.cpp
   ${CATLIB}/exceptions/implementations/personality.cpp
   ${CATLIB}/exceptions/implementations/typeinfo.cpp
+  ${CATLIB}/signal_guard/implementations/signal_guard.cpp
   ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/math/implementations/acos.cpp
   ${CATLIB}/math/implementations/asin.cpp
@@ -608,6 +609,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/exceptions/cat/detail/eh_frame_hdr.hpp
   ${CATLIB}/exceptions/cat/detail/register_context.hpp
   ${CATLIB}/exceptions/cat/detail/unwind.hpp
+  ${CATLIB}/signal_guard/cat/signal_guard
   ${CATLIB}/mutex/cat/mutex
   ${CATLIB}/mutex/cat/mutex_native
   ${CATLIB}/mutex/cat/mutex_spin
