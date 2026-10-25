@@ -1807,6 +1807,24 @@ basic_allocator_musl<is_shared>::aligned_allocate_zeroed_feedback(
 }
 
 template <bool is_shared>
+auto
+basic_allocator_musl<is_shared>::recorded_allocation_bytes(
+   void const* p_storage
+) -> idx {
+   context* const p_context = m_p_context.acquire();
+   verify(p_context != nullptr);
+   auto* const p_allocation =
+      const_cast<byte*>(bit_cast<byte const*>(p_storage));
+   auto* const p_metadata = p_context->get_meta(p_allocation);
+   uint4 const index = detail::slot_index(p_allocation);
+   return idx(
+      detail::nominal_size(
+         p_allocation, detail::slot_bounds(p_metadata, index).second()
+      )
+   );
+}
+
+template <bool is_shared>
 void
 basic_allocator_musl<is_shared>::deallocate(
    void const* p_storage, idx allocation_bytes

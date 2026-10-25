@@ -106,13 +106,22 @@ class basic_allocator_musl
    void
    deallocate(void const* _Nonnull p_storage, idx allocation_bytes);
 
+   auto
+   recorded_allocation_bytes(void const* _Nonnull p_storage) -> idx;
+
    [[clang::ownership_takes(libcat, 3)]]
    friend void
    deallocate_release_customization(
       [[maybe_unused]] detail::allocator_release_tag release_tag,
       self_type& allocator, void const* _Nonnull p_storage, idx allocation_bytes
    ) {
-      allocator.deallocate(p_storage, allocation_bytes);
+      if constexpr (is_shared) {
+         allocator.deallocate(
+            p_storage, allocator.recorded_allocation_bytes(p_storage)
+         );
+      } else {
+         allocator.deallocate(p_storage, allocation_bytes);
+      }
    }
 
    auto

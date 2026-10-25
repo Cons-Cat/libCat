@@ -2841,7 +2841,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    realloc_multi_uninit(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return realloc_multi_uninit_to(*this, p_handle, old_count, new_count);
+      return realloc_multi_uninit_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Resize an array with an uninitialized expanded range.

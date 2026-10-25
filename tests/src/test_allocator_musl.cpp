@@ -1026,15 +1026,15 @@ $test(allocator_musl_shared_forwarded_contention) {
       if (index % 2u == 0u) {
          threads[index]
             .spawn(
-               g_tests_alloc, worker_stack_size,
-               shared_dyn_contention_worker, &dyn, index + 0u
+               g_tests_alloc, worker_stack_size, shared_dyn_contention_worker,
+               &dyn, index + 0u
             )
             .verify();
       } else {
          threads[index]
             .spawn(
-               g_tests_alloc, worker_stack_size,
-               shared_ref_contention_worker, &ref, index + 0u
+               g_tests_alloc, worker_stack_size, shared_ref_contention_worker,
+               &ref, index + 0u
             )
             .verify();
       }
