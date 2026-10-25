@@ -1,27 +1,26 @@
 /* libCat linker script for x86-64 ELF.
 
-   Pass `-Wl,-T,path/to/libcat.ld`. This script replaces lld's
-   built-in default linker script entirely. Every output section
-   libCat ever produces is described here.
+   CMake consumes this as `-Wl,-T,path/to/libcat.ld`. This script replaces lld's
+   built-in default linker script. Every output section libCat produces
+   is in this file.
 
-   Layout matches lld's x86-64 SysV order across all configurations:
+   The script supports the following configurations:
 
-     1. Static, non-PIE Release (`-static -Wl,--no-pie -Wl,-N`).
-        With `-Wl,-N` lld merges every section into a single R+W+X
-        LOAD. `_start.cpp` initialises `%fs` itself (gated on
-        `CAT_STATIC_LINKED`).
+     Static, non-PIE Release (`-static -Wl,--no-pie -Wl,-N`):
+        With `-Wl,-N`, lld merges every section into a single R+W+X
+        LOAD.
 
-     2. Dynamic, no sanitizers, no shared libs (Debug nosan).
+     Dynamic, no sanitizers, no shared libs (Debug nosan):
         `ld.so` still runs because the kernel honours PT_INTERP, and
         `ld.so` initialises TLS for us.
 
-     3. Dynamic + ASan (Debug + sanitizers). Adds `DT_NEEDED
-        libclang_rt.asan-x86_64.so`, `asan_globals`, and a populated
+      Dynamic + ASan (Debug + sanitizers):
+        Adds `DT_NEEDED libclang_rt.asan-x86_64.so`, `asan_globals`, and a populated
         `.preinit_array` for ASan's startup callbacks.
 
-     4. Dynamic + `libcat.so` (`CAT_USE_SHARED=ON`). Adds
-        `DT_NEEDED libcat.so`. The `.so` itself is also produced via
-        this script.
+      Dynamic + `libcat.so` (`CAT_USE_SHARED=ON`):
+        Adds `DT_NEEDED libcat.so`. The `.so` itself is also produced by
+        this script in that case.
 
    References:
      MaskRay on section/segment layout:
@@ -30,64 +29,46 @@
        https://blog.thea.codes/the-most-thoroughly-commented-linker-script/
 */
 
-/* Entry point. `cat::detail::_start` is `extern "C"` so its symbol
-   name is the unmangled `_start`. The kernel jumps here directly in
-   static builds. `ld.so` jumps here after relocation in dynamic ones.
-   `libcat.so` reuses this script with `-Wl,--no-entry` because it has
-   no `_start`. */
+/* Entry point function. */
 ENTRY(_start)
-
-/* PHDRS are omitted. lld synthesises them from the section flag bands below,
-   which keeps `-Wl,-N` (omagic) effective: it merges adjacent compatible
-   LOADs into a single R+W+X segment for the size-optimised Release configuration. */
 
 SECTIONS {
    /* Image base. `SEGMENT_START("text-segment", 0x200000)` matches
-      the classical x86-64 SysV ABI choice (2 MiB) for static non-PIE.
-      Dynamic builds treat it as a soft preference (the runtime
-      relocates anyway). `+ SIZEOF_HEADERS` bumps the cursor past the
-      ELF header + program-header table that lld writes at the start
-      of the file: without it, the first content section would land
-      at vaddr 0x200000 while still living at file offset
-      `sizeof(elf_header) + N*sizeof(elf_program_header)`, and the kernel
-      would reject the LOAD because `vaddr - file_offset` must be a
-      multiple of the page size. */
+      the classical x86-64 SysV ABI choice (2 MiB) for static non-PIE. */
    . = SEGMENT_START("text-segment", 0x200000) + SIZEOF_HEADERS;
 
-   /* Read-only band ====================================================
-      Headers, dynamic-link metadata, and constant data. In static
-      builds the dynamic-link sections are empty and disappear. */
+   /* Headers, dynamic-link metadata, and constant data. In static
+      builds these sections are empty and disappear. */
 
    .interp           : { *(.interp) }
    .note.gnu.build-id : { *(.note.gnu.build-id) }
    .gnu.hash         : { *(.gnu.hash) }
    .dynsym           : { *(.dynsym) }
    .dynstr           : { *(.dynstr) }
-   .gnu.version      : { *(.gnu.version) }
-   .gnu.version_r    : { *(.gnu.version_r) }
    .rela.dyn         : { *(.rela.* .rela_iplt_*) }
    .rela.plt         : { *(.rela.plt) }
 
    .rodata           : { *(.rodata .rodata.* .rodata.cst*) }
 
-   /* Compiler-rt's ASan runtime ships its own `.eh_frame[_hdr]`. libCat
-      itself doesn't (we build with `-fno-asynchronous-unwind-tables`),
-      so these are empty in static Release. */
+   /* Clang emits `.eh_frame` and `.gcc_except_table` for exception
+      builds. lld fills `.eh_frame_hdr` when `--eh-frame-hdr` is on
+      the link line. libCat's unwinder finds FDEs and the LSDA through
+      the `__cat_eh_*` symbols below. `KEEP` retains CIE, FDE, and
+      LSDA under `--gc-sections`. These sections stay allocated so
+      lookup still works after strip. */
    .eh_frame_hdr     : { *(.eh_frame_hdr) }
    .eh_frame         : { KEEP(*(.eh_frame .eh_frame.*)) }
+   .gcc_except_table : { KEEP(*(.gcc_except_table .gcc_except_table.*)) }
 
-   /* Read-execute band =================================================
-      Page-aligned away from the read-only band so `ld.so`'s later
+   /* Page-aligned away from the read-only band so `ld.so`'s later
       `mprotect` of `PT_GNU_RELRO` can't reach back into a shared
-      page and flip text bytes read-only. `MAXPAGESIZE` resolves to
-      4 KiB on x86-64. */
+      page and flip text bytes read-only. */
    . = ALIGN(CONSTANT(MAXPAGESIZE));
 
    .text             : { *(.text .text.*) }
    .plt              : { *(.plt) }
 
-   /* Read-write band ===================================================
-      Close to lld's x86-64 default, with two deliberate deviations
+   /* Close to lld's x86-64 default, with two deliberate deviations
       forced by `-T` semantics:
 
         1. The TLS template lives below the RELRO band rather than
@@ -156,10 +137,9 @@ SECTIONS {
    .data             : { *(.data .data.*) }
    .bss (NOLOAD)     : { *(.bss .bss.*) *(COMMON) }
 
-   /* Discarded sections ================================================ */
    /DISCARD/         : {
-      /* libCat is `-z noexecstack`. Drop the marker so a stray .o
-         that defines it can't flip the segment to executable. */
+      /* libCat uses `-z noexecstack`. Drop the marker so a stray `.o` can't
+      accidentally flag this as executable. */
       *(.note.GNU-stack)
       /* Stale LTO blobs from partial links. */
       *(.gnu.lto_*)
@@ -167,8 +147,7 @@ SECTIONS {
       *(__gnu_lto_*)
    }
 
-   /* Non-loaded auxiliary band =========================================
-      DWARF v5 plus tool metadata. Not part of any LOAD. Their
+   /* DWARF v5 plus tool metadata. Not part of any LOAD. Their
       addresses are 0 in the section header table. lld appends
       `.symtab`, `.shstrtab`, and `.strtab` automatically. We don't
       need to list them. */
@@ -206,3 +185,18 @@ __cat_tls_memory_size  =
   - ADDR(.tdata);
 __cat_tls_alignment    = MAX(MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)), 32);
 __cat_tls_initial_image = ADDR(.tdata);
+
+/* lld's x86-64 `.eh_frame_hdr` is a 12-byte header followed by sorted (initial-location, FDE)
+   pairs of data-relative signed 32-bit offsets. We provide the index, so the runtime need not
+   parse that header, unlike other compiler-rt. This forces a fixed ABI but makes libCat leaner. */
+ASSERT(SIZEOF(.eh_frame_hdr) == 0 ||
+       (SIZEOF(.eh_frame_hdr) >= 12 && (SIZEOF(.eh_frame_hdr) - 12) % 8 == 0),
+       "Unexpected x86-64 unwind index layout");
+HIDDEN(__cat_eh_frame_hdr_start = ADDR(.eh_frame_hdr));
+HIDDEN(__cat_eh_frame_table_start = ADDR(.eh_frame_hdr) + 12);
+HIDDEN(__cat_eh_frame_table_count = SIZEOF(.eh_frame_hdr) >= 12
+       ? (SIZEOF(.eh_frame_hdr) - 12) / 8 : 0);
+HIDDEN(__cat_eh_frame_start = ADDR(.eh_frame));
+HIDDEN(__cat_eh_frame_end = ADDR(.eh_frame) + SIZEOF(.eh_frame));
+HIDDEN(__cat_eh_except_table_start = ADDR(.gcc_except_table));
+HIDDEN(__cat_eh_except_table_end = ADDR(.gcc_except_table) + SIZEOF(.gcc_except_table));

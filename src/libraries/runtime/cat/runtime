@@ -19,6 +19,10 @@ _start();  // NOLINT
 void
 exit(iword exit_code = 0);
 
+[[noreturn]]
+void
+terminate();
+
 // This must be inlined to sample the stack pointer on the stack frame it is
 // called from.
 [[gnu::always_inline, gnu::returns_nonnull]]

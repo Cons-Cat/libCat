@@ -4,7 +4,7 @@
 #+STARTUP: fold
 
 libCat is a non-POSIX compliant C++26 runtime.
-It has no pthreads nor global =malloc()=, and currently does not support exceptions.
+It has no pthreads nor global =malloc()=, and exceptions are fundamentally optional.
 It has type-safe arithmetic, SIMD, fast syscalls, CRTP interfaces,
 
 * Building
@@ -398,14 +398,14 @@ For an example configuration:
 #+BEGIN_SRC sh
   just status release
   # ASan: OFF, UBSan: OFF (cached)
-  # sccache: ON (/home/lgooch/.local/share/mise/installs/sccache/0.17.0/sccache-v0.17.0-x86_64-unknown-linux-musl/sccache)
+  # sccache: ON (/home/conscat/.local/share/mise/installs/sccache/0.17.0/sccache-v0.17.0-x86_64-unknown-linux-musl/sccache)
   # CMAKE_CXX_COMPILER: ./.cache/cat-llvm/bin/clang++
   # Clang nightly: July 7, 2026 at 11:16:25
   # CMAKE_LINKER_TYPE: LLD
   # ISA: default (x86_64-pc-linux-gnu)
   # Language: gnu++26 nostdlib nostdlib++
   # #define: CMAKE_INTDIR="Release" NDEBUG
-  # Exceptions: no-exceptions no-unwind-tables no-asynchronous-unwind-tables
+  # Exceptions: exceptions asynchronous-unwind-tables
   # RTTI: no-rtti
   # Warnings: all extra invalid-pch
   # Disabled warnings: unused-function unknown-pragmas missing-braces unqualified-std-cast-call main redundant-consteval-if gnu
@@ -422,8 +422,8 @@ For an example configuration:
     
   just status debug -v
   # ASan: OFF, UBSan: OFF (cached)
-  # sccache: ON (/home/lgooch/.local/share/mise/installs/sccache/0.17.0/sccache-v0.17.0-x86_64-unknown-linux-musl/sccache)
-  # CMAKE_CXX_COMPILER: /home/lgooch/libCat/.cache/cat-llvm/bin/clang++
+  # sccache: ON (/home/conscat/.local/share/mise/installs/sccache/0.17.0/sccache-v0.17.0-x86_64-unknown-linux-musl/sccache)
+  # CMAKE_CXX_COMPILER: /home/conscat/libCat/.cache/cat-llvm/bin/clang++
   # CMAKE_LINKER_TYPE: LLD
   # ISA: default (x86_64-pc-linux-gnu)
   # Language:
@@ -434,9 +434,8 @@ For an example configuration:
   # #define:
   #   -DCMAKE_INTDIR="Debug"
   # Exceptions:
-  #   -fno-exceptions: Disable support for exception handling
-  #   -fno-unwind-tables: n/a
-  #   -fno-asynchronous-unwind-tables: n/a
+  #   -fexceptions: Enable support for exception handling
+  #   -fasynchronous-unwind-tables: Generate unwind tables at every instruction
   # RTTI:
   #   -fno-rtti: Disable generation of rtti information
   # Warnings:

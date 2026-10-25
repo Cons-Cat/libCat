@@ -10,7 +10,7 @@ set(CAT_INCLUDE_SUBDIRS
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
   tuple vec map ring enum iterable dyn random timer chrono mutex quantity
-  stacktrace demangle)
+  stacktrace demangle exceptions)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -51,6 +51,14 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/__clzti2.cpp
   ${CATLIB}/runtime/implementations/__floattisf.cpp
   ${CATLIB}/runtime/implementations/__eqtf2.cpp
+  ${CATLIB}/exceptions/implementations/cfi_interpreter.cpp
+  ${CATLIB}/exceptions/implementations/eh_frame_hdr.cpp
+  ${CATLIB}/exceptions/implementations/fde_parser.cpp
+  ${CATLIB}/exceptions/implementations/register_context.cpp
+  ${CATLIB}/exceptions/implementations/unwind.cpp
+  ${CATLIB}/exceptions/implementations/cxa_exception.cpp
+  ${CATLIB}/exceptions/implementations/personality.cpp
+  ${CATLIB}/exceptions/implementations/typeinfo.cpp
   ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/math/implementations/acos.cpp
   ${CATLIB}/math/implementations/asin.cpp
@@ -416,6 +424,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/iterable/implementations/drop_last_while.tpp
   ${CATLIB}/iterable/implementations/drop_while.tpp
   ${CATLIB}/iterable/implementations/filter.tpp
+  ${CATLIB}/iterable/implementations/find.tpp
    ${CATLIB}/iterable/implementations/fill.tpp
    ${CATLIB}/iterable/implementations/fold.tpp
   ${CATLIB}/iterable/implementations/for_each.tpp
@@ -532,6 +541,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/random/cat/detail/random_seed.hpp
   ${CATLIB}/random/cat/detail/sampling_distribution_helpers.hpp
   ${CATLIB}/random/cat/detail/shuffle_order_engine.hpp
+  ${CATLIB}/random/cat/detail/splitmix.hpp
   ${CATLIB}/random/cat/detail/student_t_distribution.hpp
   ${CATLIB}/random/cat/detail/uniform_float_distribution.hpp
   ${CATLIB}/random/cat/detail/uniform_int_distribution.hpp
@@ -590,9 +600,14 @@ set(CAT_HEADER_FILES
   ${CATLIB}/string/cat/detail/str_span.hpp
   ${CATLIB}/string/cat/detail/str_vec.hpp
   ${CATLIB}/string/cat/detail/raii_str_vec.hpp
-  ${CATLIB}/elf/cat/elf
   ${CATLIB}/stacktrace/cat/stacktrace
   ${CATLIB}/demangle/cat/demangle
+  ${CATLIB}/exceptions/cat/exceptions
+  ${CATLIB}/exceptions/cat/detail/cxa_abi.hpp
+  ${CATLIB}/exceptions/cat/detail/dwarf_cfi.hpp
+  ${CATLIB}/exceptions/cat/detail/eh_frame_hdr.hpp
+  ${CATLIB}/exceptions/cat/detail/register_context.hpp
+  ${CATLIB}/exceptions/cat/detail/unwind.hpp
   ${CATLIB}/mutex/cat/mutex
   ${CATLIB}/mutex/cat/mutex_native
   ${CATLIB}/mutex/cat/mutex_spin
@@ -600,6 +615,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/mutex/cat/detail/word_lock.hpp
   ${CATLIB}/thread/cat/thread
   ${CATLIB}/thread/cat/raii_thread
+  ${CATLIB}/thread/cat/detail/machine_pause.hpp
   ${CATLIB}/timer/cat/timer
   ${CATLIB}/chrono/cat/chrono
   ${CATLIB}/tui/cat/tui
@@ -646,3 +662,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/enum/cat/enum
   PARENT_SCOPE
 )
+
+# LTO must not infer nounwind for ABI entry points that transfer to catch pads.
+set_source_files_properties(
+  ${CATLIB}/exceptions/implementations/cxa_exception.cpp
+  TARGET_DIRECTORY cat-impl
+  PROPERTIES COMPILE_OPTIONS "-fno-lto")

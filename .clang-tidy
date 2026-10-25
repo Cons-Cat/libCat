@@ -32,6 +32,7 @@ Checks: "bugprone-*,
          -misc-use-internal-linkage,
          -misc-header-include-cycle,
          -misc-include-cleaner,
+         -bugprone-std-exception-baseclass, # We have our own exception types.
          "
 
 WarningsAsErrors: ''

@@ -31,19 +31,19 @@ auto
 operator new[](unsigned long, std::align_val_t align) -> void* _Nonnull;
 
 void
-operator delete(void* _Nullable);
+operator delete(void* _Nullable) noexcept;
 
 void
-operator delete(void* _Nullable, unsigned long);
+operator delete(void* _Nullable, unsigned long) noexcept;
 
 void
-operator delete[](void* _Nullable);
+operator delete[](void* _Nullable) noexcept;
 
 void
-operator delete[](void* _Nullable, unsigned long);
+operator delete[](void* _Nullable, unsigned long) noexcept;
 
 void
-operator delete[](void* _Nullable, unsigned long, std::align_val_t);
+operator delete[](void* _Nullable, unsigned long, std::align_val_t) noexcept;
 
 namespace std {
 

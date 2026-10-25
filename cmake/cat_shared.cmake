@@ -16,7 +16,7 @@
 # Reuses `cat-impl`'s sources and essential flags verbatim, plus four
 # specialisations:
 #   * `-fPIC` everywhere -- mandatory for a shared object.
-#   * `-fno-lto`, because LLD would otherwise internalise libCat's
+#   * `-fno-lto`, because lld would otherwise internalise libCat's
 #     entire public API (no static consumer is visible at link time).
 #   * compiler-rt's PIC builtins archive, for `__cpu_model` referenced
 #     by `__builtin_cpu_supports` in the SIMD shims. Under `-nostdlib`
@@ -85,7 +85,7 @@ target_compile_options(cat-impl-shared
     $<TARGET_PROPERTY:cat,INTERFACE_COMPILE_OPTIONS>
   PRIVATE
     ${CAT_CXX_FLAGS_INTERNAL}
-    # Override `-flto=auto` from `CAT_CXX_FLAGS_INTERNAL` so LLD does not
+    # Override `-flto=auto` from `CAT_CXX_FLAGS_INTERNAL` so lld does not
     # internalise the public API at link time.
     -fno-lto
     # Release-without-sanitizers adds `-fvisibility=hidden`

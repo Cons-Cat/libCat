@@ -116,6 +116,11 @@ endif()
 # Bitcode-aware AR/RANLIB so `libcat.a` stays loadable by LTO and `clang-repl`.
 include(${CMAKE_SOURCE_DIR}/cmake/llvm_archivers.cmake)
 
+option(CAT_NO_EXCEPTIONS "Disable C++ exceptions and unwind tables." OFF)
+if(NOT CAT_NO_EXCEPTIONS AND CAT_THREAD_LOCAL_SIZE STREQUAL "0")
+  message(FATAL_ERROR "C++ exceptions require thread_local storage.")
+endif()
+
 option(CAT_NO_VDSO "Disable Linux vDSO runtime hooks." OFF)
 option(CAT_NO_STACKTRACE
   "Omit frame pointers. Disables reliable `%rbp` stack traces." OFF)
@@ -129,10 +134,11 @@ list(
   # Disable linking libC symbols.
   -nostdlib
   -nostdlib++
-  # These features are pessimizations to libCat:
-  # TODO: Exceptions and rtti should have optional support once it's possible to
-  # implement them.
-  -fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables
+  # Exception support is on by default; RTTI language features stay disabled.
+  -fno-rtti
+  $<IF:$<BOOL:${CAT_NO_EXCEPTIONS}>,-fno-exceptions,-fexceptions>
+  $<IF:$<BOOL:${CAT_NO_EXCEPTIONS}>,-fno-asynchronous-unwind-tables,-fasynchronous-unwind-tables>
+  $<$<BOOL:${CAT_NO_EXCEPTIONS}>:-fno-unwind-tables>
 
   # Ordinary `char` / `str_*` literals are UTF-8. That's an important property for
   # libCat. This is Clang's default on all platforms, but it's an explicit precondition.
@@ -244,13 +250,14 @@ list(
   APPEND CAT_LINK_OPTIONS_COMMON
   # This is required to prevent duplicate symbols.
   -nostdlib
+  $<$<NOT:$<BOOL:${CAT_NO_EXCEPTIONS}>>:-Wl,--eh-frame-hdr>
 )
 
 list(
   APPEND CAT_LINK_OPTIONS_RELEASE
   # Remove unused symbols.
   -Wl,-z,noseparate-code,--gc-sections
-  # Bump LTO codegen optimization above LLD's default of `-O2`.
+  # Bump LTO codegen optimization above lld's default of `-O2`.
   -Wl,--lto-O3
   # Eager binding pairs with `--gc-sections` to fold lazy PLT stubs.
   -Wl,-z,now
@@ -413,6 +420,11 @@ option(CAT_USE_SHARED
 Make `cat` link libcat.so instead of libcat.a (implies CAT_BUILD_SHARED).
 This primarily exists for testing compatibility with `clang-repl` in CI.
 ]=] OFF)
+if (CAT_USE_SHARED AND NOT CAT_NO_EXCEPTIONS)
+  message(FATAL_ERROR
+    "Exception unwinding currently supports a single linked image. "
+    "CAT_USE_SHARED requires CAT_NO_EXCEPTIONS=ON.")
+endif()
 if (CAT_USE_SHARED AND NOT CAT_BUILD_SHARED)
   set(CAT_BUILD_SHARED ON CACHE BOOL
     "Build libcat.so (cat-impl-shared) and the clang-repl-libcat wrapper." FORCE)

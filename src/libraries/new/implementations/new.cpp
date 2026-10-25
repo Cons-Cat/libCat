@@ -34,23 +34,24 @@ operator new[](unsigned long /*unused*/, std::align_val_t align)
 }
 
 void
-operator delete(void* _Nullable /*unused*/) {
+operator delete(void* _Nullable /*unused*/) noexcept {
 }
 
 void
-operator delete(void* _Nullable /*unused*/, unsigned long /*unused*/) {
+operator delete(void* _Nullable /*unused*/, unsigned long /*unused*/) noexcept {
 }
 
 void
-operator delete[](void* _Nullable /*unused*/) {
+operator delete[](void* _Nullable /*unused*/) noexcept {
 }
 
 void
-operator delete[](void* _Nullable /*unused*/, unsigned long /*unused*/) {
+operator delete
+   [](void* _Nullable /*unused*/, unsigned long /*unused*/) noexcept {
 }
 
 void
 operator delete
    [](void* _Nullable /*unused*/, unsigned long /*unused*/,
-      std::align_val_t /*unused*/) {
+      std::align_val_t /*unused*/) noexcept {
 }
