@@ -617,7 +617,7 @@ nominal_size(byte const* p_allocation, byte const* p_end) -> uword {
       verify(p_encoded_end[-5] == 0u);
    }
    verify(reserved <= uword(p_end - p_allocation));
-   verify(p_encoded_end[-reserved.raw] == 0u);
+   verify(*(p_encoded_end - reserved.raw) == 0u);
    verify(*p_encoded_end == 0u);
    return uword(p_end - reserved.raw - p_allocation);
 }
@@ -628,7 +628,7 @@ set_size(byte* p_allocation, byte* p_end, uword bytes) {
    auto* const p_encoded_end = encoded_bytes(p_end);
    uword reserved = uword(p_end - p_allocation) - bytes;
    if (reserved != 0u) {
-      p_encoded_end[-reserved.raw] = 0u;
+      *(p_encoded_end - reserved.raw) = 0u;
    }
    if (reserved >= 5u) {
       verify(reserved <= limits<uint4>::max());
@@ -1375,7 +1375,9 @@ musl_context<is_shared>::aligned_allocate(
       return allocate_memory(bytes, p_feedback_bytes);
    }
 
-   uword const expanded = bytes + alignment - musl_quanta;
+   // `bytes + alignment` fits in a `uword`, checked above, but can exceed the
+   // signed range of the undefined overflow policy.
+   uword const expanded = bytes.wrap() + alignment - musl_quanta;
    byte* p_allocation = allocate_memory_unaccounted(expanded);
    if (p_allocation == nullptr) {
       return nullptr;

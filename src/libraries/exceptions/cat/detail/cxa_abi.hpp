@@ -17,10 +17,9 @@ struct alignas(__STDCPP_DEFAULT_NEW_ALIGNMENT__) exception_header {
 inline auto
 header_from_unwind(unwind_exception* p_exception) -> exception_header* {
    return __builtin_bit_cast(
-      exception_header*,
-      (intptr<char>(__builtin_bit_cast(char*, p_exception))
-       - __builtin_offsetof(exception_header, unwind))
-         .get()
+      exception_header*, (intptr<char>(__builtin_bit_cast(char*, p_exception))
+                          - __builtin_offsetof(exception_header, unwind))
+                            .get()
    );
 }
 

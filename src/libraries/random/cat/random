@@ -319,6 +319,8 @@ class seed_sequence {
       idx const left = idx(output_size - mix_count) / 2u;
       idx const right = left + mix_count;
       idx const rounds = output_size > m_size + 1u ? output_size : m_size + 1u;
+      // This algorithm is defined modulo 2^32, so its arithmetic wraps. Its
+      // shifts must not rotate, so only the arithmetic uses `.wrap()`.
       auto word = [&](idx index) {
          auto position = first;
          offset_pos(output, position, index % output_size);
@@ -329,38 +331,38 @@ class seed_sequence {
          offset_pos(output, position, index % output_size);
          read_at_unchecked(output, position) = value;
       };
-      auto first_mix = [](uint4 value) {
+      auto first_mix = [](uint4 value) -> uint4 {
          value ^= value >> 27u;
-         return value * 1'664'525u;
+         return value.wrap() * 1'664'525u;
       };
-      auto second_mix = [](uint4 value) {
+      auto second_mix = [](uint4 value) -> uint4 {
          value ^= value >> 27u;
-         return value * 1'566'083'941u;
+         return value.wrap() * 1'566'083'941u;
       };
 
       uint4 mixed =
          first_mix(word(0u) ^ word(left) ^ word(idx(output_size - 1u)));
-      uint4 added = mixed + uint4(m_size);
-      store(left, word(left) + mixed);
-      store(right, word(right) + added);
+      uint4 added = mixed.wrap() + uint4(m_size);
+      store(left, word(left).wrap() + mixed);
+      store(right, word(right).wrap() + added);
       store(0u, added);
 
       for (idx index = 1u; index < rounds; ++index) {
          mixed =
             first_mix(word(index) ^ word(index + left) ^ word(idx(index - 1u)));
-         added = mixed + uint4(index);
+         added = mixed.wrap() + uint4(index);
          if (index <= m_size) {
-            added += m_values[idx(index - 1u)];
+            added.wrap() += m_values[idx(index - 1u)];
          }
-         store(index + left, word(index + left) + mixed);
-         store(index + right, word(index + right) + added);
+         store(index + left, word(index + left).wrap() + mixed);
+         store(index + right, word(index + right).wrap() + added);
          store(index, added);
       }
       for (idx index = rounds; index < rounds + output_size; ++index) {
          mixed = second_mix(
-            word(index) + word(index + left) + word(idx(index - 1u))
+            word(index).wrap() + word(index + left) + word(idx(index - 1u))
          );
-         added = mixed - uint4(index);
+         added = mixed.wrap() - uint4(index);
          store(index + left, word(index + left) ^ mixed);
          store(index + right, word(index + right) ^ added);
          store(index, added);

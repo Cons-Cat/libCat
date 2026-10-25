@@ -78,8 +78,7 @@ deallocate_exception(exception_header* p_header) {
    }
    p_allocator->free_multi(
       span<byte>(
-         __builtin_bit_cast(byte*, p_header),
-         p_header->allocation_bytes
+         __builtin_bit_cast(byte*, p_header), p_header->allocation_bytes
       )
    );
 }
@@ -242,7 +241,6 @@ void
 __cxa_call_terminate(unwind_exception* /*exception*/) {
    terminate();
 }
-
 }
 
 }  // namespace cat::detail

@@ -33,20 +33,18 @@ struct fundamental_pointer {
    type_descriptor const* pointee;
 };
 
-#define CAT_FUNDAMENTAL(suffix, spelling)                                     \
-   type_descriptor _ZTI##suffix{                                              \
-      static_cast<void*>(                                                     \
-         _ZTVN10__cxxabiv123__fundamental_type_infoE + 2                      \
-      ),                                                                      \
-      spelling                                                                \
-   };                                                                         \
-   fundamental_pointer _ZTIP##suffix{                                         \
-      static_cast<void*>(_ZTVN10__cxxabiv119__pointer_type_infoE + 2),        \
-      "P" spelling, 0, &_ZTI##suffix                                          \
-   };                                                                         \
-   fundamental_pointer _ZTIPK##suffix {                                       \
-      static_cast<void*>(_ZTVN10__cxxabiv119__pointer_type_infoE + 2),        \
-         "PK" spelling, 1, &_ZTI##suffix                                      \
+#define CAT_FUNDAMENTAL(suffix, spelling)                                  \
+   type_descriptor _ZTI##suffix{                                           \
+      static_cast<void*>(_ZTVN10__cxxabiv123__fundamental_type_infoE + 2), \
+      spelling                                                             \
+   };                                                                      \
+   fundamental_pointer _ZTIP##suffix{                                      \
+      static_cast<void*>(_ZTVN10__cxxabiv119__pointer_type_infoE + 2),     \
+      "P" spelling, 0, &_ZTI##suffix                                       \
+   };                                                                      \
+   fundamental_pointer _ZTIPK##suffix {                                    \
+      static_cast<void*>(_ZTVN10__cxxabiv119__pointer_type_infoE + 2),     \
+         "PK" spelling, 1, &_ZTI##suffix                                   \
    }
 CAT_FUNDAMENTAL(v, "v");
 CAT_FUNDAMENTAL(b, "b");

@@ -76,10 +76,7 @@ decode_eh_pointer(
          break;
    }
 
-   if (
-      (encoding & dw_eh_pe::indirect) != dw_eh_pe::absptr
-      && raw != 0u
-   ) {
+   if ((encoding & dw_eh_pe::indirect) != dw_eh_pe::absptr && raw != 0u) {
       // Indirect through the resolved address, typically a global
       // offset table slot.
       auto const* const p_slot = __builtin_bit_cast(uword const*, raw);

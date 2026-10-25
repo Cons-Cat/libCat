@@ -880,6 +880,10 @@ class pcg_engine {
 
  private:
    using state_type = State;
+   // The LCG is defined modulo the state's width, so its arithmetic wraps.
+   // This is generic over raw `unsigned __int128` states, which lack `.wrap()`.
+   using wrapping_state = typename rebind_overflow_policy<
+      state_type, overflow_policies::wrap>::type;
 
    state_type m_state = detail::pcg_initial_state<state_type, stream>;
    state_type m_increment = detail::pcg_initial_increment<state_type, stream>;
@@ -904,7 +908,8 @@ class pcg_engine {
 
    constexpr void
    step() {
-      m_state = m_state * multiplier() + increment();
+      m_state =
+         state_type(wrapping_state(m_state).fma(multiplier(), increment()));
    }
 
  public:
@@ -998,14 +1003,18 @@ class pcg_engine {
          state_type const multiplier_value = generator.multiplier();
          state_type const increment_value = generator.increment();
          if constexpr (!output_previous) {
-            state = state * multiplier_value + increment_value;
+            state = state_type(
+               wrapping_state(state).fma(multiplier_value, increment_value)
+            );
          }
 
          for (idx chain = 0u; chain < chain_count; ++chain) {
             array<state_type, lanes> states;
             for (idx lane = 0u; lane < lanes; ++lane) {
                states[lane] = state;
-               state = state * multiplier_value + increment_value;
+               state = state_type(
+                  wrapping_state(state).fma(multiplier_value, increment_value)
+               );
             }
             m_states[chain] = detail::pcg_pack_states<batch_type>(states);
          }
@@ -1122,14 +1131,16 @@ class pcg_engine {
          if ((count & 1u) != 0u) {
             accumulated_multiplier *= current_multiplier;
             accumulated_increment =
-               accumulated_increment * current_multiplier + current_increment;
+               state_type(wrapping_state(accumulated_increment)
+                             .fma(current_multiplier, current_increment));
          }
          current_increment *= current_multiplier + 1u;
          current_multiplier *= current_multiplier;
          count >>= 1u;
       }
 
-      m_state = accumulated_multiplier * m_state + accumulated_increment;
+      m_state = state_type(wrapping_state(accumulated_multiplier)
+                              .fma(m_state, accumulated_increment));
    }
 
  public:

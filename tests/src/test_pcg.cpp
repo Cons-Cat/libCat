@@ -15,6 +15,9 @@ make_uint16(cat::uint8 high, cat::uint8 low) -> unsigned __int128 {
    return (static_cast<unsigned __int128>(high.raw) << 64u) | low.raw;
 }
 
+// PCG's 128-bit state is defined modulo 2^128, so the arithmetic on its
+// halves wraps. Its shifts must not rotate, so only the arithmetic uses
+// `.wrap()`.
 struct pcg_reference_state {
    cat::uint8 low;
    cat::uint8 high;
@@ -32,10 +35,10 @@ constexpr pcg_reference_state pcg_cheap_multiplier = {
 constexpr auto
 pcg_reference_add(pcg_reference_state left, pcg_reference_state right)
    -> pcg_reference_state {
-   cat::uint8 const low = left.low + right.low;
+   cat::uint8 const low = left.low.wrap() + right.low;
    return {
       .low = low,
-      .high = left.high + right.high + cat::uint8(low < left.low),
+      .high = left.high.wrap() + right.high + cat::uint8(low < left.low),
    };
 }
 
@@ -46,8 +49,8 @@ pcg_reference_multiply(pcg_reference_state left, pcg_reference_state right)
       static_cast<unsigned __int128>(left.low.raw) * right.low.raw;
    return {
       .low = cat::uint8(low_product),
-      .high = cat::uint8(low_product >> 64u) + left.high * right.low
-              + left.low * right.high,
+      .high = cat::uint8(low_product >> 64u).wrap()
+              + left.high.wrap() * right.low + left.low.wrap() * right.high,
    };
 }
 
@@ -111,9 +114,9 @@ constexpr auto
 pcg_reference_dxsm(pcg_reference_state state) -> cat::uint8 {
    cat::uint8 high = state.high;
    high ^= high >> 32u;
-   high *= pcg_cheap_multiplier.low;
+   high.wrap() *= pcg_cheap_multiplier.low;
    high ^= high >> 48u;
-   return high * (state.low | 1u);
+   return high.wrap() * (state.low | 1u);
 }
 
 template <bool dxsm>

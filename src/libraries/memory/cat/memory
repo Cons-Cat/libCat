@@ -213,32 +213,16 @@ fill_memory_detail(void* _Nonnull p_source, T value, idx const size) {
          remaining_bytes -= sizeof(T);
       }
 
-      // TODO: Optimize this with a tiled loop and proper SIMD widths.
+      // TODO: Optimize this with a tiled loop.
 
-      // Non-type template parameters are not allowed in a lambda's template
-      // parameter list, so the lanes are passed through a `constant`.
-      auto vectorized_fill = [&]<idx lanes> {
-         // TODO: Consider optimizing this by tiling the loop.
-         using vector_type = fixed_size_simd<T, lanes>;
-         while (remaining_bytes >= sizeof(vector_type)) {
-            auto* _Nonnull p_vector =
-               __builtin_bit_cast(vector_type*, p_current);
-            p_vector->fill(value);
-            p_current += lanes;
-            remaining_bytes -= lanes;
-         }
-      };
-
-      // Fill out 32-byte portion.
-      if constexpr (cat::simd_abi::native<T>::size >= 32u) {
-         vectorized_fill.template operator()<32u>();
+      // Fill out the SIMD-aligned portion. The loop above aligned `p_current`
+      // for `native_simd<T>`.
+      using vector_type = native_simd<T>;
+      while (remaining_bytes >= sizeof(vector_type)) {
+         __builtin_bit_cast(vector_type*, p_current)->fill(value);
+         p_current += sizeof(vector_type);
+         remaining_bytes -= sizeof(vector_type);
       }
-
-      // TODO: Support `fill()` on 16-byte x86-64 SIMD.
-      // // Fill out 16-byte portion.
-      // if constexpr (cat::simd_abi::native<T>::size >= 16) {
-      //     vectorized_fill.template operator()<16u>();
-      // }
 
       // Fill out remaining portion one byte at a time.
       fill_memory_scalar(

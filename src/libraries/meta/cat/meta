@@ -757,8 +757,7 @@ concept is_trivially_copy_constructible =
 
 // Replaces the deprecated `__has_nothrow_copy()` Clang builtin.
 template <typename T>
-concept is_nothrow_copy_constructible =
-   __is_nothrow_constructible(T, T const&);
+concept is_nothrow_copy_constructible = __is_nothrow_constructible(T, T const&);
 
 template <typename T>
 concept is_move_constructible = __is_constructible(T, T&&);
