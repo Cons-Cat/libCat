@@ -1,7 +1,7 @@
 #include <cat/detail/machine_pause.hpp>
 
 #include <cat/atomic>
-#include <cat/exceptions>
+#include <cat/exception>
 #include <cat/new>
 
 #include "implementations/narrow_cast.tpp"
@@ -33,10 +33,8 @@ exception_allocator() -> allocator_dyn* _Nullable {
 
 }  // namespace
 
-namespace detail {
-
 void
-register_exception_allocator(allocator_dyn allocator) {
+alloc_exception_runtime(allocator_dyn allocator) {
    if (exception_allocator_state.acquire() == allocator_state_ready) {
       return;
    }
@@ -56,7 +54,19 @@ register_exception_allocator(allocator_dyn allocator) {
    exception_allocator_state.release() = allocator_state_ready;
 }
 
+namespace detail {
+
+auto
+registered_exception_allocator() -> allocator_dyn {
+   allocator_dyn* const p_allocator = exception_allocator();
+   if (p_allocator == nullptr) {
+      terminate();
+   }
+   return *p_allocator;
+}
+
 }  // namespace detail
+
 }  // namespace cat
 
 #if __has_feature(cxx_exceptions)

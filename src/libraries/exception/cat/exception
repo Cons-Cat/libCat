@@ -1,0 +1,23 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/allocator>
+#include <cat/allocator_parameters>
+
+namespace cat {
+
+// Call before throwing. The allocator must outlive thrown exceptions. Only the
+// first registration is kept. A throw with no registered allocator terminates.
+void
+alloc_exception_runtime(allocator_dyn allocator);
+
+namespace detail {
+// The allocator registered by `alloc_exception_runtime`, used to own each
+// `exception`'s message storage. Terminates if none has been registered.
+auto
+registered_exception_allocator() -> allocator_dyn;
+}  // namespace detail
+
+
+}  // namespace cat

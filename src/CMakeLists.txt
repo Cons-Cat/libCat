@@ -10,7 +10,7 @@ set(CAT_INCLUDE_SUBDIRS
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
   tuple vec map ring enum iterable dyn random timer chrono mutex quantity
-  stacktrace demangle exceptions)
+  stacktrace demangle exception)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -51,14 +51,14 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/__clzti2.cpp
   ${CATLIB}/runtime/implementations/__floattisf.cpp
   ${CATLIB}/runtime/implementations/__eqtf2.cpp
-  ${CATLIB}/exceptions/implementations/cfi_interpreter.cpp
-  ${CATLIB}/exceptions/implementations/eh_frame_hdr.cpp
-  ${CATLIB}/exceptions/implementations/fde_parser.cpp
-  ${CATLIB}/exceptions/implementations/register_context.cpp
-  ${CATLIB}/exceptions/implementations/unwind.cpp
-  ${CATLIB}/exceptions/implementations/cxa_exception.cpp
-  ${CATLIB}/exceptions/implementations/personality.cpp
-  ${CATLIB}/exceptions/implementations/typeinfo.cpp
+  ${CATLIB}/exception/implementations/cfi_interpreter.cpp
+  ${CATLIB}/exception/implementations/eh_frame_hdr.cpp
+  ${CATLIB}/exception/implementations/fde_parser.cpp
+  ${CATLIB}/exception/implementations/register_context.cpp
+  ${CATLIB}/exception/implementations/unwind.cpp
+  ${CATLIB}/exception/implementations/cxa_exception.cpp
+  ${CATLIB}/exception/implementations/personality.cpp
+  ${CATLIB}/exception/implementations/typeinfo.cpp
   ${CATLIB}/new/implementations/new.cpp
   ${CATLIB}/math/implementations/acos.cpp
   ${CATLIB}/math/implementations/asin.cpp
@@ -602,12 +602,12 @@ set(CAT_HEADER_FILES
   ${CATLIB}/string/cat/detail/raii_str_vec.hpp
   ${CATLIB}/stacktrace/cat/stacktrace
   ${CATLIB}/demangle/cat/demangle
-  ${CATLIB}/exceptions/cat/exceptions
-  ${CATLIB}/exceptions/cat/detail/cxa_abi.hpp
-  ${CATLIB}/exceptions/cat/detail/dwarf_cfi.hpp
-  ${CATLIB}/exceptions/cat/detail/eh_frame_hdr.hpp
-  ${CATLIB}/exceptions/cat/detail/register_context.hpp
-  ${CATLIB}/exceptions/cat/detail/unwind.hpp
+  ${CATLIB}/exception/cat/exception
+  ${CATLIB}/exception/cat/detail/cxa_abi.hpp
+  ${CATLIB}/exception/cat/detail/dwarf_cfi.hpp
+  ${CATLIB}/exception/cat/detail/eh_frame_hdr.hpp
+  ${CATLIB}/exception/cat/detail/register_context.hpp
+  ${CATLIB}/exception/cat/detail/unwind.hpp
   ${CATLIB}/mutex/cat/mutex
   ${CATLIB}/mutex/cat/mutex_native
   ${CATLIB}/mutex/cat/mutex_spin
@@ -665,6 +665,6 @@ set(CAT_HEADER_FILES
 
 # LTO must not infer nounwind for ABI entry points that transfer to catch pads.
 set_source_files_properties(
-  ${CATLIB}/exceptions/implementations/cxa_exception.cpp
+  ${CATLIB}/exception/implementations/cxa_exception.cpp
   TARGET_DIRECTORY cat-impl
   PROPERTIES COMPILE_OPTIONS "-fno-lto")
