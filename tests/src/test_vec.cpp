@@ -1477,11 +1477,14 @@ $test(vec_reverse_inplace_simd) {
 struct throwing_move_element {
    throwing_move_element() noexcept = default;
    throwing_move_element(throwing_move_element const&) noexcept = default;
+
    throwing_move_element(throwing_move_element&&) noexcept(false) {
    }
+
    auto
    operator=(throwing_move_element const&) noexcept
       -> throwing_move_element& = default;
+
    auto
    operator=(throwing_move_element&&) noexcept(false)
       -> throwing_move_element& {
