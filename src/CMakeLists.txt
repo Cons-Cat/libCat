@@ -603,6 +603,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/stacktrace/cat/stacktrace
   ${CATLIB}/demangle/cat/demangle
   ${CATLIB}/exception/cat/exception
+  ${CATLIB}/exception/implementations/format_exception.tpp
   ${CATLIB}/exception/cat/detail/cxa_abi.hpp
   ${CATLIB}/exception/cat/detail/dwarf_cfi.hpp
   ${CATLIB}/exception/cat/detail/eh_frame_hdr.hpp

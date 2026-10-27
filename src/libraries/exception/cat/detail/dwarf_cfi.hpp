@@ -184,7 +184,7 @@ struct byte_cursor {
 
    [[nodiscard]]
    auto
-   read_string() noexcept(!__has_feature(cxx_exceptions)) -> zstr_view {
+   read_string() noexcept(!__has_feature(cxx_exceptions)) -> str_view {
       idx const start = position;
       while (position < limit && p_data[position].value != 0u) {
          ++position;
@@ -192,11 +192,9 @@ struct byte_cursor {
       if (position == limit) {
          terminate();
       }
+      idx const length = narrow_cast<idx>(position - start).assert();
       ++position;
-      return {
-         __builtin_bit_cast(char const*, p_data + start),
-         narrow_cast<idx>(position - start).assert()
-      };
+      return {__builtin_bit_cast(char const*, p_data + start), length};
    }
 };
 

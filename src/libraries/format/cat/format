@@ -1791,6 +1791,7 @@ eprintln_fmt(
 #include "../../bit/implementations/format_bit_value.tpp"
 #include "../../bitset/implementations/format_bitset.tpp"
 #include "../../debug/implementations/format_source_location.tpp"
+#include "../../exception/implementations/format_exception.tpp"
 #include "../../math/implementations/format_infinity_type.tpp"
 #include "../../scaredy/implementations/format_scaredy.tpp"
 #include "../../simd/implementations/format_simd_overflow_reference.tpp"

@@ -1,6 +1,9 @@
 #if __has_feature(cxx_exceptions)
+#include <cat/allocator_linear>
 #include <cat/array>
 #include <cat/atomic>
+#include <cat/exception>
+#include <cat/format>
 #include <cat/forward_list>
 #include <cat/list>
 #include <cat/map>
@@ -238,6 +241,101 @@ $test(exceptions_terminate_uncaught_and_noexcept) {
    check_termination(noexcept_throw);
 }
 
+namespace {
+struct freestanding_error {
+   cat::source_location m_location = cat::source_location::current();
+
+   [[nodiscard]]
+   auto
+   what() const noexcept -> cat::str_view {
+      return cat::str_view("freestanding failure");
+   }
+
+   [[nodiscard]]
+   auto
+   location() const noexcept -> cat::source_location {
+      return m_location;
+   }
+};
+}  // namespace
+
+$test(exceptions_cat_exception_message_location_format) {
+   cat::source_location const expected = cat::source_location::current();
+   cat::exception const original(expected);
+   cat::exception const copy = original;
+   cat::verify(original.what() == "exception");
+   cat::verify(copy.what() == "exception");
+   // The viewed range ends on 'e', so this message has no null terminator.
+   cat::str_view const sliced = cat::str_view("note-tail").substring(0u, 4u);
+   cat::exception const named(sliced);
+   cat::exception const named_copy = named;
+   cat::verify(named.what() == "note");
+   cat::verify(named_copy.what() == "note");
+   cat::verify(original.location().line() == expected.line());
+   cat::verify(copy.location().line() == expected.line());
+   cat::verify(
+      cat::str_view(original.location().file_name())
+      == cat::str_view(expected.file_name())
+   );
+   cat::verify(
+      cat::str_view(copy.location().file_name())
+      == cat::str_view(expected.file_name())
+   );
+
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
+   $defer {
+      g_tests_alloc.free(page);
+   };
+   auto allocator = cat::make_allocator_linear(page);
+   cat::verify(cat::fmt(allocator, "{}", original).verify() == "exception");
+   allocator.reset();
+   cat::verify(
+      cat::fmt(allocator, "{:?}", original).verify() == R"("exception")"
+   );
+   allocator.reset();
+   cat::verify(cat::fmt(allocator, "{}", named).verify() == "note");
+   allocator.reset();
+   cat::verify(cat::fmt(allocator, "{:?}", named).verify() == R"("note")");
+   allocator.reset();
+
+   cat::allocator_dyn dyn_allocator = g_tests_alloc;
+   freestanding_error const error;
+   cat::exception_dyn const erased{dyn_allocator, error};
+   cat::exception_dyn const erased_copy = erased;
+   cat::verify(
+      cat::dyn_invoke<cat::dyn_exception_what>(erased) == "freestanding failure"
+   );
+   cat::verify(
+      cat::dyn_invoke<cat::dyn_exception_what>(erased_copy)
+      == "freestanding failure"
+   );
+   cat::verify(
+      cat::dyn_invoke<cat::dyn_exception_location>(erased_copy).line()
+      == error.location().line()
+   );
+   cat::verify(
+      cat::fmt(allocator, "{}", erased_copy).verify() == "freestanding failure"
+   );
+   allocator.reset();
+   cat::verify(
+      cat::fmt(allocator, "{:?}", erased).verify()
+      == R"("freestanding failure")"
+   );
+   allocator.reset();
+
+   bool caught = false;
+   try {
+      throw erased;
+   } catch (cat::exception_dyn const& thrown) {
+      cat::verify(
+         cat::dyn_invoke<cat::dyn_exception_what>(thrown)
+         == "freestanding failure"
+      );
+      caught = true;
+   }
+   cat::verify(caught);
+}
+
 $test(exceptions_null_and_nested_pointer_matching) {
    try {
       throw static_cast<ambiguous*>(nullptr);  // NOLINT
@@ -377,7 +475,7 @@ struct fragile {
       --live;
    }
 
-  private:
+ private:
    static constexpr void
    constructed() {
       if (until_throw > 0) {
@@ -675,15 +773,15 @@ $test(map_throwing_rehash) {
       fragile::live = 0;
       cat::map_big<int4, fragile> map;
       for (int4 i = 0; i < 20; ++i) {
-         cat::verify(map.insert<allocator_type>(g_tests_alloc, i, fragile(i))
-                        .has_value());
+         cat::verify(
+            map.insert<allocator_type>(g_tests_alloc, i, fragile(i)).has_value()
+         );
       }
 
       fragile::arm(failure);
       throws_injected_failure([&] {
          for (int4 i = 20; i < 200; ++i) {
-            auto _ =
-               map.insert<allocator_type>(g_tests_alloc, i, fragile(i));
+            auto _ = map.insert<allocator_type>(g_tests_alloc, i, fragile(i));
          }
       });
       fragile::disarm();

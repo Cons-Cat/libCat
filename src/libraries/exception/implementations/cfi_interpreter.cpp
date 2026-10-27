@@ -99,7 +99,7 @@ parse_cie(byte const* _Nonnull p_cie_record, cie_info& out) noexcept(
    if (version != 1u && version != 3u && version != 4u) {
       return false;
    }
-   zstr_view const augmentation = cursor.read_string();
+   str_view const augmentation = cursor.read_string();
 
    if (version == 4u) {
       // Skip address_size + segment_size.
@@ -112,7 +112,7 @@ parse_cie(byte const* _Nonnull p_cie_record, cie_info& out) noexcept(
       version == 1u ? uint8(cursor.read<uint1>()) : cursor.read_uleb128();
    out.cie_start_address = __builtin_bit_cast(uword, p_cie_record);
 
-   if (augmentation[0u] == 'z') {
+   if (augmentation.size() != 0u && augmentation[0u] == 'z') {
       out.has_augmentation = true;
       uint8 const augmentation_length = cursor.read_uleb128();
       if (augmentation_length > cursor.remaining()) {
@@ -123,7 +123,7 @@ parse_cie(byte const* _Nonnull p_cie_record, cie_info& out) noexcept(
          p_augmentation_start + augmentation_length;
 
       // Clang on x86-64 SysV emits z, zP, zR, zL, zPR, zPL, zLR, or zPLR.
-      for (idx i = 1u; augmentation[i] != '\0'; ++i) {
+      for (idx i = 1u; i < augmentation.size(); ++i) {
          switch (augmentation[i]) {
             case 'R':
                {
@@ -164,7 +164,7 @@ parse_cie(byte const* _Nonnull p_cie_record, cie_info& out) noexcept(
          terminate();
       }
       cursor.skip(narrow_cast<idx>(target - cursor.position).assert());
-   } else if (augmentation[0u] != '\0') {
+   } else if (augmentation.size() != 0u) {
       // Non-`z` augmentations are not emitted by Clang on x86-64.
       return false;
    }

@@ -111,7 +111,7 @@ equal(type_descriptor const* p_left, type_descriptor const* p_right) -> bool {
    if (p_left == p_right) {
       return true;
    }
-   return zstr_view(p_left->name) == zstr_view(p_right->name);
+   return str_view(p_left->name) == str_view(p_right->name);
 }
 
 auto

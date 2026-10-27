@@ -4,6 +4,9 @@
 
 #include <cat/allocator>
 #include <cat/allocator_parameters>
+#include <cat/debug>
+#include <cat/dyn>
+#include <cat/string>
 
 namespace cat {
 
@@ -19,5 +22,111 @@ auto
 registered_exception_allocator() -> allocator_dyn;
 }  // namespace detail
 
+// Base for user-defined exceptions. Construction captures the caller's
+// `source_location` and copies the default or given message into owned
+// storage, like Boost's diagnostic buffers. The message is formattable.
+class exception {
+ public:
+   exception(source_location location = source_location::current())
+       : m_location(location),
+         m_message(
+            raii::make_str_vec(
+               detail::registered_exception_allocator(), "exception"
+            )
+               .verify()
+         ) {
+   }
+
+   exception(
+      str_view message, source_location location = source_location::current()
+   )
+       : m_location(location),
+         m_message(
+            raii::make_str_vec(
+               detail::registered_exception_allocator(), message
+            )
+               .verify()
+         ) {
+   }
+
+   exception(exception const& other)
+       : m_location(other.m_location),
+         m_message(other.m_message.clone().verify()) {
+   }
+
+   exception(exception&&) = default;
+
+   auto
+   operator=(exception const& other) -> exception& {
+      if (this != __builtin_addressof(other)) {
+         m_location = other.m_location;
+         m_message = other.m_message.clone().verify();
+      }
+      return *this;
+   }
+
+   auto
+   operator=(exception&&) -> exception& = default;
+
+   [[nodiscard]]
+   auto
+   what() const noexcept -> str_view {
+      return m_message.span();
+   }
+
+   [[nodiscard]]
+   auto
+   location() const noexcept -> source_location {
+      return m_location;
+   }
+
+ private:
+   source_location m_location;
+   raii::str_vec<allocator_dyn> m_message;
+};
+
+// `dyn` method which returns an exception's `what()` message.
+struct dyn_exception_what {
+   using signature = str_view() const;
+
+   template <typename T>
+      requires(requires(T const& t) { t.what(); })
+   static constexpr auto
+   do_invoke(T const& self) -> str_view {
+      return self.what();
+   }
+};
+
+// `dyn` method which returns an exception's `location()`.
+struct dyn_exception_location {
+   using signature = source_location() const;
+
+   template <typename T>
+      requires(requires(T const& t) { t.location(); })
+   static constexpr auto
+   do_invoke(T const& self) -> source_location {
+      return self.location();
+   }
+};
+
+// Owning, copyable and throwable erasure of any type with `what()` and
+// `location()`.
+template <is_allocator Allocator>
+using basic_exception_dyn = dyn<
+   Allocator, destructor, move_constructor, copy_constructor,
+   dyn_exception_what, dyn_exception_location>;
+
+using exception_dyn = basic_exception_dyn<allocator_dyn>;
+
+template <typename T, typename CharT>
+struct formatter;
+
+// Implementing these here is a circular dependency. The implementations can be
+// found in <cat/exception/implementations/format_exception.tpp>.
+template <typename CharT>
+struct formatter<exception, CharT>;
+
+template <is_allocator Allocator, typename CharT>
+struct formatter<basic_exception_dyn<Allocator>, CharT>;
 
 }  // namespace cat

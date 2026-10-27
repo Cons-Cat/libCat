@@ -3,6 +3,7 @@
 #include <cat/atomic>
 #include <cat/exception>
 #include <cat/new>
+#include <cat/runtime>
 
 #include "implementations/narrow_cast.tpp"
 
