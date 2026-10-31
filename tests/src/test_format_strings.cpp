@@ -550,6 +550,17 @@ $test(fmt_bit_containers_and_proxies) {
       cat::fmt(allocator, "{}", bits).verify() == "[false, true, false, true]"
    );
 
+   // Bits spanning several `uint1` elements format in logical order.
+   allocator.reset();
+   cat::bitset<10u, cat::uint1> wide_bits{};
+   wide_bits[0] = true;
+   wide_bits[8] = true;
+   wide_bits[9] = true;
+   cat::verify(
+      cat::fmt(allocator, "{}", wide_bits).verify()
+      == "[true, false, false, false, false, false, false, false, true, true]"
+   );
+
    allocator.reset();
    cat::array<cat::uint4, 1u> words{};
    cat::bit_span span_bits(words.data(), 0u, 4u);

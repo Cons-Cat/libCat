@@ -20,15 +20,21 @@ concept are_bitset_arguments_same_size =
    ((sizeof(Arguments...[0]) == sizeof(Arguments)) && ...);
 }  // namespace detail
 
-template <idx bits_count>
+// TODO: It would be nice if `sizeof(bitset<0>)` was 0.
+
+// If `T` is `void`, the storage element type is chosen from `bits_count`.
+// Otherwise, the bits are stored in an array of `T`.
+template <idx bits_count, typename T>
 class [[clang::trivial_abi, gsl::Owner]]
-bitset : public bitwise_interface<bitset<bits_count>>,
-         public bit_collection_interface<bitset<bits_count>> {
+bitset : public bitwise_interface<bitset<bits_count, T>>,
+         public bit_collection_interface<bitset<bits_count, T>> {
  private:
+   static_assert(bits_count >= 0, "`cat::bitset` must hold at least 1 bit!");
+
    template <is_unsigned_integral>
    friend class bit_span;
 
-   template <idx, is_unsigned_integral... Arguments>
+   template <idx, typename, is_unsigned_integral... Arguments>
       requires(detail::are_bitset_arguments_same_size<Arguments...>)
    friend constexpr auto
    make_bitset(Arguments... arguments) noexcept(!__has_feature(cxx_exceptions));
@@ -38,13 +44,18 @@ bitset : public bitwise_interface<bitset<bits_count>>,
    // 8-byte integers. Divide the bits by 8, rounding up.
    static constexpr idx total_bytes = div_ceil(bits_count, 8u);
 
+   using element_type = conditional<is_void<T>, uint1, T>;
+
    using array_type = conditional<
-      total_bytes <= 8u,
-      // `uint_fixed` will not compile here if it is larger than 8
-      // or it is not a power of 2. This is an `array` of one
-      // element to make it iterable.
-      array<uint_fixed<min(bit_ceil(total_bytes), 8u)>, 1u>,
-      array<uint8, div_ceil(total_bytes, 8u)>>;
+      !is_void<T>,
+      array<element_type, div_ceil(bits_count, idx(sizeof(element_type) * 8u))>,
+      conditional<
+         total_bytes <= 8u,
+         // `uint_fixed` will not compile here if it is larger than 8
+         // or it is not a power of 2. This is an `array` of one
+         // element to make it iterable.
+         array<uint_fixed<min(bit_ceil(total_bytes), 8u)>, 1u>,
+         array<uint8, div_ceil(total_bytes, 8u)>>>;
 
    using array_type_element = array_type::value_type;
 
@@ -113,7 +124,7 @@ bitset : public bitwise_interface<bitset<bits_count>>,
       !__has_feature(cxx_exceptions)
    ) {
       [[assume(bitstring[bitstring_size - 1] == '\0')]];
-      bitset<bits_count> new_bitset;
+      bitset new_bitset;
       for (__SIZE_TYPE__ i = 0; i < bits_count; ++i) {
          [[assume(bitstring[i] == '0' || bitstring[i] == '1')]];
          new_bitset[i] = (bitstring[i] == '1');
@@ -151,16 +162,18 @@ bitset : public bitwise_interface<bitset<bits_count>>,
       [[clang::lifetimebound]] -> bit_reference<array_type_element> {
       assert(index_bit < bits_count);
 
+      constexpr idx element_bits = storage_element_size * 8u;
       idx const array_word = idx(
-         m_data.size() - 1u - ((index_bit + leading_skipped_bits) / word_bits)
+         m_data.size() - 1u
+         - ((index_bit + leading_skipped_bits) / element_bits)
       );
       array_type_element& index_byte = m_data[array_word];
 
       uword bit_offset = index_bit + leading_skipped_bits;
-      if constexpr (total_bytes > word_bytes) {
-         // If the bitset is larger than a word, wrap the bit offset by the size
-         // of a word.
-         bit_offset.raw &= word_bits.raw - 1u;
+      if constexpr (storage_array_size > 1u) {
+         // If the bitset spans several elements, wrap the bit offset by the
+         // size of an element.
+         bit_offset.raw &= element_bits.raw - 1u;
       }
 
       return make_bit_reference_from_offset(index_byte, bit_offset);
@@ -693,49 +706,51 @@ struct formatter;
 
 // Implementing this here is a circular dependency. The implementation can be
 // found in <cat/bitset/implementations/format_bitset.tpp>.
-template <idx bits_count, typename CharT>
-struct formatter<bitset<bits_count>, CharT>;
+template <idx bits_count, typename T, typename CharT>
+struct formatter<bitset<bits_count, T>, CharT>;
 
 // Subtract 1 to skip the null terminator.
 template <__SIZE_TYPE__ bits_count>
 bitset(char const (&bitstring)[bits_count]) -> bitset<idx(bits_count - 1u)>;
 
 template <is_unsigned_integral Storage>
-template <idx bits_count>
+template <idx bits_count, typename T>
 constexpr bit_span<Storage>::bit_span(
-   bitset<bits_count>& storage [[clang::lifetimebound]]
+   bitset<bits_count, T>& storage [[clang::lifetimebound]]
 )
     : bit_span(
-         storage.m_data.data(), bitset<bits_count>::leading_skipped_bits,
-         bits_count
-      ) {
-   static_assert(is_same<Storage, typename bitset<bits_count>::storage_type>);
-}
-
-template <is_unsigned_integral Storage>
-template <idx bits_count>
-constexpr bit_span<Storage>::bit_span(
-   bitset<bits_count> const& storage [[clang::lifetimebound]]
-)
-    : bit_span(
-         storage.m_data.data(), bitset<bits_count>::leading_skipped_bits,
+         storage.m_data.data(), bitset<bits_count, T>::leading_skipped_bits,
          bits_count
       ) {
    static_assert(
-      is_same<Storage, typename bitset<bits_count>::storage_type const>
+      is_same<Storage, typename bitset<bits_count, T>::storage_type>
    );
 }
 
-template <idx bits_count>
-bit_span(bitset<bits_count>&) noexcept(!__has_feature(cxx_exceptions))
-   ->bit_span<typename bitset<bits_count>::storage_type>;
+template <is_unsigned_integral Storage>
+template <idx bits_count, typename T>
+constexpr bit_span<Storage>::bit_span(
+   bitset<bits_count, T> const& storage [[clang::lifetimebound]]
+)
+    : bit_span(
+         storage.m_data.data(), bitset<bits_count, T>::leading_skipped_bits,
+         bits_count
+      ) {
+   static_assert(
+      is_same<Storage, typename bitset<bits_count, T>::storage_type const>
+   );
+}
 
-template <idx bits_count>
-bit_span(bitset<bits_count> const&) noexcept(!__has_feature(cxx_exceptions))
-   ->bit_span<typename bitset<bits_count>::storage_type const>;
+template <idx bits_count, typename T>
+bit_span(bitset<bits_count, T>&) noexcept(!__has_feature(cxx_exceptions))
+   ->bit_span<typename bitset<bits_count, T>::storage_type>;
 
-template <idx bits_count, is_unsigned_integral... Arguments>
-// Ensure that all `types` are the same size. e.g., `uint4` and unsigned are
+template <idx bits_count, typename T>
+bit_span(bitset<bits_count, T> const&) noexcept(!__has_feature(cxx_exceptions))
+   ->bit_span<typename bitset<bits_count, T>::storage_type const>;
+
+template <idx bits_count, typename T = void, is_unsigned_integral... Arguments>
+// Ensure that all `types` are the same size. e.g., `uint4` and `unsigned` are
 // compatible here.
    requires(detail::are_bitset_arguments_same_size<Arguments...>)
 [[nodiscard]]
@@ -743,78 +758,75 @@ constexpr auto
 make_bitset(Arguments... arguments) noexcept(!__has_feature(cxx_exceptions)) {
    // TODO: Assert that the input fits in `bits_count`.
    static_assert(
-      sizeof...(Arguments) == bitset<bits_count>::array_type::size(),
+      sizeof...(Arguments) == bitset<bits_count, T>::array_type::size(),
       "The arguments passed into this bitset do not fit within the "
-      "`bits_count` alloted."
+      "`bits_count`."
    );
 
-   bitset<bits_count> new_bitset;
+   bitset<bits_count, T> new_bitset;
    new_bitset.m_data = {arguments...};
-   if !consteval {
-      bitset<bits_count> cleared = new_bitset;
-      // Confirm no padding bits are 1.
-      cleared.clear_padding_bits();
-      assert(new_bitset == cleared);
-   } else {
-      bitset<bits_count> cleared = new_bitset;
-      cleared.clear_padding_bits();
-      bool const padding_is_clear = new_bitset == cleared;
-      [[assume(padding_is_clear)]];
-   }
+
+   bitset<bits_count, T> cleared = new_bitset;
+   // Confirm no padding bits are set to 1 by the arguments.
+   // TODO: Lets compare only the padding bytes.
+   cleared.clear_padding_bits();
+   assert(new_bitset == cleared);
+
    return new_bitset;
 }
 
-template <idx bits_count>
+template <idx bits_count, typename T = void>
 [[nodiscard]]
 constexpr auto
 make_bitset_filled(bit_value value) noexcept {
-   bitset<bits_count> new_bitset;
+   bitset<bits_count, T> new_bitset;
    new_bitset.fill(value);
    return new_bitset;
 }
 
-template <idx bits_count, typename Generator>
+template <idx bits_count, typename T = void, typename Generator>
 [[nodiscard]]
 constexpr auto
-make_bitset_filled_random(Generator&& generator) -> bitset<bits_count> {
+make_bitset_filled_random(Generator&& generator) -> bitset<bits_count, T> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
-   bitset<bits_count> result;
+   bitset<bits_count, T> result;
    result.fill_random($fwd(generator));
    return result;
 }
 
-template <idx bits_count, typename Generator, typename Distribution>
+template <
+   idx bits_count, typename T = void, typename Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_bitset_filled_random(Generator&& generator, Distribution&& distribution)
-   -> bitset<bits_count> {
+   -> bitset<bits_count, T> {
    static_assert(
       is_assignable<
          bool&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   bitset<bits_count> result;
+   bitset<bits_count, T> result;
    result.fill_random($fwd(generator), $fwd(distribution));
    return result;
 }
 
 // Construct a bitset with only the even-indexed bits (logical indices 0, 2, 4,
 // ...) set. Odd-indexed bits are 0.
-template <idx bits_count>
+template <idx bits_count, typename T = void>
 [[nodiscard]]
 constexpr auto
 make_bitset_even() noexcept {
-   bitset<bits_count> new_bitset;
+   bitset<bits_count, T> new_bitset;
    new_bitset.set_even();
    return new_bitset;
 }
 
 // Construct a bitset with only the odd-indexed bits (logical indices 1, 3, 5,
 // ...) set. Even-indexed bits are 0.
-template <idx bits_count>
+template <idx bits_count, typename T = void>
 [[nodiscard]]
 constexpr auto
 make_bitset_odd() noexcept {
-   bitset<bits_count> new_bitset;
+   bitset<bits_count, T> new_bitset;
    new_bitset.set_odd();
    return new_bitset;
 }
