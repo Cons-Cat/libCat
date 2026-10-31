@@ -31,6 +31,9 @@
 //
 // The "parking lot" runtime requires allocating a trivial hash table before
 // unlocking is sound. This must be done with `alloc_mutex_runtime(allocator)`.
+// Because the hash table cannot grow, it is recommended to provide it a global
+// `inline` `allocator_inplace` with static storage duration if the total number
+// of threads is known.
 //
 // The "parking lot" mutex was passed over for Rust's mutex refactor, because
 // their design performs much better under very high lock contention, with only
