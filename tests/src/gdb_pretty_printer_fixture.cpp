@@ -354,6 +354,21 @@ cat::bitset<128u> cat_gdb_bitset128_value =
    cat::make_bitset_filled<128u>(cat::one_bit);
 
 [[gnu::used, gnu::retain]]
+cat::bitset<12u, cat::uint1> cat_gdb_bitset12_uint1_value{"101010101010"};
+
+[[gnu::used, gnu::retain]]
+cat::bitset<20u, cat::uint1> cat_gdb_bitset20_uint1_value =
+   cat::make_bitset_filled<20u, cat::uint1>(cat::one_bit);
+
+[[gnu::used, gnu::retain]]
+cat::bitset<64u, cat::uint4> cat_gdb_bitset64_uint4_value =
+   cat::make_bitset_filled<64u, cat::uint4>(cat::one_bit);
+
+[[gnu::used, gnu::retain]]
+cat::bitset<10u, cat::uint8> cat_gdb_bitset10_uint8_value =
+   cat::make_bitset_filled<10u, cat::uint8>(cat::one_bit);
+
+[[gnu::used, gnu::retain]]
 int cat_gdb_arithmetic_matrix_failures = 0;
 
 [[gnu::used, gnu::retain]]
@@ -514,6 +529,10 @@ cat_gdb_pretty_printer_breakpoint() {
                 "g"(&cat_gdb_bitset64_value),
                 "g"(&cat_gdb_bitset65_value),
                 "g"(&cat_gdb_bitset128_value),
+                "g"(&cat_gdb_bitset12_uint1_value),
+                "g"(&cat_gdb_bitset20_uint1_value),
+                "g"(&cat_gdb_bitset64_uint4_value),
+                "g"(&cat_gdb_bitset10_uint8_value),
                 "g"(&cat_gdb_arithmetic_matrix_failures),
                 "g"(&cat_gdb_alloc_fixture)
                 : "memory");

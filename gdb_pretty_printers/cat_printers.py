@@ -332,10 +332,9 @@ class BitsetPrinter:
             # If that's optimized out, parse the `ptype` for it.
             # This happens when compiling with Clang, even with `-gfull`.
             type: str = str(val.type.strip_typedefs())
-            # Extract all numbers in the type signature.
-            type_numbers = [int(s) for s in re.findall(r' \d+\b', type)]
-            # The last number is the bitset's size.
-            bits_count: int = type_numbers[-1]
+            # The bitset's size closes the `basic_idx` initializer, the first
+            # template argument. Later numbers belong to the storage type.
+            bits_count: int = int(re.search(r' (\d+)\}', type)[1])
             self.leading_skipped_bits: int = (
                 self.array_len * self.element_size_bits - bits_count
             )

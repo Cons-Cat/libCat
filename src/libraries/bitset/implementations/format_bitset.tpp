@@ -11,10 +11,10 @@
 
 namespace cat {
 
-template <idx bits_count, typename CharT>
-struct formatter<bitset<bits_count>, CharT> : formatter_base<CharT> {
+template <idx bits_count, typename T, typename CharT>
+struct formatter<bitset<bits_count, T>, CharT> : formatter_base<CharT> {
    auto
-   format(bitset<bits_count> const& value, format_context& context) const
+   format(bitset<bits_count, T> const& value, format_context& context) const
       -> scaredy_format<void> {
       scaredy_format<void> result = context.append('[');
       if (result.is_empty()) {

@@ -12,7 +12,7 @@
 
 namespace cat {
 
-template <idx bits_count>
+template <idx bits_count, typename T = void>
 class bitset;
 
 template <is_unsigned_integral Storage>
@@ -86,14 +86,14 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
          m_bit_size(bit_count) {
    }
 
-   template <idx bits_count>
+   template <idx bits_count, typename T>
    constexpr explicit bit_span(
-      bitset<bits_count>& storage [[clang::lifetimebound]]
+      bitset<bits_count, T>& storage [[clang::lifetimebound]]
    );
 
-   template <idx bits_count>
+   template <idx bits_count, typename T>
    constexpr explicit bit_span(
-      bitset<bits_count> const& storage [[clang::lifetimebound]]
+      bitset<bits_count, T> const& storage [[clang::lifetimebound]]
    );
 
    template <typename WordStorage>

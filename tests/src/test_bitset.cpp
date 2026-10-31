@@ -40,6 +40,86 @@ $test(bitset_storage_layout) {
    static_assert(bits129.leading_skipped_bits == 63u);
 }
 
+$test(bitset_explicit_storage_type) {
+   // 20 bits in `uint1` elements spans three elements with 4 padding bits.
+   cat::bitset<20, cat::uint1> bits20;
+   static_assert(bits20.storage_array_size == 3);
+   static_assert(bits20.storage_element_size == 1);
+   static_assert(bits20.leading_skipped_bits == 4u);
+   static_assert(cat::is_same<decltype(bits20)::storage_type, cat::uint1>);
+
+   // 64 bits in `uint4` elements spans two elements with no padding.
+   static_assert(cat::bitset<64, cat::uint4>::storage_array_size == 2);
+   static_assert(cat::bitset<64, cat::uint4>::leading_skipped_bits == 0u);
+   static_assert(sizeof(cat::bitset<3, cat::uint8>) == 8u);
+
+   for (cat::idx i; i < 20u; i += 3u) {
+      bits20[i] = true;
+   }
+
+   for (cat::idx i; i < 20u; ++i) {
+      cat::verify((bits20[i]) == (i % 3u == 0u));
+   }
+
+   cat::verify(bits20.popcount() == 7u);
+   cat::verify(bits20.countr_zero() == 0u);
+   cat::verify(bits20.countl_zero() == 1u);
+   cat::verify((~bits20).popcount() == 13u);
+   cat::verify(bits20.rotate_left(1).popcount() == 7u);
+   cat::verify(bits20.rotate_left(1)[1]);
+
+   auto filled = cat::make_bitset_filled<20, cat::uint1>(true);
+   cat::verify(filled.all_of());
+   cat::verify(filled.countl_one() == 20u);
+}
+
+namespace {
+// Verify that `bits_count` wider than `T` is backed by an array of `T`, and
+// that every bit is addressed independently across element boundaries.
+template <cat::idx bits_count, typename T>
+void
+verify_explicit_storage_array() {
+   using bitset_type = cat::bitset<bits_count, T>;
+   constexpr cat::idx element_bits = sizeof(T) * 8u;
+   static_assert(bits_count > element_bits);
+   static_assert(cat::is_same<typename bitset_type::storage_type, T>);
+   static_assert(bitset_type::storage_element_size == sizeof(T));
+   static_assert(
+      bitset_type::storage_array_size
+      == (bits_count + element_bits - 1u) / element_bits
+   );
+   static_assert(bitset_type::storage_array_size > 1u);
+   static_assert(
+      sizeof(bitset_type) == sizeof(T) * bitset_type::storage_array_size
+   );
+
+   for (cat::idx i; i < bits_count; ++i) {
+      bitset_type bits;
+      bits[i] = true;
+      cat::verify(bits.popcount() == 1u);
+      cat::verify(bits.countr_zero() == i);
+      cat::verify(bits.countl_zero() == bits_count - 1u - i);
+      cat::verify(bool(bits[i]));
+   }
+
+   bitset_type filled = cat::make_bitset_filled<bits_count, T>(true);
+   cat::verify(filled.popcount() == bits_count);
+   cat::verify(filled.all_of());
+}
+}  // namespace
+
+$test(bitset_explicit_storage_array) {
+   verify_explicit_storage_array<9, cat::uint1>();
+   verify_explicit_storage_array<16, cat::uint1>();
+   verify_explicit_storage_array<65, cat::uint1>();
+   verify_explicit_storage_array<17, cat::uint2>();
+   verify_explicit_storage_array<100, cat::uint2>();
+   verify_explicit_storage_array<33, cat::uint4>();
+   verify_explicit_storage_array<96, cat::uint4>();
+   verify_explicit_storage_array<65, cat::uint8>();
+   verify_explicit_storage_array<200, cat::uint8>();
+}
+
 // `__datasizeof` is `sizeof` minus tail padding. `cat::bitset<N>` should always
 // pack tightly to its storage backing array with no tail padding, so the two
 // must agree at every bit count. This guards against a regression where the
