@@ -2,24 +2,119 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/allocator>
-#include <cat/bit>
-#include <cat/defer>
+#include <cat/array>
+#include <cat/io_uring>
 #include <cat/linux>
-#include <cat/meta>
-#include <cat/propagate>
-#include <cat/socket>
+#include <cat/scaredy>
+#include <cat/span>
 #include <cat/string>
 
 // https://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.pdf
+//
+// `x11::connection` speaks the core X11 protocol without Xlib or xcb. Every
+// socket operation goes through the thread's shared `io_uring` from
+// `nix::alloc_io_uring_runtime()`, so a round trip is a linked send and
+// receive submitted by a single `io_uring_enter`. Requests are buffered until a
+// flush, a reply wait, or an event wait sends them.
+//
+// A `connection` and everything it returns belong to one thread.
 
 namespace x11 {
 
-// TODO: Handle `$DISPLAY`.
-constexpr auto socket_path = cat::make_str_inplace<108>("/tmp/.X11-unix/X0");
+// Resource identifiers, which servers and `connection::generate_id()` assign.
+
+struct window {
+   cat::uint4 value;
+
+   constexpr window() = default;
+
+   constexpr window(cat::uint4 input) noexcept : value(input) {
+   }
+
+   friend constexpr auto
+   operator==(window, window) -> bool = default;
+
+   static window const none;
+};
+
+inline constexpr window window::none{0u};
+
+struct colormap {
+   cat::uint4 value;
+
+   constexpr colormap() = default;
+
+   constexpr colormap(cat::uint4 input) noexcept : value(input) {
+   }
+
+   friend constexpr auto
+   operator==(colormap, colormap) -> bool = default;
+
+   static colormap const copy_from_parent;
+};
+
+inline constexpr colormap colormap::copy_from_parent{0u};
+
+struct visual {
+   cat::uint4 value;
+
+   constexpr visual() = default;
+
+   constexpr visual(cat::uint4 input) noexcept : value(input) {
+   }
+
+   friend constexpr auto
+   operator==(visual, visual) -> bool = default;
+
+   static visual const copy_from_parent;
+};
+
+inline constexpr visual visual::copy_from_parent{0u};
+
+// An interned string, from `connection::intern_atom()` or `x11::atoms`.
+struct atom {
+   cat::uint4 value;
+
+   constexpr atom() = default;
+
+   constexpr atom(cat::uint4 input) noexcept : value(input) {
+   }
+
+   friend constexpr auto
+   operator==(atom, atom) -> bool = default;
+
+   static atom const none;
+};
+
+inline constexpr atom atom::none{0u};
+
+static_assert(sizeof(window) == 4);
+static_assert(sizeof(atom) == 4);
+
+// Predefined atoms required by the X11 spec.
+namespace atoms {
+inline constexpr x11::atom primary{1u};
+inline constexpr x11::atom secondary{2u};
+inline constexpr x11::atom atom{4u};
+inline constexpr x11::atom cardinal{6u};
+inline constexpr x11::atom integer{19u};
+inline constexpr x11::atom resource_manager{23u};
+inline constexpr x11::atom string{31u};
+inline constexpr x11::atom window{33u};
+inline constexpr x11::atom wm_command{34u};
+inline constexpr x11::atom wm_hints{35u};
+inline constexpr x11::atom wm_client_machine{36u};
+inline constexpr x11::atom wm_icon_name{37u};
+inline constexpr x11::atom wm_name{39u};
+inline constexpr x11::atom wm_normal_hints{40u};
+inline constexpr x11::atom wm_size_hints{41u};
+inline constexpr x11::atom wm_class{67u};
+inline constexpr x11::atom wm_transient_for{68u};
+}  // namespace atoms
 
 enum class [[clang::enum_extensibility(open)]] operation_code : unsigned char {
-   error = 0,
+   // No request, as in a zeroed error packet.
+   none = 0,
    create_window = 1,
    change_window_attributes = 2,
    get_window_attributes = 3,
@@ -79,7 +174,7 @@ enum class [[clang::enum_extensibility(open)]] operation_code : unsigned char {
    copy_gc = 57,
    set_dashes = 58,
    set_clip_rectangles = 59,
-   gree_gc = 60,
+   free_gc = 60,
    clear_area = 61,
    copy_area = 62,
    copy_plane = 63,
@@ -98,8 +193,8 @@ enum class [[clang::enum_extensibility(open)]] operation_code : unsigned char {
    image_text8 = 76,
    image_text16 = 77,
    create_colormap = 78,
-   free_Colormap = 79,
-   copy_Colormap_and_free = 80,
+   free_colormap = 79,
+   copy_colormap_and_free = 80,
    install_colormap = 81,
    uninstall_colormap = 82,
    list_installed_colormaps = 83,
@@ -139,10 +234,14 @@ enum class [[clang::enum_extensibility(open)]] operation_code : unsigned char {
    get_pointer_mapping = 117,
    set_modifier_mapping = 118,
    get_modifier_mapping = 119,
-   no_operation = 120,
+   no_operation = 127,
 };
 
 enum class [[clang::enum_extensibility(open)]] event_code : unsigned char {
+   // Responses which are not events. `event::code()` returns `error` for an
+   // asynchronous error.
+   error = 0,
+   reply = 1,
    key_press = 2,
    key_release = 3,
    button_press = 4,
@@ -176,401 +275,1459 @@ enum class [[clang::enum_extensibility(open)]] event_code : unsigned char {
    colormap_notify = 32,
    client_message = 33,
    mapping_notify = 34,
+   generic_event = 35,
 };
 
-enum class [[clang::enum_extensibility(open)]] key_code : unsigned char {
+enum class [[clang::flag_enum]] event_mask : unsigned int {
+   none = 0,
+   key_press = 1u << 0,
+   key_release = 1u << 1,
+   button_press = 1u << 2,
+   button_release = 1u << 3,
+   enter_window = 1u << 4,
+   leave_window = 1u << 5,
+   pointer_motion = 1u << 6,
+   pointer_motion_hint = 1u << 7,
+   button_1_motion = 1u << 8,
+   button_2_motion = 1u << 9,
+   button_3_motion = 1u << 10,
+   button_4_motion = 1u << 11,
+   button_5_motion = 1u << 12,
+   button_motion = 1u << 13,
+   keymap_state = 1u << 14,
+   exposure = 1u << 15,
+   visibility_change = 1u << 16,
+   structure_notify = 1u << 17,
+   resize_redirect = 1u << 18,
+   substructure_notify = 1u << 19,
+   substructure_redirect = 1u << 20,
+   focus_change = 1u << 21,
+   property_change = 1u << 22,
+   colormap_change = 1u << 23,
+   owner_grab_button = 1u << 24,
 };
 
-struct [[gnu::packed]] event_mask {
-   bool key_press = false;
-   bool key_release = false;
-   bool button_press = false;
-   bool button_release = false;
-   bool enter_window = false;
-   bool leave_window = false;
-   bool pointer_motion = false;
-   bool pointer_motion_hint = false;
-   bool button1_motion = false;
-   bool button2_motion = false;
-   bool button3_motion = false;
-   bool button4_motion = false;
-   bool button5_motion = false;
-   bool button_motion = false;
-   bool keymap_state = false;
-   bool exposure = false;
-   bool visibility_change = false;
-   bool structure_notify = false;
-   bool resize_redirect = false;
-   bool substructure_notify = false;
-   bool substructure_redirect = false;
-   bool focus_change = false;
-   bool property_change = false;
-   bool colormap_change = false;
-   bool owner_grab_button = false;
-   unsigned _ : 7 = 0u;
+}  // namespace x11
+
+template <>
+struct cat::enum_flag_trait<x11::event_mask> : cat::true_trait {};
+
+namespace x11 {
+
+// Error codes 1 through 17 are core protocol errors. Extensions allocate codes
+// starting from their `query_extension_reply::first_error`.
+enum class [[clang::enum_extensibility(open)]] error_code : unsigned char {
+   // The X protocol never sends this code. `x11::connection` uses it for a
+   // local failure, and stores its `nix::linux_error` in `bad_value`.
+   transport = 0,
+   request = 1,
+   value = 2,
+   window = 3,
+   pixmap = 4,
+   atom = 5,
+   cursor = 6,
+   font = 7,
+   match = 8,
+   drawable = 9,
+   access = 10,
+   alloc = 11,
+   colormap = 12,
+   graphics_context = 13,
+   id_choice = 14,
+   name = 15,
+   length = 16,
+   implementation = 17,
 };
 
-struct error_code {
-   cat::uint1 response_operation = static_cast<unsigned char>(0);
-
-   enum : unsigned char {
-      request = 1,
-      value = 2,
-      window = 3,
-      pixmap = 4,
-      atom = 5,
-      cursor = 6,
-      font = 7,
-      match = 8,
-      drawable = 9,
-      access = 10,
-      alloc = 11,
-      colormap = 12,
-      g_context = 13,
-      resource_id_choice = 14,
-      name = 15,
-      length = 16,
-      implementation = 17,
-   } code;
-
+// This is the exact 32-byte error packet an X server sends.
+struct error_packet {
+   cat::uint1 response_type;
+   error_code code;
    cat::uint2 sequence;
-   cat::uint4 resource_resource_id;
+   cat::uint4 bad_value;
    cat::uint2 minor_operation;
    operation_code major_operation;
+   cat::uint1 _[21];  // NOLINT
 
- private:
-   [[maybe_unused]]
-   cat::uint1 _[21];
-
- public:
-   cat::uint4 full_sequence;
-};
-
-struct window_resource {
-   window_resource() = default;
-
-   window_resource(cat::uint4 input) noexcept : value(input) {
+   [[nodiscard]]
+   static constexpr auto
+   from_linux(nix::linux_error linux_error) noexcept -> error_packet {
+      error_packet result{};
+      result.code = error_code::transport;
+      result.bad_value = __builtin_bit_cast(cat::uint4, linux_error);
+      return result;
    }
 
-   cat::uint4 value;
+   [[nodiscard]]
+   constexpr auto
+   is_transport() const noexcept -> bool {
+      return code == error_code::transport;
+   }
+
+   // This is only meaningful when `.is_transport()` holds.
+   [[nodiscard]]
+   constexpr auto
+   linux_error() const noexcept -> nix::linux_error {
+      return __builtin_bit_cast(nix::linux_error, bad_value);
+   }
 };
 
+static_assert(sizeof(error_packet) == 32);
+
+// The value of a successful `scaredy_x11<void>`. Like every reply, its first
+// byte is non-zero, which distinguishes it from an `x11::error_packet`.
+struct no_reply {
+   cat::uint1 response_type = 1u;
+
+   constexpr no_reply() = default;
+
+   constexpr no_reply(cat::monostate_type /*unused*/) noexcept {
+   }
+};
+
+namespace detail {
+// Every reply and every error begins with a `response_type` byte, which is 0
+// for errors and 1 for replies. Reading it through either member of a union is
+// valid, because it is their common initial sequence.
+template <typename T>
+concept is_response = requires(T response) { response.response_type; };
+
+template <typename Reply>
+constexpr auto
+holds_reply(Reply const& reply) noexcept -> bool {
+   return reply.response_type != 0u;
+}
+
+template <typename T>
+using x11_storage = cat::conditional<cat::is_void<T>, no_reply, T>;
+
+template <typename T, bool = is_response<x11_storage<T>>>
+struct x11_value {
+   using type = T;
+};
+
+template <typename T>
+struct x11_value<T, true> {
+   using type =
+      cat::compact_scaredy<x11_storage<T>, holds_reply<x11_storage<T>>>;
+};
+}  // namespace detail
+
+// A reply or `x11::error_packet`. For replies, this is a union of the reply
+// packet and error packet, discriminated by the packet's own first byte, so it
+// has no storage or conversion cost over the bytes an X server sends. Other
+// values are stored in a `cat::scaredy` variant.
+template <typename T = void>
+using scaredy_x11 =
+   cat::scaredy<typename detail::x11_value<T>::type, error_packet>;
+
+namespace detail {
+// The low 16 bits of a sequence number, which responses carry.
+[[nodiscard]]
+constexpr auto
+low_sequence(cat::uint8 sequence) noexcept -> cat::uint2 {
+   // Masking leaves a value which always fits.
+   return cat::narrow_cast<cat::uint2>(sequence & 0xffffu).value();
+}
+}  // namespace detail
+
+// A handle to a pending request's response. `Reply` is `void` for requests
+// without replies, which can be verified with `connection::check()`. A request
+// that could not be queued gets sequence 0, and waiting or checking its cookie
+// returns why.
+template <typename Reply>
 struct cookie {
-   cat::uint4 sequence;
+   cat::uint8 sequence;
+
+   // Whether `failure` is this request's error, such as an asynchronous error
+   // from `connection::poll_event()`. Errors carry the low 16 bits of their
+   // request's sequence number, so this holds within 2^16 requests.
+   [[nodiscard]]
+   constexpr auto
+   is_for(error_packet const& failure) const noexcept -> bool {
+      return failure.sequence == detail::low_sequence(sequence);
+   }
 };
 
-struct event {
-   cat::uint2 response_type;
+// Replies.
+
+struct intern_atom_reply {
+   cat::uint1 response_type;
+   cat::uint1 _;
    cat::uint2 sequence;
    cat::uint4 length;
-   event_code event_type;
-
- private:
-   [[maybe_unused]]
-   cat::uint1 _[23];
-
- public:
-   cat::uint4 full_sequence;
+   x11::atom atom;
+   cat::uint1 _[20];  // NOLINT
 };
 
-// TODO: Make this a span.
-struct io_virtualization {
-   void* _Nullable p_base;
-   cat::iword length;
-};
-
-// Every X client request begins with an `x11::client_request_header`.
-struct client_request_header {
-   operation_code operation;
-   // `message_length` represents a multiple of four bytes.
-   cat::uint2 message_length;
-};
-
-// Every X server reply begins with an `x11::server_reply_header`.
-struct server_reply_header {
-   enum class [[clang::enum_extensibility(
-      open
-   )]] success_code_type : unsigned char {
-      failure = 0,
-      success = 1,
-   } success_code;
-
- private:
-   [[maybe_unused]]
-   cat::int1 _;
-
- public:
-   // This field is only initialized if `success_code_type` is `failed`.
-   cat::array<cat::uint2, 2u> x_version;
-   // `message_length` represents a multiple of four bytes.
-   cat::uint2 message_length;
-};
-
-// This packet is used to initiate a connection handshake with an X server.
-struct connection_request_info {
-   char endianness = cat::is_target_little_endian ? 'l' : 'B';
-
- private:
-   [[maybe_unused]]
-   cat::int1 _;
-
- public:
-   // This should almost always be `{11, 0}`.
-   cat::array<cat::uint2, 2u> x_version = {
-      static_cast<unsigned char>(11), static_cast<unsigned char>(0)
-   };
-   // No explicit protocol is specified if this is 0.
-   cat::uint2 authorization_protocol_length = static_cast<unsigned char>(0);
-   // No explicit protocol is specified if this is 0.
-   cat::uint2 authorization_data_length = static_cast<unsigned char>(0);
-
- private:
-   [[maybe_unused]]
-   cat::int2 _;
-};
-
-struct connection_response_info {
-   // The version of an X server that has been connected to.
-   cat::uint4 release_number;
-   // TODO: These should be bitsets.
-   cat::uint4 resource_id_base, resource_id_mask;
-   cat::uint4 motion_buffer_size;
-   // Length of the X server's name.
-   cat::uint2 vendor_string_length;
-   // Maximum length of a request that this server can handle.
-   cat::uint2 request_maximum_length;
-   // The number of root windows hosted by this server. These are transmitted as
-   // `root_window_packet`s imillimetersediately after the pixel map formats.
-   // This can determine the number of screens held by the server.
-   cat::uint1 root_windows_count;
-   // The number of pixel map formats available for this server. These are
-   // transmitted as `pixel_map_format_packet`s imillimetersediately after this
-   // struct's data.
-   cat::uint1 pixel_map_formats_count;
-   // Endianness of images, specified by the server.
-   cat::uint1 image_endianness;
-   // The leftmost bit in the bitmap is either the least significant or most
-   // significant bit in the scanline unit, as given by `bitmap_order`.
-   cat::uint1 bitmap_endianness;
-   // These will be 8, 16, or 32.
-   cat::uint1 scanline_unit, scanline_padding;
-   // This is the smallest key code the server will transmit.
-   key_code keycode_minimum;
-   // This is the largest key code the server will transmit.
-   key_code keycode_maximum;
-
- private:
-   [[maybe_unused]]
-   cat::int4 _;
-};
-
-struct pixel_map_format_packet {
-   cat::uint1 color_depth;
-   cat::uint1 bits_per_pixel;
-   cat::uint1 scanline_padding;
-
- private:
-   [[maybe_unused]]
-   cat::uint1 _[5];
-};
-
-// There is one root window per screen, so multiple `root_window_packet`s will
-// be recieved if there are multiple screens.
-struct root_window_packet {
-   window_resource window_id;
-   cat::uint4 default_colormap;
-   cat::uint4 white_pixel, black_pixel;
-   cat::uint4 input_mask;
-   // The window's dimensions in pixels.
-   cat::uint2 width_pixels, height_pixels;
-   // The window's dimensions in millimeters.
-   cat::uint2 width_millimeters, height_millimeters;
-   cat::uint2 minimum_installed_maps, maximum_installed_maps;
-   cat::uint4 root_visual_id;
-   cat::uint1 backing_store_state;
-   cat::uint1 save_unders;
-   cat::uint1 root_depth;
-   // The number of `depth_packet`s transmitted imillimetersediately after this
-   // packet.
-   cat::uint1 depths_count;
-};
-
-struct depth_packet {
+struct geometry_reply {
+   cat::uint1 response_type;
    cat::uint1 depth;
-
- private:
-   [[maybe_unused]]
-   cat::uint1 _;
-
- public:
-   // The number of `visual_packet`s transmitted imillimetersediately after this
-   // packet.
-   cat::uint2 visuals_count;
-
- private:
-   [[maybe_unused]]
-   cat::uint4 _;
-};
-
-struct visual_packet {
-   cat::uint1 group;
-   cat::uint1 bits_per_rgb;
-   cat::uint2 colormap_entries;
-   cat::uint4 mask_red, mask_green, mask_blue;
-
- private:
-   [[maybe_unused]]
-   cat::uint4 _;
-};
-
-struct connection {
-   cat::socket_handle socket;
-   x11::server_reply_header header;
-   x11::connection_response_info* _Nullable p_setup;
-   // TODO: A `p_vendor_name` could go here. Consider it?
-   x11::pixel_map_format_packet* _Nullable p_pixel_map_formats;
-   x11::root_window_packet* _Nullable p_root_windows;
-   x11::depth_packet* _Nullable p_depths;
-   x11::visual_packet* _Nullable p_visuals;
-};
-
-// TODO: Propagate errors instead of panicking.
-auto
-handshake(cat::is_allocator auto& allocator, cat::socket_handle socket)
-   -> cat::maybe<x11::connection> {
-   x11::connection x_connection{};
-
-   // Send a request with default-initialized fields.
-   x11::connection_request_info request{};
-   socket
-      .send(
-         cat::str_view(
-            __builtin_bit_cast(char const* _Nonnull, &request), sizeof(request)
-         )
-      )
-      .or_exit();
-
-   // TODO: Is the return of `.receive` important here?
-   auto _ = socket
-               .receive(
-                  cat::span<char>(
-                     __builtin_bit_cast(char* _Nonnull, &x_connection.header),
-                     sizeof(x_connection.header)
-                  )
-               )
-               .or_exit();
-
-   // TODO: This will fail if Xauth is enabled. This must handle X11 cookies.
-   if (
-      x_connection.header.success_code
-      == x11::server_reply_header::success_code_type::failure
-   ) {
-      // return Failure(x_connection.header.success_code)
-      return cat::nullopt;
-   }
-
-   // A dynamic allocation must be made because the total size of all recieved
-   // packets is unknown and potentially a very large amount.
-   // TODO: Deallocate this somehow.
-   auto memory = $prop(allocator.template alloc_multi<connection_response_info>(
-      x_connection.header.message_length * 4u
-   ));
-
-   x_connection.p_setup = memory.data();
-
-   // TODO: Is the return of `.receive` important here?
-   auto _ = socket
-               .receive(
-                  cat::span<char>(
-                     __builtin_bit_cast(char* _Nonnull, x_connection.p_setup),
-                     x_connection.header.message_length * 4u
-                  )
-               )
-               .or_exit();
-
-   // Copy pointers to that recieved data from the allocated buffer into
-   // `connection`.
-   // TODO: Use `intptr`.
-   char* p_iterator = static_cast<char*>(static_cast<void*>(
-      // TODO: Fix `cat::basic_int` so that these parentheses around
-      // `(sizeof() + uint2)` are not required.
-      x_connection.p_setup
-      + (sizeof(x11::connection_response_info)
-         // For now, skip past the vendor name string.
-         + x_connection.p_setup->vendor_string_length)
-   ));
-
-   x_connection.p_pixel_map_formats =
-      static_cast<x11::pixel_map_format_packet*>(
-         static_cast<void*>(p_iterator)
-      );
-   p_iterator += sizeof(x11::pixel_map_format_packet)
-                 * cat::idx(x_connection.p_setup->pixel_map_formats_count);
-
-   x_connection.p_root_windows =
-      static_cast<x11::root_window_packet*>(static_cast<void*>(p_iterator));
-   p_iterator += sizeof(x11::root_window_packet)
-                 * cat::idx(x_connection.p_setup->root_windows_count);
-
-   x_connection.p_depths =
-      static_cast<x11::depth_packet*>(static_cast<void*>(p_iterator));
-   p_iterator += sizeof(x11::depth_packet);
-
-   x_connection.p_visuals =
-      static_cast<x11::visual_packet*>(static_cast<void*>(p_iterator));
-
-   x_connection.socket = cat::move(socket);
-   return cat::move(x_connection);
-}
-
-// TODO: Improve error handling. Union X11 errors and Linux errors.
-// Attempt to connect to an X server over local sockets.
-auto
-initiate_connection(cat::is_allocator auto& allocator)
-   -> cat::maybe<x11::connection> {
-   cat::file_path socket_path =
-      $prop(cat::make_file_path(allocator, x11::socket_path));
-   $defer {
-      socket_path.free(allocator);
-   };
-
-   auto socket_result = cat::socket_handle::create(
-      cat::socket_domain::local, cat::socket_type::stream
-   );
-   if (socket_result.is_empty()) {
-      return cat::nullopt;
-   }
-   cat::socket_handle socket = cat::move(socket_result).value();
-   if (socket.connect(socket_path).is_empty()) {
-      return cat::nullopt;
-   }
-   return x11::handshake(allocator, cat::move(socket));
-}
-
-struct create_window_request_info {
-   client_request_header header = {
-      .operation = operation_code::create_window,
-      .message_length =
-         static_cast<unsigned short>(sizeof(create_window_request_info) / 4)
-   };
-
-   cat::uint1 window_depth;
-   window_resource window_id, parent_id;
+   cat::uint2 sequence;
+   cat::uint4 length;
+   x11::window root;
    cat::int2 x, y;
-   cat::uint2 width, height, border_thickness;
+   cat::uint2 width, height, border_width;
+   cat::uint1 _[10];  // NOLINT
+};
 
-   enum class [[clang::enum_extensibility(
-      open
-   )]] window_class_type : unsigned char {
-      input_output = 0,
-      input_only = 1,
-      copy_from_parent = 2,
-   } window_class;
+struct input_focus_reply {
+   cat::uint1 response_type;
+   cat::uint1 revert_to;
+   cat::uint2 sequence;
+   cat::uint4 length;
+   x11::window focus;
+   cat::uint1 _[20];  // NOLINT
+};
 
-   cat::uint4 visual_resource_id;
-   cat::uint4 value_mask;  // TODO: Use a `cat::bitset`.
-                           // TODO: Confirm that this field should exist.
-   cat::uint4 const* _Nullable p_values;
+struct query_extension_reply {
+   cat::uint1 response_type;
+   cat::uint1 _;
+   cat::uint2 sequence;
+   cat::uint4 length;
+   bool present;
+   cat::uint1 major_operation;
+   cat::uint1 first_event;
+   cat::uint1 first_error;
+   cat::uint1 _[20];  // NOLINT
+};
+
+// `value_length` items of `format` bits follow this reply. Receive them with
+// the overload of `connection::wait()` that takes a span.
+struct property_reply {
+   cat::uint1 response_type;
+   cat::uint1 format;
+   cat::uint2 sequence;
+   cat::uint4 length;
+   x11::atom type;
+   cat::uint4 bytes_after;
+   cat::uint4 value_length;
+   cat::uint1 _[12];  // NOLINT
+};
+
+// Where the pointer is, relative to the root and to the queried window.
+struct pointer_reply {
+   cat::uint1 response_type;
+   bool same_screen;
+   cat::uint2 sequence;
+   cat::uint4 length;
+   x11::window root, child;
+   cat::int2 root_x, root_y, window_x, window_y;
+   cat::uint2 mask;
+   cat::uint1 _[6];  // NOLINT
+};
+
+static_assert(sizeof(pointer_reply) == 32);
+static_assert(sizeof(intern_atom_reply) == 32);
+static_assert(sizeof(geometry_reply) == 32);
+static_assert(sizeof(input_focus_reply) == 32);
+static_assert(sizeof(query_extension_reply) == 32);
+static_assert(sizeof(property_reply) == 32);
+
+// Events.
+
+// Key, button, and motion events share this layout.
+struct input_event {
+   cat::uint1 response_type;
+   cat::uint1 detail;
+   cat::uint2 sequence;
+   cat::uint4 time;
+   x11::window root, event, child;
+   cat::int2 root_x, root_y, event_x, event_y;
+   cat::uint2 state;
+   bool same_screen;
+   cat::uint1 _;
+};
+
+struct focus_event {
+   cat::uint1 response_type;
+   cat::uint1 detail;
+   cat::uint2 sequence;
+   x11::window event;
+   cat::uint1 mode;
+   cat::uint1 _[23];  // NOLINT
+};
+
+struct expose_event {
+   cat::uint1 response_type;
+   cat::uint1 _;
+   cat::uint2 sequence;
+   x11::window window;
+   cat::uint2 x, y, width, height;
+   cat::uint2 count;
+   cat::uint1 _[14];  // NOLINT
+};
+
+struct destroy_notify_event {
+   cat::uint1 response_type;
+   cat::uint1 _;
+   cat::uint2 sequence;
+   x11::window event, window;
+   cat::uint1 _[20];  // NOLINT
+};
+
+// `map_notify` and `unmap_notify` share this layout.
+struct map_event {
+   cat::uint1 response_type;
+   cat::uint1 _;
+   cat::uint2 sequence;
+   x11::window event, window;
+   // This is `override_redirect` for maps, and `from_configure` for unmaps.
+   bool flag;
+   cat::uint1 _[19];  // NOLINT
+};
+
+struct configure_notify_event {
+   cat::uint1 response_type;
+   cat::uint1 _;
+   cat::uint2 sequence;
+   x11::window event, window, above_sibling;
+   cat::int2 x, y;
+   cat::uint2 width, height, border_width;
+   bool override_redirect;
+   cat::uint1 _[5];  // NOLINT
+};
+
+struct property_notify_event {
+   cat::uint1 response_type;
+   cat::uint1 _;
+   cat::uint2 sequence;
+   x11::window window;
+   x11::atom atom;
+   cat::uint4 time;
+   cat::uint1 state;
+   cat::uint1 _[15];  // NOLINT
+};
+
+struct client_message_event {
+   cat::uint1 response_type;
+   cat::uint1 format;
+   cat::uint2 sequence;
+   x11::window window;
+   x11::atom type;
+
+   union {
+      cat::array<cat::uint1, 20u> data_8;
+      cat::array<cat::uint2, 10u> data_16;
+      cat::array<cat::uint4, 5u> data_32;
+   };
+};
+
+// `4 * length` bytes of extension data follow this header.
+struct generic_event {
+   cat::uint1 response_type;
+   cat::uint1 extension;
+   cat::uint2 sequence;
+   cat::uint4 length;
+   cat::uint2 event_type;
+   cat::uint1 _[22];  // NOLINT
+};
+
+static_assert(sizeof(input_event) == 32);
+static_assert(sizeof(focus_event) == 32);
+static_assert(sizeof(expose_event) == 32);
+static_assert(sizeof(destroy_notify_event) == 32);
+static_assert(sizeof(map_event) == 32);
+static_assert(sizeof(configure_notify_event) == 32);
+static_assert(sizeof(property_notify_event) == 32);
+static_assert(sizeof(client_message_event) == 32);
+static_assert(sizeof(generic_event) == 32);
+
+// An event or an asynchronous `x11::error_packet` as received. This is a view
+// into a `connection`'s buffers, valid until the next call on that
+// `connection`.
+struct event {
+   cat::uint1 response_type;
+   cat::uint1 detail;
+   cat::uint2 sequence;
+   cat::uint1 _[28];  // NOLINT
+
+   // The event's code, without the bit which marks events from `send_event()`.
+   [[nodiscard]]
+   constexpr auto
+   code() const noexcept -> event_code {
+      return static_cast<event_code>(response_type & 0x7fu);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_sent() const noexcept -> bool {
+      return (response_type & 0x80u) != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_error() const noexcept -> bool {
+      return response_type == 0u;
+   }
+
+   // Reinterpret this as one of the event structs above, or
+   // `x11::error_packet`.
+   template <typename T>
+   [[nodiscard]]
+   auto
+   as() const noexcept [[clang::lifetimebound]] -> T const& {
+      static_assert(sizeof(T) == 32);
+      return *__builtin_bit_cast(T const*, this);
+   }
+
+   // The window this event is about, or `window::none` for events that do not
+   // have one. Use this to dispatch events between multiple windows.
+   [[nodiscard]]
+   auto
+   window() const noexcept -> x11::window;
+};
+
+static_assert(sizeof(event) == 32);
+
+// Fields of `value_list<window_attribute>`, in protocol order.
+enum class window_attribute : unsigned char {
+   background_pixmap,
+   background_pixel,
+   border_pixmap,
+   border_pixel,
+   bit_gravity,
+   window_gravity,
+   backing_store,
+   backing_planes,
+   backing_pixel,
+   override_redirect,
+   save_under,
+   event_mask,
+   do_not_propagate_mask,
+   colormap,
+   cursor,
+};
+
+// Fields of `value_list<window_configuration>`, in protocol order.
+enum class window_configuration : unsigned char {
+   x,
+   y,
+   width,
+   height,
+   border_width,
+   sibling,
+   stack_mode,
+};
+
+// The bitmask-selected list of values used by `create_window()`,
+// `change_window_attributes()`, and `configure_window()`. `Field`'s
+// enumerators index `values` and the bits of `mask`, so they must be below 32.
+template <cat::is_scoped_enum Field>
+struct value_list {
+   cat::uint4 mask = 0u;
+   cat::array<cat::uint4, 32u> values;
+
+   constexpr auto
+   set(Field field, cat::uint4 value) noexcept -> value_list& {
+      mask |= cat::uint4(1u) << cat::to_underlying(field);
+      values[cat::to_underlying(field)] = value;
+      return *this;
+   }
+
+   // Signed values, such as coordinates, are sent as their 32-bit pattern.
+   constexpr auto
+   set_signed(Field field, cat::uint4 value) noexcept -> value_list& {
+      return set(field, value);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const noexcept -> cat::idx {
+      return cat::popcount(mask);
+   }
+};
+
+using window_attributes = value_list<window_attribute>;
+using window_configurations = value_list<window_configuration>;
+
+// NOLINTNEXTLINE The ABI specifies a two-byte value.
+enum class window_class : unsigned short {
+   copy_from_parent = 0,
+   input_output = 1,
+   input_only = 2,
+};
+
+// The size of each item of a property's data.
+enum class property_format : unsigned char {
+   bits_8 = 8,
+   bits_16 = 16,
+   bits_32 = 32,
+};
+
+enum class property_mode : unsigned char {
+   replace = 0,
+   prepend = 1,
+   append = 2,
+};
+
+struct window_options {
+   // `window::none` creates a top-level window on the default screen.
+   x11::window parent = window::none;
+   cat::int2 x = 0, y = 0;
+   cat::uint2 width = 1u, height = 1u;
+   cat::uint2 border_width = 0u;
+   window_class class_type = window_class::input_output;
+   // 0 copies the parent's depth.
+   cat::uint1 depth = 0u;
+   x11::visual visual = visual::copy_from_parent;
+   window_attributes attributes;
+};
+
+// The default screen chosen by `$DISPLAY`.
+struct screen {
+   x11::window root;
+   x11::colormap default_colormap;
+   cat::uint4 white_pixel, black_pixel;
+   cat::uint2 width, height;
+   x11::visual root_visual;
+   cat::uint1 root_depth;
+};
+
+// A parsed `$DISPLAY` of the form `[host]:display[.screen]`.
+struct display_name {
+   // Empty or `"unix"` for a local socket. Anything else is a TCP host.
+   cat::str_view host;
+   cat::uint4 display = 0u;
+   cat::uint4 screen = 0u;
+};
+
+[[nodiscard]]
+auto
+parse_display_name(cat::str_view name) noexcept -> cat::maybe<display_name>;
+
+// An authorization protocol name and its secret, viewing an Xauthority file.
+struct authorization {
+   cat::str_view name;
+   cat::str_view data;
+};
+
+// Find the `MIT-MAGIC-COOKIE-1` entry of an Xauthority file's contents for
+// `display` on the local host named `host_name`.
+[[nodiscard]]
+auto
+find_authorization(
+   cat::span<cat::byte const> file, cat::str_view host_name, cat::uint4 display
+) noexcept -> cat::maybe<authorization>;
+
+namespace detail {
+using namespace cat::bit_literals;
+
+// A send, receive, or file registration for a connection's socket. It is
+// complete whenever it is not in flight.
+struct transfer_operation : nix::io_uring_operation {
+   cat::int4 result = 0;
+   bool is_complete = true;
+};
+
+// A poll for a connection's socket becoming readable.
+struct watch_operation : nix::io_uring_operation {
+   bool is_armed = false;
+   bool is_readable = true;
+};
+
+// The header of a reply kept for a later wait. The reply's bytes follow it,
+// padded to 8 bytes.
+struct parked_reply {
+   cat::uint8 sequence;
+   cat::idx size;
+};
+
+// Everything a `connection` owns. This is trivially copyable, so moving a
+// `connection` copies it and resets the source.
+struct connection_state {
+   explicit connection_state(cat::allocator_dyn allocator) noexcept
+       : m_allocator(allocator) {
+   }
+
+   // Each buffer starts this large, and grows to fit larger messages. These
+   // are small enough that heap allocators reuse memory for them rather than
+   // mapping new pages.
+   static constexpr cat::idx initial_send_capacity = 16_uki;
+   static constexpr cat::idx initial_receive_capacity = 16_uki;
+   static constexpr cat::idx initial_event_capacity = 4_uki;
+   // In pending replies, not bytes.
+   static constexpr cat::idx initial_pending_capacity = 64u;
+   // Queued requests are sent without waiting whenever this many accumulate.
+   static constexpr cat::idx chunk_size = 8_uki;
+
+   // The thread's shared ring, and the socket's fixed file slot in it.
+   nix::io_uring* _Nullable m_p_ring = nullptr;
+   nix::file_descriptor m_socket = nix::invalid_file_descriptor;
+   cat::uint4 m_socket_slot = 0u;
+   bool m_has_socket_slot = false;
+   // The first transfer also registers the socket in a fixed file slot.
+   // Linux writes the slot's index over `m_slot_value`.
+   transfer_operation m_slot_operation{};
+   cat::int4 m_slot_value = 0;
+   bool m_is_slot_pending = false;
+   bool m_is_slot_unavailable = false;
+   transfer_operation m_send_operation{};
+   transfer_operation m_receive_operation{};
+   // Once an idle `poll_event()` finds nothing, this watches the socket, so
+   // later idle polls need no system call until it becomes readable.
+   watch_operation m_watch_operation{};
+   transfer_operation m_cancel_operation{};
+   // `m_allocator` owns the send, receive, and event buffers.
+   cat::allocator_dyn m_allocator;
+   cat::byte* _Nullable m_p_send = nullptr;
+   cat::byte* _Nullable m_p_receive = nullptr;
+   cat::byte* _Nullable m_p_events = nullptr;
+   cat::idx m_send_capacity = 0u;
+   cat::idx m_receive_capacity = 0u;
+   cat::idx m_event_capacity = 0u;
+   cat::idx m_send_size = 0u;
+   // The send buffer before this offset has been submitted by
+   // `send_chunk()`.
+   cat::idx m_send_submitted = 0u;
+   cat::idx m_chunk_length = 0u;
+   transfer_operation m_chunk_operation{};
+   bool m_has_chunk = false;
+   cat::idx m_receive_head = 0u;
+   cat::idx m_receive_tail = 0u;
+   cat::idx m_event_head = 0u;
+   cat::idx m_event_tail = 0u;
+   cat::idx m_maximum_request_size = 4'096u;
+
+   // The sequence number of the last request queued.
+   cat::uint8 m_sequence = 0u;
+   cat::uint8 m_last_reply_sequence = 0u;
+   // The widened sequence number of the last response received.
+   cat::uint8 m_last_response_sequence = 0u;
+   // `check()` diverts the error with this sequence number to `m_checked`.
+   cat::uint8 m_check_sequence = 0u;
+   error_packet m_checked{};
+   bool m_has_checked = false;
+   // A `transport` error for local misuse, which does not fail the connection.
+   error_packet m_misuse{};
+   // Why the last request that could not be queued was rejected.
+   error_packet m_unsent{};
+
+   // The sequence numbers of requests with replies whose reply or error has
+   // not arrived, in request order. Responses arrive in request order too, so
+   // a response is for such a request exactly when it matches the front.
+   static constexpr cat::uint8 discarded_bit = 1ull << 63u;
+   cat::uint8* _Nullable m_p_pending = nullptr;
+   cat::idx m_pending_capacity = 0u;
+   cat::idx m_pending_head = 0u;
+   cat::idx m_pending_tail = 0u;
+
+   // Replies and errors that arrived before their cookie was waited, each
+   // after a `parked_reply`.
+   cat::byte* _Nullable m_p_parked = nullptr;
+   cat::idx m_parked_capacity = 0u;
+   cat::idx m_parked_size = 0u;
+   // The parked reply last returned by a wait, which the next call drops.
+   cat::idx m_taken_parked = 0u;
+   bool m_has_taken_parked = false;
+
+   cat::uint4 m_id_base = 0u;
+   cat::uint4 m_id_mask = 0u;
+   cat::uint4 m_id_increment = 1u;
+   cat::uint4 m_id_last = 0u;
+
+   screen m_screen{};
+   atom m_wm_protocols = atom::none;
+   atom m_wm_delete_window = atom::none;
+   atom m_net_wm_name = atom::none;
+   atom m_utf8_string = atom::none;
+
+   error_packet m_failure{};
+   bool m_has_failed = false;
+   // The ring failed with operations of this connection in flight, so their
+   // buffers may still be written and must not be freed.
+   bool m_is_ring_broken = false;
+};
+}  // namespace detail
+
+class connection : detail::connection_state {
+ public:
+   connection(connection&& other) noexcept;
+   connection(connection const&) = delete;
+   ~connection();
+
+   auto
+   operator=(connection&& other) noexcept -> connection&;
+   auto
+   operator=(connection const&) -> connection& = delete;
+
+   // Connect to `$DISPLAY`, authenticating with `$XAUTHORITY` or
+   // `$HOME/.Xauthority`. `p_environment` is the null-terminated environment
+   // array, which follows `argv`'s null terminator. This fails with
+   // `nix::linux_error::badfd` unless the calling thread has called
+   // `nix::alloc_io_uring_runtime()`. Buffers come from `allocator`, which
+   // must outlive this connection.
+   [[nodiscard]]
+   static auto
+   open(
+      cat::allocator_dyn allocator,
+      char const* _Nullable const* _Nonnull p_environment
+   ) noexcept -> scaredy_x11<connection>;
+
+   // Connect to `display`, authenticating with the Xauthority file at
+   // `authority_path`. An empty path or a missing entry connects without
+   // authorization, which servers may still accept from local users.
+   [[nodiscard]]
+   static auto
+   open(
+      cat::allocator_dyn allocator, cat::str_view display,
+      cat::zstr_view authority_path
+   ) noexcept -> scaredy_x11<connection>;
+
+   [[nodiscard]]
+   auto
+   default_screen() const noexcept [[clang::lifetimebound]] -> screen const& {
+      return m_screen;
+   }
+
+   // Allocate a new resource identifier for a window, pixmap, or other
+   // resource. Once they run out this returns 0, and the server rejects
+   // requests that create a resource with it.
+   [[nodiscard]]
+   auto
+   generate_id() noexcept -> cat::uint4 {
+      if (m_id_last + m_id_increment > m_id_mask) [[unlikely]] {
+         return 0u;
+      }
+      m_id_last += m_id_increment;
+      return m_id_base | m_id_last;
+   }
+
+   // Core requests.
+
+   auto
+   create_window(window_options const& options) noexcept -> window;
+
+   auto
+   change_window_attributes(
+      window target, window_attributes const& attributes
+   ) noexcept -> cookie<void> {
+      struct {
+         request_header header{
+            .operation = operation_code::change_window_attributes,
+         };
+         x11::window target;
+         cat::uint4 mask;
+      } request{.target = target, .mask = attributes.mask};
+
+      return push_with_values<void>(request, attributes);
+   }
+
+   auto
+   destroy_window(window target) noexcept -> cookie<void> {
+      return push<void>(window_request{
+         .header = {.operation = operation_code::destroy_window},
+         .target = target,
+      });
+   }
+
+   auto
+   map_window(window target) noexcept -> cookie<void> {
+      return push<void>(window_request{
+         .header = {.operation = operation_code::map_window},
+         .target = target,
+      });
+   }
+
+   auto
+   unmap_window(window target) noexcept -> cookie<void> {
+      return push<void>(window_request{
+         .header = {.operation = operation_code::unmap_window},
+         .target = target,
+      });
+   }
+
+   auto
+   configure_window(
+      window target, window_configurations const& configurations
+   ) noexcept -> cookie<void> {
+      struct {
+         request_header header{.operation = operation_code::configure_window};
+         x11::window target;
+         cat::uint2 mask;
+         cat::uint2 _ = 0u;
+      } request{
+         .target = target,
+      };
+
+      // Configurations only have 7 fields, so their mask fits 16 bits.
+      cat::maybe<cat::uint2> const mask =
+         cat::narrow_cast<cat::uint2>(configurations.mask);
+      if (!mask.has_value()) [[unlikely]] {
+         return rejected<void>(error_code::value, configurations.mask);
+      }
+      request.mask = mask.value();
+      return push_with_values<void>(request, configurations);
+   }
+
+   auto
+   get_geometry(window target) noexcept -> cookie<geometry_reply> {
+      return push<geometry_reply>(window_request{
+         .header = {.operation = operation_code::get_geometry}, .target = target
+      });
+   }
+
+   auto
+   intern_atom(cat::str_view name, bool only_if_exists = false) noexcept
+      -> cookie<intern_atom_reply> {
+      cat::maybe<cat::uint2> const name_length =
+         cat::narrow_cast<cat::uint2>(name.size());
+      if (!name_length.has_value()) [[unlikely]] {
+         return rejected<intern_atom_reply>(error_code::length, name.size());
+      }
+
+      struct {
+         request_header header;
+         cat::uint2 name_length;
+         cat::uint2 _ = 0u;
+      } request{
+         .header =
+            {.operation = operation_code::intern_atom,
+                     .data = as_flag(only_if_exists)},
+         .name_length = name_length.value(),
+      };
+
+      return push<intern_atom_reply>(request, as_bytes(name));
+   }
+
+   // `data` holds items of `format` bits each.
+   auto
+   change_property(
+      window target, atom property, atom type, property_format format,
+      cat::span<cat::byte const> data,
+      property_mode mode = property_mode::replace
+   ) noexcept -> cookie<void> {
+      // Data must hold whole items, and their count must fit 32 bits.
+      cat::idx const item_size = cat::to_underlying(format) / 8u;
+      cat::maybe<cat::uint4> const items =
+         cat::narrow_cast<cat::uint4>(data.size() / item_size);
+      if (!items.has_value() || data.size() % item_size != 0u) [[unlikely]] {
+         return rejected<void>(error_code::length, data.size());
+      }
+
+      struct {
+         request_header header;
+         x11::window target;
+         x11::atom property, type;
+         cat::uint1 format;
+         cat::uint1 _[3] = {};  // NOLINT
+         cat::uint4 length;
+      } request{
+         .header =
+            {
+                     .operation = operation_code::change_property,
+                     .data = cat::to_underlying(mode),
+                     },
+         .target = target,
+         .property = property,
+         .type = type,
+         .format = cat::to_underlying(format),
+         .length = items.value(),
+      };
+
+      return push<void>(request, data);
+   }
+
+   auto
+   delete_property(window target, atom property) noexcept -> cookie<void> {
+      struct {
+         request_header header{.operation = operation_code::delete_property};
+         x11::window target;
+         x11::atom property;
+      } request{.target = target, .property = property};
+
+      return push<void>(request);
+   }
+
+   // `offset` and `length` count 4-byte units. `type` may be `atom::none` to
+   // accept any type.
+   auto
+   get_property(
+      window target, atom property, atom type = atom::none,
+      cat::uint4 offset = 0u, cat::uint4 length = 0x1fffffffu,
+      bool delete_after = false
+   ) noexcept -> cookie<property_reply> {
+      struct {
+         request_header header;
+         x11::window target;
+         x11::atom property, type;
+         cat::uint4 offset, length;
+      } request{
+         .header =
+            {
+                     .operation = operation_code::get_property,
+                     .data = as_flag(delete_after),
+                     },
+         .target = target,
+         .property = property,
+         .type = type,
+         .offset = offset,
+         .length = length,
+      };
+
+      return push<property_reply>(request);
+   }
+
+   // Send a 32-byte `event` packet to `destination`.
+   auto
+   send_event(
+      window destination, event_mask mask, void const* _Nonnull p_event,
+      bool propagate = false
+   ) noexcept -> cookie<void> {
+      struct {
+         request_header header;
+         x11::window destination;
+         event_mask mask;
+         cat::array<cat::byte, 32u> event;
+      } request{
+         .header =
+            {
+                     .operation = operation_code::send_event,
+                     .data = as_flag(propagate),
+                     },
+         .destination = destination,
+         .mask = mask,
+         .event = {                                      },
+      };
+
+      __builtin_memcpy_inline(request.event.data(), p_event, 32u);
+      return push<void>(request);
+   }
+
+   // `revert_to` is 0 for none, 1 for the pointer root, or 2 for the parent.
+   auto
+   set_input_focus(
+      window focus, cat::uint1 revert_to = 2u, cat::uint4 time = 0u
+   ) noexcept -> cookie<void> {
+      struct {
+         request_header header;
+         x11::window focus;
+         cat::uint4 time;
+      } request{
+         .header =
+            {.operation = operation_code::set_input_focus, .data = revert_to},
+         .focus = focus,
+         .time = time,
+      };
+
+      return push<void>(request);
+   }
+
+   auto
+   query_pointer(window target) noexcept -> cookie<pointer_reply> {
+      return push<pointer_reply>(window_request{
+         .header = {.operation = operation_code::query_pointer},
+         .target = target,
+      });
+   }
+
+   auto
+   get_input_focus() noexcept -> cookie<input_focus_reply> {
+      return push<input_focus_reply>(
+         request_header{.operation = operation_code::get_input_focus}
+      );
+   }
+
+   auto
+   query_extension(cat::str_view name) noexcept
+      -> cookie<query_extension_reply> {
+      cat::maybe<cat::uint2> const name_length =
+         cat::narrow_cast<cat::uint2>(name.size());
+      if (!name_length.has_value()) [[unlikely]] {
+         return rejected<query_extension_reply>(
+            error_code::length, name.size()
+         );
+      }
+
+      struct {
+         request_header header{.operation = operation_code::query_extension};
+         cat::uint2 name_length;
+         cat::uint2 _ = 0u;
+      } request{.name_length = name_length.value()};
+
+      return push<query_extension_reply>(request, as_bytes(name));
+   }
+
+   // Queue an already encoded request, such as an extension request. Its
+   // length field is filled in. `Reply` is `void` if it has no reply.
+   template <typename Reply = void>
+   auto
+   send_request(cat::span<cat::byte const> request) noexcept -> cookie<Reply> {
+      cat::idx const size = pad(request.size());
+      cat::maybe<cat::uint2> const length = request_length(size);
+      if (!length.has_value()) [[unlikely]] {
+         return rejected<Reply>(error_code::length, size);
+      }
+      cat::byte* p_request = begin_request(size, !cat::is_void<Reply>);
+      if (p_request == nullptr) [[unlikely]] {
+         return {0u};
+      }
+      cat::idx const request_size = request.size();
+      __builtin_memcpy(p_request, request.data(), request_size);
+      __builtin_memset(
+         p_request + request_size, 0, cat::idx(size - request_size)
+      );
+      set_length(p_request, length.value());
+      return {m_sequence};
+   }
+
+   // Window manager conveniences.
+
+   // Set `WM_NAME` and `_NET_WM_NAME` to the UTF-8 `title`.
+   auto
+   set_title(window target, cat::str_view title) noexcept -> cookie<void>;
+
+   // Ask the window manager for a close request event instead of killing
+   // this connection when the user closes `target`.
+   auto
+   enable_close_request(window target) noexcept -> cookie<void>;
+
+   // Whether `event` asks to close its `.window()`.
+   [[nodiscard]]
+   auto
+   is_close_request(event const& event) const noexcept -> bool;
+
+   // Waiting.
+
+   // Send any queued requests without waiting for a response.
+   auto
+   flush() noexcept -> scaredy_x11<void>;
+
+   // Wait for a reply or its error. Cookies may be waited in any order, so
+   // replies that arrive first are kept until their cookie is waited or
+   // discarded. Waiting a cookie that was already waited or discarded fails
+   // with `nix::linux_error::noent` instead of blocking.
+   template <typename Reply>
+   [[nodiscard]]
+   auto
+   wait(cookie<Reply> request) noexcept -> scaredy_x11<Reply> {
+      static_assert(
+         !cat::is_void<Reply>,
+         "Requests without replies are verified with `check()`."
+      );
+      return to_reply<Reply>(wait_response(request.sequence));
+   }
+
+   // Wait for a reply, and copy up to `trailing.size()` bytes of the data that
+   // follows it into `trailing`.
+   template <typename Reply>
+   [[nodiscard]]
+   auto
+   wait(cookie<Reply> request, cat::span<cat::byte> trailing) noexcept
+      -> scaredy_x11<Reply> {
+      static_assert(
+         !cat::is_void<Reply>,
+         "Requests without replies are verified with `check()`."
+      );
+      cat::byte const* p_response = wait_response(request.sequence);
+      if (p_response[0] != 0u) {
+         cat::idx const length = cat::idx(response_size(p_response) - 32u);
+         cat::idx const capacity = trailing.size();
+         __builtin_memcpy(
+            trailing.data(), p_response + 32,
+            length < capacity ? length : capacity
+         );
+      }
+      return to_reply<Reply>(p_response);
+   }
+
+   // Round trip to the server to learn whether a request without a reply
+   // failed. Its error is not also delivered as an event.
+   [[nodiscard]]
+   auto
+   check(cookie<void> request) noexcept -> scaredy_x11<void>;
+
+   // Drop the reply of a request whose cookie will never be waited.
+   template <typename Reply>
+   void
+   discard(cookie<Reply> request) noexcept {
+      if constexpr (!cat::is_void<Reply>) {
+         discard_sequence(request.sequence);
+      }
+   }
+
+   // Return the next event or asynchronous error, or `nullptr` if none have
+   // arrived. This does not block.
+   [[nodiscard]]
+   auto
+   poll_event() noexcept -> scaredy_x11<event const*>;
+
+   // Return the next event or asynchronous error, blocking until one arrives.
+   [[nodiscard]]
+   auto
+   wait_event() noexcept -> scaredy_x11<event const*>;
+
+   // The error which ended this connection, if any. A failed connection fails
+   // every later wait with this error.
+   [[nodiscard]]
+   auto
+   failure() const noexcept -> cat::maybe<error_packet> {
+      if (m_has_failed) {
+         return m_failure;
+      }
+      return cat::nullopt;
+   }
+
+ private:
+   // Every request begins with this.
+   struct request_header {
+      operation_code operation;
+      cat::uint1 data = 0u;
+      // The request's size in 4-byte units. `push()` fills this in.
+      cat::uint2 length = 0u;
+   };
+
+   struct window_request {
+      request_header header;
+      x11::window target;
+   };
+
+   enum class transfer_mode : unsigned char {
+      send,
+      receive,
+      poll,
+   };
+
+   [[nodiscard]]
+   static constexpr auto
+   pad(cat::idx size) noexcept -> cat::idx {
+      return (size + 3u) / 4u * 4u;
+   }
+
+   // A request's length field, which counts 4-byte units in 16 bits.
+   [[nodiscard]]
+   static constexpr auto
+   request_length(cat::idx size) noexcept -> cat::maybe<cat::uint2> {
+      return cat::narrow_cast<cat::uint2>(size / 4u);
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   as_flag(bool flag) noexcept -> cat::uint1 {
+      return flag ? cat::uint1(1u) : cat::uint1(0u);
+   }
+
+   [[nodiscard]]
+   static auto
+   as_bytes(cat::str_view string) noexcept -> cat::span<cat::byte const> {
+      return {
+         __builtin_bit_cast(cat::byte const*, string.data()), string.size()
+      };
+   }
+
+   static void
+   set_length(cat::byte* _Nonnull p_request, cat::uint2 length) noexcept {
+      __builtin_memcpy_inline(p_request + 2, &length, 2u);
+   }
+
+   // The full size of a reply, error, or event, given its first 32 bytes.
+   [[nodiscard]]
+   static auto
+   response_size(cat::byte const* _Nonnull p_response) noexcept -> cat::idx {
+      if (
+         p_response[0] == 1u
+         || p_response[0] == cat::to_underlying(event_code::generic_event)
+      ) {
+         cat::uint4 length;
+         __builtin_memcpy_inline(&length, p_response + 4, 4u);
+         // Widen before multiplying, since this may exceed 32 bits.
+         cat::idx const words = length;
+         return words * 4u + 32u;
+      }
+      return 32u;
+   }
+
+   template <typename Reply>
+   [[nodiscard]]
+   static auto
+   to_reply(cat::byte const* _Nonnull p_response) noexcept
+      -> scaredy_x11<Reply> {
+      if (p_response[0] == 0u) {
+         error_packet failure;
+         __builtin_memcpy_inline(&failure, p_response, 32u);
+         return failure;
+      }
+      detail::x11_storage<Reply> reply;
+      __builtin_memcpy_inline(&reply, p_response, sizeof(reply));
+      return reply;
+   }
+
+   // Reserve `size` bytes for a request, and return them, or `nullptr` if this
+   // connection failed.
+   [[nodiscard]]
+   auto
+   begin_request(cat::idx size, bool has_reply) noexcept
+      -> cat::byte* _Nullable {
+      // Once earlier requests fill a chunk, start sending them, so that the
+      // server works while later requests are encoded.
+      if (m_send_size >= m_send_submitted + chunk_size) [[unlikely]] {
+         send_chunk();
+      }
+      if (size > m_maximum_request_size || m_has_failed) [[unlikely]] {
+         reject(error_code::length, size / 4u);
+         return nullptr;
+      }
+      // Responses carry 16 bits of their request's sequence number. Ensure
+      // that there is a response at least every 2^16 requests, so that each
+      // can be widened from the last.
+      if (!has_reply && m_sequence - m_last_reply_sequence >= 0xfffeu)
+         [[unlikely]] {
+         if (!reserve_pending() || !reserve_send(4u)) {
+            return nullptr;
+         }
+         request_header const sync{
+            .operation = operation_code::get_input_focus,
+            .data = 0u,
+            .length = 1u,
+         };
+         __builtin_memcpy_inline(m_p_send + m_send_size - 4u, &sync, 4u);
+         m_last_reply_sequence = ++m_sequence;
+         // Nothing waits for this reply.
+         m_p_pending[m_pending_tail] = m_sequence | discarded_bit;
+         ++m_pending_tail;
+      }
+      if (has_reply && !reserve_pending()) [[unlikely]] {
+         return nullptr;
+      }
+      if (!reserve_send(size)) [[unlikely]] {
+         return nullptr;
+      }
+      ++m_sequence;
+      if (has_reply) {
+         m_last_reply_sequence = m_sequence;
+         m_p_pending[m_pending_tail] = m_sequence;
+         ++m_pending_tail;
+      }
+      return m_p_send + (m_send_size - size);
+   }
+
+   // Ensure that one more pending reply can be recorded.
+   [[nodiscard]]
+   auto
+   reserve_pending() noexcept -> bool {
+      if (m_pending_tail == m_pending_capacity) [[unlikely]] {
+         return make_pending_space();
+      }
+      return true;
+   }
+
+   [[nodiscard]]
+   auto
+   reserve_send(cat::idx size) noexcept -> bool {
+      if (m_send_size + size > m_send_capacity) [[unlikely]] {
+         if (!make_send_space(size)) {
+            return false;
+         }
+      }
+      m_send_size += size;
+      return true;
+   }
+
+   template <typename Reply, typename Request>
+   auto
+   push(
+      Request const& request, cat::span<cat::byte const> trailing = nullptr
+   ) noexcept -> cookie<Reply> {
+      constexpr cat::idx request_size = sizeof(Request);
+      cat::idx const trailing_size = trailing.size();
+      cat::idx const size = request_size + pad(trailing_size);
+      cat::maybe<cat::uint2> const length = request_length(size);
+      if (!length.has_value()) [[unlikely]] {
+         return rejected<Reply>(error_code::length, size);
+      }
+      cat::byte* p_request = begin_request(size, !cat::is_void<Reply>);
+      if (p_request == nullptr) [[unlikely]] {
+         return {0u};
+      }
+      __builtin_memcpy_inline(p_request, &request, sizeof(Request));
+      set_length(p_request, length.value());
+      cat::byte* p_trailing = p_request + request_size;
+      if (trailing_size != 0u) {
+         __builtin_memcpy(p_trailing, trailing.data(), trailing_size);
+      }
+      __builtin_memset(
+         p_trailing + trailing_size, 0,
+         cat::idx(size - request_size - trailing_size)
+      );
+      return {m_sequence};
+   }
+
+   template <typename Reply, typename Request, typename Field>
+   auto
+   push_with_values(
+      Request const& request, value_list<Field> const& values
+   ) noexcept -> cookie<Reply> {
+      constexpr cat::idx request_size = sizeof(Request);
+      cat::idx const size = request_size + (values.size() * 4u);
+      cat::maybe<cat::uint2> const length = request_length(size);
+      if (!length.has_value()) [[unlikely]] {
+         return rejected<Reply>(error_code::length, size);
+      }
+      cat::byte* p_request = begin_request(size, !cat::is_void<Reply>);
+      if (p_request == nullptr) [[unlikely]] {
+         return {0u};
+      }
+      __builtin_memcpy_inline(p_request, &request, sizeof(Request));
+      set_length(p_request, length.value());
+      cat::byte* p_value = p_request + request_size;
+      // Values follow in the order of their bits in the mask.
+      for (cat::uint4 mask = values.mask; mask != 0u;
+           mask = mask & (mask - 1u)) {
+         __builtin_memcpy_inline(
+            p_value, &values.values[cat::countr_zero(mask)], 4u
+         );
+         p_value += 4;
+      }
+      return {m_sequence};
+   }
+
+   void
+   fail(error_code code) noexcept;
+
+   void
+   discard_sequence(cat::uint8 sequence) noexcept;
+
+   // Record why a request could not be queued, with the value which was out
+   // of range.
+   void
+   reject(error_code code, cat::idx bad_value) noexcept;
+
+   // Reject a request, and return its cookie.
+   template <typename Reply>
+   [[nodiscard]]
+   auto
+   rejected(error_code code, cat::idx bad_value) noexcept -> cookie<Reply> {
+      reject(code, bad_value);
+      return {0u};
+   }
+
+   [[nodiscard]]
+   auto
+   make_pending_space() noexcept -> bool;
+
+   // The index of `sequence` among the pending replies, or `m_pending_tail`.
+   [[nodiscard]]
+   auto
+   find_pending(cat::uint8 sequence) const noexcept -> cat::idx;
+
+   // What `route()` did with a reply or error.
+   enum class routed : unsigned char {
+      // It is the response to the request being waited.
+      target,
+      // It was parked, captured by `check()`, or dropped for `discard()`.
+      kept,
+      // It is an error for a request without a reply, so it is an event.
+      event,
+      // Keeping it failed this connection.
+      failed,
+   };
+
+   // Decide what to do with the reply or error last returned by
+   // `next_response()`, while waiting for the request `target`.
+   [[nodiscard]]
+   auto
+   route(cat::byte const* _Nonnull p_response, cat::uint8 target) noexcept
+      -> routed;
+
+   // Wait until no operation of this connection is in flight. This fails if
+   // the ring breaks, and then the connection's buffers are never freed.
+   [[nodiscard]]
+   auto
+   settle_operations() noexcept -> bool;
+
+   // Park a reply or error which no wait asked for.
+   [[nodiscard]]
+   auto
+   park(cat::byte const* _Nonnull p_response) noexcept -> bool;
+
+   // The offset of the parked entry for `sequence`, or `m_parked_size`.
+   [[nodiscard]]
+   auto
+   find_parked(cat::uint8 sequence) const noexcept -> cat::idx;
+
+   void
+   erase_parked(cat::idx offset) noexcept;
+
+   // Drop the parked reply returned by the last wait.
+   void
+   release_taken() noexcept;
+
+   void
+   fail(nix::linux_error linux_error) noexcept;
+
+   // Send everything queued, and grow the send buffer if it is still smaller
+   // than `size`.
+   [[nodiscard]]
+   auto
+   make_send_space(cat::idx size) noexcept -> bool;
+
+   // Grow `p_buffer` to at least `minimum` bytes, keeping its contents.
+   [[nodiscard]]
+   auto
+   grow(cat::byte*& p_buffer, cat::idx& capacity, cat::idx minimum) noexcept
+      -> bool;
+
+   // Submit the unsent part of the send buffer without waiting, unless an
+   // earlier chunk is still being sent.
+   void
+   send_chunk() noexcept;
+
+   // Wait for the chunk being sent, and fail if it was not sent.
+   [[nodiscard]]
+   auto
+   finish_chunk() noexcept -> bool;
+
+   // Cancel the watch and wait for its last completion.
+   void
+   stop_watching() noexcept;
+
+   // Adopt the fixed file slot once its registration completes. With `wait`,
+   // wait for that.
+   void
+   finish_slot(bool wait) noexcept;
+
+   // Fill an SQE's file for the socket, using its fixed file slot if it has
+   // one yet.
+   void
+   set_socket(nix::io_uring_sqe& submission) const noexcept;
+
+   // Finish `other`'s chunk, so that no completion targets its old address.
+   [[nodiscard]]
+   static auto
+   settled(connection& other) noexcept -> connection&;
+
+   // Send queued requests, and for `receive` and `poll`, receive whatever
+   // data is available. `poll` does not wait for data to arrive.
+   [[nodiscard]]
+   auto
+   transfer(transfer_mode mode) noexcept -> bool;
+
+   // Return the next complete response in the receive buffer, or `nullptr`.
+   [[nodiscard]]
+   auto
+   next_response() noexcept -> cat::byte const* _Nullable;
+
+   [[nodiscard]]
+   auto
+   queue_event(cat::byte const* _Nonnull p_response) noexcept -> bool;
+
+   // Return the reply or error for `sequence`, or this connection's failure.
+   [[nodiscard]]
+   auto
+   wait_response(cat::uint8 sequence) noexcept -> cat::byte const* _Nonnull;
+
+   [[nodiscard]]
+   auto
+   next_event(transfer_mode mode) noexcept -> event const* _Nullable;
+
+   [[nodiscard]]
+   auto
+   handshake(authorization authority, cat::uint4 screen_index) noexcept
+      -> scaredy_x11<void>;
+
+   explicit connection(cat::allocator_dyn allocator) noexcept
+       : detail::connection_state(allocator) {
+   }
 };
 
 }  // namespace x11

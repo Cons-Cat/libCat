@@ -513,4 +513,64 @@ $test(io_uring_swap) {
    right.close().verify();
 }
 
+namespace {
+
+struct counted_operation : nix::io_uring_operation {
+   cat::int4 result;
+   cat::idx completions;
+};
+
+void
+count_completion(
+   nix::io_uring_operation& operation, nix::io_uring_cqe const& completion
+) noexcept {
+   auto& counted = static_cast<counted_operation&>(operation);
+   counted.result = completion.result;
+   ++counted.completions;
+}
+
+}  // namespace
+
+$test(io_uring_runtime) {
+   if (!nix::has_sys_io_uring()) {
+      return;
+   }
+   cat::verify(nix::io_uring_runtime() == nullptr);
+   auto allocated = nix::alloc_io_uring_runtime(8u, 4u);
+   if (allocated.is_empty()) {
+      return;
+   }
+   nix::io_uring* const p_ring = nix::io_uring_runtime();
+   cat::verify(p_ring != nullptr);
+   // Allocating again keeps the same ring.
+   nix::alloc_io_uring_runtime().verify();
+   cat::verify(nix::io_uring_runtime() == p_ring);
+
+   // Fixed file slots are handed out and returned.
+   nix::file_descriptor pipe[2];
+   nix::sys_pipe(pipe).verify();
+   cat::uint4 const read_slot = p_ring->register_file(pipe[0]).verify();
+   cat::uint4 const write_slot = p_ring->register_file(pipe[1]).verify();
+   cat::verify(read_slot != write_slot);
+
+   // `dispatch()` hands each CQE to the operation in its `user_data`.
+   counted_operation first{{count_completion}, -1, 0u};
+   counted_operation second{{count_completion}, -1, 0u};
+   for (counted_operation* p_operation : {&first, &second}) {
+      nix::io_uring_sqe* p_submission = p_ring->submission_queue().get_sqe();
+      p_submission->opcode = nix::io_uring_opcode::nop;
+      p_submission->user_data = __builtin_bit_cast(cat::uword, p_operation);
+   }
+   p_ring->dispatch(2u).verify();
+   cat::verify(first.completions == 1u && first.result == 0);
+   cat::verify(second.completions == 1u && second.result == 0);
+
+   p_ring->unregister_file(read_slot).verify();
+   p_ring->unregister_file(write_slot).verify();
+   nix::sys_close(pipe[0]).verify();
+   nix::sys_close(pipe[1]).verify();
+   nix::free_io_uring_runtime();
+   cat::verify(nix::io_uring_runtime() == nullptr);
+}
+
 // NOLINTEND(readability-magic-numbers)

@@ -28,6 +28,8 @@ namespace nix {
 // TODO: Consider using the names from `std::errc`.
 // NOLINTNEXTLINE
 enum class [[clang::enum_extensibility(open)]] linux_error : int {
+   // No error.
+   none = 0,
    // Operation is not permitted.
    perm = -1,
    // No such file or directory.

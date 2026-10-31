@@ -21,6 +21,16 @@ namespace nix {
 
 class io_uring;
 
+// An operation submitted to a ring that other code shares. An SQE's
+// `user_data` holds the address of one of these, and `io_uring::dispatch()`
+// passes that SQE's CQE to `p_complete`. Embed this in a larger struct to keep
+// per-operation state.
+struct io_uring_operation {
+   void (*_Nonnull p_complete)(
+      io_uring_operation& operation, io_uring_cqe const& completion
+   ) noexcept;
+};
+
 class io_uring_submission_queue {
  public:
    // Construct an unbound queue view. An owning ring binds it before access.
@@ -142,6 +152,27 @@ class io_uring_submission_queue {
       );
       m_sqe_head = m_sqe_tail;
       return submitted;
+   }
+
+   // Return the SQ slots published by `.flush()` that Linux has not consumed
+   // yet. A failed `io_uring_enter` leaves them for the next one.
+   [[nodiscard]]
+   auto
+   unconsumed_count() const noexcept(!__has_feature(cxx_exceptions))
+      -> cat::uint4 {
+      cat::uint4 const head =
+         cat::atomic<cat::uint4&>(*m_p_head).load(cat::memory_order::acquire);
+      return m_sqe_head.wrap() - head;
+   }
+
+   // Report whether completions wait for this thread to enter the ring. Linux
+   // only reports this for rings set up with `taskrun_flag`.
+   [[nodiscard]]
+   auto
+   has_task_work() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
+      cat::uint4 const flags =
+         cat::atomic<cat::uint4&>(*m_p_flags).load(cat::memory_order::relaxed);
+      return (flags & cat::to_underlying(io_uring_sq_flags::taskrun)) != 0u;
    }
 
    // Report whether the kernel currently requests an SQ polling thread wakeup.
@@ -356,6 +387,42 @@ class [[gsl::Owner]] io_uring {
       io_uring_enter_flags flags = io_uring_enter_flags::none
    ) noexcept -> scaredy_nix<cat::idx>;
 
+   // Register this ring's descriptor with the calling thread, so that every
+   // later `.enter()` skips the descriptor table lookup. Registration belongs
+   // to the calling thread, so only that thread may enter this ring after.
+   [[nodiscard]]
+   auto
+   register_ring_descriptor() noexcept -> scaredy_nix<void>;
+
+   // Submit pending SQEs, wait until at least `minimum_complete` CQEs are
+   // ready, then pass every ready CQE to the `io_uring_operation` that its
+   // `user_data` points to. Interruptions and a full completion queue are not
+   // errors here, because collecting completions is how they are resolved, so
+   // callers wait again until their operations complete. An error means the
+   // ring cannot be used, and its operations may never complete.
+   [[nodiscard]]
+   auto
+   dispatch(cat::uint4 minimum_complete) noexcept -> scaredy_nix<void>;
+
+   // Register a fixed file table of `count` empty slots, which
+   // `.register_file()` or a `files_update` operation fills.
+   [[nodiscard]]
+   auto
+   register_file_table(cat::uint4 count) noexcept -> scaredy_nix<void>;
+
+   // Put `descriptor` in a free fixed file slot, and return that slot's index
+   // for SQEs flagged with `io_uring_sqe_flags::fixed_file`.
+   [[nodiscard]]
+   auto
+   register_file(file_descriptor descriptor) noexcept
+      -> scaredy_nix<cat::uint4>;
+
+   // Empty a slot filled by `.register_file()`. This drops the ring's
+   // reference to that file once no submitted operation uses it.
+   [[nodiscard]]
+   auto
+   unregister_file(cat::uint4 index) noexcept -> scaredy_nix<void>;
+
    // Attempt every unmap and close, returning the first cleanup error. The
    // owner becomes empty even on error. Queue references must not be retained.
    [[nodiscard]]
@@ -382,6 +449,10 @@ class [[gsl::Owner]] io_uring {
    ) -> scaredy_nix<void>;
 
    file_descriptor m_file_descriptor = invalid_file_descriptor;
+   // This is `m_file_descriptor` until `.register_ring_descriptor()` replaces
+   // it with a registered ring index.
+   file_descriptor m_enter_descriptor = invalid_file_descriptor;
+   io_uring_enter_flags m_enter_flags = io_uring_enter_flags::none;
    io_uring_params m_params{};
    io_uring_submission_queue m_submission_queue;
    io_uring_completion_queue m_completion_queue;
@@ -396,5 +467,31 @@ auto
 make_io_uring(cat::uint4 entries, io_uring_params params = {}) noexcept(
    !__has_feature(cxx_exceptions)
 ) -> cat::scaredy<io_uring, linux_error>;
+
+namespace detail {
+inline constinit thread_local io_uring* _Nullable p_io_uring_runtime = nullptr;
+}  // namespace detail
+
+// Create the calling thread's shared ring, unless it already has one. Code
+// that submits asynchronous system calls, such as `x11::connection`, uses this
+// ring through `io_uring_runtime()`. The ring is set up for one issuing
+// thread, which runs completions only while it waits in `.dispatch()`.
+[[nodiscard]]
+auto
+alloc_io_uring_runtime(
+   cat::uint4 entries = 64u, cat::uint4 files = 64u
+) noexcept -> scaredy_nix<void>;
+
+// Destroy the calling thread's shared ring. Nothing may still be using it.
+void
+free_io_uring_runtime() noexcept;
+
+// The calling thread's shared ring, or `nullptr` before
+// `alloc_io_uring_runtime()`.
+[[nodiscard]]
+inline auto
+io_uring_runtime() noexcept -> io_uring* _Nullable {
+   return detail::p_io_uring_runtime;
+}
 
 }  // namespace nix

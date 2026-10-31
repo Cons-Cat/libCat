@@ -177,7 +177,10 @@ struct scaredy_compact_storage {
       is_enum<Error> && sizeof(Error) <= sizeof(value_type)
       && is_trivially_copyable<value_type>;
 
-   using storage_integer = int_fixed<sizeof(value_type)>;
+   // Only enum errors are encoded as integers, and values wider than any
+   // integer must still be storable.
+   using storage_integer =
+      int_fixed<stores_enum_error_as_value ? sizeof(value_type) : 1u>;
 
    [[nodiscard]]
    static constexpr auto

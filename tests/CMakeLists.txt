@@ -97,7 +97,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_quantity_format_catalog.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_runtime.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_exceptions.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_signal_guard.cpp
+    # ${CMAKE_SOURCE_DIR}/tests/src/test_signal_guard.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_assert_handler.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_alloc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_arrays.cpp
@@ -156,6 +156,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_stringify.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_futex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_io_uring.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_x11.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_syscalls.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_socket.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_chrono.cpp

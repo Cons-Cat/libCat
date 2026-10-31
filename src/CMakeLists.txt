@@ -288,6 +288,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/file/implementations/get_executable_path.cpp
   ${CATLIB}/file/implementations/mapped_file.cpp
   ${CATLIB}/socket/implementations/socket.cpp
+  ${CATLIB}/x11/implementations/x11.cpp
   ${CATLIB}/linux/implementations/is_a_tty.cpp
   ${CATLIB}/linux/implementations/tty_get_attributes.cpp
   ${CATLIB}/linux/implementations/tty_set_attributes.cpp
