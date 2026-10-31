@@ -148,9 +148,9 @@ struct op_sub_sat {};
 
 struct op_fma {};
 
-struct op_fshl {};
+struct op_funnel_shift_left {};
 
-struct op_fshr {};
+struct op_funnel_shift_right {};
 
 struct op_ldexp {};
 

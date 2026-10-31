@@ -108,13 +108,6 @@ shift_right_by(T value, cat::uword count) noexcept(
    !__has_feature(cxx_exceptions)
 ) -> T;
 
-template <cat::is_unsigned_integral T>
-[[nodiscard]]
-constexpr auto
-rotate_right_by(T value, cat::uword count) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> T;
-
 template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
@@ -318,84 +311,76 @@ shift_right(T value, uword count) noexcept -> T {
    return ::x64::shift_right_by(value, count);
 }
 
-// Returns `value` rotated left by `shift` positions. Shifts wrap around the bit
-// width of `T`.
-template <is_unsigned_integral T>
+// Returns `value` rotated left by `shift` positions. Shifts wrap around the
+// bit width of `T`. Negative shifts rotate right by the same magnitude.
+template <is_unsigned_integral T, is_integral Shift>
    requires(!is_idx<T>)  // TODO: Support `idx`.
 [[nodiscard]]
 constexpr auto
-rotate_left(T value, uword shift) noexcept -> T {
-   return T(__builtin_stdc_rotate_left(make_raw_arithmetic(value), shift.raw));
-}
-
-// Returns `value` rotated left by `shift` positions. Shifts wrap around the bit
-// width of `T`. Negative shifts rotate right by the same magnitude value.
-template <is_unsigned_integral T>
-   requires(!is_idx<T>)
-[[nodiscard]]
-constexpr T
-rotate_left(T value, iword shift) noexcept {
-   // Unsigned wrap is intentional so the most-negative value has a magnitude.
-   uword magnitude = 0u - shift;
-   return rotate_right(value, magnitude);
-}
-
-template <is_unsigned_integral T>
-   requires(!is_idx<T>)
-[[nodiscard]]
-constexpr auto
-rotate_right(T value, uword shift) noexcept -> T;
-
-// Returns `value` rotated left by `shift` positions. Shifts wrap around the bit
-// width of `T`.
-template <is_unsigned_integral T>
-   requires(!is_idx<T>)
-[[nodiscard]]
-constexpr T
-rotate_left(T value, iword shift)
-   // When a signed positive shift constant is inputted, forward to
-   // `cat::rotate_right()`.
-   __attribute__((enable_if(shift.raw >= 0, ""))) {
-   // Unsigned wrap is intentional so the most-negative value has a magnitude.
-   uword magnitude = 0u - shift;
-   return rotate_right(value, uword(magnitude));
+rotate_left(T value, Shift shift) noexcept -> T {
+   return T(__builtin_stdc_rotate_left(
+      make_raw_arithmetic(value), make_raw_arithmetic(shift)
+   ));
 }
 
 // Returns `value` rotated right by `shift` positions. Shifts wrap around the
-// bit width of `T`.
-template <is_unsigned_integral T>
+// bit width of `T`. Negative shifts rotate left by the same magnitude.
+template <is_unsigned_integral T, is_integral Shift>
    requires(!is_idx<T>)  // TODO: Support `idx`.
 [[nodiscard]]
 constexpr auto
-rotate_right(T value, uword shift) noexcept -> T {
-   return ::x64::rotate_right_by(value, shift);
+rotate_right(T value, Shift shift) noexcept -> T {
+   return T(__builtin_stdc_rotate_right(
+      make_raw_arithmetic(value), make_raw_arithmetic(shift)
+   ));
 }
 
-// Returns `value` rotated right by `shift` positions. Shifts wrap around the
-// bit width of `T`. Negative shifts rotate left by the same magnitude value.
-template <is_unsigned_integral T>
-   requires(!is_idx<T>)
+// Concatenate `high` and `low` into a value twice the width of `T`, shift it
+// left by `shift`, and return the high half. This is `high << shift` with the
+// vacated low bits filled from the high bits of `low`. `shift` must be less
+// than the bit width of `T`. Zero returns `high`.
+template <is_unsigned_integral T, is_integral Shift>
+   requires(!is_idx<T>)  // TODO: Support `idx`.
 [[nodiscard]]
-constexpr T
-rotate_right(T value, iword shift) noexcept {
-   // Unsigned wrap is intentional so the most-negative value has a magnitude.
-   uword magnitude = 0u - shift;
-   return rotate_left(value, magnitude);
+constexpr auto
+funnel_shift_left(T high, T low, Shift shift) noexcept -> T {
+   return T(__builtin_elementwise_fshl(
+      make_raw_arithmetic(high), make_raw_arithmetic(low),
+      static_cast<raw_arithmetic_type<T>>(make_raw_arithmetic(shift))
+   ));
 }
 
-// Returns `value` rotated right by `shift` positions. Shifts wrap around the
-// bit width of `T`.
-template <is_unsigned_integral T>
+// A constant `shift` that is out of range selects this guard instead.
+template <is_unsigned_integral T, is_integral Shift>
    requires(!is_idx<T>)
+constexpr void
+funnel_shift_left(T, T, Shift shift)
+   __attribute__((enable_if(shift < 0 || shift >= sizeof(T) * 8u, ""))) {
+   static_assert(false, "Shift is out of range!");
+}
+
+// Concatenate `high` and `low` into a value twice the width of `T`, shift it
+// right by `shift`, and return the low half. This is `low >> shift` with the
+// vacated high bits filled from the low bits of `high`. `shift` must be less
+// than the bit width of `T`. Zero returns `low`.
+template <is_unsigned_integral T, is_integral Shift>
+   requires(!is_idx<T>)  // TODO: Support `idx`.
 [[nodiscard]]
-constexpr T
-rotate_right(T value, iword shift)
-   // When a signed positive shift constant is inputted, forward to
-   // `cat::rotate_left()`.
-   __attribute__((enable_if(shift.raw >= 0, ""))) {
-   // Unsigned wrap is intentional so the most-negative value has a magnitude.
-   uword magnitude = 0u - shift;
-   return rotate_left(value, uword(magnitude));
+constexpr auto
+funnel_shift_right(T high, T low, Shift shift) noexcept -> T {
+   return T(__builtin_elementwise_fshr(
+      make_raw_arithmetic(high), make_raw_arithmetic(low),
+      static_cast<raw_arithmetic_type<T>>(make_raw_arithmetic(shift))
+   ));
+}
+
+// A constant `shift` that is out of range selects this guard instead.
+template <is_unsigned_integral T, is_integral Shift>
+   requires(!is_idx<T>)
+constexpr void
+funnel_shift_right(T, T, Shift shift)
+   __attribute__((enable_if(shift < 0 || shift >= sizeof(T) * 8u, ""))) {
+   static_assert(false, "Shift is out of range!");
 }
 
 // Reverse every bit in an unsigned integer.
@@ -798,22 +783,6 @@ shift_right_arithmetic_by_fallback(T value, cat::uword count) noexcept -> T {
    return T(cat::make_raw_arithmetic(value) >> count.raw);
 }
 
-template <cat::is_unsigned_integral T>
-[[nodiscard]]
-constexpr auto
-rotate_right_by_fallback(T value, cat::uword count) noexcept -> T {
-   constexpr cat::idx bits = sizeof(T) * 8u;
-   cat::uword const reduced_count = count % bits;
-   if (reduced_count == 0u) {
-      return value;
-   }
-   auto const raw_value = cat::make_raw_arithmetic(value);
-   return T(
-      (raw_value >> reduced_count.raw)
-      | (raw_value << (cat::make_raw_arithmetic(bits - reduced_count)))
-   );
-}
-
 template <cat::is_unsigned T>
 [[nodiscard, gnu::target("bmi"), gnu::nodebug]]
 auto
@@ -935,12 +904,6 @@ shift_right_arithmetic_by_bmi2(T value, cat::uword count) noexcept -> T {
    return shift_right_arithmetic_by_fallback(value, count);
 }
 
-template <cat::is_unsigned_integral T>
-[[nodiscard, gnu::target("bmi2"), gnu::nodebug]]
-auto
-rotate_right_by_bmi2(T value, cat::uword count) noexcept -> T {
-   return rotate_right_by_fallback(value, count);
-}
 }  // namespace detail
 
 // Extracts `length` number of bits out of `from`, ending at the `offset` of the
@@ -1108,22 +1071,6 @@ shift_right_arithmetic_by(T value, cat::uword count) noexcept -> T {
          return detail::shift_right_arithmetic_by_bmi2(value, count);
       }
       return detail::shift_right_arithmetic_by_fallback(value, count);
-   }
-}
-
-template <cat::is_unsigned_integral T>
-[[nodiscard]]
-constexpr auto
-rotate_right_by(T value, cat::uword count) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> T {
-   if consteval {
-      return detail::rotate_right_by_fallback(value, count);
-   } else {
-      if (__builtin_cpu_supports("bmi2")) {
-         return detail::rotate_right_by_bmi2(value, count);
-      }
-      return detail::rotate_right_by_fallback(value, count);
    }
 }
 
