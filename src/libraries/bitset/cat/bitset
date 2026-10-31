@@ -186,7 +186,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
 
    [[nodiscard]]
    constexpr auto
-   at(idx index) [[clang::lifetimebound]]
+   at(idx index) noexcept [[clang::lifetimebound]]
    -> maybe<bit_reference<array_type_element>> {
       if (index < bits_count) {
          return (*this)[index];
@@ -196,7 +196,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
 
    [[nodiscard]]
    constexpr auto
-   at(idx index) const [[clang::lifetimebound]]
+   at(idx index) const noexcept [[clang::lifetimebound]]
    -> maybe<bit_reference<array_type_element> const> {
       if (index < bits_count) {
          return (*this)[index];
@@ -318,7 +318,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
 
    [[nodiscard]]
    constexpr auto
-   countr_zero() const -> idx {
+   countr_zero() const noexcept -> idx {
       idx count;
 
       // Iff `leading_skipped_bits` is not zero, then the first iteration of
@@ -359,7 +359,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
 
    [[nodiscard]]
    constexpr auto
-   countr_one() const -> idx {
+   countr_one() const noexcept -> idx {
       idx count;
 
       constexpr bool has_prologue = (leading_skipped_bits != 0u);
@@ -467,7 +467,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // `shift` is reduced mod `bits_count`. Negative shifts rotate the other way.
    [[nodiscard]]
    constexpr auto
-   rotate_left(iword shift) const -> bitset {
+   rotate_left(iword shift) const noexcept -> bitset {
       if constexpr (storage_array_size == 1u && leading_skipped_bits == 0u) {
          // The bitset exactly fills one storage element, so rotating that
          // element is rotating the bitset.
@@ -483,7 +483,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // `shift` is reduced mod `bits_count`. Negative shifts rotate the other way.
    [[nodiscard]]
    constexpr auto
-   rotate_right(iword shift) const -> bitset {
+   rotate_right(iword shift) const noexcept -> bitset {
       if constexpr (storage_array_size == 1u && leading_skipped_bits == 0u) {
          // The bitset exactly fills one storage element, so rotating that
          // element is rotating the bitset.
@@ -617,7 +617,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // `i` is bit `i + leading_skipped_bits` of that integer.
    [[nodiscard]]
    constexpr auto
-   rotate_left_impl(idx left_shift) const -> bitset {
+   rotate_left_impl(idx left_shift) const noexcept -> bitset {
       if constexpr (bits_count == 0u) {
          return *this;
       } else if constexpr (storage_array_size == 1u) {

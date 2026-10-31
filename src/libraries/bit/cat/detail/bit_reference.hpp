@@ -2,11 +2,32 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/compact.hpp>
+
+#include <cat/arithmetic>
+#include <cat/debug>
+#include <cat/limits>
+#include <cat/meta>
+
 namespace cat {
+
+template <is_unsigned_integral Storage>
+class bit_reference;
+
+namespace detail {
+template <is_unsigned_integral Storage>
+constexpr auto
+empty_bit_reference() noexcept -> bit_reference<Storage>;
+}  // namespace detail
 
 template <is_unsigned_integral Storage>
 class bit_reference {
  public:
+   // If this references a `bit_value`, the type would be `bool`, which can be
+   // problematic and confusing for bit operations such as negation.
+   using mask_integer_type =
+      conditional<is_same<Storage, bool>, unsigned char, Storage>;
+
    constexpr bit_reference(bit_reference<Storage> const&) = default;
    constexpr bit_reference(bit_reference<Storage>&&) = default;
 
@@ -95,16 +116,6 @@ class bit_reference {
       return *this;
    }
 
-   // Assign another bit's value to this bit.
-   template <is_unsigned_integral T>
-   constexpr auto
-   assign(Storage value) noexcept(!__has_feature(cxx_exceptions))
-      -> bit_reference& {
-      assert(has_single_bit(value));
-      value & 1u ? set() : unset();
-      return *this;
-   }
-
    // Flag this bit on.
    constexpr auto
    set() noexcept -> bit_reference& {
@@ -134,7 +145,7 @@ class bit_reference {
 
    [[nodiscard]]
    constexpr auto
-   mask() const noexcept -> Storage const& {
+   mask() const noexcept -> remove_cv<mask_integer_type> {
       return m_bit_mask;
    }
 
@@ -151,6 +162,18 @@ class bit_reference {
       Storage& reference, uword offset
    ) noexcept(!__has_feature(cxx_exceptions)) -> bit_reference<Storage>;
 
+   template <is_unsigned_integral FriendStorage>
+   friend constexpr auto
+   detail::empty_bit_reference() noexcept -> bit_reference<FriendStorage>;
+
+   struct empty_tag {};
+
+   // The empty state of a `maybe<bit_reference>`. Every other `bit_reference`
+   // has a non-zero mask.
+   constexpr explicit bit_reference(empty_tag /*empty_tag*/) noexcept
+       : m_p_storage(nullptr), m_bit_mask(0u) {
+   }
+
    // This constructor is only used by the free factory functions.
    constexpr bit_reference(Storage& in_storage, Storage in_mask) noexcept(
       !__has_feature(cxx_exceptions)
@@ -160,13 +183,28 @@ class bit_reference {
    }
 
    Storage* _Nonnull m_p_storage;
-
-   // If this references a `bit_value`, the type would be `bool`, which can be
-   // problematic and confusing for bit operations such as negation.
-   using mask_integer_type =
-      conditional<is_same<Storage, bool>, unsigned char, Storage>;
    remove_cv<mask_integer_type> m_bit_mask;
 };
+
+namespace detail {
+template <is_unsigned_integral Storage>
+constexpr auto
+empty_bit_reference() noexcept -> bit_reference<Storage> {
+   return bit_reference<Storage>(typename bit_reference<Storage>::empty_tag{});
+}
+}  // namespace detail
+
+// No `bit_reference` has a zero mask, so that is available as a `maybe` niche.
+template <is_unsigned_integral Storage>
+struct default_compact_trait<bit_reference<Storage>>
+    : identity_trait<compact<
+         bit_reference<Storage>,
+         [](bit_reference<Storage> const& reference) constexpr -> bool {
+            return reference.mask() != 0u;
+         },
+         [] constexpr -> bit_reference<Storage> {
+            return detail::empty_bit_reference<Storage>();
+         }>> {};
 
 template <typename T, typename CharT>
 struct formatter;

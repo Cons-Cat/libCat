@@ -166,9 +166,8 @@ popcount_words_simd(uword const* _Nonnull p_words, idx words, uword tail_mask)
 
 // Count set bits in a byte buffer with runtime SIMD dispatch.
 auto
-popcount_bytes_runtime(byte const* _Nonnull p_bytes, idx bytes) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> idx {
+popcount_bytes_runtime(byte const* _Nonnull p_bytes, idx bytes) noexcept
+   -> idx {
    if (bytes < 512u) {
       return popcount_bytes_scalar(p_bytes, bytes);
    }
@@ -194,7 +193,7 @@ popcount_bytes_runtime(byte const* _Nonnull p_bytes, idx bytes) noexcept(
 auto
 popcount_words_runtime(
    uword const* _Nonnull p_words, idx words, uword tail_mask
-) noexcept(!__has_feature(cxx_exceptions)) -> idx {
+) noexcept -> idx {
    if (words < 64u) {
       return popcount_words_scalar(p_words, words, tail_mask);
    }

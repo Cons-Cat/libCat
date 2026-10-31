@@ -97,30 +97,24 @@ namespace x64 {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-shift_left_by(T value, cat::uword count) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> T;
+shift_left_by(T value, cat::uword count) noexcept -> T;
 
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-shift_right_by(T value, cat::uword count) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> T;
+shift_right_by(T value, cat::uword count) noexcept -> T;
 
 template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-parallel_extract_bits(T value, U mask) noexcept(!__has_feature(cxx_exceptions))
-   -> T;
+parallel_extract_bits(T value, U mask) noexcept -> T;
 
 template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-deposit_bits_mask(T value, U mask) noexcept(!__has_feature(cxx_exceptions))
-   -> T;
+deposit_bits_mask(T value, U mask) noexcept -> T;
 }  // namespace x64
 
 namespace cat {
@@ -985,8 +979,7 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-parallel_extract_bits(T value, U mask) noexcept(!__has_feature(cxx_exceptions))
-   -> T {
+parallel_extract_bits(T value, U mask) noexcept -> T {
    if consteval {
       return detail::parallel_extract_bits_fallback(value, mask);
    } else {
@@ -1002,8 +995,7 @@ template <cat::is_unsigned_integral T, cat::is_unsigned_integral U>
    requires(sizeof(T) == sizeof(U))
 [[nodiscard]]
 constexpr auto
-deposit_bits_mask(T value, U mask) noexcept(!__has_feature(cxx_exceptions))
-   -> T {
+deposit_bits_mask(T value, U mask) noexcept -> T {
    if consteval {
       return detail::deposit_bits_mask_fallback(value, mask);
    } else {
@@ -1031,9 +1023,7 @@ zero_high_bits_at(T source, cat::uint4 bit_index) noexcept -> T {
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-shift_left_by(T value, cat::uword count) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> T {
+shift_left_by(T value, cat::uword count) noexcept -> T {
    if consteval {
       return detail::shift_left_by_fallback(value, count);
    } else {
@@ -1047,9 +1037,7 @@ shift_left_by(T value, cat::uword count) noexcept(
 template <cat::is_unsigned_integral T>
 [[nodiscard]]
 constexpr auto
-shift_right_by(T value, cat::uword count) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> T {
+shift_right_by(T value, cat::uword count) noexcept -> T {
    if consteval {
       return detail::shift_right_by_fallback(value, count);
    } else {
@@ -1117,11 +1105,9 @@ make_bit_ptr_from_offset(Storage* _Nonnull p_storage, Offset offset) noexcept(
 
 namespace detail {
 constexpr auto
-get_bit_value(bit_value& value) noexcept(!__has_feature(cxx_exceptions))
-   -> bool&;
+get_bit_value(bit_value& value) noexcept -> bool&;
 constexpr auto
-get_bit_value(bit_value const& value) noexcept(!__has_feature(cxx_exceptions))
-   -> bool const&;
+get_bit_value(bit_value const& value) noexcept -> bool const&;
 }  // namespace detail
 
 }  // namespace cat
@@ -1134,13 +1120,9 @@ namespace cat {
 class bit_value {
  private:
    friend constexpr auto
-   cat::detail::get_bit_value(bit_value& value) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> bool&;
+   cat::detail::get_bit_value(bit_value& value) noexcept -> bool&;
    friend constexpr auto
-   cat::detail::get_bit_value(bit_value const& value) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> bool const&;
+   cat::detail::get_bit_value(bit_value const& value) noexcept -> bool const&;
 
  public:
    template <is_unsigned_integral>
@@ -1160,10 +1142,11 @@ class bit_value {
    static constexpr auto
    from_offset(Storage word, iword offset) noexcept(
       !__has_feature(cxx_exceptions)
-   ) {
-      assert(offset < limits<Storage>::bits);
+   ) -> bit_value {
+      assert(offset >= 0 && offset < limits<Storage>::bits);
       bit_value bit;
       bit.m_value = ((word >> offset) & 1u) != 0u;
+      return bit;
    }
 
    constexpr auto
@@ -1306,14 +1289,12 @@ inline constexpr bit_value zero_bit = false;
 
 namespace detail {
 constexpr auto
-get_bit_value(bit_value& value) noexcept(!__has_feature(cxx_exceptions))
-   -> bool& {
+get_bit_value(bit_value& value) noexcept -> bool& {
    return value.m_value;
 }
 
 constexpr auto
-get_bit_value(bit_value const& value) noexcept(!__has_feature(cxx_exceptions))
-   -> bool const& {
+get_bit_value(bit_value const& value) noexcept -> bool const& {
    return value.m_value;
 }
 }  // namespace detail
@@ -1694,25 +1675,21 @@ namespace detail {
 // Count set bits in a byte buffer at runtime.
 [[nodiscard]]
 auto
-popcount_bytes_runtime(byte const* _Nonnull p_bytes, idx bytes) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> idx;
+popcount_bytes_runtime(byte const* _Nonnull p_bytes, idx bytes) noexcept -> idx;
 
 // Count set bits in a word buffer at runtime.
 [[nodiscard]]
 auto
 popcount_words_runtime(
    uword const* _Nonnull p_words, idx words, uword tail_mask
-) noexcept(!__has_feature(cxx_exceptions)) -> idx;
+) noexcept -> idx;
 }  // namespace detail
 
 // Count set bits across a byte span.
 template <idx fixed_extent>
 [[nodiscard]]
 constexpr auto
-popcount(span<byte const, fixed_extent> bytes) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> idx {
+popcount(span<byte const, fixed_extent> bytes) noexcept -> idx {
    if consteval {
       idx count = 0u;
       for (idx i = 0u; i < bytes.size(); ++i) {
@@ -1728,9 +1705,7 @@ popcount(span<byte const, fixed_extent> bytes) noexcept(
 template <is_unsigned_integral Word, idx fixed_extent>
 [[nodiscard]]
 constexpr auto
-popcount(span<Word const, fixed_extent> words) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> idx {
+popcount(span<Word const, fixed_extent> words) noexcept -> idx {
    if consteval {
       idx count = 0u;
       for (idx i = 0u; i < words.size(); ++i) {

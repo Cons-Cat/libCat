@@ -2,6 +2,13 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/iterable_interface.hpp>
+
+#include <cat/arithmetic>
+#include <cat/limits>
+#include <cat/meta>
+#include <cat/stepanov>
+
 namespace cat {
 
 struct byte;
@@ -48,7 +55,8 @@ class bit_stepanov_iterator
    }
 
    constexpr auto
-   dereference() const noexcept -> const_reference {
+   dereference() const noexcept(!__has_feature(cxx_exceptions))
+      -> const_reference {
       return make_bit_reference_from_offset(
          *m_internal_iterator, m_bit_position
       );
