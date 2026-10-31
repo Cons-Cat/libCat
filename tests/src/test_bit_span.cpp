@@ -187,9 +187,10 @@ $test(bit_span_algorithms) {
    cat::verify(right.equal(left));
    cat::verify(cat::popcount(right) == 3u);
 
-   right.shift_left(4u);
+   // Shifts match integer shifts: shifting left moves bits to higher indices.
+   right.shift_right(4u);
    cat::verify(right_words[0u] == 0b0000'1011_u1);
-   right.shift_right(2u);
+   right.shift_left(2u);
    cat::verify(right_words[0u] == 0b0010'1100_u1);
 
    right.reverse_inplace();
@@ -226,9 +227,10 @@ $test(bit_span_algorithms) {
    right.reverse_inplace();
    cat::verify(right_words[0u] == 0b0010'1100_u1);
 
-   right.rotate_left(2u);
-   cat::verify(right_words[0u] == 0b0000'1011_u1);
-   right.rotate_right(2u);
+   // Rotations match `bitset`: rotating left moves bits to higher indices.
+   right.rotate_left(2);
+   cat::verify(right_words[0u] == 0b1011'0000_u1);
+   right.rotate_right(2);
    cat::verify(right_words[0u] == 0b0010'1100_u1);
 
    right.transform([](cat::bit_value bit) -> bool {
@@ -268,4 +270,198 @@ $test(bit_stepanov_iterator) {
    // 1st bit of 3rd uint4 is 0:
    it++;
    cat::verify(*it == false);
+}
+
+namespace {
+// Rotate `bits_count` bits viewed at `bit_offset` within their storage by
+// every shift in `[-2 * bits_count, 2 * bits_count]`, and compare against
+// rotating a `bitset`. The storage bits outside of the span must not change.
+template <cat::idx bits_count>
+constexpr auto
+bit_span_rotations_match_bitset(cat::idx bit_offset) -> bool {
+   constexpr cat::idx word_count = (bits_count + 16u + 7u) / 8u;
+   cat::bitset<bits_count> pattern;
+   for (cat::idx index; index < bits_count; ++index) {
+      pattern[index] = (index * 7u) % 5u < 2u;
+   }
+
+   cat::iword const span = cat::iword(bits_count) * 2;
+   for (cat::iword shift = -span; shift <= span; ++shift) {
+      for (bool const is_left : {true, false}) {
+         cat::array<cat::uint1, word_count> words;
+         for (cat::uint1& word : words) {
+            word = 0b1010'0101_u1;
+         }
+         cat::array<cat::uint1, word_count> expected_words = words;
+
+         cat::bit_span bits(words, bit_offset, bits_count);
+         for (cat::idx index; index < bits_count; ++index) {
+            bits[index] = bool(pattern[index]);
+         }
+         cat::bitset<bits_count> const expected =
+            is_left ? pattern.rotate_left(shift) : pattern.rotate_right(shift);
+         cat::bit_span expected_bits(expected_words, bit_offset, bits_count);
+         for (cat::idx index; index < bits_count; ++index) {
+            expected_bits[index] = bool(expected[index]);
+         }
+
+         if (is_left) {
+            bits.rotate_left(shift);
+         } else {
+            bits.rotate_right(shift);
+         }
+         if (words != expected_words) {
+            return false;
+         }
+      }
+   }
+   return true;
+}
+}  // namespace
+
+$test(bit_span_rotate_matches_bitset) {
+   static_assert(bit_span_rotations_match_bitset<1>(0u));
+   static_assert(bit_span_rotations_match_bitset<5>(3u));
+   static_assert(bit_span_rotations_match_bitset<8>(0u));
+   static_assert(bit_span_rotations_match_bitset<8>(5u));
+   for (cat::idx bit_offset : {0u, 1u, 3u, 7u, 8u, 13u}) {
+      cat::verify(bit_span_rotations_match_bitset<1>(bit_offset));
+      cat::verify(bit_span_rotations_match_bitset<7>(bit_offset));
+      cat::verify(bit_span_rotations_match_bitset<13>(bit_offset));
+      cat::verify(bit_span_rotations_match_bitset<16>(bit_offset));
+      cat::verify(bit_span_rotations_match_bitset<64>(bit_offset));
+      cat::verify(bit_span_rotations_match_bitset<77>(bit_offset));
+   }
+
+   // The most negative shift has no positive counterpart.
+   cat::array<cat::uint1, 2u> words{0b1100'1010_u1, 0b0000'0110_u1};
+   cat::array<cat::uint1, 2u> const original = words;
+   cat::bit_span bits(words, 3u, 11u);
+   bits.rotate_left(cat::limits<cat::iword>::min());
+   bits.rotate_right(cat::limits<cat::iword>::min());
+   cat::verify(words == original);
+
+   // An empty span rotates to itself.
+   cat::bit_span<cat::uint1> empty;
+   empty.rotate_left(3);
+   empty.rotate_right(-3);
+}
+
+namespace {
+// Shift `bits_count` bits viewed at `bit_offset` within their storage by every
+// count in `[0, bits_count + 2]`, and compare against moving each bit
+// individually. The storage bits outside of the span must not change.
+template <cat::idx bits_count>
+constexpr auto
+bit_span_shifts_are_correct(cat::idx bit_offset) -> bool {
+   constexpr cat::idx word_count = (bits_count + 16u + 7u) / 8u;
+   for (cat::idx count; count <= bits_count + 2u; ++count) {
+      for (bool const is_left : {true, false}) {
+         cat::array<cat::uint1, word_count> words;
+         for (cat::uint1& word : words) {
+            word = 0b1010'0101_u1;
+         }
+         cat::bit_span bits(words, bit_offset, bits_count);
+         for (cat::idx index; index < bits_count; ++index) {
+            bits[index] = (index * 7u) % 5u < 2u;
+         }
+
+         cat::array<cat::uint1, word_count> expected_words = words;
+         cat::bit_span expected(expected_words, bit_offset, bits_count);
+         for (cat::idx index; index < bits_count; ++index) {
+            bool value = false;
+            if (is_left && index >= count) {
+               value = bits[cat::idx(index - count)];
+            } else if (!is_left && index + count < bits_count) {
+               value = bits[index + count];
+            }
+            expected[index] = value;
+         }
+
+         if (is_left) {
+            bits.shift_left(count);
+         } else {
+            bits.shift_right(count);
+         }
+         if (words != expected_words) {
+            return false;
+         }
+      }
+   }
+   return true;
+}
+}  // namespace
+
+$test(bit_span_shift_and_copy) {
+   static_assert(bit_span_shifts_are_correct<5>(3u));
+   static_assert(bit_span_shifts_are_correct<8>(0u));
+   for (cat::idx bit_offset : {0u, 1u, 3u, 7u, 8u, 13u}) {
+      cat::verify(bit_span_shifts_are_correct<1>(bit_offset));
+      cat::verify(bit_span_shifts_are_correct<13>(bit_offset));
+      cat::verify(bit_span_shifts_are_correct<64>(bit_offset));
+      cat::verify(bit_span_shifts_are_correct<77>(bit_offset));
+   }
+
+   // `copy_from` and `equal` read from a view over `const` storage, and
+   // `copy_from` keeps the destination bits past the end of the span.
+   cat::array<cat::uint1, 2u> const source_words{0b1010'1010_u1, 0b0101_u1};
+   cat::array<cat::uint1, 2u> destination_words{0u, 0b1111'0000_u1};
+   cat::bit_span<cat::uint1 const> const source(source_words, 0u, 12u);
+   cat::bit_span destination(destination_words, 0u, 12u);
+   destination.copy_from(source);
+   cat::verify(destination.equal(source));
+   cat::verify(destination_words[0u] == 0b1010'1010_u1);
+   cat::verify(destination_words[1u] == 0b1111'0101_u1);
+}
+
+$test(bit_span_const_correctness_and_noexcept) {
+   // Only a view over mutable storage can write to it.
+   constexpr auto can_write = []<typename Bits>(Bits bits) {
+      return requires {
+                bits.rotate_left(1);
+                bits.rotate_right(1);
+                bits.fill();
+                bits.clear();
+                bits.shift_left(1u);
+                bits.shift_right(1u);
+                bits.reverse_inplace();
+                bits.copy_from(bits);
+                bits.move_from(bits);
+             };
+   };
+   static_assert(can_write(cat::bit_span<cat::uint1>{}));
+   static_assert(!can_write(cat::bit_span<cat::uint1 const>{}));
+
+   cat::bit_span<cat::uint1> bits;
+   static_assert(noexcept(bits.rotate_left(1)));
+   static_assert(noexcept(bits.rotate_right(1)));
+   static_assert(noexcept(bits.fill()));
+   static_assert(noexcept(bits.clear()));
+   static_assert(noexcept(bits.shift_left(1u)));
+   static_assert(noexcept(bits.shift_right(1u)));
+   static_assert(noexcept(bits.reverse_inplace()));
+   static_assert(noexcept(bits.countl_zero()));
+   static_assert(noexcept(bits.countl_one()));
+   static_assert(noexcept(bits.countr_zero()));
+   static_assert(noexcept(bits.countr_one()));
+   static_assert(noexcept(bits.bit_width()));
+   static_assert(noexcept(bits.equal(bits)));
+   static_assert(noexcept(cat::popcount(bits)));
+   static_assert(noexcept(cat::countl_zero(bits)));
+   cat::bitset<10u> bitset;
+   static_assert(noexcept(cat::bit_span(bitset)));
+
+   // Operations whose only assertions cannot fail are `noexcept`.
+   static_assert(noexcept(bitset.at(0u)));
+   static_assert(noexcept(bitset.countr_zero()));
+   static_assert(noexcept(bitset.countr_one()));
+   static_assert(noexcept(bitset.rotate_left(1)));
+   static_assert(noexcept(bitset.rotate_right(1)));
+   cat::bitset<100u> wide_bitset;
+   static_assert(noexcept(wide_bitset.rotate_left(1)));
+   cat::array<cat::uint1, 1u> words{};
+   cat::bit_ptr<cat::uint1> pointer(words.data());
+   static_assert(noexcept(*pointer));
+   static_assert(noexcept(pointer.add(9)));
+   static_assert(noexcept(cat::popcount(cat::span<cat::uint1 const>{})));
 }

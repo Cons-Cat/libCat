@@ -399,6 +399,38 @@ $test(bitset_at) {
    cat::verify(bits127.at(128u).is_empty());
 }
 
+$test(bitset_at_niche) {
+   // A `bit_reference` never has a zero mask, so `maybe<bit_reference>` uses
+   // that as its empty state instead of a separate flag.
+   using reference = cat::bitset<10u>::reference;
+   static_assert(sizeof(cat::maybe<reference>) == sizeof(reference));
+
+   cat::bitset<10u> bits;
+   cat::maybe<reference> engaged = bits.at(9u);
+   cat::verify(engaged.has_value());
+   engaged.value() = true;
+   cat::verify(bits[9u]);
+   cat::verify(!bits.at(10u).has_value());
+   cat::verify(!cat::maybe<reference>(cat::nullopt).has_value());
+
+   constexpr auto engaged_in_constant_expression = [] {
+      cat::bitset<10u> constant_bits;
+      return constant_bits.at(3u).has_value()
+             && !constant_bits.at(10u).has_value();
+   };
+   static_assert(engaged_in_constant_expression());
+
+   // A reference to a `bit_value` stores its mask as `unsigned char`, and
+   // `mask()` returns that rather than a reference to a temporary.
+   cat::bit_value value = true;
+   cat::bit_reference value_reference(value);
+   static_assert(cat::is_same<decltype(value_reference.mask()), unsigned char>);
+   cat::verify(value_reference.mask() == 1u);
+   static_assert(
+      sizeof(cat::maybe<decltype(value_reference)>) == sizeof(value_reference)
+   );
+}
+
 $test(bitset_from_string) {
    cat::bitset bitstring("010101");
    cat::verify(bitstring[0] == false);

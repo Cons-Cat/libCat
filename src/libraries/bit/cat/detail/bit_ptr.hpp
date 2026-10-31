@@ -2,6 +2,12 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/arithmetic>
+#include <cat/bit>
+#include <cat/debug>
+#include <cat/limits>
+#include <cat/meta>
+
 namespace cat {
 
 template <is_unsigned_integral Storage>
@@ -59,7 +65,7 @@ bit_ptr : public plus_interface<bit_ptr<Storage>>,
 
    [[nodiscard]]
    constexpr auto
-   operator*() const noexcept(!__has_feature(cxx_exceptions)) -> reference {
+   operator*() const noexcept -> reference {
       return make_bit_reference_from_offset(*m_p_storage, m_bit_position);
    }
 
@@ -98,8 +104,7 @@ bit_ptr : public plus_interface<bit_ptr<Storage>>,
    template <is_arithmetic Offset>
    [[nodiscard]]
    constexpr auto
-   add(Offset offset) const noexcept(!__has_feature(cxx_exceptions))
-      -> bit_ptr {
+   add(Offset offset) const noexcept -> bit_ptr {
       difference_type const advanced_bit = m_bit_position + offset;
       difference_type word_offset = advanced_bit / storage_bits;
       if (advanced_bit < 0 && word_offset * storage_bits != advanced_bit) {
@@ -176,8 +181,7 @@ bit_ptr : public plus_interface<bit_ptr<Storage>>,
 };
 
 template <is_unsigned_integral Storage>
-bit_ptr(Storage* _Nullable) noexcept(!__has_feature(cxx_exceptions))
-   ->bit_ptr<Storage>;
+bit_ptr(Storage* _Nullable) -> bit_ptr<Storage>;
 
 template <is_unsigned_integral Storage, is_unsigned_integral Mask>
 constexpr auto
