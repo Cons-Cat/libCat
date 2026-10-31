@@ -429,6 +429,9 @@ set(CAT_HEADER_FILES
    ${CATLIB}/iterable/implementations/fill.tpp
    ${CATLIB}/iterable/implementations/fold.tpp
   ${CATLIB}/iterable/implementations/for_each.tpp
+  ${CATLIB}/iterable/implementations/is_all.tpp
+  ${CATLIB}/iterable/implementations/is_any.tpp
+  ${CATLIB}/iterable/implementations/is_none.tpp
   ${CATLIB}/iterable/implementations/iterable_interface.tpp
   ${CATLIB}/iterable/implementations/max.tpp
   ${CATLIB}/iterable/implementations/min.tpp
