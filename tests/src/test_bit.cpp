@@ -371,6 +371,40 @@ $test(bit_rotate) {
       cat::rotate_right(0b1000'0001_u1, 6)
       == cat::rotate_right(0b1000'0001_u1, cat::uword(6u))
    );
+   // `funnel_shift_left` fills from the high bits of `low`, and
+   // `funnel_shift_right` fills from the low bits of `high`.
+   static_assert(
+      cat::funnel_shift_left(0b1000'0001_u1, 0b1100'0000_u1, 2)
+      == 0b0000'0111_u1
+   );
+   static_assert(
+      cat::funnel_shift_right(0b0000'0011_u1, 0b1000'0001_u1, 2)
+      == 0b1110'0000_u1
+   );
+   static_assert(
+      cat::funnel_shift_left(0b1010'1010_u1, 0b0101'0101_u1, 0)
+      == 0b1010'1010_u1
+   );
+   static_assert(
+      cat::funnel_shift_right(0b1010'1010_u1, 0b0101'0101_u1, 0)
+      == 0b0101'0101_u1
+   );
+   // The example from P4010.
+   static_assert(cat::funnel_shift_right(0xABCD_u2, 0x1234_u2, 8) == 0xCD12_u2);
+   static_assert(cat::funnel_shift_left(0xABCD_u2, 0x1234_u2, 8) == 0xCD12_u2);
+   // Funnelling a value with itself is a rotation.
+   static_assert(
+      cat::funnel_shift_left(0b1000'0001_u1, 0b1000'0001_u1, 3)
+      == cat::rotate_left(0b1000'0001_u1, 3)
+   );
+   static_assert(
+      cat::funnel_shift_right(0b1000'0001_u1, 0b1000'0001_u1, 7_u4)
+      == cat::rotate_right(0b1000'0001_u1, 7)
+   );
+   static_assert(
+      cat::rotate_left(0b1000'0001_u1, cat::limits<cat::iword>::min())
+      == 0b1000'0001_u1
+   );
    static_assert(
       cat::rotate_left(0b1000'0001_u1, cat::iword(-1))
       == cat::rotate_right(0b1000'0001_u1, cat::uword(1u))

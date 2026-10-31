@@ -3435,65 +3435,106 @@ struct simd_fma_impl
    }
 };
 
-struct simd_fshl_impl
-    : simd_elementwise_ternary_interface<simd_fshl_impl, simd_abi::op_fshl> {
-   constexpr simd_fshl_impl() = default;
+struct simd_funnel_shift_left_impl
+    : simd_elementwise_ternary_interface<
+         simd_funnel_shift_left_impl, simd_abi::op_funnel_shift_left> {
+   constexpr simd_funnel_shift_left_impl() = default;
+
+   using simd_elementwise_ternary_interface<
+      simd_funnel_shift_left_impl, simd_abi::op_funnel_shift_left>::operator();
+
+   // Shift every lane by the same `shift`.
+   template <typename T, typename Abi, is_integral Shift>
+      requires(is_integral<T> && !is_bool<T>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> high, simd<T, Abi> low, Shift shift) const noexcept
+      -> simd<T, Abi> {
+      return invoke_full(high, low, simd<T, Abi>(T(shift)));
+   }
 
    template <typename T, typename Abi>
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const noexcept
-      -> simd<T, Abi> {
-      if constexpr (has_simd_abi_ternary_full<simd_abi::op_fshl, T, Abi>) {
-         return simd_abi_apply_ternary_full<simd_abi::op_fshl, T, Abi>(x, y, z);
+   invoke_full(
+      simd<T, Abi> high, simd<T, Abi> low, simd<T, Abi> shift
+   ) const noexcept -> simd<T, Abi> {
+      if constexpr (
+         has_simd_abi_ternary_full<simd_abi::op_funnel_shift_left, T, Abi>
+      ) {
+         return simd_abi_apply_ternary_full<
+            simd_abi::op_funnel_shift_left, T, Abi>(high, low, shift);
       }
-      return simd<T, Abi>(__builtin_elementwise_fshl(x.raw, y.raw, z.raw));
+      return simd<T, Abi>(
+         __builtin_elementwise_fshl(high.raw, low.raw, shift.raw)
+      );
    }
 
    template <typename T>
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x, T y, T z) const noexcept -> T {
+   invoke_lanewise(T high, T low, T shift) const noexcept -> T {
       using unsigned_type = make_unsigned_type<T>;
-      unsigned_type const hi = static_cast<unsigned_type>(x);
-      unsigned_type const lo = static_cast<unsigned_type>(y);
+      unsigned_type const high_bits = static_cast<unsigned_type>(high);
+      unsigned_type const low_bits = static_cast<unsigned_type>(low);
       unsigned int const count =
-         static_cast<unsigned int>(make_raw_arithmetic(z))
+         static_cast<unsigned int>(make_raw_arithmetic(shift))
          % static_cast<unsigned int>(sizeof(T) * 8u);
-      return static_cast<T>(__builtin_fshl(hi, lo, count));
+      return static_cast<T>(__builtin_fshl(high_bits, low_bits, count));
    }
 };
 
-struct simd_fshr_impl
-    : simd_elementwise_ternary_interface<simd_fshr_impl, simd_abi::op_fshr> {
-   constexpr simd_fshr_impl() = default;
+struct simd_funnel_shift_right_impl
+    : simd_elementwise_ternary_interface<
+         simd_funnel_shift_right_impl, simd_abi::op_funnel_shift_right> {
+   constexpr simd_funnel_shift_right_impl() = default;
+
+   using simd_elementwise_ternary_interface<
+      simd_funnel_shift_right_impl,
+      simd_abi::op_funnel_shift_right>::operator();
+
+   // Shift every lane by the same `shift`.
+   template <typename T, typename Abi, is_integral Shift>
+      requires(is_integral<T> && !is_bool<T>)
+   [[nodiscard]]
+   constexpr auto
+   operator()(simd<T, Abi> high, simd<T, Abi> low, Shift shift) const noexcept
+      -> simd<T, Abi> {
+      return invoke_full(high, low, simd<T, Abi>(T(shift)));
+   }
 
    template <typename T, typename Abi>
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_full(simd<T, Abi> x, simd<T, Abi> y, simd<T, Abi> z) const noexcept
-      -> simd<T, Abi> {
-      if constexpr (has_simd_abi_ternary_full<simd_abi::op_fshr, T, Abi>) {
-         return simd_abi_apply_ternary_full<simd_abi::op_fshr, T, Abi>(x, y, z);
+   invoke_full(
+      simd<T, Abi> high, simd<T, Abi> low, simd<T, Abi> shift
+   ) const noexcept -> simd<T, Abi> {
+      if constexpr (
+         has_simd_abi_ternary_full<simd_abi::op_funnel_shift_right, T, Abi>
+      ) {
+         return simd_abi_apply_ternary_full<
+            simd_abi::op_funnel_shift_right, T, Abi>(high, low, shift);
       }
-      return simd<T, Abi>(__builtin_elementwise_fshr(x.raw, y.raw, z.raw));
+      return simd<T, Abi>(
+         __builtin_elementwise_fshr(high.raw, low.raw, shift.raw)
+      );
    }
 
    template <typename T>
       requires(is_integral<T> && !is_bool<T>)
    [[nodiscard]]
    constexpr auto
-   invoke_lanewise(T x, T y, T z) const noexcept -> T {
+   invoke_lanewise(T high, T low, T shift) const noexcept -> T {
       using unsigned_type = make_unsigned_type<T>;
-      unsigned_type const hi = static_cast<unsigned_type>(x);
-      unsigned_type const lo = static_cast<unsigned_type>(y);
+      unsigned_type const high_bits = static_cast<unsigned_type>(high);
+      unsigned_type const low_bits = static_cast<unsigned_type>(low);
       unsigned int const count =
-         static_cast<unsigned int>(make_raw_arithmetic(z))
+         static_cast<unsigned int>(make_raw_arithmetic(shift))
          % static_cast<unsigned int>(sizeof(T) * 8u);
-      return static_cast<T>(__builtin_fshr(hi, lo, count));
+      return static_cast<T>(__builtin_fshr(high_bits, low_bits, count));
    }
 };
 
@@ -3656,16 +3697,20 @@ template <typename T>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-simd_fshl_lane(T x, T y, T z) noexcept -> T {
-   return detail::simd_fshl_impl{}.invoke_lanewise(x, y, z);
+simd_funnel_shift_left_lane(T high, T low, T shift) noexcept -> T {
+   return detail::simd_funnel_shift_left_impl{}.invoke_lanewise(
+      high, low, shift
+   );
 }
 
 template <typename T>
    requires(is_integral<T> && !is_bool<T>)
 [[nodiscard]]
 constexpr auto
-simd_fshr_lane(T x, T y, T z) noexcept -> T {
-   return detail::simd_fshr_impl{}.invoke_lanewise(x, y, z);
+simd_funnel_shift_right_lane(T high, T low, T shift) noexcept -> T {
+   return detail::simd_funnel_shift_right_impl{}.invoke_lanewise(
+      high, low, shift
+   );
 }
 
 template <typename T, typename IntT>
@@ -3847,8 +3892,8 @@ inline constexpr detail::simd_maximumnum_impl simd_maximumnum{};
 inline constexpr detail::simd_add_sat_impl simd_add_sat{};
 inline constexpr detail::simd_sub_sat_impl simd_sub_sat{};
 inline constexpr detail::simd_fma_impl simd_fma{};
-inline constexpr detail::simd_fshl_impl simd_fshl{};
-inline constexpr detail::simd_fshr_impl simd_fshr{};
+inline constexpr detail::simd_funnel_shift_left_impl simd_funnel_shift_left{};
+inline constexpr detail::simd_funnel_shift_right_impl simd_funnel_shift_right{};
 inline constexpr detail::simd_ldexp_impl simd_ldexp{};
 
 inline constexpr detail::simd_pairwise_add_impl simd_pairwise_add{};

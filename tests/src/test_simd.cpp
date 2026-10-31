@@ -2695,6 +2695,29 @@ $test(simd_popcount_rotate_left_rotate_right) {
    cat::verify(rotated_left[0] == 2u);
    uint4x4 rotated_right = cat::simd_rotate_right(rx, 1);
    cat::verify(rotated_right[3] == 4u);
+
+   // Funnel shifts take one shift per lane, or one shift for every lane.
+   uint4x4 const high = {0x00000001u, 0x80000000u, 0xFFFFFFFFu, 0u};
+   uint4x4 const low = {0x80000000u, 0x00000001u, 0u, 0xFFFFFFFFu};
+   uint4x4 const shifts = {1u, 31u, 4u, 0u};
+   uint4x4 const left = cat::simd_funnel_shift_left(high, low, shifts);
+   cat::verify(left[0] == 0x00000003u);
+   cat::verify(left[1] == 0x00000000u);
+   cat::verify(left[2] == 0xFFFFFFF0u);
+   cat::verify(left[3] == 0u);
+   uint4x4 const right = cat::simd_funnel_shift_right(high, low, shifts);
+   cat::verify(right[0] == 0xC0000000u);
+   cat::verify(right[1] == 0x00000000u);
+   cat::verify(right[2] == 0xF0000000u);
+   cat::verify(right[3] == 0xFFFFFFFFu);
+   uint4x4 const uniform = cat::simd_funnel_shift_left(high, low, 1);
+   cat::verify(uniform[0] == 0x00000003u);
+   cat::verify(uniform[1] == 0x00000000u);
+   cat::verify(uniform[2] == 0xFFFFFFFEu);
+   cat::verify(uniform[3] == 0x00000001u);
+   cat::verify(
+      cat::simd_funnel_shift_right(rx, rx, 1) == cat::simd_rotate_right(rx, 1)
+   );
 }
 
 // EVE-style mask subscript: `fn[mask](args?)` applies `fn` only where the:
