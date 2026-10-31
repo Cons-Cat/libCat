@@ -239,23 +239,15 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
       return result;
    }
 
-   // XOR is not part of `bitwise_interface` and `cat::basic_int` does not
-   // define `operator^`, so compute on the raw underlying integers.
+   // `bitwise_interface` generates `operator^` and `operator^=` from this.
    [[nodiscard]]
-   friend constexpr auto
-   operator^(bitset const& lhs, bitset const& rhs) noexcept -> bitset {
+   constexpr auto
+   bit_xor(bitset const& other) const noexcept -> bitset {
       bitset result;
       for (idx i; i < storage_array_size; ++i) {
-         result.m_data[i] =
-            array_type_element(lhs.m_data[i].raw ^ rhs.m_data[i].raw);
+         result.m_data[i] = m_data[i] ^ other.m_data[i];
       }
       return result;
-   }
-
-   friend constexpr auto
-   operator^=(bitset& self, bitset const& other) noexcept -> bitset& {
-      self = self ^ other;
-      return self;
    }
 
    // Evaluate true if every bit in this bitset is 1.
