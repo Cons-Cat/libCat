@@ -933,6 +933,7 @@ struct nothrow_element {
 struct throwing_move_element {
    throwing_move_element() noexcept = default;
    throwing_move_element(throwing_move_element const&) noexcept = default;
+
    throwing_move_element(throwing_move_element&&) noexcept(false) {
    }
 };

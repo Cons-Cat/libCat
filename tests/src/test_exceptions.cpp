@@ -377,7 +377,7 @@ struct fragile {
       --live;
    }
 
-  private:
+ private:
    static constexpr void
    constructed() {
       if (until_throw > 0) {
@@ -675,15 +675,15 @@ $test(map_throwing_rehash) {
       fragile::live = 0;
       cat::map_big<int4, fragile> map;
       for (int4 i = 0; i < 20; ++i) {
-         cat::verify(map.insert<allocator_type>(g_tests_alloc, i, fragile(i))
-                        .has_value());
+         cat::verify(
+            map.insert<allocator_type>(g_tests_alloc, i, fragile(i)).has_value()
+         );
       }
 
       fragile::arm(failure);
       throws_injected_failure([&] {
          for (int4 i = 20; i < 200; ++i) {
-            auto _ =
-               map.insert<allocator_type>(g_tests_alloc, i, fragile(i));
+            auto _ = map.insert<allocator_type>(g_tests_alloc, i, fragile(i));
          }
       });
       fragile::disarm();
