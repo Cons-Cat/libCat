@@ -468,58 +468,14 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    [[nodiscard]]
    constexpr auto
    rotate_left(iword shift) const -> bitset {
-      if constexpr (bits_count == 0u) {
-         return *this;
-      } else if constexpr (
-         storage_array_size == 1u && leading_skipped_bits == 0u
-      ) {
-         // The bitset exactly fills one storage word, so `cat::rotate_left` on
-         // the element is the rotation of the whole bitset.
+      if constexpr (storage_array_size == 1u && leading_skipped_bits == 0u) {
+         // The bitset exactly fills one storage element, so rotating that
+         // element is rotating the bitset.
          bitset result;
          result.m_data[0] = cat::rotate_left(m_data[0], shift);
          return result;
-      } else if constexpr (storage_array_size == 1u) {
-         using raw_type = raw_arithmetic_type<array_type_element>;
-         constexpr raw_type logical_mask =
-            (raw_type(1u) << bits_count.raw) - 1u;
-         constexpr raw_type storage_shift = leading_skipped_bits.raw;
-         constexpr auto bw = iword::raw_type(bits_count);
-         auto s = shift.raw % bw;
-         if (s < 0) {
-            s += bw;
-         }
-         uword const left_shift = uword(s);
-         raw_type const packed =
-            raw_type(m_data[0].raw >> storage_shift) & logical_mask;
-         raw_type const rotated =
-            left_shift == 0u
-               ? packed
-               : raw_type(
-                    (packed << left_shift.raw)
-                    | (packed >> (bits_count.raw - left_shift.raw))
-                 ) & logical_mask;
-         bitset result;
-         result.m_data[0] = array_type_element(rotated << storage_shift);
-         return result;
       } else {
-         // TODO: For the padded single-word case, delegate to
-         // `cat::rotate_left` plus masking to rotate within `bits_count` bits.
-         // For the multi-word case, use per-word shifts + carries. The current
-         // loop is `O(bits_count)` bit copies.
-         bitset result;
-         constexpr auto bw = iword::raw_type(bits_count);
-         auto s = shift.raw % bw;
-         if (s < 0) {
-            s += bw;
-         }
-         // Rotating left by `s` is equivalent to indexing backward by `s`,
-         // which is forward by `bw - s` under unsigned modular arithmetic.
-         idx const backward_shift = idx(bw - s);
-         for (idx i = 0u; i < bits_count; ++i) {
-            idx const src = (i + backward_shift) % bits_count;
-            result[i] = bool((*this)[src]);
-         }
-         return result;
+         return rotate_left_impl(left_rotation_of(shift));
       }
    }
 
@@ -528,50 +484,15 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    [[nodiscard]]
    constexpr auto
    rotate_right(iword shift) const -> bitset {
-      if constexpr (bits_count == 0u) {
-         return *this;
-      } else if constexpr (
-         storage_array_size == 1u && leading_skipped_bits == 0u
-      ) {
+      if constexpr (storage_array_size == 1u && leading_skipped_bits == 0u) {
+         // The bitset exactly fills one storage element, so rotating that
+         // element is rotating the bitset.
          bitset result;
          result.m_data[0] = cat::rotate_right(m_data[0], shift);
          return result;
-      } else if constexpr (storage_array_size == 1u) {
-         using raw_type = raw_arithmetic_type<array_type_element>;
-         constexpr raw_type logical_mask =
-            (raw_type(1u) << bits_count.raw) - 1u;
-         constexpr raw_type storage_shift = leading_skipped_bits.raw;
-         constexpr auto bw = iword::raw_type(bits_count);
-         auto s = shift.raw % bw;
-         if (s < 0) {
-            s += bw;
-         }
-         uword const right_shift = uword(s);
-         raw_type const packed =
-            raw_type(m_data[0].raw >> storage_shift) & logical_mask;
-         raw_type const rotated =
-            right_shift == 0u
-               ? packed
-               : raw_type(
-                    (packed >> right_shift.raw)
-                    | (packed << (bits_count.raw - right_shift.raw))
-                 ) & logical_mask;
-         bitset result;
-         result.m_data[0] = array_type_element(rotated << storage_shift);
-         return result;
       } else {
-         bitset result;
-         constexpr auto bw = iword::raw_type(bits_count);
-         auto s = shift.raw % bw;
-         if (s < 0) {
-            s += bw;
-         }
-         idx const forward_shift = idx(s);
-         for (idx i = 0u; i < bits_count; ++i) {
-            idx const src = (i + forward_shift) % bits_count;
-            result[i] = bool((*this)[src]);
-         }
-         return result;
+         // Rotating right is rotating left by the remaining distance.
+         return rotate_left_impl(idx(bits_count - left_rotation_of(shift)));
       }
    }
 
@@ -678,9 +599,99 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
 
    static constexpr array_type_element odd_bits_pattern = ~even_bits_pattern;
 
-   // Reset the low `leading_skipped_bits` bits of `m_data.back()` to zero. Used
-   // to restore the class invariant after a bitwise-OR that may have set
-   // padding bits.
+   // Reduce a signed rotation to a left rotation in `[0, bits_count)`.
+   [[nodiscard]]
+   static constexpr auto
+   left_rotation_of(iword shift) noexcept -> idx {
+      if constexpr (bits_count == 0u) {
+         return 0u;
+      } else {
+         iword const remainder = shift % iword(bits_count);
+         return remainder < 0 ? idx(remainder + iword(bits_count))
+                              : idx(remainder);
+      }
+   }
+
+   // Rotate left by `left_shift`, which is at most `bits_count`. The storage is
+   // one wide integer whose most significant element is `m_data[0]`, and bit
+   // `i` is bit `i + leading_skipped_bits` of that integer.
+   [[nodiscard]]
+   constexpr auto
+   rotate_left_impl(idx left_shift) const -> bitset {
+      if constexpr (bits_count == 0u) {
+         return *this;
+      } else if constexpr (storage_array_size == 1u) {
+         // Shift bits up within their element, then bring the bits that passed
+         // the top back down.
+         bitset result;
+         result.m_data[0] = (m_data[0] << left_shift)
+                            | (m_data[0] >> idx(bits_count - left_shift));
+         result.clear_padding_bits();
+         return result;
+      } else if constexpr (leading_skipped_bits == 0u) {
+         // Without padding, rotating the wide integer rotates whole elements by
+         // `element_shift`, and funnels the remaining `bit_shift` bits in from
+         // each next less significant element.
+         idx const element_shift =
+            (left_shift / (storage_element_size * 8u)) % storage_array_size;
+         idx const bit_shift = left_shift % (storage_element_size * 8u);
+         bitset result;
+         for (idx index; index < storage_array_size; ++index) {
+            idx const source = (index + element_shift) % storage_array_size;
+            idx const less_significant = (source + 1u) % storage_array_size;
+            result.m_data[index] = funnel_shift_left(
+               m_data[source], m_data[less_significant], bit_shift
+            );
+         }
+         return result;
+      } else {
+         // With padding, shift the bits up, then bring the bits that passed the
+         // top back down above the padding.
+         bitset result = storage_shifted_left(left_shift)
+                         | storage_shifted_right(idx(bits_count - left_shift));
+         result.clear_padding_bits();
+         return result;
+      }
+   }
+
+   // Shift the storage's wide integer left by `shift`, which is narrower than
+   // the storage.
+   [[nodiscard]]
+   constexpr auto
+   storage_shifted_left(idx shift) const noexcept -> bitset {
+      idx const element_shift = shift / (storage_element_size * 8u);
+      idx const bit_shift = shift % (storage_element_size * 8u);
+      bitset result;
+      for (idx index; index + element_shift < storage_array_size; ++index) {
+         idx const source = index + element_shift;
+         array_type_element const less_significant =
+            source + 1u < storage_array_size ? m_data[source + 1u]
+                                             : array_type_element(0u);
+         result.m_data[index] =
+            funnel_shift_left(m_data[source], less_significant, bit_shift);
+      }
+      return result;
+   }
+
+   // Shift the storage's wide integer right by `shift`, which is narrower than
+   // the storage.
+   [[nodiscard]]
+   constexpr auto
+   storage_shifted_right(idx shift) const noexcept -> bitset {
+      idx const element_shift = shift / (storage_element_size * 8u);
+      idx const bit_shift = shift % (storage_element_size * 8u);
+      bitset result;
+      for (idx index = element_shift; index < storage_array_size; ++index) {
+         idx const source = idx(index - element_shift);
+         array_type_element const more_significant =
+            source > 0u ? m_data[idx(source - 1u)] : array_type_element(0u);
+         result.m_data[index] =
+            funnel_shift_right(more_significant, m_data[source], bit_shift);
+      }
+      return result;
+   }
+
+   // Zero-out the low `leading_skipped_bits` bits of `m_data.back()`.
    constexpr auto
    clear_padding_bits() noexcept -> void {
       if constexpr (leading_skipped_bits != 0u) {
@@ -711,7 +722,7 @@ template <is_unsigned_integral Storage>
 template <idx bits_count, typename T>
 constexpr bit_span<Storage>::bit_span(
    bitset<bits_count, T>& storage [[clang::lifetimebound]]
-)
+) noexcept
     : bit_span(
          storage.m_data.data(), bitset<bits_count, T>::leading_skipped_bits,
          bits_count
@@ -725,7 +736,7 @@ template <is_unsigned_integral Storage>
 template <idx bits_count, typename T>
 constexpr bit_span<Storage>::bit_span(
    bitset<bits_count, T> const& storage [[clang::lifetimebound]]
-)
+) noexcept
     : bit_span(
          storage.m_data.data(), bitset<bits_count, T>::leading_skipped_bits,
          bits_count

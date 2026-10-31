@@ -78,7 +78,7 @@ struct mask_any_of;
 
 namespace cat {
 
-template <idx bits_count, typename T>
+template <idx bits_count, typename T = void>
 class bitset;
 
 // ABI tags for `simd`, in `cat::simd_abi` to mirror `std::simd_abi` from the
