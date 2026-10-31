@@ -1,4 +1,5 @@
 import gdb
+import gdb.printing
 
 cat_pretty_printers = gdb.printing.RegexpCollectionPrettyPrinter('libCat')
 
