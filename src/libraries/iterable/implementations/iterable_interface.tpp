@@ -181,6 +181,24 @@ iterable_pipe_fold(Self&& self, Callback callback, Init init) -> Init {
    return $fwd(self) | fold(move(callback), move(init));
 }
 
+template <typename Self, typename... Predicate>
+constexpr auto
+iterable_pipe_is_all(Self&& self, Predicate... predicate) -> bool {
+   return $fwd(self) | is_all(move(predicate)...);
+}
+
+template <typename Self, typename... Predicate>
+constexpr auto
+iterable_pipe_is_any(Self&& self, Predicate... predicate) -> bool {
+   return $fwd(self) | is_any(move(predicate)...);
+}
+
+template <typename Self, typename... Predicate>
+constexpr auto
+iterable_pipe_is_none(Self&& self, Predicate... predicate) -> bool {
+   return $fwd(self) | is_none(move(predicate)...);
+}
+
 }  // namespace detail
 
 template <typename Tag>
@@ -382,6 +400,33 @@ constexpr auto
 iterable_interface<Tag>::fold(this Self&& self, Callback callback, Init init)
    -> Init {
    return detail::iterable_pipe_fold($fwd(self), move(callback), move(init));
+}
+
+template <typename Tag>
+template <typename Self, typename... Predicate>
+   requires(sizeof...(Predicate) <= 1u)
+constexpr auto
+iterable_interface<Tag>::is_all(this Self&& self, Predicate... predicate)
+   -> bool {
+   return detail::iterable_pipe_is_all($fwd(self), move(predicate)...);
+}
+
+template <typename Tag>
+template <typename Self, typename... Predicate>
+   requires(sizeof...(Predicate) <= 1u)
+constexpr auto
+iterable_interface<Tag>::is_any(this Self&& self, Predicate... predicate)
+   -> bool {
+   return detail::iterable_pipe_is_any($fwd(self), move(predicate)...);
+}
+
+template <typename Tag>
+template <typename Self, typename... Predicate>
+   requires(sizeof...(Predicate) <= 1u)
+constexpr auto
+iterable_interface<Tag>::is_none(this Self&& self, Predicate... predicate)
+   -> bool {
+   return detail::iterable_pipe_is_none($fwd(self), move(predicate)...);
 }
 
 }  // namespace cat

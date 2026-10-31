@@ -1,3 +1,5 @@
+#include <cat/array>
+#include <cat/bitset>
 #include <cat/debug>
 #include <cat/iterable>
 #include <cat/math>
@@ -1619,4 +1621,47 @@ $test(flux_iteration_context_and_element_traits) {
 
    using list8 = tiny_list<int, 8u>;
    static_assert(cat::is_same<cat::iterable_value_type<list8>, int>);
+}
+
+$test(iterable_is_all_is_any_is_none) {
+   constexpr cat::array<int, 4u> values = {1, 2, 3, 4};
+   auto const is_large = cat::is_less(9);
+
+   cat::verify(values | cat::is_all(cat::is_less(0)));
+   cat::verify(!(values | cat::is_all(cat::is_even)));
+   cat::verify(values | cat::is_any(cat::is_even));
+   cat::verify(!(values | cat::is_any(is_large)));
+   cat::verify(values | cat::is_none(is_large));
+   cat::verify(!(values | cat::is_none(cat::is_even)));
+
+   // Vacuous truth over an empty range.
+   constexpr cat::array<int, 0u> empty{};
+   cat::verify(empty | cat::is_all(cat::is_even));
+   cat::verify(!(empty | cat::is_any(cat::is_less(0))));
+   cat::verify(empty | cat::is_none(cat::is_less(0)));
+
+   // Stop at the first element that decides the result.
+   cat::idx calls = 0;
+   cat::verify(values | cat::is_any([&calls](int value) {
+                  ++calls;
+                  return value == 2;
+               }));
+   cat::verify(calls == 2);
+
+   // Without a predicate, test each element's truthiness.
+   cat::bitset<10u> bits;
+   cat::verify(bits | cat::is_none());
+   bits[3] = true;
+   cat::verify(bits | cat::is_any());
+   cat::verify(!(bits | cat::is_all()));
+   bits.fill();
+   cat::verify(bits | cat::is_all());
+
+   // The fluent forms forward to the pipe forms.
+   cat::verify(values.is_all(cat::is_less(0)));
+   cat::verify(values.is_any(cat::is_even));
+   cat::verify(values.is_none(is_large));
+   cat::verify(bits.is_all());
+   cat::verify(!bits.is_none());
+   cat::verify(values.take(1u).is_none(cat::is_even));
 }

@@ -181,6 +181,20 @@ struct iterable_interface {
    template <typename Self, typename Callback, typename Init>
    constexpr auto
    fold(this Self&& self, Callback callback, Init init) -> Init;
+   template <typename Self, typename... Predicate>
+      requires(sizeof...(Predicate) <= 1u)
+   constexpr auto
+   is_all(this Self&& self, Predicate... predicate) -> bool;
+
+   template <typename Self, typename... Predicate>
+      requires(sizeof...(Predicate) <= 1u)
+   constexpr auto
+   is_any(this Self&& self, Predicate... predicate) -> bool;
+
+   template <typename Self, typename... Predicate>
+      requires(sizeof...(Predicate) <= 1u)
+   constexpr auto
+   is_none(this Self&& self, Predicate... predicate) -> bool;
 };
 
 }  // namespace cat
