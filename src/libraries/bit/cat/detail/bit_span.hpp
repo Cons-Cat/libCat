@@ -12,7 +12,7 @@
 
 namespace cat {
 
-template <idx bits_count, typename T = void>
+template <idx bits_count, typename T>
 class bitset;
 
 template <is_unsigned_integral Storage>

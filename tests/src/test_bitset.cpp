@@ -451,9 +451,7 @@ $test(bitset_rotate) {
    cat::verify(bits15_3.rotate_left(-1) == bits15_3.rotate_right(1));
    cat::verify(bits15_3.rotate_right(-4) == bits15_3.rotate_left(4));
 
-   // Test the fast path that delegates to `cat::rotate_left` /
-   // `cat::rotate_right`: `bitset<8>` fully fills its storage (no padding
-   // bits).
+   // `bitset<8>` fully fills its storage (no padding bits).
    constexpr cat::bitset<8u> bits8_rot = cat::make_bitset<8u>(0b0000'0001_u1);
    cat::verify(bits8_rot[0u]);
    cat::verify(bits8_rot.rotate_left(1)[1u]);
@@ -472,6 +470,74 @@ $test(bitset_rotate) {
    // Rotating by `bits_count` returns to the original.
    cat::verify(bits127_4.rotate_left(127) == bits127_4);
    cat::verify(bits127_4.rotate_right(127) == bits127_4);
+}
+
+namespace {
+// Compare every rotation in `[-2 * bits_count, 2 * bits_count]` against moving
+// each bit individually. This is `constexpr` so that it can also prove the
+// rotations are usable in constant expressions.
+template <cat::idx bits_count, typename T = void>
+constexpr auto
+rotations_are_correct() -> bool {
+   cat::bitset<bits_count, T> bits;
+   // An irregular pattern, so that any misplaced bit changes the result.
+   for (cat::idx index; index < bits_count; ++index) {
+      bits[index] = (index * 7u) % 5u < 2u;
+   }
+
+   cat::iword const span = cat::iword(bits_count) * 2;
+   for (cat::iword shift = -span; shift <= span; ++shift) {
+      cat::bitset<bits_count, T> expected;
+      cat::iword const remainder = shift % cat::iword(bits_count);
+      cat::idx const left_shift =
+         remainder < 0 ? cat::idx(remainder + cat::iword(bits_count))
+                       : cat::idx(remainder);
+      for (cat::idx index; index < bits_count; ++index) {
+         expected[(index + left_shift) % bits_count] = bool(bits[index]);
+      }
+      if (
+         bits.rotate_left(shift) != expected
+         || bits.rotate_right(-shift) != expected
+      ) {
+         return false;
+      }
+   }
+
+   // The most negative shift has no positive counterpart.
+   cat::iword const most_negative = cat::limits<cat::iword>::min();
+   return bits.rotate_left(most_negative).rotate_right(most_negative) == bits;
+}
+}  // namespace
+
+$test(bitset_rotate_every_shift) {
+   // One element without padding.
+   static_assert(rotations_are_correct<8>());
+   static_assert(rotations_are_correct<16, cat::uint2>());
+   cat::verify(rotations_are_correct<32>());
+   cat::verify(rotations_are_correct<64>());
+   // One element with padding.
+   static_assert(rotations_are_correct<1>());
+   static_assert(rotations_are_correct<7>());
+   static_assert(rotations_are_correct<15>());
+   cat::verify(rotations_are_correct<63>());
+   cat::verify(rotations_are_correct<12, cat::uint8>());
+   // Several elements without padding.
+   static_assert(rotations_are_correct<16, cat::uint1>());
+   cat::verify(rotations_are_correct<24, cat::uint1>());
+   cat::verify(rotations_are_correct<64, cat::uint4>());
+   cat::verify(rotations_are_correct<128>());
+   cat::verify(rotations_are_correct<192>());
+   // Several elements with padding.
+   static_assert(rotations_are_correct<12, cat::uint1>());
+   cat::verify(rotations_are_correct<20, cat::uint1>());
+   cat::verify(rotations_are_correct<65>());
+   cat::verify(rotations_are_correct<127>());
+   cat::verify(rotations_are_correct<100, cat::uint4>());
+
+   // A bitset with no bits rotates to itself.
+   constexpr cat::bitset<0> empty{};
+   static_assert(empty.rotate_left(3) == empty);
+   static_assert(empty.rotate_right(-3) == empty);
 }
 
 $test(bitset_reverse_inplace) {
