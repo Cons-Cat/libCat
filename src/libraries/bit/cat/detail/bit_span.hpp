@@ -9,6 +9,7 @@
 // `cat::bitset` and `cat::bitvec`.
 
 // TODO: These algorithms are not SIMD optimized yet.
+// TODO: Provide bitwise operators.
 
 #include <cat/arithmetic>
 #include <cat/debug>

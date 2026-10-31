@@ -705,6 +705,16 @@ $test(bitset_bitwise_operators) {
    xor_accum ^= all_ones_17_a;
    cat::verify(xor_accum.none_of());
 
+   // `^` and `^=` are generated from `bit_xor`, across several elements too.
+   static_assert(noexcept(xor_accum ^ xor_accum));
+   static_assert(noexcept(xor_accum ^= xor_accum));
+   cat::bitset<100u> const wide_even = cat::make_bitset_even<100u>();
+   cat::bitset<100u> const wide_odd = cat::make_bitset_odd<100u>();
+   cat::verify((wide_even ^ wide_odd).all_of());
+   cat::bitset<100u> wide_accum = wide_even;
+   wide_accum ^= wide_even;
+   cat::verify(wide_accum.none_of());
+
    // &= / |= compound assignment (generated from `bit_and`/`bit_or`).
    cat::bitset<17u> and_accum = complement_zero_17;
    and_accum &= cat::make_bitset_even<17u>();
