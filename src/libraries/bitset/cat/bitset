@@ -120,9 +120,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
 
    // Construct a `bitset` from a bit-string at compile time.
    template <__SIZE_TYPE__ bitstring_size>
-   consteval bitset(char const (&bitstring)[bitstring_size]) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) {
+   consteval bitset(char const (&bitstring)[bitstring_size]) noexcept {
       [[assume(bitstring[bitstring_size - 1] == '\0')]];
       bitset new_bitset;
       for (__SIZE_TYPE__ i = 0; i < bits_count; ++i) {
@@ -209,8 +207,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // `bitwise_interface` generates `operator&` and `operator&=` from this.
    [[nodiscard]]
    constexpr auto
-   bit_and(bitset const& other) const noexcept(!__has_feature(cxx_exceptions))
-      -> bitset {
+   bit_and(bitset const& other) const noexcept -> bitset {
       bitset result;
       for (idx i; i < storage_array_size; ++i) {
          result.m_data[i] = m_data[i] & other.m_data[i];
@@ -221,8 +218,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // `bitwise_interface` generates `operator|` and `operator|=` from this.
    [[nodiscard]]
    constexpr auto
-   bit_or(bitset const& other) const noexcept(!__has_feature(cxx_exceptions))
-      -> bitset {
+   bit_or(bitset const& other) const noexcept -> bitset {
       bitset result;
       for (idx i; i < storage_array_size; ++i) {
          result.m_data[i] = m_data[i] | other.m_data[i];
@@ -234,7 +230,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // reset to zero afterwards to preserve the class invariant.
    [[nodiscard]]
    constexpr auto
-   bit_complement() const noexcept(!__has_feature(cxx_exceptions)) -> bitset {
+   bit_complement() const noexcept -> bitset {
       bitset result;
       for (idx i; i < storage_array_size; ++i) {
          result.m_data[i] = ~m_data[i];
@@ -247,9 +243,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // define `operator^`, so compute on the raw underlying integers.
    [[nodiscard]]
    friend constexpr auto
-   operator^(bitset const& lhs, bitset const& rhs) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> bitset {
+   operator^(bitset const& lhs, bitset const& rhs) noexcept -> bitset {
       bitset result;
       for (idx i; i < storage_array_size; ++i) {
          result.m_data[i] =
@@ -582,7 +576,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    }
 
    constexpr void
-   reverse_inplace() noexcept(!__has_feature(cxx_exceptions)) {
+   reverse_inplace() noexcept {
       auto first = bit_stepanov_iterator(m_data.rbegin(), leading_skipped_bits);
       cat::stepanov_reverse_inplace(first, first + bits_count);
    }
@@ -688,7 +682,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // to restore the class invariant after a bitwise-OR that may have set
    // padding bits.
    constexpr auto
-   clear_padding_bits() noexcept(!__has_feature(cxx_exceptions)) -> void {
+   clear_padding_bits() noexcept -> void {
       if constexpr (leading_skipped_bits != 0u) {
          constexpr array_type_element keep_mask = ~array_type_element(
             (array_type_element(1u) << leading_skipped_bits) - 1u
@@ -742,12 +736,12 @@ constexpr bit_span<Storage>::bit_span(
 }
 
 template <idx bits_count, typename T>
-bit_span(bitset<bits_count, T>&) noexcept(!__has_feature(cxx_exceptions))
-   ->bit_span<typename bitset<bits_count, T>::storage_type>;
+bit_span(bitset<bits_count, T>&)
+   -> bit_span<typename bitset<bits_count, T>::storage_type>;
 
 template <idx bits_count, typename T>
-bit_span(bitset<bits_count, T> const&) noexcept(!__has_feature(cxx_exceptions))
-   ->bit_span<typename bitset<bits_count, T>::storage_type const>;
+bit_span(bitset<bits_count, T> const&)
+   -> bit_span<typename bitset<bits_count, T>::storage_type const>;
 
 template <idx bits_count, typename T = void, is_unsigned_integral... Arguments>
 // Ensure that all `types` are the same size. e.g., `uint4` and `unsigned` are
