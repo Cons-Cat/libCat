@@ -151,6 +151,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit_span.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bit_x64.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitset.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_bitset_enum.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitset_shared.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_bitvec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_stringify.cpp

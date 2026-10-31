@@ -1,0 +1,288 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/bitset>
+#include <cat/enum>
+#include <cat/iterable>
+#include <cat/math>
+#include <cat/utility>
+
+namespace cat {
+
+// A `bitset` with one bit per bit of `Flags`, indexed by single-bit `Flags`
+// values instead of `idx`. A flag `1u << n` addresses bit `n`. Only bits that
+// some enumerator of `Flags` names can ever be set.
+
+template <is_scoped_enum Flags>
+   requires(is_enum_flag<Flags>)
+class bitset_enum : public bitwise_interface<bitset_enum<Flags>> {
+   static constexpr idx bits_count = sizeof(Flags) * 8u;
+   using bitset_type = bitset<bits_count>;
+   using raw_flags = make_unsigned_type<underlying_type<Flags>>;
+
+   static constexpr bitset_type valid_bits = []<idx... indices>(
+                                                index_list_type<indices...>
+                                             ) {
+      bitset_type bits;
+      ((bits[indices] =
+           enum_name_from_nttp<static_cast<Flags>(raw_flags(1u) << indices)>()
+              .is_none(is_equal_to(')'))),
+       ...);
+      return bits;
+   }(make_index_sequence<bits_count>{});
+
+ public:
+   using storage_type = bitset_type::storage_type;
+   using value_type = bit_value;
+   using const_value_type = bit_value const;
+   using reference = bit_reference<storage_type>;
+   using const_reference = bit_reference<storage_type const>;
+   using size_type = idx;
+   using difference_type = iword;
+
+   static constexpr idx storage_array_size = bitset_type::storage_array_size;
+   static constexpr idx storage_element_size =
+      bitset_type::storage_element_size;
+   static constexpr idx leading_skipped_bits =
+      bitset_type::leading_skipped_bits;
+   static constexpr idx leading_bytes_bits = bitset_type::leading_bytes_bits;
+
+   constexpr bitset_enum() = default;
+   constexpr bitset_enum(bitset_enum const&) = default;
+   constexpr bitset_enum(bitset_enum&&) = default;
+
+   constexpr auto
+   operator=(bitset_enum const&) noexcept -> bitset_enum& = default;
+   constexpr auto
+   operator=(bitset_enum&&) noexcept -> bitset_enum& = default;
+
+   [[nodiscard]]
+   static constexpr auto
+   size() noexcept -> idx {
+      return bits_count;
+   }
+
+   constexpr void
+   swap(bitset_enum& other) noexcept {
+      m_bits.swap(other.m_bits);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(bitset_enum const& other) const noexcept -> bool {
+      return m_bits == other.m_bits;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   popcount() const noexcept -> idx {
+      return m_bits.popcount();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_single_bit() const noexcept -> bool {
+      return m_bits.has_single_bit();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](Flags flag) noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> reference {
+      return m_bits[index_of(flag)];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator[](Flags flag) const noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> reference {
+      return m_bits[index_of(flag)];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   at(Flags flag) noexcept [[clang::lifetimebound]] -> maybe<reference> {
+      maybe<idx> const index = try_index_of(flag);
+      if (!index.has_value()) {
+         return nullopt;
+      }
+      return m_bits[index.value()];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   at(Flags flag) const noexcept [[clang::lifetimebound]]
+   -> maybe<reference const> {
+      maybe<idx> const index = try_index_of(flag);
+      if (!index.has_value()) {
+         return nullopt;
+      }
+      return m_bits[index.value()];
+   }
+
+   // `bitwise_interface` generates `operator&` and `operator&=` from this.
+   [[nodiscard]]
+   constexpr auto
+   bit_and(bitset_enum const& other) const noexcept -> bitset_enum {
+      return bitset_enum(m_bits & other.m_bits);
+   }
+
+   // `bitwise_interface` generates `operator|` and `operator|=` from this.
+   [[nodiscard]]
+   constexpr auto
+   bit_or(bitset_enum const& other) const noexcept -> bitset_enum {
+      return bitset_enum(m_bits | other.m_bits);
+   }
+
+   // `bitwise_interface` generates `operator~` from this.
+   [[nodiscard]]
+   constexpr auto
+   bit_complement() const noexcept -> bitset_enum {
+      return bitset_enum(~m_bits & valid_bits);
+   }
+
+   // `bitwise_interface` generates `operator^` and `operator^=` from this.
+   [[nodiscard]]
+   constexpr auto
+   bit_xor(bitset_enum const& other) const noexcept -> bitset_enum {
+      return bitset_enum(m_bits ^ other.m_bits);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   all_of() const noexcept -> bool {
+      return m_bits == valid_bits;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   any_of() const noexcept -> bool {
+      return m_bits.any_of();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   none_of() const noexcept -> bool {
+      return m_bits.none_of();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bit_width() const noexcept -> idx {
+      return m_bits.bit_width();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   countl_zero() const noexcept -> idx {
+      return m_bits.countl_zero();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   countl_one() const noexcept -> idx {
+      return m_bits.countl_one();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   countr_zero() const noexcept -> idx {
+      return m_bits.countr_zero();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   countr_one() const noexcept -> idx {
+      return m_bits.countr_one();
+   }
+
+   constexpr auto
+   clear() noexcept -> bitset_enum& {
+      m_bits.clear();
+      return *this;
+   }
+
+   constexpr auto
+   fill(bit_value value = true) noexcept -> bitset_enum& {
+      m_bits = value ? valid_bits : bitset_type();
+      return *this;
+   }
+
+   template <typename... Arguments>
+   constexpr auto
+   fill_random(Arguments&&... arguments) -> bitset_enum& {
+      m_bits.fill_random($fwd(arguments)...);
+      m_bits &= valid_bits;
+      return *this;
+   }
+
+ private:
+   constexpr explicit bitset_enum(bitset_type const& bits) noexcept
+       : m_bits(bits) {
+   }
+
+   // The bit index of a single-bit `flag`.
+   [[nodiscard]]
+   static constexpr auto
+   index_of(Flags flag) noexcept(!__has_feature(cxx_exceptions)) -> idx {
+      auto const mask = static_cast<raw_flags>(to_underlying(flag));
+      assert(cat::has_single_bit(mask));
+      idx const index = idx(__builtin_ctzg(mask));
+      assert(valid_bits[index]);
+      return index;
+   }
+
+   // The bit index of `flag`, if it is a single bit that an enumerator of
+   // `Flags` names.
+   [[nodiscard]]
+   static constexpr auto
+   try_index_of(Flags flag) noexcept -> maybe<idx> {
+      auto const mask = static_cast<raw_flags>(to_underlying(flag));
+      if (!cat::has_single_bit(mask)) {
+         return nullopt;
+      }
+      idx const index = idx(__builtin_ctzg(mask));
+      if (!valid_bits[index]) {
+         return nullopt;
+      }
+      return index;
+   }
+
+   bitset_type m_bits;
+};
+
+// Construct a `bitset_enum` with each of `flags` set.
+template <is_scoped_enum Flags>
+   requires(is_enum_flag<Flags>)
+[[nodiscard]]
+constexpr auto
+make_bitset_enum(is_same<Flags> auto... flags) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bitset_enum<Flags> {
+   bitset_enum<Flags> new_flags;
+   ((new_flags[flags] = true), ...);
+   return new_flags;
+}
+
+template <is_scoped_enum Flags>
+   requires(is_enum_flag<Flags>)
+[[nodiscard]]
+constexpr auto
+make_bitset_enum_filled(bit_value value) noexcept -> bitset_enum<Flags> {
+   bitset_enum<Flags> new_flags;
+   new_flags.fill(value);
+   return new_flags;
+}
+
+template <is_scoped_enum Flags, typename... Arguments>
+   requires(is_enum_flag<Flags>)
+[[nodiscard]]
+constexpr auto
+make_bitset_enum_filled_random(Arguments&&... arguments) -> bitset_enum<Flags> {
+   bitset_enum<Flags> new_flags;
+   new_flags.fill_random($fwd(arguments)...);
+   return new_flags;
+}
+
+}  // namespace cat
