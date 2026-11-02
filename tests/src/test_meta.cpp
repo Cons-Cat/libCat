@@ -843,13 +843,51 @@ $test(meta_sign_type_traits) {
    static_assert(!is_signed<make_unsigned_type<int4>>);
    static_assert(!is_signed<make_unsigned_type<int4 const>>);
 
-   static_assert(is_signed<copy_sign_from<int4, unsigned>>);
-   static_assert(is_signed<copy_sign_from<int, uint4>>);
-   static_assert(is_signed<copy_sign_from<int, unsigned>>);
+   // Signedness comes from the first type. Width, cv, and overflow policy
+   // come from the second.
+   static_assert(is_same<copy_sign_from<int, unsigned>, int>);
+   static_assert(is_same<copy_sign_from<unsigned, int>, unsigned>);
+   static_assert(is_same<copy_sign_from<int, int>, int>);
+   static_assert(is_same<copy_sign_from<unsigned, unsigned>, unsigned>);
+   static_assert(is_same<copy_sign_from<signed char, unsigned short>, short>);
+   static_assert(
+      is_same<copy_sign_from<unsigned long long, long>, unsigned long>
+   );
+   static_assert(is_same<copy_sign_from<int, unsigned __int128>, __int128>);
+   static_assert(
+      is_same<copy_sign_from<unsigned, __int128>, unsigned __int128>
+   );
 
-   static_assert(!is_signed<copy_sign_from<uint4, int>>);
-   static_assert(!is_signed<copy_sign_from<unsigned, int4>>);
-   static_assert(!is_signed<copy_sign_from<unsigned, int>>);
+   static_assert(is_same<copy_sign_from<int4, uint4>, int4>);
+   static_assert(is_same<copy_sign_from<uint4, int4>, uint4>);
+   static_assert(is_same<copy_sign_from<int4, int8>, int8>);
+   static_assert(is_same<copy_sign_from<uint8, uint1>, uint1>);
+   static_assert(is_same<copy_sign_from<int1, uint8>, int8>);
+   static_assert(is_same<copy_sign_from<uint8, int1>, uint1>);
+   static_assert(is_same<copy_sign_from<int16, uint16>, int16>);
+   static_assert(is_same<copy_sign_from<uint16, int16>, uint16>);
+
+   static_assert(is_same<copy_sign_from<int, unsigned const>, int const>);
+   static_assert(is_same<copy_sign_from<unsigned, int const>, unsigned const>);
+   static_assert(
+      is_same<copy_sign_from<int const, uint4 volatile>, int4 volatile>
+   );
+   static_assert(is_same<
+                 copy_sign_from<uint4 const, int const volatile>,
+                 unsigned const volatile>);
+   static_assert(is_same<copy_sign_from<idx const, int4>, uint4>);
+
+   static_assert(is_same<copy_sign_from<int, wrap_uint4>, wrap_int4>);
+   static_assert(is_same<copy_sign_from<unsigned, wrap_int8>, wrap_uint8>);
+   static_assert(is_same<copy_sign_from<int1, sat_uint16>, sat_int16>);
+   static_assert(is_same<copy_sign_from<uint16, sat_int1>, sat_uint1>);
+
+   static_assert(is_same<copy_sign_from<idx, int>, unsigned>);
+   static_assert(is_same<copy_sign_from<ualign, int4>, uint4>);
+   static_assert(is_same<copy_sign_from<iword, uint8>, int8>);
+   static_assert(is_same<copy_sign_from<uword, int8>, uint8>);
+   static_assert(is_same<copy_sign_from<int, uword>, iword>);
+   static_assert(is_same<copy_sign_from<unsigned, iword>, uword>);
 }
 
 $test(meta_trivially_copy_construct) {

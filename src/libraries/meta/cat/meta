@@ -625,8 +625,8 @@ struct detail::make_unsigned_trait<basic_ualign<Storage>> {
 };
 
 template <is_integral Sign, is_integral T>
-using copy_sign_from = conditional<
-   is_signed<Sign>, make_signed_type<Sign>, detail::make_unsigned_trait<Sign>>;
+using copy_sign_from =
+   conditional<is_signed<Sign>, make_signed_type<T>, make_unsigned_type<T>>;
 
 template <typename T>
 concept is_void = __is_same(T, void);
