@@ -56,11 +56,9 @@ class shuffle_order_engine {
    constexpr auto
    operator()() -> result_type {
       using unsigned_type = make_unsigned_type<result_type>;
-      __uint128_t const numerator =
-         __uint128_t(make_raw_arithmetic(unsigned_type(m_value - min())))
-         * __uint128_t(make_raw_arithmetic(table_size));
-      __uint128_t const denominator =
-         __uint128_t(make_raw_arithmetic(unsigned_type(max() - min()))) + 1u;
+      uint16 const numerator =
+         uint16(unsigned_type(m_value - min())) * table_size;
+      uint16 const denominator = uint16(unsigned_type(max() - min())) + 1u;
       idx const index(numerator / denominator);
       result_type result = m_table[index];
       m_table[index] = m_engine();

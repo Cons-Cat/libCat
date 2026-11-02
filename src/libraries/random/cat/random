@@ -89,13 +89,13 @@ random_canonical_calls(Unsigned span) noexcept -> idx {
    if (span == 0u) {
       return idx(digits + engine_bits - 1u) / engine_bits;
    }
-   __uint128_t const target = __uint128_t(1u) << digits.raw;
-   __uint128_t const radix = make_raw_arithmetic(span);
-   __uint128_t capacity = 1u;
+   uint16 const target = uint16(1u) << digits.raw;
+   uint16 const radix(make_raw_arithmetic(span));
+   uint16 capacity = 1u;
    idx calls = 0u;
    while (capacity < target) {
       ++calls;
-      __uint128_t const needed = (target + capacity - 1u) / capacity;
+      uint16 const needed = (target + capacity - 1u) / capacity;
       if (radix >= needed) {
          break;
       }

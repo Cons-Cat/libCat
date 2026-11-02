@@ -13,6 +13,7 @@
 namespace cat {
 
 namespace detail {
+// TODO: is_raw_arithmetic type_trait.
 template <typename T>
 struct raw_arithmetic_type_trait {
    using type = T;
@@ -188,6 +189,8 @@ using int4 = basic_int<__INT32_TYPE__, overflow_policies::undefined>;
 using uint4 = basic_int<__UINT32_TYPE__, overflow_policies::undefined>;
 using int8 = basic_int<__INT64_TYPE__, overflow_policies::undefined>;
 using uint8 = basic_int<__UINT64_TYPE__, overflow_policies::undefined>;
+using int16 = basic_int<__int128, overflow_policies::undefined>;
+using uint16 = basic_int<unsigned __int128, overflow_policies::undefined>;
 
 using float4 = basic_float<float>;
 using float8 = basic_float<double>;
@@ -218,6 +221,8 @@ using wrap_int4 = basic_int<__INT32_TYPE__, overflow_policies::wrap>;
 using wrap_uint4 = basic_int<__UINT32_TYPE__, overflow_policies::wrap>;
 using wrap_int8 = basic_int<__INT64_TYPE__, overflow_policies::wrap>;
 using wrap_uint8 = basic_int<__UINT64_TYPE__, overflow_policies::wrap>;
+using wrap_int16 = basic_int<__int128, overflow_policies::wrap>;
+using wrap_uint16 = basic_int<unsigned __int128, overflow_policies::wrap>;
 
 using sat_int1 = basic_int<__INT8_TYPE__, overflow_policies::saturate>;
 using sat_uint1 = basic_int<__UINT8_TYPE__, overflow_policies::saturate>;
@@ -227,65 +232,79 @@ using sat_int4 = basic_int<__INT32_TYPE__, overflow_policies::saturate>;
 using sat_uint4 = basic_int<__UINT32_TYPE__, overflow_policies::saturate>;
 using sat_int8 = basic_int<__INT64_TYPE__, overflow_policies::saturate>;
 using sat_uint8 = basic_int<__UINT64_TYPE__, overflow_policies::saturate>;
+using sat_int16 = basic_int<__int128, overflow_policies::saturate>;
+using sat_uint16 = basic_int<unsigned __int128, overflow_policies::saturate>;
 }  // namespace arithmetic
 
 // TODO: Replace this with reflection when possible.
-#define CAT_DECLARE_QUANTITY_ALIASES(name, quantity)                          \
-   using name##_int1 = ::cat::basic_int<                                      \
-      ::cat::int1::raw_type, ::cat::overflow_policies::undefined, quantity>;  \
-   using name##_uint1 = ::cat::basic_int<                                     \
-      ::cat::uint1::raw_type, ::cat::overflow_policies::undefined, quantity>; \
-   using name##_int2 = ::cat::basic_int<                                      \
-      ::cat::int2::raw_type, ::cat::overflow_policies::undefined, quantity>;  \
-   using name##_uint2 = ::cat::basic_int<                                     \
-      ::cat::uint2::raw_type, ::cat::overflow_policies::undefined, quantity>; \
-   using name##_int4 = ::cat::basic_int<                                      \
-      ::cat::int4::raw_type, ::cat::overflow_policies::undefined, quantity>;  \
-   using name##_uint4 = ::cat::basic_int<                                     \
-      ::cat::uint4::raw_type, ::cat::overflow_policies::undefined, quantity>; \
-   using name##_int8 = ::cat::basic_int<                                      \
-      ::cat::int8::raw_type, ::cat::overflow_policies::undefined, quantity>;  \
-   using name##_uint8 = ::cat::basic_int<                                     \
-      ::cat::uint8::raw_type, ::cat::overflow_policies::undefined, quantity>; \
-   using name##_wrap_int1 = ::cat::basic_int<                                 \
-      ::cat::int1::raw_type, ::cat::overflow_policies::wrap, quantity>;       \
-   using name##_wrap_uint1 = ::cat::basic_int<                                \
-      ::cat::uint1::raw_type, ::cat::overflow_policies::wrap, quantity>;      \
-   using name##_wrap_int2 = ::cat::basic_int<                                 \
-      ::cat::int2::raw_type, ::cat::overflow_policies::wrap, quantity>;       \
-   using name##_wrap_uint2 = ::cat::basic_int<                                \
-      ::cat::uint2::raw_type, ::cat::overflow_policies::wrap, quantity>;      \
-   using name##_wrap_int4 = ::cat::basic_int<                                 \
-      ::cat::int4::raw_type, ::cat::overflow_policies::wrap, quantity>;       \
-   using name##_wrap_uint4 = ::cat::basic_int<                                \
-      ::cat::uint4::raw_type, ::cat::overflow_policies::wrap, quantity>;      \
-   using name##_wrap_int8 = ::cat::basic_int<                                 \
-      ::cat::int8::raw_type, ::cat::overflow_policies::wrap, quantity>;       \
-   using name##_wrap_uint8 = ::cat::basic_int<                                \
-      ::cat::uint8::raw_type, ::cat::overflow_policies::wrap, quantity>;      \
-   using name##_sat_int1 = ::cat::basic_int<                                  \
-      ::cat::int1::raw_type, ::cat::overflow_policies::saturate, quantity>;   \
-   using name##_sat_uint1 = ::cat::basic_int<                                 \
-      ::cat::uint1::raw_type, ::cat::overflow_policies::saturate, quantity>;  \
-   using name##_sat_int2 = ::cat::basic_int<                                  \
-      ::cat::int2::raw_type, ::cat::overflow_policies::saturate, quantity>;   \
-   using name##_sat_uint2 = ::cat::basic_int<                                 \
-      ::cat::uint2::raw_type, ::cat::overflow_policies::saturate, quantity>;  \
-   using name##_sat_int4 = ::cat::basic_int<                                  \
-      ::cat::int4::raw_type, ::cat::overflow_policies::saturate, quantity>;   \
-   using name##_sat_uint4 = ::cat::basic_int<                                 \
-      ::cat::uint4::raw_type, ::cat::overflow_policies::saturate, quantity>;  \
-   using name##_sat_int8 = ::cat::basic_int<                                  \
-      ::cat::int8::raw_type, ::cat::overflow_policies::saturate, quantity>;   \
-   using name##_sat_uint8 = ::cat::basic_int<                                 \
-      ::cat::uint8::raw_type, ::cat::overflow_policies::saturate, quantity>;  \
-   using name##_float4 = ::cat::basic_float<                                  \
-      ::cat::float4::raw_type, ::cat::precision_policies::precise, quantity>; \
-   using name##_float8 = ::cat::basic_float<                                  \
-      ::cat::float8::raw_type, ::cat::precision_policies::precise, quantity>; \
-   using name##_float4_fast = ::cat::basic_float<                             \
-      ::cat::float4::raw_type, ::cat::precision_policies::fast, quantity>;    \
-   using name##_float8_fast = ::cat::basic_float<                             \
+#define CAT_DECLARE_QUANTITY_ALIASES(name, quantity)                           \
+   using name##_int1 = ::cat::basic_int<                                       \
+      ::cat::int1::raw_type, ::cat::overflow_policies::undefined, quantity>;   \
+   using name##_uint1 = ::cat::basic_int<                                      \
+      ::cat::uint1::raw_type, ::cat::overflow_policies::undefined, quantity>;  \
+   using name##_int2 = ::cat::basic_int<                                       \
+      ::cat::int2::raw_type, ::cat::overflow_policies::undefined, quantity>;   \
+   using name##_uint2 = ::cat::basic_int<                                      \
+      ::cat::uint2::raw_type, ::cat::overflow_policies::undefined, quantity>;  \
+   using name##_int4 = ::cat::basic_int<                                       \
+      ::cat::int4::raw_type, ::cat::overflow_policies::undefined, quantity>;   \
+   using name##_uint4 = ::cat::basic_int<                                      \
+      ::cat::uint4::raw_type, ::cat::overflow_policies::undefined, quantity>;  \
+   using name##_int8 = ::cat::basic_int<                                       \
+      ::cat::int8::raw_type, ::cat::overflow_policies::undefined, quantity>;   \
+   using name##_uint8 = ::cat::basic_int<                                      \
+      ::cat::uint8::raw_type, ::cat::overflow_policies::undefined, quantity>;  \
+   using name##_int16 = ::cat::basic_int<                                      \
+      ::cat::int16::raw_type, ::cat::overflow_policies::undefined, quantity>;  \
+   using name##_uint16 = ::cat::basic_int<                                     \
+      ::cat::uint16::raw_type, ::cat::overflow_policies::undefined, quantity>; \
+   using name##_wrap_int1 = ::cat::basic_int<                                  \
+      ::cat::int1::raw_type, ::cat::overflow_policies::wrap, quantity>;        \
+   using name##_wrap_uint1 = ::cat::basic_int<                                 \
+      ::cat::uint1::raw_type, ::cat::overflow_policies::wrap, quantity>;       \
+   using name##_wrap_int2 = ::cat::basic_int<                                  \
+      ::cat::int2::raw_type, ::cat::overflow_policies::wrap, quantity>;        \
+   using name##_wrap_uint2 = ::cat::basic_int<                                 \
+      ::cat::uint2::raw_type, ::cat::overflow_policies::wrap, quantity>;       \
+   using name##_wrap_int4 = ::cat::basic_int<                                  \
+      ::cat::int4::raw_type, ::cat::overflow_policies::wrap, quantity>;        \
+   using name##_wrap_uint4 = ::cat::basic_int<                                 \
+      ::cat::uint4::raw_type, ::cat::overflow_policies::wrap, quantity>;       \
+   using name##_wrap_int8 = ::cat::basic_int<                                  \
+      ::cat::int8::raw_type, ::cat::overflow_policies::wrap, quantity>;        \
+   using name##_wrap_uint8 = ::cat::basic_int<                                 \
+      ::cat::uint8::raw_type, ::cat::overflow_policies::wrap, quantity>;       \
+   using name##_wrap_int16 = ::cat::basic_int<                                 \
+      ::cat::int16::raw_type, ::cat::overflow_policies::wrap, quantity>;       \
+   using name##_wrap_uint16 = ::cat::basic_int<                                \
+      ::cat::uint16::raw_type, ::cat::overflow_policies::wrap, quantity>;      \
+   using name##_sat_int1 = ::cat::basic_int<                                   \
+      ::cat::int1::raw_type, ::cat::overflow_policies::saturate, quantity>;    \
+   using name##_sat_uint1 = ::cat::basic_int<                                  \
+      ::cat::uint1::raw_type, ::cat::overflow_policies::saturate, quantity>;   \
+   using name##_sat_int2 = ::cat::basic_int<                                   \
+      ::cat::int2::raw_type, ::cat::overflow_policies::saturate, quantity>;    \
+   using name##_sat_uint2 = ::cat::basic_int<                                  \
+      ::cat::uint2::raw_type, ::cat::overflow_policies::saturate, quantity>;   \
+   using name##_sat_int4 = ::cat::basic_int<                                   \
+      ::cat::int4::raw_type, ::cat::overflow_policies::saturate, quantity>;    \
+   using name##_sat_uint4 = ::cat::basic_int<                                  \
+      ::cat::uint4::raw_type, ::cat::overflow_policies::saturate, quantity>;   \
+   using name##_sat_int8 = ::cat::basic_int<                                   \
+      ::cat::int8::raw_type, ::cat::overflow_policies::saturate, quantity>;    \
+   using name##_sat_uint8 = ::cat::basic_int<                                  \
+      ::cat::uint8::raw_type, ::cat::overflow_policies::saturate, quantity>;   \
+   using name##_sat_int16 = ::cat::basic_int<                                  \
+      ::cat::int16::raw_type, ::cat::overflow_policies::saturate, quantity>;   \
+   using name##_sat_uint16 = ::cat::basic_int<                                 \
+      ::cat::uint16::raw_type, ::cat::overflow_policies::saturate, quantity>;  \
+   using name##_float4 = ::cat::basic_float<                                   \
+      ::cat::float4::raw_type, ::cat::precision_policies::precise, quantity>;  \
+   using name##_float8 = ::cat::basic_float<                                   \
+      ::cat::float8::raw_type, ::cat::precision_policies::precise, quantity>;  \
+   using name##_float4_fast = ::cat::basic_float<                              \
+      ::cat::float4::raw_type, ::cat::precision_policies::fast, quantity>;     \
+   using name##_float8_fast = ::cat::basic_float<                              \
       ::cat::float8::raw_type, ::cat::precision_policies::fast, quantity>
 
 #pragma clang final(CAT_DECLARE_QUANTITY_ALIASES)
@@ -1717,15 +1736,18 @@ class
      clang::preferred_name(int2), clang::preferred_name(uint2),
      clang::preferred_name(int4), clang::preferred_name(uint4),
      clang::preferred_name(int8), clang::preferred_name(uint8),
+     clang::preferred_name(int16), clang::preferred_name(uint16),
      clang::preferred_name(iword), clang::preferred_name(uword),
      clang::preferred_name(wrap_int1), clang::preferred_name(wrap_uint1),
      clang::preferred_name(wrap_int2), clang::preferred_name(wrap_uint2),
      clang::preferred_name(wrap_int4), clang::preferred_name(wrap_uint4),
      clang::preferred_name(wrap_int8), clang::preferred_name(wrap_uint8),
+     clang::preferred_name(wrap_int16), clang::preferred_name(wrap_uint16),
      clang::preferred_name(sat_int1), clang::preferred_name(sat_uint1),
      clang::preferred_name(sat_int2), clang::preferred_name(sat_uint2),
      clang::preferred_name(sat_int4), clang::preferred_name(sat_uint4),
-     clang::preferred_name(sat_int8), clang::preferred_name(sat_uint8)]]
+     clang::preferred_name(sat_int8), clang::preferred_name(sat_uint8),
+     clang::preferred_name(sat_int16), clang::preferred_name(sat_uint16)]]
    basic_int :
     // Generate basic_int operators.
     public arithmetic_interface<basic_int<T, overflow_policy, quantity>> {
@@ -4256,20 +4278,24 @@ wrap_shr(basic_idx<policy> value, U bits) noexcept -> basic_idx<policy> {
 
 inline namespace arithmetic {
 template <uword bytes>
-   requires(bytes <= 8u &&
+   requires(bytes <= 16u &&
             // Is a power of 2:
             ((bytes & (bytes - 1u)) == 0u))
 using int_fixed = conditional<
    bytes == 1, int1,
-   conditional<bytes == 2, int2, conditional<bytes == 4, int4, int8>>>;
+   conditional<
+      bytes == 2, int2,
+      conditional<bytes == 4, int4, conditional<bytes == 8, int8, int16>>>>;
 
 template <uword bytes>
-   requires(bytes <= 8u &&
+   requires(bytes <= 16u &&
             // Is a power of 2:
             ((bytes & (bytes - 1u)) == 0u))
 using uint_fixed = conditional<
    bytes == 1, uint1,
-   conditional<bytes == 2, uint2, conditional<bytes == 4, uint4, uint8>>>;
+   conditional<
+      bytes == 2, uint2,
+      conditional<bytes == 4, uint4, conditional<bytes == 8, uint8, uint16>>>>;
 
 struct bool2 {
    using raw_type = __UINT16_TYPE__;
@@ -4348,6 +4374,10 @@ inline constexpr int8 int8_min = limits<int8>::min();
 inline constexpr int8 int8_max = limits<int8>::max();
 inline constexpr uint8 uint8_min = limits<uint8>::min();
 inline constexpr uint8 uint8_max = limits<uint8>::max();
+inline constexpr int16 int16_min = limits<int16>::min();
+inline constexpr int16 int16_max = limits<int16>::max();
+inline constexpr uint16 uint16_min = limits<uint16>::min();
+inline constexpr uint16 uint16_max = limits<uint16>::max();
 }  // namespace arithmetic
 
 // Implementing this here is a circular dependency. The implementation can be
@@ -4431,6 +4461,11 @@ operator""_i8(unsigned long long input) noexcept -> cat::int8 {
 }
 
 consteval auto
+operator""_i16(unsigned long long input) noexcept -> cat::int16 {
+   return cat::int16(input);
+}
+
+consteval auto
 operator""_sz(unsigned long long input) noexcept -> cat::iword {
    return cat::iword(input);
 }
@@ -4452,6 +4487,11 @@ operator""_u4(unsigned long long input) noexcept -> cat::uint4 {
 
 consteval auto
 operator""_u8(unsigned long long input) noexcept -> cat::uint8 {
+   return input;
+}
+
+consteval auto
+operator""_u16(unsigned long long input) noexcept -> cat::uint16 {
    return input;
 }
 

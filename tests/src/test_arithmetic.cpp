@@ -597,11 +597,13 @@ $test(arithmetic_traits_is_same) {
    static_assert(cat::is_same<cat::int_fixed<2>, int2>);
    static_assert(cat::is_same<cat::int_fixed<4>, int4>);
    static_assert(cat::is_same<cat::int_fixed<8>, int8>);
+   static_assert(cat::is_same<cat::int_fixed<16>, int16>);
 
    static_assert(cat::is_same<cat::uint_fixed<1>, uint1>);
    static_assert(cat::is_same<cat::uint_fixed<2>, uint2>);
    static_assert(cat::is_same<cat::uint_fixed<4>, uint4>);
    static_assert(cat::is_same<cat::uint_fixed<8>, uint8>);
+   static_assert(cat::is_same<cat::uint_fixed<16>, uint16>);
 
    static_assert(
       cat::is_same<decltype(uword::max() - uintptr<void>{8u}), uword>
@@ -861,55 +863,57 @@ $test(arithmetic_numeral_sizes) {
    static_assert(sizeof(int4) == 4);
    static_assert(sizeof(uint4) == 4);
    static_assert(sizeof(int8) == 8);
+   static_assert(sizeof(uint8) == 8);
+   static_assert(sizeof(int16) == 16);
+   static_assert(sizeof(uint16) == 16);
    static_assert(sizeof(float4) == 4);
    static_assert(sizeof(float8) == 8);
 }
 
 $test(uint128_runtime_div_mod) {
-   unsigned __int128 const two_pow_64 = cat::deconst(__uint128_t(1u) << 64u);
-   unsigned __int128 const three = cat::deconst(__uint128_t(3u));
+   uint16 const two_pow_64 = cat::deconst(uint16(1u) << 64u);
+   uint16 const three = cat::deconst(uint16(3u));
    cat::verify(two_pow_64 / three == 0x55555555'55555555ull);
    cat::verify(two_pow_64 % three == 1u);
 
-   unsigned __int128 const two_pow_64_times_3 =
-      cat::deconst(__uint128_t(3u) << 64u);
-   unsigned __int128 const two = cat::deconst(__uint128_t(2u));
-   cat::verify(two_pow_64_times_3 / two == __uint128_t(3u) << 63u);
+   uint16 const two_pow_64_times_3 = cat::deconst(uint16(3u) << 64u);
+   uint16 const two = cat::deconst(uint16(2u));
+   cat::verify(two_pow_64_times_3 / two == (uint16(3u) << 63u));
    cat::verify(two_pow_64_times_3 % two == 0u);
 
-   unsigned __int128 const max = cat::deconst(~__uint128_t(0));
-   unsigned __int128 const one = cat::deconst(__uint128_t(1u));
+   uint16 const max = cat::deconst(~uint16(0u));
+   uint16 const one = cat::deconst(uint16(1u));
    cat::verify(max / one == max);
    cat::verify(max % one == 0u);
    cat::verify(max / max == 1u);
    cat::verify(max % max == 0u);
 
-   unsigned __int128 const hundred = cat::deconst(__uint128_t(100u));
-   unsigned __int128 const seven = cat::deconst(__uint128_t(7u));
+   uint16 const hundred = cat::deconst(uint16(100u));
+   uint16 const seven = cat::deconst(uint16(7u));
    cat::verify(hundred / seven == 14u);
    cat::verify(hundred % seven == 2u);
 
-   unsigned __int128 const zero = cat::deconst(__uint128_t(0u));
+   uint16 const zero = cat::deconst(uint16(0u));
    cat::verify(zero / three == 0u);
    cat::verify(zero % three == 0u);
    cat::verify(three / hundred == 0u);
    cat::verify(three % hundred == 3u);
 
-   unsigned __int128 const two_pow_80 = cat::deconst(__uint128_t(1u) << 80u);
-   unsigned __int128 const two_pow_70 = cat::deconst(__uint128_t(1u) << 70u);
+   uint16 const two_pow_80 = cat::deconst(uint16(1u) << 80u);
+   uint16 const two_pow_70 = cat::deconst(uint16(1u) << 70u);
    cat::verify(two_pow_80 / two_pow_70 == 1'024u);
    cat::verify(two_pow_80 % two_pow_70 == 0u);
 
-   unsigned __int128 const two_pow_64_plus_1 = two_pow_64 + 1u;
+   uint16 const two_pow_64_plus_1 = two_pow_64 + 1u;
    cat::verify(two_pow_80 / two_pow_64_plus_1 == 65'535u);
    cat::verify(two_pow_80 % two_pow_64_plus_1 == two_pow_64 - 65'535u);
 }
 
 $test(int128_runtime_div_mod) {
-   __int128 const hundred = cat::deconst(__int128(100));
-   __int128 const seven = cat::deconst(__int128(7));
-   __int128 const neg_hundred = cat::deconst(-__int128(100));
-   __int128 const neg_seven = cat::deconst(-__int128(7));
+   int16 const hundred = cat::deconst(int16(100));
+   int16 const seven = cat::deconst(int16(7));
+   int16 const neg_hundred = cat::deconst(-int16(100));
+   int16 const neg_seven = cat::deconst(-int16(7));
 
    cat::verify(hundred / seven == 14);
    cat::verify(hundred % seven == 2);
@@ -920,11 +924,11 @@ $test(int128_runtime_div_mod) {
    cat::verify(neg_hundred / neg_seven == 14);
    cat::verify(neg_hundred % neg_seven == -2);
 
-   __int128 const two_pow_64 = cat::deconst(__int128(1) << 64);
-   __int128 const three = cat::deconst(__int128(3));
-   cat::verify(two_pow_64 / three == __int128(0x55555555'55555555ull));
-   cat::verify((-two_pow_64) / three == -__int128(0x55555555'55555555ull));
-   cat::verify((-two_pow_64) / (-three) == __int128(0x55555555'55555555ull));
+   int16 const two_pow_64 = cat::deconst(int16(1) << 64);
+   int16 const three = cat::deconst(int16(3));
+   cat::verify(two_pow_64 / three == 0x55555555'55555555ull);
+   cat::verify((-two_pow_64) / three == -int16(0x55555555'55555555ull));
+   cat::verify((-two_pow_64) / (-three) == 0x55555555'55555555ull);
 }
 
 $test(arithmetic_int4_uint4_operations_and_ordering) {

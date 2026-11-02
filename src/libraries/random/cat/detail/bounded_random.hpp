@@ -13,23 +13,19 @@ template <is_unsigned_integral T, typename Next>
 constexpr auto
 lemire_bounded(T bound, Next&& next) noexcept(!__has_feature(cxx_exceptions))
    -> T {
-   using raw_type = raw_arithmetic_type<T>;
-   raw_type const limit = make_raw_arithmetic(bound);
-   raw_type raw = make_raw_arithmetic(next());
-   __uint128_t sample = __uint128_t(raw) * __uint128_t(limit);
    uword const shift = sizeof(T) * 8u;
-   raw_type fraction = raw_type(sample);
-   raw_type high = raw_type(sample >> shift);
-   if (fraction < limit) {
-      raw_type const threshold = raw_type(raw_type(0u) - limit) % limit;
+   uint16 sample = uint16(next()) * bound;
+   T fraction = T(sample);
+   T high = T(sample >> shift);
+   if (fraction < bound) {
+      T const threshold = (T(0u) - bound) % bound;
       while (fraction < threshold) {
-         raw = make_raw_arithmetic(next());
-         sample = __uint128_t(raw) * __uint128_t(limit);
-         fraction = raw_type(sample);
-         high = raw_type(sample >> shift);
+         sample = uint16(next()) * bound;
+         fraction = T(sample);
+         high = T(sample >> shift);
       }
    }
-   return T(high);
+   return high;
 }
 
 template <is_simd_unsigned_integral T>

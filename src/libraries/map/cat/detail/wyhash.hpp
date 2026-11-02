@@ -35,13 +35,12 @@ inline constexpr array<uint8, 4u> wyhash_secret = {
 };
 
 // Replace `a` and `b` with the low and high halves of their 128-bit product.
-// TODO: Use a libCat 128-bit integer when one exists.
 constexpr void
 wyhash_multiply(uint8& a, uint8& b) {
-   unsigned __int128 const product =
-      static_cast<unsigned __int128>(a.raw) * b.raw;
-   a = static_cast<uint8::raw_type>(product);
-   b = static_cast<uint8::raw_type>(product >> 64u);
+   uint16 const product = uint16(a) * b;
+   // TODO: Should we have a `truncate_cast` to express intent better?
+   a = uint8(product);
+   b = uint8(product >> 64u);
 }
 
 [[nodiscard]]

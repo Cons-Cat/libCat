@@ -97,24 +97,22 @@ struct pcg_constants<uint8> {
 };
 
 template <>
-struct pcg_constants<unsigned __int128> {
-   static constexpr unsigned __int128 multiplier =
-      (static_cast<__uint128_t>(2'549'297'995'355'413'924ull) << 64u)
+struct pcg_constants<uint16> {
+   static constexpr uint16 multiplier =
+      (uint16(2'549'297'995'355'413'924ull) << 64u)
       | 4'865'540'595'714'422'341ull;
-   static constexpr unsigned __int128 increment =
-      (static_cast<__uint128_t>(6'364'136'223'846'793'005ull) << 64u)
+   static constexpr uint16 increment =
+      (uint16(6'364'136'223'846'793'005ull) << 64u)
       | 1'442'695'040'888'963'407ull;
 
-   static constexpr unsigned __int128 oneseq_state =
-      (static_cast<__uint128_t>(0xb8dc10e1'58a92392ull) << 64u)
-      | 0x98046df0'07ec0a53ull;
-   static constexpr unsigned __int128 mcg_state = 0xcafef00d'd15ea5e5ull;
-   static constexpr unsigned __int128 setseq_state =
-      (static_cast<__uint128_t>(0x979c9a98'd8462005ull) << 64u)
-      | 0x7d3e9cb6'cfe0549bull;
-   static constexpr unsigned __int128 setseq_increment =
-      (static_cast<__uint128_t>(1u) << 64u) | 0xda3e39cb'94b95bdbull;
-   static constexpr unsigned __int128 cheap_multiplier = 0xda942042'e4dd58b5ull;
+   static constexpr uint16 oneseq_state =
+      (uint16(0xb8dc10e1'58a92392ull) << 64u) | 0x98046df0'07ec0a53ull;
+   static constexpr uint16 mcg_state = 0xcafef00d'd15ea5e5ull;
+   static constexpr uint16 setseq_state =
+      (uint16(0x979c9a98'd8462005ull) << 64u) | 0x7d3e9cb6'cfe0549bull;
+   static constexpr uint16 setseq_increment =
+      (uint16(1u) << 64u) | 0xda3e39cb'94b95bdbull;
+   static constexpr uint16 cheap_multiplier = 0xda942042'e4dd58b5ull;
 };
 
 template <
@@ -127,7 +125,6 @@ class pcg_simd_state<Word, true> {
  public:
    using word_type = Word;
    using lane_type = word_type::value_type;
-   using lane_raw = raw_arithmetic_type<lane_type>;
    using scalar_type = uint8;
    using mask_type = word_type::mask_type;
 
@@ -233,7 +230,11 @@ class pcg_simd_state<Word, true> {
       word_type result;
       for (idx lane = 0u; lane < word_type::abi_type::lanes; ++lane) {
          result.set_lane(
-            lane, lane_type(lane_raw(make_raw_arithmetic(this->lane(lane))))
+            lane, lane_type(
+                     raw_arithmetic_type<lane_type>(
+                        make_raw_arithmetic(this->lane(lane))
+                     )
+                  )
          );
       }
       return result;
@@ -245,8 +246,11 @@ class pcg_simd_state<Word, true> {
       word_type result;
       for (idx lane = 0u; lane < word_type::abi_type::lanes; ++lane) {
          result.set_lane(
-            lane,
-            lane_type(lane_raw(make_raw_arithmetic(this->lane(lane) >> 32u)))
+            lane, lane_type(
+                     raw_arithmetic_type<lane_type>(
+                        make_raw_arithmetic(this->lane(lane) >> 32u)
+                     )
+                  )
          );
       }
       return result;
@@ -265,8 +269,11 @@ class pcg_simd_state<Word, true> {
          idx const word = lane / wide_lanes;
          idx const word_lane = lane % wide_lanes;
          result.set_lane(
-            lane,
-            lane_type(lane_raw(make_raw_arithmetic(words[word][word_lane])))
+            lane, lane_type(
+                     raw_arithmetic_type<lane_type>(
+                        make_raw_arithmetic(words[word][word_lane])
+                     )
+                  )
          );
       }
       return result;
@@ -433,9 +440,7 @@ class pcg_simd_state<Word, false> {
  public:
    using word_type = Word;
    using lane_type = word_type::value_type;
-   using lane_raw = raw_arithmetic_type<lane_type>;
-   using scalar_type =
-      conditional<sizeof(lane_type) == 4u, uint8, unsigned __int128>;
+   using scalar_type = conditional<sizeof(lane_type) == 4u, uint8, uint16>;
    using mask_type = word_type::mask_type;
 
  private:
@@ -447,10 +452,8 @@ class pcg_simd_state<Word, false> {
    constexpr pcg_simd_state() = default;
 
    constexpr pcg_simd_state(scalar_type value) noexcept
-       : m_low(lane_type(lane_raw(make_raw_arithmetic(value)))),
-         m_high(lane_type(
-            lane_raw(make_raw_arithmetic(value >> (word_bytes * 8u).raw))
-         )) {
+       : m_low(lane_type(value)),
+         m_high(lane_type(value >> (word_bytes * 8u))) {
    }
 
    template <is_unsigned_integral Value>
@@ -662,7 +665,7 @@ template <typename T>
 struct pcg_types<T> {
    using result = uint_fixed<sizeof(T)>;
    // PCG state is always wider than the result value.
-   using state = conditional<sizeof(T) == 4u, uint8, unsigned __int128>;
+   using state = conditional<sizeof(T) == 4u, uint8, uint16>;
 };
 
 template <typename Lane, typename Abi>
@@ -745,8 +748,8 @@ pcg_output(State state) noexcept -> Result {
 
    if constexpr (permutation == pcg_permutation::xorshift_low_random_rotate) {
       static_assert(sizeof(State) == 16u && sizeof(Result) == 8u);
-      uint8 const word = uint8((raw_state >> 64u) ^ raw_state);
-      return rotate_right(word, uword(raw_state >> 122u));
+      uint8 const word = uint8((state >> 64u) ^ state);
+      return rotate_right(word, uword(state >> 122u));
    }
 
    if constexpr (
@@ -773,15 +776,13 @@ pcg_output(State state) noexcept -> Result {
          hi *= lo;
          return uint4(hi);
       } else {
-         uint8::raw_type hi = uint8::raw_type(raw_state >> 64u);
-         uint8::raw_type lo = uint8::raw_type(raw_state) | 1u;
+         uint8 hi = uint8(state >> 64u);
+         uint8 lo = uint8(state) | 1u;
          hi ^= hi >> 32u;
-         hi *= uint8::raw_type(
-            make_raw_arithmetic(pcg_constants<State>::cheap_multiplier)
-         );
+         hi *= uint8(pcg_constants<State>::cheap_multiplier);
          hi ^= hi >> 48u;
          hi *= lo;
-         return uint8(hi);
+         return hi;
       }
    }
 }
@@ -791,7 +792,6 @@ template <is_simd Result, typename State, pcg_permutation permutation>
 constexpr auto
 pcg_output(State state) noexcept -> Result {
    using lane_type = Result::value_type;
-   using lane_raw = raw_arithmetic_type<lane_type>;
    constexpr idx word_bytes = sizeof(lane_type);
    constexpr bool equal_width_state = is_same<State, Result>;
 
@@ -840,15 +840,17 @@ pcg_output(State state) noexcept -> Result {
          Result word = state.high();
          if constexpr (word_bytes == 4u) {
             word ^= word >> 16u;
-            word *= lane_type(lane_raw(make_raw_arithmetic(
-               pcg_constants<typename State::scalar_type>::cheap_multiplier
-            )));
+            word *= lane_type(
+               raw_arithmetic_type<lane_type>(make_raw_arithmetic(
+                  pcg_constants<typename State::scalar_type>::cheap_multiplier
+               ))
+            );
             word ^= word >> 24u;
          } else {
             word ^= word >> 32u;
-            word *= lane_type(lane_raw(make_raw_arithmetic(
+            word *= lane_type(
                pcg_constants<typename State::scalar_type>::cheap_multiplier
-            )));
+            );
             word ^= word >> 48u;
          }
          return word * (state.low() | 1u);
@@ -871,16 +873,13 @@ pcg_pack_states(array<State, Result::abi_type::lanes> const& states) noexcept(
    } else {
       using packed_state = pcg_simd_state<Result>;
       using lane_type = Result::value_type;
-      using lane_raw = raw_arithmetic_type<lane_type>;
       constexpr idx word_bytes = sizeof(lane_type);
       Result low;
       Result high;
       for (idx lane = 0u; lane < Result::abi_type::lanes; ++lane) {
-         auto const raw_state = make_raw_arithmetic(states[lane]);
-         low.set_lane(lane, lane_type(lane_raw(raw_state)));
-         high.set_lane(
-            lane, lane_type(lane_raw(raw_state >> (word_bytes * 8u).raw))
-         );
+         auto const state = states[lane];
+         low.set_lane(lane, lane_type(state));
+         high.set_lane(lane, lane_type(state >> (word_bytes * 8u)));
       }
       return packed_state(low, high);
    }
@@ -911,7 +910,6 @@ class pcg_engine {
  private:
    using state_type = State;
    // The LCG is defined modulo the state's width, so its arithmetic wraps.
-   // This is generic over raw `unsigned __int128` states, which lack `.wrap()`.
    using wrapping_state = typename rebind_overflow_policy<
       state_type, overflow_policies::wrap>::type;
 
@@ -1206,7 +1204,6 @@ class pcg_engine<
  private:
    using state_type = State;
    using lane_type = result_type::value_type;
-   using lane_raw = raw_arithmetic_type<lane_type>;
    using expected_state = detail::pcg_simd_state<result_type>;
    using mask_type = result_type::mask_type;
    static constexpr bool equal_width_state = is_same<state_type, result_type>;

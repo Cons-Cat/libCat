@@ -119,8 +119,8 @@ to_nanoseconds(cat::uint8 tsc, conversion const& parameters)
       return cat::nullopt;
    }
    cat::uint8 const elapsed_tsc = tsc - parameters.base_tsc;
-   __uint128_t const elapsed_fixed =
-      __uint128_t(elapsed_tsc) * parameters.multiplier.raw;
+   cat::uint16 const elapsed_fixed =
+      cat::uint16(elapsed_tsc) * parameters.multiplier;
    return parameters.base_nanoseconds + cat::int8(elapsed_fixed >> fixed_shift);
 }
 
@@ -131,7 +131,7 @@ make_multiplier(cat::int8 elapsed_nanoseconds, cat::uint8 elapsed_tsc)
    if (elapsed_nanoseconds <= 0 || elapsed_tsc == 0u) {
       return cat::nullopt;
    }
-   __uint128_t const fixed = __uint128_t(elapsed_nanoseconds) << fixed_shift;
+   cat::uint16 const fixed = cat::uint16(elapsed_nanoseconds) << fixed_shift;
    cat::uint8 const multiplier = cat::uint8(fixed / elapsed_tsc);
    if (multiplier == 0u) {
       return cat::nullopt;
@@ -142,7 +142,7 @@ make_multiplier(cat::int8 elapsed_nanoseconds, cat::uint8 elapsed_tsc)
 [[nodiscard]]
 auto
 next_calibration(cat::uint8 tsc, cat::uint8 multiplier) -> cat::uint8 {
-   __uint128_t const interval_fixed = __uint128_t(calibration_interval)
+   cat::uint16 const interval_fixed = cat::uint16(calibration_interval)
                                       << fixed_shift;
    return tsc + cat::uint8(interval_fixed / multiplier);
 }

@@ -1716,9 +1716,9 @@ quantity_value_in(U value) noexcept {
          }
          return result * quantity_pi_factor<wide>(conversion_type::pi_power);
       } else {
-         using wide = conditional<
-            is_signed<__typeof_unqual(raw)>, __int128, unsigned __int128>;
-         wide result = static_cast<wide>(raw) * conversion_type::numerator;
+         using wide = copy_sign_from<__typeof_unqual(raw), __int128>;
+         wide result = raw;
+         result *= conversion_type::numerator;
          if constexpr (conversion_type::decimal_power > 0) {
             result *=
                quantity_scale_factor<wide>(conversion_type::decimal_power);

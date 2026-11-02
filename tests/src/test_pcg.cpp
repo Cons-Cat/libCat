@@ -11,8 +11,8 @@
 namespace {
 
 constexpr auto
-make_uint16(cat::uint8 high, cat::uint8 low) -> unsigned __int128 {
-   return (static_cast<unsigned __int128>(high.raw) << 64u) | low.raw;
+make_uint16(cat::uint8 high, cat::uint8 low) -> cat::uint16 {
+   return (cat::uint16(high) << 64u) | low;
 }
 
 // PCG's 128-bit state is defined modulo 2^128, so the arithmetic on its
@@ -45,8 +45,7 @@ pcg_reference_add(pcg_reference_state left, pcg_reference_state right)
 constexpr auto
 pcg_reference_multiply(pcg_reference_state left, pcg_reference_state right)
    -> pcg_reference_state {
-   unsigned __int128 const low_product =
-      static_cast<unsigned __int128>(left.low.raw) * right.low.raw;
+   cat::uint16 const low_product = cat::uint16(left.low) * right.low;
    return {
       .low = cat::uint8(low_product),
       .high = cat::uint8(low_product >> 64u).wrap()
@@ -136,7 +135,7 @@ pcg_reference_generate(
 }
 
 constexpr auto
-pcg_reference_native(pcg_reference_state state) -> unsigned __int128 {
+pcg_reference_native(pcg_reference_state state) -> cat::uint16 {
    return make_uint16(state.high, state.low);
 }
 
@@ -505,9 +504,9 @@ $test(pcg_increment_shift_regression) {
    // rkern's 2019 fix moved initseq low bit 63 into increment high bit 0.
    // The old emulation tested bit 47 and could set high bit 47 instead.
    // https://github.com/rkern/pcg64/commit/b9604fe16dadfb93eeefe07f4ba1cda9acf7c389
-   constexpr unsigned __int128 initial_state =
+   constexpr cat::uint16 initial_state =
       make_uint16(0xfedcba98'76543210ull, 0xffffffff'fffffff1ull);
-   constexpr unsigned __int128 initial_sequence =
+   constexpr cat::uint16 initial_sequence =
       make_uint16(0x13579bdf'2468ace0ull, 0x80000000'00000054ull);
    cat::pcg_engine<cat::uint8> pcg(initial_state, initial_sequence);
    cat::verify(pcg() == 0x69097423'7023ba37ull);

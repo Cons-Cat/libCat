@@ -10,8 +10,7 @@ namespace cat {
 class random_seed {
  public:
    template <is_unsigned_integral T>
-   constexpr random_seed(T value) noexcept
-       : m_value(make_raw_arithmetic(value)) {
+   constexpr random_seed(T value) noexcept : m_value(value) {
    }
 
    template <is_unsigned_integral T>
@@ -22,7 +21,7 @@ class random_seed {
    }
 
  private:
-   unsigned __int128 m_value;
+   uint16 m_value;
 };
 
 }  // namespace cat

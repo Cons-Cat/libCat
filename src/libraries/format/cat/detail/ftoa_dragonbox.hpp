@@ -410,10 +410,7 @@ namespace wuint {
 
 // clang-format off
     #if defined(__SIZEOF_INT128__)
-            // To silence "error: ISO C++ does not support '`__int128`' for
-            // 'type name' [-Wpedantic]".
-            __extension__
-            using builtin_uint128_t = unsigned __int128;
+            using builtin_uint128_t = uint16;
     #endif
 // clang-format on
 
@@ -474,7 +471,7 @@ umul64(uint4::raw_type x, uint4::raw_type y) noexcept {
 JKJ_SAFEBUFFERS inline uint128
 umul128(uint8::raw_type x, uint8::raw_type y) noexcept {
 #if defined(__SIZEOF_INT128__)
-   auto result = builtin_uint128_t(x) * builtin_uint128_t(y);
+   auto result = builtin_uint128_t(x) * y;
    return {uint8::raw_type(result >> 64), uint8::raw_type(result)};
 #elif defined(_MSC_VER) && defined(_M_X64)
    uint128 result;
@@ -503,7 +500,7 @@ umul128(uint8::raw_type x, uint8::raw_type y) noexcept {
 JKJ_SAFEBUFFERS inline uint8::raw_type
 umul128_upper64(uint8::raw_type x, uint8::raw_type y) noexcept {
 #if defined(__SIZEOF_INT128__)
-   auto result = builtin_uint128_t(x) * builtin_uint128_t(y);
+   auto result = builtin_uint128_t(x) * y;
    return uint8::raw_type(result >> 64);
 #elif defined(_MSC_VER) && defined(_M_X64)
    return __umulh(x, y);

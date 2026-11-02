@@ -51,9 +51,9 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
       array<element_type, div_ceil(bits_count, idx(sizeof(element_type) * 8u))>,
       conditional<
          total_bytes <= 8u,
-         // `uint_fixed` will not compile here if it is larger than 8
-         // or it is not a power of 2. This is an `array` of one
-         // element to make it iterable.
+         // `uint_fixed` will not compile here if it is not a power of 2, and we
+         // don't want to use a 16 byte type by default. This is an `array` of
+         // one element to make it iterable.
          array<uint_fixed<min(bit_ceil(total_bytes), 8u)>, 1u>,
          array<uint8, div_ceil(total_bytes, 8u)>>>;
 
