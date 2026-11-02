@@ -53,6 +53,6 @@ cat::scoped_assert_handler::scoped_assert_handler(
    p_assert_handler_frames = &m_frame;
 }
 
-cat::scoped_assert_handler::~scoped_assert_handler() {
+cat::scoped_assert_handler::~scoped_assert_handler() noexcept {
    p_assert_handler_frames = m_frame.p_previous;
 }
