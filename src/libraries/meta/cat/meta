@@ -472,6 +472,9 @@ template <typename T, typename Storage, auto policy>
 inline constexpr bool is_signed_detail<basic_intptr<T, Storage, policy>> =
    is_signed_detail<Storage>;
 
+template <auto policy>
+inline constexpr bool is_signed_detail<basic_idx<policy>> = false;
+
 template <typename Storage>
 inline constexpr bool is_signed_detail<basic_ualign<Storage>> = false;
 
@@ -624,9 +627,24 @@ struct detail::make_unsigned_trait<basic_ualign<Storage>> {
    using type = basic_ualign<Storage>;
 };
 
+namespace detail {
+template <typename T>
+inline constexpr bool is_idx_or_ualign = false;
+
+template <auto policy>
+inline constexpr bool is_idx_or_ualign<basic_idx<policy>> = true;
+
+template <typename Storage>
+inline constexpr bool is_idx_or_ualign<basic_ualign<Storage>> = true;
+}  // namespace detail
+
+// `idx` and `ualign` are unsigned, so they only work as the sign source.
+// Neither has a signed form, so neither can be the target.
 template <is_integral Sign, is_integral T>
-using copy_sign_from =
-   conditional<is_signed<Sign>, make_signed_type<T>, make_unsigned_type<T>>;
+   requires(!detail::is_idx_or_ualign<remove_cvref<T>>)
+using copy_sign_from = conditional<
+   is_signed<Sign> && !detail::is_idx_or_ualign<remove_cvref<Sign>>,
+   make_signed_type<T>, make_unsigned_type<T>>;
 
 template <typename T>
 concept is_void = __is_same(T, void);

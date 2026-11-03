@@ -829,6 +829,16 @@ $test(meta_is_specialization) {
    static_assert(!is_specialization<templated_one<int>, templated_two>);
 }
 
+namespace {
+struct non_integral_sign {};
+
+template <typename T>
+concept can_copy_sign_from = requires { typename cat::copy_sign_from<T, int>; };
+
+template <typename T>
+concept can_copy_sign_onto = requires { typename cat::copy_sign_from<int, T>; };
+}  // namespace
+
 $test(meta_sign_type_traits) {
    using namespace cat;
 
@@ -844,7 +854,8 @@ $test(meta_sign_type_traits) {
    static_assert(!is_signed<make_unsigned_type<int4 const>>);
 
    // Signedness comes from the first type. Width, cv, and overflow policy
-   // come from the second.
+   // come from the second. `idx` and `ualign` are unsigned sources and are
+   // not valid targets.
    static_assert(is_same<copy_sign_from<int, unsigned>, int>);
    static_assert(is_same<copy_sign_from<unsigned, int>, unsigned>);
    static_assert(is_same<copy_sign_from<int, int>, int>);
@@ -876,6 +887,10 @@ $test(meta_sign_type_traits) {
                  copy_sign_from<uint4 const, int const volatile>,
                  unsigned const volatile>);
    static_assert(is_same<copy_sign_from<idx const, int4>, uint4>);
+   static_assert(is_same<
+                 copy_sign_from<basic_idx<overflow_policies::wrap>, long>,
+                 unsigned long>);
+   static_assert(is_same<copy_sign_from<ualign volatile, int>, unsigned>);
 
    static_assert(is_same<copy_sign_from<int, wrap_uint4>, wrap_int4>);
    static_assert(is_same<copy_sign_from<unsigned, wrap_int8>, wrap_uint8>);
@@ -888,6 +903,22 @@ $test(meta_sign_type_traits) {
    static_assert(is_same<copy_sign_from<uword, int8>, uint8>);
    static_assert(is_same<copy_sign_from<int, uword>, iword>);
    static_assert(is_same<copy_sign_from<unsigned, iword>, uword>);
+
+   static_assert(can_copy_sign_from<int>);
+   static_assert(can_copy_sign_from<idx>);
+   static_assert(can_copy_sign_from<ualign>);
+   static_assert(!can_copy_sign_from<non_integral_sign>);
+
+   static_assert(can_copy_sign_onto<int>);
+   static_assert(can_copy_sign_onto<uint4 const>);
+   static_assert(!can_copy_sign_onto<idx>);
+   static_assert(!can_copy_sign_onto<idx const>);
+   static_assert(!can_copy_sign_onto<idx volatile>);
+   static_assert(!can_copy_sign_onto<basic_idx<overflow_policies::wrap>>);
+   static_assert(!can_copy_sign_onto<basic_idx<overflow_policies::saturate>>);
+   static_assert(!can_copy_sign_onto<ualign>);
+   static_assert(!can_copy_sign_onto<ualign const>);
+   static_assert(!can_copy_sign_onto<ualign volatile>);
 }
 
 $test(meta_trivially_copy_construct) {
