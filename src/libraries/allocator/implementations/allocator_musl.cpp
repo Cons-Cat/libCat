@@ -180,13 +180,16 @@ struct musl_context {
    free_meta(meta<is_shared>* p_metadata);
 
    void
-   deallocate_pages(byte const* p_memory, uword bytes);
+   deallocate_pages(byte const* p_memory, uword bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   );
 
    auto
    allocate_meta() noexcept(false) -> meta<is_shared>* _Nullable;
 
    auto
-   get_meta(byte const* p_allocation) noexcept(false) -> meta<is_shared>*;
+   get_meta(byte const* p_allocation) noexcept(!__has_feature(cxx_exceptions))
+      -> meta<is_shared>*;
 
    void
    step_sequence();
@@ -204,8 +207,9 @@ struct musl_context {
    is_bouncing(uint4 size_class) const noexcept(false) -> bool;
 
    auto
-   try_available(meta<is_shared>* _Nullable* p_metadata) noexcept(false)
-      -> uint4;
+   try_available(meta<is_shared>* _Nullable* p_metadata) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> uint4;
 
    auto
    allocate_slot(uint4 size_class, uword request) noexcept(false)
@@ -230,8 +234,9 @@ struct musl_context {
    okay_to_free(meta<is_shared>* p_metadata) noexcept(false) -> bool;
 
    auto
-   nontrivial_free(meta<is_shared>* p_metadata, uint4 index) noexcept(false)
-      -> musl_map_info<is_shared>;
+   nontrivial_free(meta<is_shared>* p_metadata, uint4 index) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> musl_map_info<is_shared>;
 
    auto
    free_group(meta<is_shared>* p_metadata) noexcept(false)
@@ -250,7 +255,7 @@ struct musl_context {
    deallocate_fast(
       byte* p_allocation, meta<is_shared>* p_metadata, uint4 index,
       uword old_bytes
-   ) noexcept(false) -> bool;
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool;
 
    auto
    prepare_free(byte* p_allocation) noexcept(false)
@@ -262,13 +267,13 @@ struct musl_context {
    auto
    aligned_allocate(
       uword alignment, uword bytes, uword* _Nullable p_feedback_bytes = nullptr
-   ) noexcept(false) -> byte* _Nullable;
+   ) noexcept(!__has_feature(cxx_exceptions)) -> byte* _Nullable;
 
    auto
    resize_in_place(
       byte*& p_allocation, uword old_allocation_bytes, uword new_bytes,
       bool may_move, uword* _Nullable p_feedback_bytes = nullptr
-   ) noexcept(false) -> bool;
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool;
 
    void
    release_mappings();

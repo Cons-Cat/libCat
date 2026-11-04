@@ -274,7 +274,8 @@ class clock_timerfd {
 
    [[nodiscard]]
    auto
-   wait() const -> scaredy_nix<cat::uint8>;
+   wait() const noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy_nix<cat::uint8>;
 
    auto
    close() noexcept -> scaredy_nix<void>;

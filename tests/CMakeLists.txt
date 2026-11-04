@@ -216,7 +216,7 @@ if(CAT_BUILD_UNIT_TESTS)
         COMPILE_DEFINITIONS "CAT_NO_ARGC_ARGV"
         SKIP_PRECOMPILE_HEADERS ON)
     target_link_libraries(gdb_pretty_printer_fixture PRIVATE cat-tests-base)
-    target_compile_options(gdb_pretty_printer_fixture PRIVATE -ggdb3 -gfull -O0)
+    target_compile_options(gdb_pretty_printer_fixture PRIVATE -ggdb3 -gfull -fstandalone-debug -O0)
     add_custom_target(
       check-gdb-pretty-printers
       COMMAND ${CAT_GDB_EXECUTABLE}

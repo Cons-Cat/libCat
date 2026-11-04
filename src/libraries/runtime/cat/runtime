@@ -67,7 +67,7 @@ __cxa_atexit(
 extern "C" [[gnu::used]]
 void
 // NOLINTNEXTLINE
-__cxa_pure_virtual();
+__cxa_pure_virtual() noexcept(!__has_feature(cxx_exceptions));
 
 // Itanium C++ ABI `thread_local` destructor registration.
 extern "C" auto

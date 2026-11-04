@@ -104,8 +104,9 @@ class basic_allocator_musl
       -> void* _Nullable;
 
    auto
-   allocate_zeroed_feedback(idx requested_bytes)
-      -> maybe_sized_allocation<void*>;
+   allocate_zeroed_feedback(idx requested_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe_sized_allocation<void*>;
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
@@ -114,15 +115,20 @@ class basic_allocator_musl
    ) -> void* _Nullable;
 
    auto
-   aligned_allocate_zeroed_feedback(ualign alignment, idx requested_bytes)
-      -> maybe_sized_allocation<void*>;
+   aligned_allocate_zeroed_feedback(
+      ualign alignment, idx requested_bytes
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe_sized_allocation<void*>;
 
    [[clang::ownership_takes(libcat, 2)]]
    void
-   deallocate(void const* _Nonnull p_storage, idx allocation_bytes);
+   deallocate(void const* _Nonnull p_storage, idx allocation_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   );
 
    auto
-   recorded_allocation_bytes(void const* _Nonnull p_storage) -> idx;
+   recorded_allocation_bytes(void const* _Nonnull p_storage) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> idx;
 
    [[clang::ownership_takes(libcat, 3)]]
    friend void
@@ -140,15 +146,19 @@ class basic_allocator_musl
    }
 
    auto
-   grow(span<byte> allocation, idx new_bytes) -> maybe<void>;
+   grow(span<byte> allocation, idx new_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>;
 
    auto
-   grow_feedback(span<byte> allocation, idx new_bytes) -> maybe_non_zero<idx>;
+   grow_feedback(span<byte> allocation, idx new_bytes) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe_non_zero<idx>;
 
    auto
    reallocate_memory(
       span<byte> allocation, idx new_bytes, uword* _Nullable p_feedback_bytes
-   ) -> void* _Nullable;
+   ) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nullable;
 
    auto
    reallocate(span<byte> allocation, idx new_bytes) noexcept(

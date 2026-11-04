@@ -118,10 +118,6 @@ SECTIONS {
    .dynamic          : { *(.dynamic) }
    .got              : { *(.got) }
 
-   /* `.got.plt` is excluded from RELRO because the dynamic loader
-      writes lazy PLT resolutions there at first call. */
-   .got.plt          : { *(.got.plt) }
-
    /* TLS template. PT_TLS describes both `.tdata` and `.tbss`. The
       `__cat_tls_*` linker symbols at the bottom of this script
       expose SIZEOF/ADDR of these sections to libCat at runtime via
@@ -132,6 +128,10 @@ SECTIONS {
    . = ALIGN(MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)));
    .tdata            : { *(.tdata .tdata.*) }
    .tbss (NOLOAD)    : { *(.tbss .tbss.*) }
+
+   /* `.got.plt` is excluded from RELRO because the dynamic loader
+      writes lazy PLT resolutions there at first call. */
+   .got.plt          : { *(.got.plt) }
 
    /* Mutable data. */
    .data             : { *(.data .data.*) }

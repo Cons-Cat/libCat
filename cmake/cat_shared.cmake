@@ -151,10 +151,10 @@ target_link_options(cat-impl-shared
 # own link and at the consumer's. PUBLIC is required because `lld` does not
 # follow a shared library's `DT_NEEDED` entries when resolving the consumer's
 # undefined symbols, so each consumer needs `-lm -lc` repeated on its own link
-# line.
-target_link_options(cat-impl-shared PUBLIC
-  -lm
-  -lc)
+# line. These are libraries rather than options so that they follow `libcat.so`
+# on that line. Otherwise libC's `__cxa_atexit` and so on would be selected
+# rather than libCat's.
+target_link_libraries(cat-impl-shared PUBLIC m c)
 
 # `_start.cpp` lives on `cat`'s `INTERFACE_SOURCES` (each consumer compiles it
 # with their own `CAT_NO_ARGC_ARGV`). Mirror the entry on `cat-impl-shared` so

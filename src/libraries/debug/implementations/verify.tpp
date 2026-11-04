@@ -6,7 +6,7 @@ namespace cat {
 
 constexpr void
 verify(bool invariant_expression, source_location const& callsite) noexcept(
-   false
+   !__has_feature(cxx_exceptions)
 ) {
    if consteval {
       [[assume(invariant_expression)]];

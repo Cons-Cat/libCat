@@ -195,6 +195,10 @@ list(
   APPEND CAT_CXX_FLAGS_DEBUG
   -ggdb3
   -gfull
+  # Emit every class in full wherever it is used. Otherwise, Clang only emits a
+  # class whose constructors are always inlined, such as `overflow_reference`,
+  # as a declaration, which debuggers cannot print.
+  -fstandalone-debug
 )
 
 list(

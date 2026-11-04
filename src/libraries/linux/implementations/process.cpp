@@ -107,7 +107,7 @@ nix::manual::process::wait() const -> scaredy_nix<process_id> {
    process_id child_id;
    cat::uint1 count = 1u;
    for (;;) {
-      cat::uint4 const observed = m_id.load(cat::memory_order::acquire);
+      cat::uint4 const observed = m_id.acquire();
       if (observed != 0u) {
          child_id = observed;
          break;
@@ -172,7 +172,7 @@ nix::manual::process::prepare_spawn(
       // address. The thread-pointer self-slot at that address is then one past
       // the span. Take the last in-bounds address and round that down.
       cat::uintptr<void> const stack_region_last_inclusive =
-         stack_and_thread_local_buffer_end_exclusive - cat::uword{1u};
+         stack_and_thread_local_buffer_end_exclusive - 1u;
       tls_thread_pointer =
          cat::align_down(stack_region_last_inclusive, minimum_alignment);
       cat::uintptr<void> const tls_slab_low = stack + m_stack_size;
@@ -187,9 +187,9 @@ nix::manual::process::prepare_spawn(
       // copied executable TLS image only covers `.tdata/.tbss` strictly below
       // `tls_thread_pointer`. The 8 bytes at `tls_thread_pointer` are the
       // thread-pointer self-slot and must equal `tls_tp` after
-      // `clone_flags::set_tls` installs that base in `%fs`. libCat has no
-      // thread control block; the slot exists only to satisfy the SysV
-      // `thread_local` ABI's `mov %fs:0, %reg` lowering.
+      // `clone_flags::set_tls` installs that base in `%fs`. The slot exists
+      // only to satisfy the SysV `thread_local` ABI's `mov %fs:0, %reg`
+      // lowering.
       *reinterpret_cast<void**>(tls_thread_pointer.get()) =
          tls_thread_pointer.get();
    }

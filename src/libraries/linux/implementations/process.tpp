@@ -228,13 +228,13 @@ manual::process::spawn(
             jmp %l[clone_parent]
          1:
             mov %%r12, %%rdi
-            call %P[continuation]
+            call *%[continuation]
             ud2)"
          : [parent_eax] "=m"(result), [syscall_number] "+a"(syscall_number),
            [active_clone_flags] "+D"(active_clone_flags)
          : "S"(stack_top), "d"(&(m_id)), [tls] "r"(p_tls_thread_pointer),
            [cleartid] "r"(p_clear_tid_for_clone), [arguments] "r"(p_arguments),
-           [continuation] "i"(&detail::clone_continuation<arguments_type>)
+           [continuation] "r"(&detail::clone_continuation<arguments_type>)
          : "r8", "r10", "r12", "rcx", "r11", "cc", "memory"
          : clone_parent
       );

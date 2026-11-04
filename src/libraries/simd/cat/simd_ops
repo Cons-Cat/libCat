@@ -30,6 +30,7 @@
 #include <cat/math>
 #include <cat/maybe>
 #include <cat/meta>
+#include <cat/metric_units>
 #include <cat/utility>
 
 namespace cat {

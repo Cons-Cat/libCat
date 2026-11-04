@@ -4,6 +4,11 @@
 #include <cat/arithmetic>
 #include <cat/bit>
 
+// When Clang explains why an `is_assignable` constraint is false, it reports
+// the failed assignment as an error rather than a note.
+// TODO: Can we fix this in Clang?
+// expected-error@cat/meta:* 0+ {{no viable overloaded '='}}
+
 using namespace cat::literals;
 using namespace cat::arithmetic;
 
@@ -436,4 +441,35 @@ compound_narrow() {
    iword w(0);
    // expected-error@+1 {{}}
    s -= cat::deconst(w);
+}
+
+// Every compound assignment through `arithmetic_interface` that assigns its
+// result back to a proxy, such as the one `.undef()` returns.
+void
+compound_proxy() {
+   int1 a{};
+   a.undef() += cat::deconst(int1{1});
+   a.undef() -= cat::deconst(int1{1});
+   a.undef() *= cat::deconst(int1{1});
+   a.undef() /= cat::deconst(int1{1});
+   a.undef() %= cat::deconst(int1{1});
+   uint1 b{};
+   b.undef() &= cat::deconst(uint1{1u});
+   b.undef() |= cat::deconst(uint1{1u});
+   b.undef() ^= cat::deconst(uint1{1u});
+   b.undef() <<= cat::deconst(uint1{1u});
+   b.undef() >>= cat::deconst(uint1{1u});
+
+   // expected-error@+1 {{no viable overloaded '+='}}
+   a.undef() += cat::deconst(int2{1});
+   // expected-error@+1 {{no viable overloaded '-='}}
+   a.undef() -= cat::deconst(int2{1});
+   // expected-error@+1 {{no viable overloaded '*='}}
+   a.undef() *= cat::deconst(int2{1});
+   // expected-error@+1 {{no viable overloaded '&='}}
+   b.undef() &= cat::deconst(uint2{1u});
+   // expected-error@+1 {{no viable overloaded '|='}}
+   b.undef() |= cat::deconst(uint2{1u});
+   // expected-error@+1 {{no viable overloaded '^='}}
+   b.undef() ^= cat::deconst(uint2{1u});
 }
