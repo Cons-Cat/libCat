@@ -1,5 +1,6 @@
 #include <cat/detail/vdso.hpp>
 
+#include <cat/array>
 #include <cat/linux>
 #include <cat/socket>
 
@@ -787,6 +788,56 @@ $test(syscall_read_self_anon_smaps) {
    cat::verify(after.mapped_bytes >= mapped_before);
    cat::verify(after.resident_bytes >= resident_before);
    nix::sys_munmap(p_mapping, bytes).verify();
+}
+
+// `/proc/self/smaps` holds an entry for each mapping, so many mappings make it
+// far larger than `read_self_anon_smaps`'s buffer.
+$test(syscall_read_self_anon_smaps_many_mappings) {
+   constexpr idx mapping_count = 1'024u;
+   cat::array<cat::byte*, mapping_count> mappings;
+   for (idx i = 0u; i < mapping_count; ++i) {
+      // Alternating protections keep the kernel from merging neighbors.
+      mappings[i] =
+         nix::sys_mmap(
+            nullptr, cat::page_size,
+            i % 2u == 0u ? nix::memory_protection_flags::read_write
+                         : nix::memory_protection_flags::read,
+            nix::memory_flags::privately | nix::memory_flags::anonymous,
+            nix::invalid_file_descriptor, 0
+         )
+            .verify();
+   }
+
+   nix::anon_smaps const smaps = nix::read_self_anon_smaps().verify();
+   cat::verify(smaps.mapped_bytes >= mapping_count * cat::page_size);
+
+   for (cat::byte* p_mapping : mappings) {
+      nix::sys_munmap(p_mapping, cat::page_size).verify();
+   }
+}
+
+$test(syscall_mmap_munmap_errors) {
+   // A mapping can not be empty.
+   nix::scaredy_nix<cat::byte*> const empty = nix::sys_mmap(
+      nullptr, 0u, nix::memory_protection_flags::read_write,
+      nix::memory_flags::privately | nix::memory_flags::anonymous,
+      nix::invalid_file_descriptor, 0
+   );
+   cat::verify(empty.is_empty());
+   cat::verify(empty.error() == nix::linux_error::inval);
+
+   cat::byte* const p_mapping =
+      nix::sys_mmap(
+         nullptr, cat::page_size, nix::memory_protection_flags::read_write,
+         nix::memory_flags::privately | nix::memory_flags::anonymous,
+         nix::invalid_file_descriptor, 0
+      )
+         .verify();
+   // An unmapped address must be page aligned.
+   nix::scaredy_nix<void> const misaligned = nix::sys_munmap(p_mapping + 1, 1u);
+   cat::verify(misaligned.is_empty());
+   cat::verify(misaligned.error() == nix::linux_error::inval);
+   nix::sys_munmap(p_mapping, cat::page_size).verify();
 }
 
 $test(syscall_mremap) {

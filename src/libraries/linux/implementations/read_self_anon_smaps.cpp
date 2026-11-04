@@ -1,10 +1,10 @@
+#include <cat/defer>
 #include <cat/linux>
 
 namespace {
 
 constexpr cat::idx max_region_kb = 1'024u * 1'024u;
 constexpr cat::idx max_anon_region_kb = 65'536u;
-constexpr cat::idx smaps_buffer_bytes = 256u * 1'024u;
 
 constexpr cat::array<cat::str_view, 5> skip_anon_prefixes{
    "[stack", "[heap]", "[vdso]", "[vvar]", "[vsyscall]",
@@ -12,32 +12,21 @@ constexpr cat::array<cat::str_view, 5> skip_anon_prefixes{
 
 struct smaps_totals {
    cat::idx resident_kb = 0u;
-   cat::idx total_mapped_kb = 0u;
-   cat::idx file_mapped_kb = 0u;
+   cat::idx mapped_kb = 0u;
 };
 
 struct smaps_region {
-   cat::str_view header;
+   bool is_region = false;
+   bool is_file_backed = false;
+   bool is_private_anonymous = false;
    cat::idx size_kb = 0u;
    cat::idx rss_kb = 0u;  // Resident Set Size
 };
 
 auto
-tag_has_prefix(cat::str_view tag, cat::str_view prefix) -> bool {
-   if (tag.size() < prefix.size()) {
-      return false;
-   }
-   return tag.substring(0u, prefix.size()) == prefix;
-}
-
-auto
-skip_anon_tag(cat::str_view tag) -> bool {
-   for (auto&& prefix : skip_anon_prefixes) {
-      if (tag_has_prefix(tag, prefix)) {
-         return true;
-      }
-   }
-   return false;
+has_prefix(cat::str_view string, cat::str_view prefix) -> bool {
+   return string.size() >= prefix.size()
+          && string.substring(0u, prefix.size()) == prefix;
 }
 
 auto
@@ -56,148 +45,24 @@ smaps_field(cat::str_view header, cat::idx index) -> cat::str_view {
             ++i;
          }
          start = i;
-         continue;
       }
    }
    return {};
 }
 
 auto
-parse_hex_uword(cat::str_view digits) -> cat::uword {
-   cat::uword value = 0u;
-   for (cat::idx i = 0u; i < digits.size(); ++i) {
-      char const digit_char = digits[i];
-      cat::uword digit = 0u;
-      if (digit_char >= '0' && digit_char <= '9') {
-         digit = cat::uword(digit_char - '0');
-      } else if (digit_char >= 'a' && digit_char <= 'f') {
-         digit = cat::uword(digit_char - 'a' + 10);
-      } else if (digit_char >= 'A' && digit_char <= 'F') {
-         digit = cat::uword(digit_char - 'A' + 10);
-      } else {
-         break;
-      }
-      value = value * 16u + digit;
-   }
-   return value;
-}
-
-struct address_span {
-   cat::uword low;
-   cat::uword high;
-};
-
-auto
-region_addresses(cat::str_view header) -> address_span {
-   cat::maybe const dash = header.find('-');
-   if (dash.is_empty()) {
-      return {.low = 0u, .high = 0u};
-   }
-   cat::uword const lo = parse_hex_uword(header.substring(0u, dash.value()));
-   cat::str_view after_dash = header.remove_prefix(dash.value() + 1u);
-   cat::maybe const space = after_dash.find(' ');
-   cat::idx const hi_len =
-      space.has_value() ? space.value() : after_dash.size();
-   cat::uword const hi = parse_hex_uword(after_dash.substring(0u, hi_len));
-   return {.low = lo, .high = hi};
-}
-
-auto
-smaps_pathname(cat::str_view header) -> cat::str_view {
-   return smaps_field(header, 5u);
-}
-
-auto
-is_file_backed(cat::str_view header) -> bool {
-   cat::str_view const tag = smaps_pathname(header);
-   return tag.size() != 0u && tag[0] == '/';
-}
-
-auto
-is_private_anonymous_map(cat::str_view header) -> bool {
-   if (header.size() < 5u) {
-      return false;
-   }
-   cat::str_view const perms = smaps_field(header, 1u);
-   bool has_private = false;
-   bool has_write = false;
-   for (cat::idx i = 0u; i < perms.size(); ++i) {
-      if (perms[i] == 'p') {
-         has_private = true;
-      }
-      if (perms[i] == 'w') {
-         has_write = true;
-      }
-   }
-   if (!has_private || !has_write) {
-      return false;
-   }
-   cat::str_view const tag = smaps_pathname(header);
-   if (tag.size() != 0u) {
-      if (tag[0] == '/') {
-         return false;
-      }
-      if (skip_anon_tag(tag)) {
-         return false;
-      }
-   }
-   address_span const addresses = region_addresses(header);
-   return addresses.high > addresses.low;
-}
-
-auto
-region_span_valid(cat::str_view header, cat::idx size_kb) -> bool {
-   address_span const addresses = region_addresses(header);
-   if (addresses.high <= addresses.low) {
-      return false;
-   }
-   if (size_kb > max_region_kb) {
-      return false;
-   }
-   if (size_kb > max_anon_region_kb && !is_file_backed(header)) {
-      cat::str_view const tag = smaps_pathname(header);
-      if (skip_anon_tag(tag)) {
-         return false;
-      }
-      return false;
-   }
-   return true;
-}
-
-void
-flush_region(smaps_region const& region, smaps_totals& totals) {
-   if (region.header.size() == 0u) {
-      return;
-   }
-   if (!region_span_valid(region.header, region.size_kb)) {
-      return;
-   }
-   if (is_private_anonymous_map(region.header)) {
-      totals.resident_kb += region.rss_kb;
-   }
-   totals.total_mapped_kb += region.size_kb;
-   if (is_file_backed(region.header)) {
-      totals.file_mapped_kb += region.size_kb;
-   }
-}
-
-auto
-parse_kb_value(cat::str_view line) -> cat::maybe<cat::idx> {
+parse_kb_value(cat::str_view line) -> cat::idx {
    cat::maybe const colon = line.find(':');
    if (colon.is_empty()) {
-      return cat::nullopt;
+      return 0u;
    }
-   cat::str_view rest = line.remove_prefix(colon.value() + 1u);
-   cat::idx i = 0u;
-   while (i < rest.size() && rest[i] == ' ') {
+   cat::idx i = colon.value() + 1u;
+   while (i < line.size() && line[i] == ' ') {
       ++i;
    }
-   if (i >= rest.size() || rest[i] < '0' || rest[i] > '9') {
-      return cat::nullopt;
-   }
    cat::idx value = 0u;
-   while (i < rest.size() && rest[i] >= '0' && rest[i] <= '9') {
-      value = cat::idx(value * 10u + rest[i] - '0');
+   while (i < line.size() && line[i] >= '0' && line[i] <= '9') {
+      value = cat::idx(value * 10u + line[i] - '0');
       ++i;
    }
    return value;
@@ -205,89 +70,124 @@ parse_kb_value(cat::str_view line) -> cat::maybe<cat::idx> {
 
 auto
 is_region_header(cat::str_view line) -> bool {
-   if (line.size() == 0u || line[0] == ' ' || line[0] == '\t') {
-      return false;
+   return line.size() != 0u && line[0] != ' ' && line[0] != '\t'
+          && line.find('-').has_value();
+}
+
+auto
+read_region_header(cat::str_view header) -> smaps_region {
+   cat::str_view const permissions = smaps_field(header, 1u);
+   cat::str_view const pathname = smaps_field(header, 5u);
+   bool const is_file_backed = pathname.size() != 0u && pathname[0] == '/';
+   bool is_skipped = false;
+   for (cat::str_view prefix : skip_anon_prefixes) {
+      is_skipped = is_skipped || has_prefix(pathname, prefix);
    }
-   return line.find('-').has_value();
+   return {
+      .is_region = true,
+      .is_file_backed = is_file_backed,
+      .is_private_anonymous = permissions.find('p').has_value()
+                              && permissions.find('w').has_value()
+                              && !is_file_backed && !is_skipped,
+   };
+}
+
+void
+flush_region(smaps_region const& region, smaps_totals& totals) {
+   if (
+      !region.is_region || region.is_file_backed
+      || region.size_kb > max_anon_region_kb || region.size_kb > max_region_kb
+   ) {
+      return;
+   }
+   if (region.is_private_anonymous) {
+      totals.resident_kb += region.rss_kb;
+   }
+   totals.mapped_kb += region.size_kb;
 }
 
 void
 process_smaps_line(
    cat::str_view line, smaps_region& region, smaps_totals& totals
 ) {
-   if (line.size() == 0u) {
-      return;
-   }
    if (is_region_header(line)) {
       flush_region(region, totals);
-      region = {};
-      region.header = line;
-      return;
+      region = read_region_header(line);
+   } else if (has_prefix(line, "Size:")) {
+      region.size_kb = parse_kb_value(line);
+   } else if (has_prefix(line, "Rss:")) {
+      region.rss_kb = parse_kb_value(line);
    }
-   if (tag_has_prefix(line, "Size:")) {
-      region.size_kb = parse_kb_value(line).value_or(0u);
-   } else if (tag_has_prefix(line, "Rss:")) {
-      region.rss_kb = parse_kb_value(line).value_or(0u);
-   }
-}
-
-void
-parse_smaps_buffer(cat::str_view buffer, smaps_totals& totals) {
-   smaps_region region{};
-   cat::idx line_start = 0u;
-   for (cat::idx i = 0u; i <= buffer.size(); ++i) {
-      if (i == buffer.size() || buffer[i] == '\n') {
-         process_smaps_line(
-            buffer.substring(line_start, cat::idx(i - line_start)), region,
-            totals
-         );
-         line_start = i + 1u;
-      }
-   }
-   flush_region(region, totals);
 }
 
 }  // namespace
 
-// `open(2)`/`read(2)` on `/proc/self/smaps`, the detailed memory-map file, can
-// fail with `noent` when `/proc` is not mounted, `mfile`/`nfile` at the fd
-// limit, `nomem`, or `intr` on signal interruption.
+// Perform `nix::sys_open()` and `nix::sys_read()` on `/proc/self/smaps`, the
+// detailed memory-map file. This can fail with `nix::linux_error` of:
+//    `noent` when `/proc` path is not mounted,
+//    `mfile`/`nfile` at the file descriptor limit,
+//    `nomem`,
+//    `intr` on signal interruption.
 auto
 nix::read_self_anon_smaps() -> cat::scaredy<nix::anon_smaps, nix::linux_error> {
-   nix::file_descriptor fd =
+   nix::file_descriptor const fd =
       $prop(nix::sys_open("/proc/self/smaps", nix::open_mode::read_only));
+   $defer {
+      auto _ = nix::sys_close(fd);
+   };
 
-   cat::array<char, smaps_buffer_bytes> buffer = {};
-   cat::idx total_bytes = 0u;
+   // Lines are parsed as they are read, so the file can be any size. A line
+   // too long for this buffer is cut short, which keeps the fields at the start
+   // of a region header.
+   cat::array<char, 4'096u> buffer;
+   cat::idx used = 0u;
+   bool is_skipping_cut_line = false;
+   smaps_region region;
+   smaps_totals totals;
 
    while (true) {
-      cat::scaredy read_result = nix::sys_read(
-         fd, buffer.data() + total_bytes,
-         cat::idx(smaps_buffer_bytes.raw - total_bytes.raw)
+      cat::idx const bytes = $prop(
+         nix::sys_read(fd, buffer.data() + used, cat::idx(buffer.size() - used))
       );
-      if (read_result.is_empty()) {
-         auto _ = nix::sys_close(fd);
-         return read_result.error();
-      }
-      cat::iword const nbytes = read_result.value();
-      if (nbytes == 0) {
+      if (bytes == 0u) {
          break;
       }
-      total_bytes += cat::idx(nbytes);
-      if (total_bytes >= smaps_buffer_bytes) {
-         auto _ = nix::sys_close(fd);
-         return nix::linux_error::overflow;
+      used += bytes;
+
+      cat::idx line_start = 0u;
+      for (cat::idx i = 0u; i < used; ++i) {
+         if (buffer[i] == '\n') {
+            if (!is_skipping_cut_line) {
+               process_smaps_line(
+                  {buffer.data() + line_start, cat::idx(i - line_start)},
+                  region, totals
+               );
+            }
+            is_skipping_cut_line = false;
+            line_start = i + 1u;
+         }
+      }
+
+      if (line_start == 0u && used == buffer.size()) {
+         if (!is_skipping_cut_line) {
+            process_smaps_line({buffer.data(), used}, region, totals);
+         }
+         is_skipping_cut_line = true;
+         used = 0u;
+      } else {
+         used = cat::idx(used - line_start);
+         cat::copy_memory_backward(
+            buffer.data() + line_start, buffer.data(), used
+         );
       }
    }
-   auto _ = nix::sys_close(fd);
+   if (used != 0u && !is_skipping_cut_line) {
+      process_smaps_line({buffer.data(), used}, region, totals);
+   }
+   flush_region(region, totals);
 
-   smaps_totals totals{};
-   parse_smaps_buffer({buffer.data(), total_bytes}, totals);
-
-   cat::idx const mapped_kb =
-      cat::idx(totals.total_mapped_kb.raw - totals.file_mapped_kb.raw);
    return nix::anon_smaps{
       .resident_bytes = totals.resident_kb * 1'024u,
-      .mapped_bytes = mapped_kb * 1'024u,
+      .mapped_bytes = totals.mapped_kb * 1'024u,
    };
 }
