@@ -57,12 +57,12 @@ void
 // NOLINTNEXTLINE
 __stack_chk_fail();
 
-extern "C" void
+extern "C" auto
 // NOLINTNEXTLINE
 __cxa_atexit(
    void (*_Nonnull p_invocable)(void* _Nullable), void* _Nullable p_arg,
    void* _Nullable p_dso_handle
-);
+) -> int;
 
 extern "C" [[gnu::used]]
 void
