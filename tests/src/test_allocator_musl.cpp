@@ -199,9 +199,12 @@ deallocate_foreign_pointer(nix::file_descriptor marker) {
    cat::allocator_musl allocator;
    void* const p_context = allocate_bytes(allocator, 1u);
    cat::verify(p_context != nullptr);
-   alignas(16) cat::byte foreign[32] = {};
+   // `get_meta` reads the 16 bytes before an allocation. Zeroing them makes it
+   // reject `p_foreign` rather than follow whatever the stack held there.
+   alignas(16) cat::array<cat::byte, 48u> storage{};
+   cat::byte* const p_foreign = storage.data() + 16u;
    mark_child(marker, child_armed);
-   deallocate_bytes(allocator, foreign, 32u);
+   deallocate_bytes(allocator, p_foreign, 32u);
    mark_child(marker, child_returned);
 }
 
@@ -292,6 +295,13 @@ verify_child_hardening(void (*p_test)(nix::file_descriptor)) {
    $defer {
       child.free(g_tests_alloc);
    };
+   // The child corrupts its heap on purpose, so give it its own memory.
+   child.set_clone_flags(
+      static_cast<nix::clone_flags>(
+         cat::to_underlying(child.get_clone_flags())
+         & ~cat::to_underlying(nix::clone_flags::virtual_memory)
+      )
+   );
    child.spawn(g_tests_alloc, worker_stack_size, p_test, pipe[1]).verify();
    cat::int4 child_status;
    nix::sys_wait4(

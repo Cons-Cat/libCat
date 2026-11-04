@@ -8,6 +8,12 @@
 #include <cat/format>
 #include <cat/linux>
 
+// With `CAT_USE_PTHREAD`, a `cat::thread` is a POSIX thread rather than a
+// `nix::process`.
+#ifdef CAT_USE_PTHREAD
+#include <cat/detail/pthread.hpp>
+#endif
+
 namespace cat {
 
 inline namespace manual {
@@ -37,6 +43,11 @@ struct thread {
       native_handle_type m_native{0u};
    };
 
+#ifdef CAT_USE_PTHREAD
+   using native_handle_type = nix::pthread_t;
+
+   thread() = default;
+#else
    using native_handle_type = nix::process;
 
    thread() noexcept {
@@ -47,6 +58,7 @@ struct thread {
       // `join` waits on that word with `futex_command::wait`.
       m_handle.add_clone_flag(nix::clone_flags::child_set_tid);
    }
+#endif
 
    thread(thread const&) = delete;
 
@@ -58,26 +70,58 @@ struct thread {
       is_allocator auto& allocator, idx stack_size,
       is_invocable<Args...> auto&& callback, Args&&... arguments
    ) -> maybe<void> {
+#ifdef CAT_USE_PTHREAD
+      return $prop_as_or(
+         nix::detail::pthread_spawn(
+            allocator, stack_size, m_handle, $fwd(callback), $fwd(arguments)...
+         ),
+         nullopt, monostate
+      );
+#else
       return $prop_as_or(
          m_handle.spawn(
             allocator, stack_size, $fwd(callback), $fwd(arguments)...
          ),
          nullopt, monostate
       );
+#endif
    }
 
    [[nodiscard]]
    auto
    join() const noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
+#ifdef CAT_USE_PTHREAD
+      // Joining a POSIX thread twice is undefined, so `join()` clears the
+      // handle to make joining again a no-op.
+      if (m_handle.handle != 0u) {
+         if (nix::pthread_join(m_handle.handle, nullptr) != 0) {
+            return nullopt;
+         }
+         m_handle.handle = 0u;
+      }
+      return monostate;
+#else
       return $prop_as_or(m_handle.wait(), nullopt, monostate);
+#endif
    }
 
    [[nodiscard]]
    constexpr auto
    is_empty() const noexcept -> bool {
+#ifdef CAT_USE_PTHREAD
+      return m_handle.memory.data() == nullptr;
+#else
       return m_handle.is_empty();
+#endif
    }
 
+#ifdef CAT_USE_PTHREAD
+   [[nodiscard]]
+   auto
+   native_handle() const noexcept -> native_handle_type {
+      return m_handle.handle;
+   }
+#else
    [[nodiscard]]
    auto
    native_handle() noexcept -> native_handle_type& {
@@ -89,14 +133,19 @@ struct thread {
    native_handle() const noexcept -> native_handle_type const& {
       return m_handle;
    }
+#endif
 
    [[nodiscard]]
    constexpr auto
    get_id() const noexcept -> id {
-      if (m_handle.is_empty()) {
+      if (is_empty()) {
          return {};
       }
+#ifdef CAT_USE_PTHREAD
+      return id(m_handle.id);
+#else
       return id(m_handle.id());
+#endif
    }
 
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
@@ -106,7 +155,14 @@ struct thread {
    free(allocator_ref<Allocator> allocator) noexcept(
       !__has_feature(cxx_exceptions)
    ) {
+#ifdef CAT_USE_PTHREAD
+      if (!is_empty()) {
+         allocator.free_multi(m_handle.memory);
+         m_handle = {};
+      }
+#else
       m_handle.free(allocator);
+#endif
    }
 
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
@@ -123,7 +179,14 @@ struct thread {
    cfree(allocator_ref<Allocator> allocator) noexcept(
       !__has_feature(cxx_exceptions)
    ) {
+#ifdef CAT_USE_PTHREAD
+      if (!is_empty()) {
+         allocator.cfree_multi(m_handle.memory);
+         m_handle = {};
+      }
+#else
       m_handle.cfree(allocator);
+#endif
    }
 
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
@@ -135,7 +198,12 @@ struct thread {
 
  private:
    // This is platform-specific hidden code.
+#ifdef CAT_USE_PTHREAD
+   // `join()` clears the handle.
+   mutable nix::detail::pthread_spawned m_handle{};
+#else
    native_handle_type m_handle;
+#endif
 };
 
 }  // namespace manual

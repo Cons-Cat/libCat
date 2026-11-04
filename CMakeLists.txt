@@ -122,6 +122,8 @@ if(NOT CAT_NO_EXCEPTIONS AND CAT_THREAD_LOCAL_SIZE STREQUAL "0")
 endif()
 
 option(CAT_NO_VDSO "Disable Linux vDSO runtime hooks." OFF)
+option(CAT_USE_PTHREAD
+  "Run `cat::thread` on POSIX threads from a dynamically linked `libc.so`." OFF)
 option(CAT_NO_STACKTRACE
   "Omit frame pointers. Disables reliable `%rbp` stack traces." OFF)
 
@@ -181,6 +183,10 @@ list(
   # TODO: -Wlifetime-safety-permissive.
 )
 
+if(CAT_USE_PTHREAD)
+  list(APPEND CAT_CXX_FLAGS_ESSENTIAL -DCAT_USE_PTHREAD)
+endif()
+
 if(CAT_USE_ASAN)
   list(APPEND CAT_CXX_FLAGS_ESSENTIAL
     # `pthread_create` is intercepted so ASan learns each pthread stack. `clone`
@@ -226,8 +232,16 @@ if (NOT CAT_USE_ASAN AND NOT CAT_USE_UBSAN)
   list(
     APPEND CAT_CXX_FLAGS_RELEASE
     -flto=auto
-    -fvisibility=hidden -fvisibility-inlines-hidden
   )
+  # With `libcat.so`, a consumer's hidden copy of an inline variable, such as
+  # `nix::detail::p_io_uring_runtime`, would not preempt `libcat.so`'s, so the
+  # executable and `libcat.so` would each use their own.
+  if (NOT CAT_USE_SHARED)
+    list(
+      APPEND CAT_CXX_FLAGS_RELEASE
+      -fvisibility=hidden -fvisibility-inlines-hidden
+    )
+  endif()
 
   list(
     APPEND CAT_CXX_FLAGS_RELWITHDEBINFO
@@ -280,7 +294,8 @@ list(
 
 # `-static`, `--no-pie`, and `-Wl,-N` (omagic) can't be used under any
 # dynamic linking scenario.
-if (NOT CAT_USE_SHARED AND NOT CAT_USE_ASAN AND NOT CAT_USE_UBSAN)
+if (NOT CAT_USE_SHARED AND NOT CAT_USE_ASAN AND NOT CAT_USE_UBSAN
+    AND NOT CAT_USE_PTHREAD)
   list(
     APPEND CAT_LINK_OPTIONS_RELEASE
     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-static>"
@@ -454,6 +469,13 @@ if (CAT_USE_SHARED)
   target_link_libraries(cat INTERFACE cat-impl-shared)
 else()
   target_link_libraries(cat INTERFACE cat-impl)
+endif()
+
+if (CAT_USE_PTHREAD)
+  # `-nostdlib` drops libc, so link it explicitly. GlibC's `libc.so` provides
+  # the pthread symbols since GlibC 2.34. This must follow libCat on the link
+  # line, or libc's `memcpy`, `__cxa_atexit`, and so on would win over libCat's.
+  target_link_libraries(cat INTERFACE c)
 endif()
 
 # `.gdbinit` symlink helper, shared by `tests/` and `examples/`.

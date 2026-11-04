@@ -155,7 +155,7 @@ nix::manual::process::prepare_spawn(
    cat::idx const thread_local_slab_bytes =
       nix::detail::clone_thread_local_buffer_min_bytes();
    cat::idx const tls_memory_size =
-      link_absolute_symbol<cat::idx>(__cat_tls_memory_size);
+      nix::detail::thread_local_bytes_below_thread_pointer();
 #endif
 
    cat::uintptr<void> const stack_and_thread_local_buffer_end_exclusive =
@@ -212,7 +212,18 @@ nix::manual::process::prepare_spawn(
 
    active_clone_flags = m_flags;
 #if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
-   if (tls_memory_size > 0u) {
+   // A child that does not share memory keeps the parent's `%fs` over its own
+   // copy of the parent's `thread_local` storage, as `fork` does. That copy
+   // also holds GlibC's thread control block, which `libcat.so`'s
+   // `thread_local` storage needs when it uses GlibC's `__tls_get_addr`.
+   //
+   // TODO: With `CAT_USE_SHARED` and `CAT_USE_PTHREAD`, a child that shares
+   // memory but is not a thread crashes on `libcat.so`'s `thread_local`
+   // storage, because GlibC's `__tls_get_addr` needs GlibC's thread control
+   // block and dynamic thread vector.
+   bool const shares_memory = (m_flags & nix::clone_flags::virtual_memory)
+                              == nix::clone_flags::virtual_memory;
+   if (tls_memory_size > 0u && shares_memory) {
       active_clone_flags |= nix::clone_flags::set_tls;
    }
 #endif

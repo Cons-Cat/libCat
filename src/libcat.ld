@@ -186,6 +186,14 @@ __cat_tls_memory_size  =
 __cat_tls_alignment    = MAX(MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)), 32);
 __cat_tls_initial_image = ADDR(.tdata);
 
+/* The executable's `__cat_tls_*` preempt `libcat.so`'s. These are hidden, so
+   `libcat.so` can still find its own `thread_local` storage image. */
+HIDDEN(__cat_module_tls_file_size = SIZEOF(.tdata));
+HIDDEN(__cat_module_tls_memory_size =
+  ALIGN(ADDR(.tbss) + SIZEOF(.tbss), MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)))
+  - ADDR(.tdata));
+HIDDEN(__cat_module_tls_initial_image = ADDR(.tdata));
+
 /* lld's x86-64 `.eh_frame_hdr` is a 12-byte header followed by sorted (initial-location, FDE)
    pairs of data-relative signed 32-bit offsets. We provide the index, so the runtime need not
    parse that header, unlike other compiler-rt. This forces a fixed ABI but makes libCat leaner. */

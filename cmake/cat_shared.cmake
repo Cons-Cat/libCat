@@ -156,6 +156,13 @@ target_link_options(cat-impl-shared
 # rather than libCat's.
 target_link_libraries(cat-impl-shared PUBLIC m c)
 
+# Without `CAT_USE_PTHREAD`, `libcat.so` calls its own `__tls_get_addr` (see
+# `executable_tls.cpp`), so that raw `clone` children can use its
+# `thread_local` storage.
+if (NOT CAT_USE_PTHREAD)
+  target_link_options(cat-impl-shared PRIVATE -Wl,--wrap=__tls_get_addr)
+endif()
+
 # `_start.cpp` lives on `cat`'s `INTERFACE_SOURCES` (each consumer compiles it
 # with their own `CAT_NO_ARGC_ARGV`). Mirror the entry on `cat-impl-shared` so
 # consumers that link the `.so` directly (or via `cat`-with- `CAT_USE_SHARED`)

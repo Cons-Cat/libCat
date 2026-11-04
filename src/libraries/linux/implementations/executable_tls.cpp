@@ -26,13 +26,164 @@ link_absolute_symbol(char const* const p_symbol_address) -> T {
 
 }  // namespace
 
+#if defined(CAT_BUILD_SHARED) && !defined(CAT_USE_PTHREAD)
+// `libcat.so` reaches `thread_local` storage through `__tls_get_addr`, both its
+// own and the executable's, which can preempt `libcat.so`'s inline
+// `thread_local` variables. GlibC's needs GlibC's thread control block, which a
+// raw `clone` child lacks, so `libcat.so` is linked with
+// `--wrap=__tls_get_addr` to call this one instead. When the dynamic loader put
+// a module's block at a fixed offset from every thread pointer, which it does
+// for modules loaded at startup, this adds that offset to the thread pointer.
+// Otherwise, such as when `clang-repl` `dlopen`s `libcat.so`, this forwards to
+// GlibC's.
+
+extern "C" {
+// Supplied by `src/libcat.ld`. These describe this library's own
+// `thread_local` storage image.
+extern char
+   __cat_module_tls_memory_size[];  // NOLINT(bugprone-reserved-identifier)
+extern char
+   __cat_module_tls_file_size[];  // NOLINT(bugprone-reserved-identifier)
+extern unsigned char
+   __cat_module_tls_initial_image[];  // NOLINT(bugprone-reserved-identifier)
+}
+
+namespace {
+
+struct tls_index {
+   cat::uword module;
+   cat::uword offset;
+};
+
+// A module whose `thread_local` block is at a fixed offset from the thread
+// pointer.
+struct static_module {
+   cat::uword id = 0u;
+   // 0 if the block is not at a fixed offset.
+   cat::iword block_offset = 0;
+};
+
+// The dynamic loader numbers the executable's block 1.
+constinit static_module executable_module{.id = 1u};
+constinit static_module library_module;
+
+// Taking this address while `probing` records this library's module id. It has
+// internal linkage, so the executable can not preempt it.
+constinit thread_local char module_probe = 0;
+constinit bool probing = false;
+
+[[nodiscard, gnu::always_inline]]
+inline auto
+thread_pointer() -> cat::uintptr<void> {
+   void* p_thread_pointer;
+   asm("movq %%fs:0, %0"
+       : "=r"(p_thread_pointer));
+   return p_thread_pointer;
+}
+
+}  // namespace
+
+extern "C" {
+// GlibC's `__tls_get_addr`.
+auto
+__real___tls_get_addr(  // NOLINT(bugprone-reserved-identifier)
+   tls_index* _Nonnull p_index
+) -> void* _Nonnull;
+
+// GlibC's dynamic loader exports this as `GLIBC_PRIVATE`. It measures the
+// static `thread_local` block that every thread carries below its thread
+// pointer.
+void
+_dl_get_tls_static_info(  // NOLINT(bugprone-reserved-identifier)
+   cat::idx* _Nonnull p_size, cat::idx* _Nonnull p_alignment
+) noexcept;
+
+[[gnu::visibility("hidden")]]
+auto
+__wrap___tls_get_addr(  // NOLINT(bugprone-reserved-identifier)
+   tls_index* _Nonnull p_index
+) -> void* _Nonnull {
+   for (static_module const& module : {library_module, executable_module}) {
+      if (module.block_offset != 0 && module.id == p_index->module) {
+         return (thread_pointer() + module.block_offset + p_index->offset)
+            .get();
+      }
+   }
+   if (probing) {
+      library_module.id = p_index->module;
+   }
+   return __real___tls_get_addr(p_index);
+}
+}
+
+namespace {
+
+// The offset of `module`'s block from the thread pointer, or 0 if it is not in
+// the static block that every thread carries.
+[[nodiscard]]
+auto
+static_block_offset(cat::uword module, cat::idx static_size) -> cat::iword {
+   tls_index index{.module = module, .offset = 0u};
+   cat::uintptr<void> const block = __real___tls_get_addr(&index);
+   cat::uintptr<void> const pointer = thread_pointer();
+   if (block < pointer && pointer - block <= static_size) {
+      return -cat::iword(pointer - block);
+   }
+   return 0;
+}
+
+[[gnu::constructor]]
+void
+find_static_modules() {
+   probing = true;
+   char* p_probe = &module_probe;
+   asm volatile(""
+                :
+                : "r"(p_probe)
+                : "memory");
+   probing = false;
+
+   cat::idx static_size;
+   cat::idx static_alignment;
+   _dl_get_tls_static_info(&static_size, &static_alignment);
+   library_module.block_offset =
+      static_block_offset(library_module.id, static_size);
+
+   // A raw `clone` child's slab only matches the executable's block where
+   // `install_executable_tls_image_at_thread_pointer` puts it.
+   cat::idx const executable_size =
+      link_absolute_symbol<cat::idx>(__cat_tls_memory_size);
+   if (executable_size != 0u && library_module.id != executable_module.id) {
+      cat::iword const offset =
+         static_block_offset(executable_module.id, static_size);
+      if (offset == -cat::iword(executable_size)) {
+         executable_module.block_offset = offset;
+      }
+   }
+}
+
+}  // namespace
+#endif
+
 namespace nix::detail {
+
+auto
+thread_local_bytes_below_thread_pointer() -> cat::idx {
+   cat::idx const memory_size =
+      link_absolute_symbol<cat::idx>(__cat_tls_memory_size);
+#if defined(CAT_BUILD_SHARED) && !defined(CAT_USE_PTHREAD)
+   // The dynamic loader puts this library's block below the executable's.
+   if (library_module.block_offset != 0) {
+      return cat::max(memory_size, cat::idx(-library_module.block_offset));
+   }
+#endif
+   return memory_size;
+}
 
 auto
 clone_thread_local_buffer_min_bytes() noexcept(!__has_feature(cxx_exceptions))
    -> cat::idx {
-   cat::idx const tls_memory_size =
-      link_absolute_symbol<cat::idx>(__cat_tls_memory_size);
+   cat::idx const tls_memory_size = thread_local_bytes_below_thread_pointer();
    if (tls_memory_size == 0u) {
       return 0u;
    }
@@ -55,6 +206,24 @@ void
 install_executable_tls_image_at_thread_pointer(
    cat::uintptr<void> const p_process_address
 ) {
+#if defined(CAT_BUILD_SHARED) && !defined(CAT_USE_PTHREAD)
+   if (library_module.block_offset != 0) {
+      cat::idx const module_memory_size =
+         link_absolute_symbol<cat::idx>(__cat_module_tls_memory_size);
+      cat::idx const module_file_size =
+         link_absolute_symbol<cat::idx>(__cat_module_tls_file_size);
+      cat::uintptr<void> const module_block =
+         p_process_address + library_module.block_offset;
+      cat::copy_memory_scalar(
+         __cat_module_tls_initial_image, module_block.get(), module_file_size
+      );
+      cat::zero_memory_scalar(
+         (module_block + module_file_size).get(),
+         cat::idx(module_memory_size - module_file_size)
+      );
+   }
+#endif
+
    cat::idx const memory_size =
       link_absolute_symbol<cat::idx>(__cat_tls_memory_size);
    // Skip this if we have no `thread_local` storage.

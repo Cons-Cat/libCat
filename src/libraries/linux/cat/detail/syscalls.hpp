@@ -3020,6 +3020,12 @@ enum class [[clang::enum_extensibility(open)]] arch_prctl_request : int {
 };
 
 namespace detail {
+// The bytes of `thread_local` storage that a thread carries below its thread
+// pointer.
+[[nodiscard]]
+auto
+thread_local_bytes_below_thread_pointer() -> cat::idx;
+
 // Minimum bytes reserved above the stack for `clone_flags::set_tls` TLS setup.
 // Covers `p_memsz`, thread-pointer alignment, and a 64-byte line round-up.
 [[nodiscard]]

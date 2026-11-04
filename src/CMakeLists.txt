@@ -620,6 +620,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/thread/cat/thread
   ${CATLIB}/thread/cat/raii_thread
   ${CATLIB}/thread/cat/detail/machine_pause.hpp
+  ${CATLIB}/thread/cat/detail/pthread.hpp
   ${CATLIB}/timer/cat/timer
   ${CATLIB}/chrono/cat/chrono
   ${CATLIB}/tui/cat/tui

@@ -68,6 +68,7 @@ $test(this_thread) {
    cat::verify(observed_id.acquire().load() == worker_id.native_handle().value);
 }
 
+#ifndef CAT_USE_PTHREAD
 $test(thread) {
    cat::thread threads[5];
    nix::process non_thread_child;
@@ -139,6 +140,7 @@ $test(thread) {
 
    cat::verify(atomic.load() == 11);
 }
+#endif
 
 $test(raii_thread) {
    int4 const before = atomic.load();
@@ -197,6 +199,7 @@ $test(raii_thread_cfree) {
    cat::verify(atomic.load() == before + 1);
 }
 
+#ifndef CAT_USE_PTHREAD
 $test(thread_clone_failure) {
    nix::rlimit original{};
    cat::verify(
@@ -241,3 +244,4 @@ $test(thread_clone_failure) {
    cat::verify(spawn_result.is_empty());
    cat::verify(spawn_result.error() == nix::linux_error::again);
 }
+#endif
