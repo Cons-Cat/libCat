@@ -24,9 +24,9 @@ struct cat::detail::symbolizer {
    cat::vec_big<cat::detail::symbol_index_entry> symbols;
    cat::vec_big<cat::detail::symbol_index_entry> dynamic_symbols;
    bool has_symbol_index = false;
-   // One mapping-wide slide: runtime `__ehdr_start` minus `p_vaddr` of the
-   // `PT_LOAD` at file offset 0. `ET_EXEC` is 0, since preferred VAs are
-   // runtime.
+   // One mapping-wide slide: the executable's runtime ELF header minus
+   // `p_vaddr` of the `PT_LOAD` at file offset 0. `ET_EXEC` is 0, since
+   // preferred VAs are runtime.
    cat::uint8 load_bias = 0u;
 };
 
@@ -141,6 +141,46 @@ valid_header(cat::detail::symbolizer const& symbols) -> bool {
           && p_header->section_header_size == sizeof(elf_section_header);
 }
 
+// The runtime address of the executable's program headers, from the auxiliary
+// vector's `AT_PHDR`.
+[[nodiscard]]
+auto
+executable_program_headers() -> cat::maybe<cat::uword> {
+   constexpr cat::uword at_phdr = 3u;
+
+   nix::scaredy_nix<nix::file_descriptor> descriptor =
+      nix::sys_open("/proc/self/auxv", nix::open_mode::read_only);
+   if (descriptor.is_empty()) {
+      return cat::nullopt;
+   }
+   $defer {
+      auto _ = nix::sys_close(descriptor.value());
+   };
+
+   // Each entry is a type word followed by a value word.
+   constexpr cat::idx entry_size = 2u * sizeof(cat::uword);
+   cat::array<char, 128u * entry_size> auxiliary;
+   nix::scaredy_nix<cat::idx> const read =
+      nix::sys_read(descriptor.value(), auxiliary);
+   if (read.is_empty()) {
+      return cat::nullopt;
+   }
+
+   for (cat::idx offset = 0u; offset + entry_size <= read.value();
+        offset += entry_size) {
+      cat::uword type;
+      __builtin_memcpy_inline(&type, auxiliary.data() + offset, sizeof(type));
+      if (type == at_phdr) {
+         cat::uword value;
+         __builtin_memcpy_inline(
+            &value, auxiliary.data() + offset + sizeof(type), sizeof(value)
+         );
+         return value;
+      }
+   }
+   return cat::nullopt;
+}
+
 [[nodiscard]]
 auto
 initialize_load_bias(cat::detail::symbolizer& symbols) -> bool {
@@ -163,7 +203,15 @@ initialize_load_bias(cat::detail::symbolizer& symbols) -> bool {
       elf_program_header const*,
       symbols.bytes.data() + header.program_header_offset
    );
-   cat::uintptr<void> const runtime_header = __ehdr_start;
+   // The `PT_LOAD` at file offset 0 maps the ELF header, and the program
+   // headers after it.
+   cat::maybe<cat::uword> const program_headers = executable_program_headers();
+   cat::uintptr<void> const runtime_header =
+      program_headers.has_value()
+         ? cat::uintptr<void>(
+              program_headers.value() - header.program_header_offset
+           )
+         : cat::uintptr<void>(__ehdr_start);
    for (cat::idx index = 0u; index < header.program_header_count; ++index) {
       elf_program_header const& program = p_program_headers[index];
       if (program.type == 1u && program.offset == 0u) {

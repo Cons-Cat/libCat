@@ -216,12 +216,15 @@ $test(stacktrace_formatting) {
       contextual.find(", in cat_test_capture_one_frame()\n").has_value()
    );
    if (has_line_info) {
+      // Clang records this path relative to the source tree only when the
+      // build directory is inside it, and otherwise as an absolute path.
       cat::str_view const source =
          cat::fmt(
-            allocator, "Source \"tests/src/test_stacktrace.cpp\", line {}, in ",
+            allocator, "tests/src/test_stacktrace.cpp\", line {}, in ",
             captured.inner_line
          )
             .verify();
+      cat::verify(contextual.find("Source \"").has_value());
       cat::verify(contextual.find(source).has_value());
       cat::verify(contextual
                      .find(
