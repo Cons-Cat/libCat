@@ -288,6 +288,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/file/implementations/get_executable_path.cpp
   ${CATLIB}/file/implementations/mapped_file.cpp
   ${CATLIB}/socket/implementations/socket.cpp
+  ${CATLIB}/x11/implementations/x11.cpp
   ${CATLIB}/linux/implementations/is_a_tty.cpp
   ${CATLIB}/linux/implementations/tty_get_attributes.cpp
   ${CATLIB}/linux/implementations/tty_set_attributes.cpp
@@ -651,6 +652,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/map/cat/detail/map_ref.hpp
   ${CATLIB}/map/cat/detail/map_view.hpp
   ${CATLIB}/map/cat/detail/wyhash.hpp
+  ${CATLIB}/x11/cat/raii_x11
   ${CATLIB}/x11/cat/x11
   ${CATLIB}/linux/implementations/syscall.tpp
   ${CATLIB}/linux/implementations/timespec.tpp

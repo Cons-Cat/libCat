@@ -1,0 +1,314 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `x11::raii::connection` wraps an `x11::manual::connection` and binds an
+// allocator for the lifetime of the connection. Its calls are those of the
+// manual connection, without their allocator parameter.
+//
+// As this is an `raii` namespace type, its destructor closes the socket and
+// deallocates its buffers through the bound allocator.
+//
+// The corresponding `x11::manual::connection` does not deallocate its own
+// buffers.
+
+#include <cat/x11>
+
+namespace x11::raii {
+
+class [[gsl::Owner]] connection {
+ public:
+   connection(connection&&) = default;
+
+   connection(connection const&) =
+      delete ("Implicit copying of `x11::raii::connection` is forbidden.");
+
+   auto
+   operator=(connection const&) -> connection& =
+      delete ("Implicit copying of `x11::raii::connection` is forbidden.");
+
+   // Free this connection's buffers, then take over `other`'s connection and
+   // allocator.
+   [[clang::reinitializes]]
+   auto
+   operator=(connection&& other) noexcept(!__has_feature(cxx_exceptions))
+      -> connection& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+
+      m_core.free(m_allocator);
+      m_core = cat::move(other.m_core);
+      m_allocator = other.m_allocator;
+      return *this;
+   }
+
+   ~connection() noexcept(!__has_feature(cxx_exceptions)) {
+      m_core.free(m_allocator);
+   }
+
+   // See `x11::manual::connection::open()`. `allocator` and `ring` must
+   // outlive this connection.
+   [[nodiscard]]
+   static auto
+   open(
+      cat::allocator_dyn allocator,
+      nix::manual::io_uring& ring [[clang::lifetimebound]],
+      char const* _Nullable const* _Nonnull p_environment
+   ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection> {
+      return connection(
+         $prop(manual::connection::open(allocator, ring, p_environment)),
+         allocator
+      );
+   }
+
+   [[nodiscard]]
+   static auto
+   open(
+      cat::allocator_dyn allocator,
+      nix::manual::io_uring& ring [[clang::lifetimebound]],
+      cat::str_view display, cat::zstr_view authority_path
+   ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection> {
+      return connection(
+         $prop(
+            manual::connection::open(allocator, ring, display, authority_path)
+         ),
+         allocator
+      );
+   }
+
+   [[nodiscard]]
+   auto
+   default_screen() const noexcept [[clang::lifetimebound]] -> screen const& {
+      return m_core.default_screen();
+   }
+
+   [[nodiscard]]
+   auto
+   generate_id() noexcept -> cat::uint4 {
+      return m_core.generate_id();
+   }
+
+   auto
+   create_window(window_options const& options) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> window {
+      return m_core.create_window(m_allocator, options);
+   }
+
+   auto
+   change_window_attributes(
+      window target, window_attributes const& attributes
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
+      return m_core.change_window_attributes(m_allocator, target, attributes);
+   }
+
+   auto
+   destroy_window(window target) noexcept(!__has_feature(cxx_exceptions))
+      -> cookie<void> {
+      return m_core.destroy_window(m_allocator, target);
+   }
+
+   auto
+   map_window(window target) noexcept(!__has_feature(cxx_exceptions))
+      -> cookie<void> {
+      return m_core.map_window(m_allocator, target);
+   }
+
+   auto
+   unmap_window(window target) noexcept(!__has_feature(cxx_exceptions))
+      -> cookie<void> {
+      return m_core.unmap_window(m_allocator, target);
+   }
+
+   auto
+   configure_window(
+      window target, window_configuration const& configurations
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
+      return m_core.configure_window(m_allocator, target, configurations);
+   }
+
+   auto
+   get_geometry(window target) noexcept(!__has_feature(cxx_exceptions))
+      -> cookie<geometry_reply> {
+      return m_core.get_geometry(m_allocator, target);
+   }
+
+   auto
+   intern_atom(cat::str_view name, bool only_if_exists = false) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> cookie<intern_atom_reply> {
+      return m_core.intern_atom(m_allocator, name, only_if_exists);
+   }
+
+   auto
+   change_property(
+      window target, atom property, atom type, property_format format,
+      cat::span<cat::byte const> data,
+      property_mode mode = property_mode::replace
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
+      return m_core.change_property(
+         m_allocator, target, property, type, format, data, mode
+      );
+   }
+
+   auto
+   delete_property(window target, atom property) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> cookie<void> {
+      return m_core.delete_property(m_allocator, target, property);
+   }
+
+   auto
+   get_property(
+      window target, atom property, atom type = atom::none,
+      cat::uint4 offset = 0u, cat::uint4 length = 0x1fffffffu,
+      bool delete_after = false
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<property_reply> {
+      return m_core.get_property(
+         m_allocator, target, property, type, offset, length, delete_after
+      );
+   }
+
+   auto
+   send_event(
+      window destination, event_mask mask, void const* _Nonnull p_event,
+      bool propagate = false
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
+      return m_core.send_event(
+         m_allocator, destination, mask, p_event, propagate
+      );
+   }
+
+   auto
+   set_input_focus(
+      window focus, cat::uint1 revert_to = 2u, cat::uint4 time = 0u
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
+      return m_core.set_input_focus(m_allocator, focus, revert_to, time);
+   }
+
+   auto
+   query_pointer(window target) noexcept(!__has_feature(cxx_exceptions))
+      -> cookie<pointer_reply> {
+      return m_core.query_pointer(m_allocator, target);
+   }
+
+   auto
+   get_input_focus() noexcept(!__has_feature(cxx_exceptions))
+      -> cookie<input_focus_reply> {
+      return m_core.get_input_focus(m_allocator);
+   }
+
+   auto
+   query_extension(cat::str_view name) noexcept(!__has_feature(cxx_exceptions))
+      -> cookie<query_extension_reply> {
+      return m_core.query_extension(m_allocator, name);
+   }
+
+   template <typename Reply = void>
+   auto
+   send_request(cat::span<cat::byte const> request) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> cookie<Reply> {
+      return m_core.template send_request<Reply>(m_allocator, request);
+   }
+
+   auto
+   set_title(window target, cat::str_view title) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> cookie<void> {
+      return m_core.set_title(m_allocator, target, title);
+   }
+
+   auto
+   enable_close_request(window target) noexcept(!__has_feature(cxx_exceptions))
+      -> cookie<void> {
+      return m_core.enable_close_request(m_allocator, target);
+   }
+
+   [[nodiscard]]
+   auto
+   is_close_request(event const& event) const noexcept -> bool {
+      return m_core.is_close_request(event);
+   }
+
+   auto
+   flush() noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<void> {
+      return m_core.flush(m_allocator);
+   }
+
+   template <typename Reply>
+   [[nodiscard]]
+   auto
+   wait(cookie<Reply> request) noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy_x11<Reply> {
+      return m_core.wait(m_allocator, request);
+   }
+
+   template <typename Reply>
+   [[nodiscard]]
+   auto
+   wait(cookie<Reply> request, cat::span<cat::byte> trailing) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy_x11<Reply> {
+      return m_core.wait(m_allocator, request, trailing);
+   }
+
+   [[nodiscard]]
+   auto
+   check(cookie<void> request) noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy_x11<void> {
+      return m_core.check(m_allocator, request);
+   }
+
+   template <typename Reply>
+   void
+   discard(cookie<Reply> request) noexcept {
+      m_core.discard(request);
+   }
+
+   [[nodiscard]]
+   auto
+   poll_event() noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy_x11<event const*> {
+      return m_core.poll_event(m_allocator);
+   }
+
+   [[nodiscard]]
+   auto
+   wait_event() noexcept(!__has_feature(cxx_exceptions))
+      -> scaredy_x11<event const*> {
+      return m_core.wait_event(m_allocator);
+   }
+
+   [[nodiscard]]
+   auto
+   failure() const noexcept -> cat::maybe<error_packet> {
+      return m_core.failure();
+   }
+
+   // The allocator which owns this connection's buffers.
+   [[nodiscard]]
+   auto
+   allocator() const noexcept -> cat::allocator_dyn {
+      return m_allocator;
+   }
+
+   // Release ownership of the underlying `x11::manual::connection`, whose
+   // buffers `.allocator()` must then free.
+   [[nodiscard, clang::reinitializes]]
+   auto
+   release() noexcept -> manual::connection {
+      return cat::move(m_core);
+   }
+
+ private:
+   connection(manual::connection&& core, cat::allocator_dyn allocator) noexcept
+       : m_core(cat::move(core)), m_allocator(allocator) {
+   }
+
+   manual::connection m_core;
+   cat::allocator_dyn m_allocator;
+};
+
+}  // namespace x11::raii
