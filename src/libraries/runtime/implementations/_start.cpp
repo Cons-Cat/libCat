@@ -107,13 +107,15 @@ extern "C" {
 #if defined(CAT_NO_ARGC_ARGV) && defined(CAT_NO_VDSO)
 void
 call_main() {
+#elif defined(CAT_NO_VDSO)
+[[gnu::used]]
+void
+call_main(int argc, char* const* pp_argv) {
 #else
 [[gnu::used]]
 void
-call_main([[maybe_unused]] cat::uword const* _Nonnull p_stack) {
-#ifndef CAT_NO_VDSO
+call_main(cat::uword const* _Nonnull p_stack) {
    init_vdso(p_stack);
-#endif
 #endif
 #ifndef CAT_NO_CPUID
    // Initialize `__cpu_model` and `__cpu_features2` for later use.
@@ -143,12 +145,16 @@ call_main([[maybe_unused]] cat::uword const* _Nonnull p_stack) {
    // potentially use runtime features inside the constructors.
    call_static_constructors();
 #endif
+   // `always_inline` here force-inlines `main()`, which saves a call frame.
+   cat::int4 exit_code;
 #ifdef CAT_NO_ARGC_ARGV
-   cat::int4 const exit_code = main();
+   [[clang::always_inline]] exit_code = main();
 #else
+#ifndef CAT_NO_VDSO
    int const argc = static_cast<int>(p_stack[0]);
    auto const* const pp_argv = __builtin_bit_cast(char* const*, p_stack + 1);
-   cat::int4 const exit_code = main(argc, pp_argv);
+#endif
+   [[clang::always_inline]] exit_code = main(argc, pp_argv);
 #endif
    // Program cleanup code.
 #if !defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0
@@ -167,6 +173,19 @@ extern "C" [[gnu::used, gnu::no_stack_protector]]
 void
 cat::detail::_start() {
    [[clang::always_inline]] call_main();
+}
+#elif defined(CAT_NO_VDSO)
+// Without the vDSO, only `argc` and `argv` are needed from the kernel stack, so
+// pass them in registers. After the `pop`, `%rsp` has the alignment that a
+// `call` would leave, and `call_main()` never returns, so `jmp` suffices.
+extern "C" [[gnu::used, gnu::no_stack_protector, gnu::naked]]
+void
+cat::detail::_start() {
+   asm(R"(.att_syntax prefix ; # rmsbolt requires this. Try `-masm=att`
+          pop %rdi        # Load `int argc`.
+          mov %rsp, %rsi  # Load `char* argv[]`.
+          jmp call_main
+       )");
 }
 #else
 // This can be inlined by BOLT, but not by Clang LTO.
