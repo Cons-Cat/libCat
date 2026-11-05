@@ -18,7 +18,7 @@ jobs:
     # the Clang package set on a cold cache in the same workflow run.
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-toolchain
 
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-26.04
     needs: install-toolchain
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-toolchain
 
@@ -100,7 +100,7 @@ jobs:
       gdb_symlink: ${{ steps.gdb-symlink.outputs.gdb_symlink }}
       arithmetic_negative: ${{ steps.arithmetic-negative.outputs.arithmetic_negative }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -188,7 +188,7 @@ jobs:
     runs-on: ubuntu-26.04
     needs: install-toolchain
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-toolchain
 
@@ -276,7 +276,7 @@ jobs:
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-toolchain
 
@@ -358,7 +358,7 @@ jobs:
           echo 'OK: echo foo moooo boo (Debug, nosan)'
 
       - name: Upload Debug build for GDB pretty printers
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-debug
           path: build-debug
@@ -420,7 +420,7 @@ jobs:
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-toolchain
 
@@ -460,7 +460,7 @@ jobs:
           echo 'OK: echo foo moooo boo (Release)'
 
       - name: Upload Release build for GDB pretty printers
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: build-release
           path: build-release
@@ -628,18 +628,18 @@ jobs:
     needs: [install-toolchain, detect-changes, debug, release]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-toolchain
 
       - name: Download Debug build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-debug
           path: build-debug
 
       - name: Download Release build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: build-release
           path: build-release
@@ -652,7 +652,7 @@ jobs:
 
       - name: Delete downloaded build artifacts
         if: always()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const artifactNames = new Set(['build-debug', 'build-release']);
@@ -679,7 +679,7 @@ jobs:
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.arithmetic_negative == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-toolchain
 
@@ -693,7 +693,7 @@ jobs:
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-toolchain
 
@@ -809,7 +809,7 @@ jobs:
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: ./.github/actions/setup-toolchain
 

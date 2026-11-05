@@ -26,7 +26,7 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-26.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # `actions/checkout` defaults to a detached merge ref on
           # `pull_request`, which cannot be pushed to. Check out the
