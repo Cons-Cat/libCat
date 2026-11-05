@@ -81,7 +81,9 @@ struct fde_info {
 // offset. Returns false on malformed input.
 [[nodiscard]]
 auto
-parse_fde(byte const* _Nonnull p_fde, fde_info& out_fde) noexcept(!__has_feature(cxx_exceptions)) -> bool;
+parse_fde(byte const* _Nonnull p_fde, fde_info& out_fde) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> bool;
 
 // Returns false if interpretation runs off the end or hits an
 // unsupported opcode. The state is the DWARF snapshot at exactly

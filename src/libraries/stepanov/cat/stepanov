@@ -705,7 +705,9 @@ concept is_bidirectional_stepanov_iterator =
 namespace detail {
 
 template <typename T>
-concept iter_has_forward_capacity_tag = is_base_of<stepanov_iterator_interface_base, remove_cvref<T>> && (is_same<typename remove_cvref<T>::iterator_concept, forward_iterator_tag> || is_same<typename remove_cvref<T>::iterator_concept, bidirectional_iterator_tag> || is_same<typename remove_cvref<T>::iterator_concept, random_access_iterator_tag> || is_same<typename remove_cvref<T>::iterator_concept, contiguous_iterator_tag>);
+concept iter_has_forward_capacity_tag =
+   is_base_of<stepanov_iterator_interface_base, remove_cvref<T>>
+   && (is_same<typename remove_cvref<T>::iterator_concept, forward_iterator_tag> || is_same<typename remove_cvref<T>::iterator_concept, bidirectional_iterator_tag> || is_same<typename remove_cvref<T>::iterator_concept, random_access_iterator_tag> || is_same<typename remove_cvref<T>::iterator_concept, contiguous_iterator_tag>);
 
 template <typename T>
 concept iter_is_pure_input_interface_iterator =
