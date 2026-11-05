@@ -170,8 +170,7 @@ class precision_reference {
       return *this;
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(U other) const noexcept {
@@ -185,8 +184,7 @@ class precision_reference {
       return view().add(other.view());
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U operand) const noexcept {
@@ -202,20 +200,16 @@ class precision_reference {
       return view().subtract_by(operand.view());
    }
 
-   template <is_arithmetic U>
-      requires(
-         is_floating_point<U>
-         && detail::is_quantity_addable<
-            U, basic_float<raw_type, precision, quantity_reference>>
-      )
+   template <is_floating_point U>
+      requires(detail::is_quantity_addable<
+               U, basic_float<raw_type, precision, quantity_reference>>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(U operand) const noexcept {
       return view().subtract_from(operand);
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(U operand) const noexcept {
@@ -231,8 +225,7 @@ class precision_reference {
       return view().multiply(operand.view());
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(U operand) const noexcept {
@@ -256,12 +249,10 @@ class precision_reference {
       return view().divide_into(operand);
    }
 
-   template <is_arithmetic U, is_arithmetic V>
+   template <is_floating_point U, is_floating_point V>
       requires(
-         (is_integral<U> || is_floating_point<U>)
-         && (is_integral<V> || is_floating_point<V>)
-         && (is_integral<U> || is_same<raw_type, raw_arithmetic_type<U>>)
-         && (is_integral<V> || is_same<raw_type, raw_arithmetic_type<V>>)
+         is_same<raw_type, raw_arithmetic_type<U>>
+         && is_same<raw_type, raw_arithmetic_type<V>>
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -280,8 +271,7 @@ class precision_reference {
       return lhs.add(static_cast<U&&>(rhs));
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator+(U lhs, precision_reference rhs) noexcept
@@ -300,8 +290,7 @@ class precision_reference {
       return lhs.subtract_by(static_cast<U&&>(rhs));
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator-(U lhs, precision_reference rhs) noexcept
@@ -320,8 +309,7 @@ class precision_reference {
       return lhs.multiply(static_cast<U&&>(rhs));
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator*(U lhs, precision_reference rhs) noexcept
@@ -340,8 +328,7 @@ class precision_reference {
       return lhs.divide_by(static_cast<U&&>(rhs));
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
    operator/(U lhs, precision_reference rhs) noexcept

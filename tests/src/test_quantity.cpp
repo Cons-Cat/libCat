@@ -280,6 +280,7 @@ $test(quantity_math_fma_and_division) {
                  decltype(integer_fma)::quantity_type,
                  cat::reference_quantity<metre_second>>);
 
+#ifdef __FMA__
    constexpr auto float_fma =
       cat::fma(meter_float(2.0), second_float(3.0), metre_second_float(4.0));
    static_assert(float_fma.raw == 10.0);
@@ -301,6 +302,7 @@ $test(quantity_math_fma_and_division) {
    constexpr auto converted_fma =
       cat::fma(meter_float(2.0), 3.0, kilometre_float(1.0));
    static_assert(converted_fma.raw == 1'006.0);
+#endif
 
    constexpr auto integer_floor = cat::div_floor(meter_int(5), second_int(2));
    constexpr auto integer_ceil = cat::div_ceil(meter_int(5), second_int(2));

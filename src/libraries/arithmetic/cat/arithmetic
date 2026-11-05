@@ -1260,9 +1260,9 @@ class
        : raw(make_raw_arithmetic(other)) {
    }
 
-   template <is_arithmetic U>
+   template <is_floating_point U>
       requires(
-         is_floating_point<U> && !is_safe_arithmetic_conversion<U, T>
+         !is_safe_arithmetic_conversion<U, T>
          && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
@@ -1274,8 +1274,8 @@ class
        : raw(make_raw_arithmetic(other)) {
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U> && !is_safe_arithmetic_conversion<U, T>
+   template <is_floating_point U>
+      requires(!is_safe_arithmetic_conversion<U, T>
                && detail::is_quantity_direct_conversion<U, quantity_type>)
    [[gnu::always_inline, gnu::nodebug]]
    consteval basic_float(U other) noexcept __attribute__((enable_if(
@@ -1284,9 +1284,9 @@ class
       "basic_float type"
    ))) = delete;
 
-   template <is_arithmetic U>
+   template <is_floating_point U>
       requires(
-         is_floating_point<U> && is_safe_arithmetic_conversion<U, T>
+         is_safe_arithmetic_conversion<U, T>
          && !detail::is_basic_float_widening<U, T>
          && detail::is_quantity_direct_conversion<U, quantity_type>
       )
@@ -1295,10 +1295,10 @@ class
        : raw(make_raw_arithmetic(other)) {
    }
 
-   template <is_arithmetic U>
+   template <is_floating_point U>
       requires(
-         is_floating_point<U>
-         && (!is_safe_arithmetic_conversion<U, T> || detail::is_basic_float_widening<U, T>)
+         (!is_safe_arithmetic_conversion<U, T>
+          || detail::is_basic_float_widening<U, T>)
          && detail::is_quantity_direct_conversion<U, quantity_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
@@ -1472,10 +1472,8 @@ class
       return basic_float<raw_type, precision_policies::fast, quantity>(raw);
    }
 
-   template <is_arithmetic U>
-      requires(
-         is_floating_point<U> && detail::is_quantity_addable<basic_float, U>
-      )
+   template <is_floating_point U>
+      requires(detail::is_quantity_addable<basic_float, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    add(U other) const noexcept -> basic_float<
@@ -1501,10 +1499,8 @@ class
       // NOLINTEND(bugprone-branch-clone)
    }
 
-   template <is_arithmetic U>
-      requires(
-         is_floating_point<U> && detail::is_quantity_addable<basic_float, U>
-      )
+   template <is_floating_point U>
+      requires(detail::is_quantity_addable<basic_float, U>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_by(U operand) const noexcept
@@ -1528,10 +1524,8 @@ class
       // NOLINTEND(bugprone-branch-clone)
    }
 
-   template <is_arithmetic U>
-      requires(
-         is_floating_point<U> && detail::is_quantity_addable<U, basic_float>
-      )
+   template <is_floating_point U>
+      requires(detail::is_quantity_addable<U, basic_float>)
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    subtract_from(U operand) const noexcept {
@@ -1554,8 +1548,7 @@ class
       // NOLINTEND(bugprone-branch-clone)
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    multiply(U operand) const noexcept -> basic_float<
@@ -1575,8 +1568,7 @@ class
       // NOLINTEND(bugprone-branch-clone)
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_by(U operand) const noexcept
@@ -1594,8 +1586,7 @@ class
       // NOLINTEND(bugprone-branch-clone)
    }
 
-   template <is_arithmetic U>
-      requires(is_floating_point<U>)
+   template <is_floating_point U>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    divide_into(U operand) const noexcept {
@@ -1613,11 +1604,10 @@ class
       // NOLINTEND(bugprone-branch-clone)
    }
 
-   template <is_arithmetic U, is_arithmetic V>
+   template <is_floating_point U, is_floating_point V>
       requires(
-         is_floating_point<U> && is_floating_point<V>
-         && (is_integral<U> || is_same<T, raw_arithmetic_type<U>>)
-         && (is_integral<V> || is_same<T, raw_arithmetic_type<V>>)
+         is_same<T, raw_arithmetic_type<U>>
+         && is_same<T, raw_arithmetic_type<V>>
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -1628,6 +1618,10 @@ class
                   T, precision, detail::multiply_quantity<basic_float, U>{}>,
                V>)
    {
+#ifndef __FMA__
+      static_assert(false, "Floating-point `fma()` requires `-mfma`!");
+#endif
+
       using result_type =
          basic_float<T, precision, detail::multiply_quantity<basic_float, U>{}>;
       T const raw_multiplier = make_raw_arithmetic(multiplier);
