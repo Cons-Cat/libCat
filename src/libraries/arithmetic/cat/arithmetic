@@ -1332,8 +1332,10 @@ class
 
    template <typename U>
       requires(
-         !is_arithmetic<U> || is_raw_arithmetic<U>
-         || is_same<quantity_type, arithmetic_quantity<U>>
+         (!is_arithmetic<U> || is_raw_arithmetic<U>
+          || is_same<quantity_type, arithmetic_quantity<U>>)
+         // If we don't constrain this, it gets selected erroneously.
+         && requires(T value) { static_cast<U>(value); }
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
@@ -1904,8 +1906,10 @@ class
 
    template <typename U>
       requires(
-         !is_arithmetic<U> || is_raw_arithmetic<U>
-         || is_same<quantity_type, arithmetic_quantity<U>>
+         (!is_arithmetic<U> || is_raw_arithmetic<U>
+          || is_same<quantity_type, arithmetic_quantity<U>>)
+         // If we don't constrain this, it gets selected erroneously.
+         && requires(T value) { static_cast<U>(value); }
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit

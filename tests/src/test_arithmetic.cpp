@@ -491,6 +491,39 @@ $test(arithmetic_traits_is_explicitly_constructible) {
    static_assert(cat::is_explicitly_constructible<float4, int>);
 }
 
+namespace {
+// A class with no constructor from arithmetic values.
+struct unrelated_class {};
+
+enum class scoped_enum : int {
+};
+
+struct explicit_from_int {
+   explicit explicit_from_int(int /*unused*/) {
+   }
+};
+
+struct explicit_from_float {
+   explicit explicit_from_float(float /*unused*/) {
+   }
+};
+}  // namespace
+
+// The explicit conversion operators must not make an unrelated class look
+// direct-constructible through its implicit copy constructor.
+$test(arithmetic_traits_conversion_operator_constraints) {
+   static_assert(!cat::is_constructible<unrelated_class, int4>);
+   static_assert(!cat::is_constructible<unrelated_class, uint8>);
+   static_assert(!cat::is_constructible<unrelated_class, float4>);
+   static_assert(!cat::is_constructible<unrelated_class, float8>);
+
+   // Conversions that `static_cast` can make on the raw value still work.
+   static_assert(static_cast<scoped_enum>(int4(3)) == scoped_enum(3));
+   static_assert(cat::is_constructible<explicit_from_int, int4>);
+   static_assert(cat::is_constructible<explicit_from_float, float4>);
+   static_assert(static_cast<int>(float4(2.5f)) == 2);
+}
+
 $test(arithmetic_traits_is_implicitly_constructible) {
    static_assert(cat::is_implicitly_constructible<uword, uword>);
    static_assert(!cat::is_implicitly_constructible<idx, uword>);
