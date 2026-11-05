@@ -138,6 +138,15 @@ def build_xcc_args(build_dir: Path) -> list[str]:
             out.extend(f"{flag}={name}" for name in names.split(","))
         else:
             out.append(val)
+    if any(
+        f.startswith("-fsanitize=") and "address" in f.split("=", 1)[1].split(",")
+        for f in out
+    ):
+        # ASan's module constructor and destructor reach the module's
+        # `__asan_globals_registered` through a 32-bit PC-relative fixup, which
+        # fails to link at random when the JIT places them over 2 GiB apart.
+        # `libcat.so` still registers its own globals.
+        out.extend(["-mllvm", "-asan-globals=0"])
     return out
 
 
