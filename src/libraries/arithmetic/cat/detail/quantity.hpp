@@ -1312,7 +1312,8 @@ concept is_same_quantity_dimension =
 template <typename Left, typename Right>
 concept is_compatible_quantity =
    is_same_quantity_dimension<Left, Right>
-   && __is_same(typename Left::unit_type, typename Right::unit_type) && (__is_same(typename Left::quantity_spec_type, typename Right::quantity_spec_type) || detail::is_generic_quantity_spec<typename Left::quantity_spec_type> || detail::is_generic_quantity_spec<typename Right::quantity_spec_type> || detail::has_common_quantity_ancestor<typename Left::quantity_spec_type, typename Right::quantity_spec_type>);
+   && __is_same(typename Left::unit_type, typename Right::unit_type)
+   && (__is_same(typename Left::quantity_spec_type, typename Right::quantity_spec_type) || detail::is_generic_quantity_spec<typename Left::quantity_spec_type> || detail::is_generic_quantity_spec<typename Right::quantity_spec_type> || detail::has_common_quantity_ancestor<typename Left::quantity_spec_type, typename Right::quantity_spec_type>);
 
 namespace detail {
 
