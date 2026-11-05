@@ -3024,7 +3024,7 @@ namespace detail {
 // pointer.
 [[nodiscard]]
 auto
-thread_local_bytes_below_thread_pointer() -> cat::idx;
+thread_local_bytes_below_thread_pointer() noexcept -> cat::idx;
 
 // Minimum bytes reserved above the stack for `clone_flags::set_tls` TLS setup.
 // Covers `p_memsz`, thread-pointer alignment, and a 64-byte line round-up.
@@ -3036,7 +3036,7 @@ clone_thread_local_buffer_min_bytes() noexcept(!__has_feature(cxx_exceptions))
 void
 install_executable_tls_image_at_thread_pointer(
    cat::uintptr<void> p_process_address
-);
+) noexcept(!__has_feature(cxx_exceptions));
 
 void
 init_parent_process_tls() noexcept(!__has_feature(cxx_exceptions));

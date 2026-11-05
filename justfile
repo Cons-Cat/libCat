@@ -39,9 +39,12 @@ cmake_build_config(arg) := if multi_config == "true" { "--config " + cmake_confi
 test_config(arg) := if cmake_config(arg) == "" { "" } else { cmake_test_config(arg) }
 cmake_test_config(arg) := if multi_config == "true" { "-C " + cmake_config(arg) } else { "" }
 repl_command(arg) := if mode(arg) == "" { repl_path(arg) } else { configured_repl_command(arg) }
-repl_path(arg) := build_dir(arg) + "/clang-repl-libcat"
+# The REPL builds `libcat.so` with `CAT_USE_PTHREAD` in its own directory, so
+# that it does not change how `build` and `test` configure theirs.
+repl_build_dir(arg) := build_dir(arg) + "-repl"
+repl_path(arg) := repl_build_dir(arg) + "/clang-repl-libcat"
 configured_repl_command(arg) := if multi_config == "true" { multi_repl_command(arg) } else { repl_path(arg) }
-multi_repl_command(arg) := "CAT_REPL_CONFIG=" + cmake_config(arg) + " ./build/clang-repl-libcat"
+multi_repl_command(arg) := "CAT_REPL_CONFIG=" + cmake_config(arg) + " ./" + repl_path(arg)
 
 # Implement `-v`.
 cmake_log(verbose) := if verbose == "-v" { "--log-level=VERBOSE" } else { "" }
@@ -470,10 +473,12 @@ test *args:
             add_test_selector GdbPrettyPrinters; shift ;; \
           arithmetic|arithmetictypecheck) \
             add_test_selector ArithmeticTypeCheck; shift ;; \
+          runtime|runtimetests) \
+            add_test_selector RuntimeTests; shift ;; \
           full) full="true"; shift ;; \
           list) list="true"; shift ;; \
           *) printf '%s\n' "just test: unknown option '$arg'!" >&2; \
-             printf '%s\n' "options: unit, gdb, arithmetic, full, list, san, nosan, asan, noasan, ubsan, noubsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
+             printf '%s\n' "options: unit, gdb, arithmetic, runtime, full, list, san, nosan, asan, noasan, ubsan, noubsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
              exit 1 ;; \
         esac; \
       done; \
@@ -1086,28 +1091,28 @@ _repl mode san="" verbose="" *args:
 
     @bash -c 'set -euo pipefail; san=$1; cxx_flags=""; \
       if [[ "{{ can_skip_configure(san) }}" == true \
-          && -x {{ build_dir(mode) }}/clang-repl-libcat ]]; then \
+          && -x {{ repl_build_dir(mode) }}/clang-repl-libcat ]]; then \
         exit 0; \
       fi; \
-      if [[ -n "${san}" && -f {{ build_dir(mode) }}/CMakeCache.txt ]]; then \
+      if [[ -n "${san}" && -f {{ repl_build_dir(mode) }}/CMakeCache.txt ]]; then \
         while IFS= read -r line; do \
           case "${line}" in \
             CMAKE_CXX_FLAGS:STRING=*) cxx_flags="${line#CMAKE_CXX_FLAGS:STRING=}" ;; \
           esac; \
-        done < {{ build_dir(mode) }}/CMakeCache.txt; \
+        done < {{ repl_build_dir(mode) }}/CMakeCache.txt; \
         cxx_flags="$(just _apply-sanitizers "${cxx_flags}" "${san}")"; \
       elif [[ -n "${san}" ]]; then \
         cxx_flags="$(just _apply-sanitizers "" "${san}")"; \
       fi; \
-      configure=(cmake {{ cmake_log(verbose) }} -S . -B {{ build_dir(mode) }} \
-        {{ configure_config(mode) }} -DCAT_BUILD_SHARED=ON); \
+      configure=(cmake {{ cmake_log(verbose) }} -S . -B {{ repl_build_dir(mode) }} \
+        {{ configure_config(mode) }} -DCAT_BUILD_SHARED=ON -DCAT_USE_PTHREAD=ON); \
       if [[ -n "${san}" ]]; then \
         configure+=("-DCMAKE_CXX_FLAGS=${cxx_flags}"); \
       fi; \
       "${configure[@]}"' _ "{{ san }}"
 
-    @just status_san {{ mode }} "{{ san }}"
-    @cmake --build {{ build_dir(mode) }} {{ build_config(mode) }} \
+    @just _print-sanitizer-status {{ repl_build_dir(mode) }} "{{ san }}"
+    @cmake --build {{ repl_build_dir(mode) }} {{ build_config(mode) }} \
       --target cat-impl-shared {{ build_verbose(verbose) }}
 
     @set -- "$@"; shift 3; \

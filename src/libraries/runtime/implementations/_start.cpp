@@ -132,6 +132,10 @@ call_main([[maybe_unused]] cat::uword const* _Nonnull p_stack) {
    // buffer is deliberately leaked (kernel reclaims at `_exit`). Only emitted
    // under static, non-PIE links where no dynamic loader has set `%fs` for us
    // first. `CAT_STATIC_LINKED` is set by the top-level `CMakeLists.txt`.
+   //
+   // TODO: Support `-static-pie`. It also has no dynamic loader to set `%fs`,
+   // but `CAT_STATIC_LINKED` is only set alongside `--no-pie`, so this never
+   // runs there.
    nix::detail::init_parent_process_tls();
 #endif
 #ifndef CAT_NO_STATIC_CONSTRUCTORS

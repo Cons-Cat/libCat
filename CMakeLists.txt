@@ -184,7 +184,9 @@ list(
 )
 
 if(CAT_USE_PTHREAD)
-  list(APPEND CAT_CXX_FLAGS_ESSENTIAL -DCAT_USE_PTHREAD)
+  # TLS descriptors make `thread_local` access in position-independent code
+  # faster than `__tls_get_addr`.
+  list(APPEND CAT_CXX_FLAGS_ESSENTIAL -DCAT_USE_PTHREAD -mtls-dialect=gnu2)
 endif()
 
 if(CAT_USE_ASAN)
@@ -439,6 +441,10 @@ option(CAT_USE_SHARED
 Make `cat` link libcat.so instead of libcat.a (implies CAT_BUILD_SHARED).
 This primarily exists for testing compatibility with `clang-repl` in CI.
 ]=] OFF)
+
+# TODO: Find `.eh_frame_hdr` in every loaded image, such as through
+# `dl_iterate_phdr`, so that exceptions can cross `libcat.so`. Until then, the
+# shared tests compile out the exception tests.
 if (CAT_USE_SHARED AND NOT CAT_NO_EXCEPTIONS)
   message(FATAL_ERROR
     "Exception unwinding currently supports a single linked image. "

@@ -204,6 +204,37 @@ if(CAT_BUILD_UNIT_TESTS)
     PROPERTIES
       LABELS "unit")
 
+  # A PIE linked with `libcat.ld` alone, without libCat or sanitizers, so that
+  # its `.got` and `.tdata` are empty.
+  add_executable(
+    linker_layout_minimal
+    ${CMAKE_SOURCE_DIR}/tests/src/linker_layout_minimal.cpp)
+  target_compile_options(linker_layout_minimal PRIVATE -fPIE -fno-sanitize=all)
+  target_link_options(linker_layout_minimal PRIVATE
+    -nostdlib -pie -fno-sanitize=all "-Wl,-T,${CMAKE_SOURCE_DIR}/src/libcat.ld")
+  set_property(TARGET linker_layout_minimal APPEND PROPERTY LINK_DEPENDS
+    "${CMAKE_SOURCE_DIR}/src/libcat.ld")
+
+  find_program(CAT_PYTHON3 NAMES python3 DOC "Python 3 for libCat helper scripts.")
+  if(CAT_PYTHON3)
+    set(_cat_layout_binaries
+      $<TARGET_FILE:linker_layout_minimal> $<TARGET_FILE:unit_tests>)
+    if(TARGET cat-impl-shared)
+      list(APPEND _cat_layout_binaries $<TARGET_FILE:cat-impl-shared>)
+    endif()
+    # These check how runtime binaries are laid out, so `just test` only runs
+    # them with `runtime` or `full`.
+    add_test(
+      NAME RuntimeTests
+      COMMAND ${CAT_PYTHON3}
+        ${CMAKE_SOURCE_DIR}/tests/check_writable_segments.py
+        ${_cat_layout_binaries})
+    set_tests_properties(
+      RuntimeTests
+      PROPERTIES
+        LABELS "runtime")
+  endif()
+
   find_program(CAT_GDB_EXECUTABLE gdb DOC "Path to the GDB executable.")
   if(CAT_GDB_EXECUTABLE)
     add_executable(

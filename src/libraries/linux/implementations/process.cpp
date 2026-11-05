@@ -1,24 +1,10 @@
+#include <cat/detail/thread_local.hpp>
+
 #include <cat/linux>
 #include <cat/runtime>
 #include <cat/thread>
 
-extern "C" {
-// Supplied by `src/libcat.ld`. Decoded via `link_absolute_symbol`.
-extern char __cat_tls_memory_size[];  // NOLINT(bugprone-reserved-identifier)
-extern char __cat_tls_alignment[];    // NOLINT(bugprone-reserved-identifier)
-}
-
 namespace {
-
-// Linker absolute symbols use the "address = constant" encoding, so reading
-// them requires a `reinterpret_cast` from the symbol's pointer back to the
-// underlying integer. `T` is the libCat integer type the caller wants.
-template <typename T>
-[[nodiscard, gnu::always_inline]]
-inline auto
-link_absolute_symbol(char const* const p_symbol_address) -> T {
-   return reinterpret_cast<__UINTPTR_TYPE__>(p_symbol_address);
-}
 
 [[nodiscard]]
 auto
@@ -131,6 +117,7 @@ nix::manual::process::wait() const -> scaredy_nix<process_id> {
 
    return wait_clone_thread_through_cleartid_futex(
       child_id,
+      // TODO: We shouldn't need this `const_cast`.
       const_cast<nix::futex_word*>(&m_clone_child_clear_tid_for_kernel)
    );
 }
@@ -165,8 +152,9 @@ nix::manual::process::prepare_spawn(
       stack_and_thread_local_buffer_end_exclusive;
 
    if (tls_memory_size > 0u) {
-      cat::ualign const minimum_alignment =
-         cat::max(32u, link_absolute_symbol<cat::uword>(__cat_tls_alignment));
+      cat::ualign const minimum_alignment = cat::max(
+         32u, nix::detail::link_absolute_symbol<cat::uword>(__cat_tls_alignment)
+      );
       // The buffer end (exclusive) can be a multiple of the requested
       // alignment. Rounding that end down with `align_down` can return the same
       // address. The thread-pointer self-slot at that address is then one past
@@ -215,12 +203,11 @@ nix::manual::process::prepare_spawn(
    // A child that does not share memory keeps the parent's `%fs` over its own
    // copy of the parent's `thread_local` storage, as `fork` does. That copy
    // also holds GlibC's thread control block, which `libcat.so`'s
-   // `thread_local` storage needs when it uses GlibC's `__tls_get_addr`.
+   // `thread_local` storage needs when it is not in static TLS.
    //
    // TODO: With `CAT_USE_SHARED` and `CAT_USE_PTHREAD`, a child that shares
    // memory but is not a thread crashes on `libcat.so`'s `thread_local`
-   // storage, because GlibC's `__tls_get_addr` needs GlibC's thread control
-   // block and dynamic thread vector.
+   // storage, because its slab does not carry `libcat.so`'s block.
    bool const shares_memory = (m_flags & nix::clone_flags::virtual_memory)
                               == nix::clone_flags::virtual_memory;
    if (tls_memory_size > 0u && shares_memory) {

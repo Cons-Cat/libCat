@@ -41,6 +41,8 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/__cxa_atexit.cpp
   ${CATLIB}/runtime/implementations/__cxa_guard.cpp
   ${CATLIB}/runtime/implementations/__cxa_thread_atexit.cpp
+  ${CATLIB}/runtime/implementations/tls_local_exec.cpp
+  ${CATLIB}/runtime/implementations/tls_descriptor.cpp
   ${CATLIB}/runtime/implementations/__cxa_pure_virtual.cpp
   ${CATLIB}/runtime/implementations/setjmp.cpp
   ${CATLIB}/runtime/implementations/longjmp.cpp
@@ -281,7 +283,6 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/has_syscall.cpp
   ${CATLIB}/linux/implementations/wait_pid.cpp
   ${CATLIB}/linux/implementations/clonearguments.cpp
-  ${CATLIB}/linux/implementations/executable_tls.cpp
   ${CATLIB}/linux/implementations/create_socket_local.cpp
   ${CATLIB}/file/implementations/file.cpp
   ${CATLIB}/file/implementations/get_executable_path.cpp
@@ -553,6 +554,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/random/cat/detail/xoshiro.hpp
   ${CATLIB}/ring/cat/ring
   ${CATLIB}/runtime/cat/runtime
+  ${CATLIB}/runtime/cat/detail/thread_local.hpp
   ${CATLIB}/sanitizer/cat/sanitizer
   ${CATLIB}/scaredy/cat/scaredy
   ${CATLIB}/scaredy/implementations/format_scaredy.tpp

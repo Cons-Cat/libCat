@@ -1,6 +1,7 @@
 #include <cat/runtime>
 
 // This function is a stub.
+// TODO: Do we need to implement it properly?
 
 extern "C" auto
 cat::__cxa_atexit(

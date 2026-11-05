@@ -45,7 +45,7 @@ SECTIONS {
    .gnu.hash         : { *(.gnu.hash) }
    .dynsym           : { *(.dynsym) }
    .dynstr           : { *(.dynstr) }
-   .rela.dyn         : { *(.rela.* .rela_iplt_*) }
+   .rela.dyn         : { *(.rela.dyn .rela_iplt_*) }
    .rela.plt         : { *(.rela.plt) }
 
    .rodata           : { *(.rodata .rodata.* .rodata.cst*) }
@@ -125,9 +125,22 @@ SECTIONS {
       mod MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)) == 0` so the
       `__cat_tls_memory_size` formula below stays invariant when
       `.tbss` is more strictly aligned than `.tdata`. */
+   /* Start the writable `PT_LOAD` after the RELRO band on a fresh page, at
+      the same offset within it so the file needs no padding. musl's dynamic
+      loader gives the rest of each writable segment's pages to `malloc`, so
+      two segments must not share a page. An empty section stays at the
+      address where it is placed, so this goes before `.tdata` when `.tdata`
+      is empty, and after `.tbss` otherwise. `-N` sets `MAXPAGESIZE` to 1,
+      which makes this a no-op. */
+   . = SIZEOF(.tdata) != 0 ? . :
+      ALIGN(CONSTANT(MAXPAGESIZE)) + (. & (CONSTANT(MAXPAGESIZE) - 1));
    . = ALIGN(MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)));
    .tdata            : { *(.tdata .tdata.*) }
    .tbss (NOLOAD)    : { *(.tbss .tbss.*) }
+
+   /* The RELRO band ends after `.tdata` unless it is empty. */
+   . = SIZEOF(.tdata) == 0 ? . :
+      ALIGN(CONSTANT(MAXPAGESIZE)) + (. & (CONSTANT(MAXPAGESIZE) - 1));
 
    /* `.got.plt` is excluded from RELRO because the dynamic loader
       writes lazy PLT resolutions there at first call. */

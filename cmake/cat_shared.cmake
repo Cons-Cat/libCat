@@ -23,7 +23,7 @@
 #     `dlopen` would otherwise reject the `.so` for an undefined
 #     symbol.
 #   * `libcat.ld` via `-T`, defining the `__cat_tls_*` linker-script
-#     symbols `executable_tls.cpp` reads (same `dlopen` failure mode
+#     symbols `tls_local_exec.cpp` reads (same `dlopen` failure mode
 #     without it).
 #
 # Usage requirements (essentials, include dirs, link options, `_start.cpp`,
@@ -121,11 +121,11 @@ target_link_options(cat-impl-shared
     #   * the `.so`'s own link, so it has internal `__cat_tls_*` for its
     #     own (typically empty) TLS layout. `clang-repl` `dlopen`s the
     #     `.so` standalone and would otherwise see undefined
-    #     `__cat_tls_*` references from `executable_tls.cpp`.
+    #     `__cat_tls_*` references from `tls_local_exec.cpp`.
     #   * a downstream executable's link, so its `__cat_tls_*` describe the
     #     executable's `.tdata` / `.tbss` (where `thread_local` data from
     #     consumer TUs lives). At runtime ELF symbol resolution prefers the
-    #     executable's copies, so libCat's `executable_tls.cpp` always
+    #     executable's copies, so libCat's `tls_local_exec.cpp` always
     #     reports the executable's TLS size when called from the `.so`.
     "-Wl,-T,${CMAKE_SOURCE_DIR}/src/libcat.ld"
     # libCat's full self-contained `libcat.ld` keeps `.tdata` page-aligned
@@ -156,12 +156,12 @@ target_link_options(cat-impl-shared
 # rather than libCat's.
 target_link_libraries(cat-impl-shared PUBLIC m c)
 
-# Without `CAT_USE_PTHREAD`, `libcat.so` calls its own `__tls_get_addr` (see
-# `executable_tls.cpp`), so that raw `clone` children can use its
-# `thread_local` storage.
-if (NOT CAT_USE_PTHREAD)
-  target_link_options(cat-impl-shared PRIVATE -Wl,--wrap=__tls_get_addr)
-endif()
+# `libcat.so` reaches `thread_local` storage through TLS descriptors rather
+# than `__tls_get_addr`. For blocks in static TLS, the dynamic loader's
+# descriptor resolver only returns an offset from the thread pointer, so it
+# works in raw `clone` children that lack GlibC's thread control block (see
+# `tls_descriptor.cpp`). It is also faster.
+target_compile_options(cat-impl-shared PRIVATE -mtls-dialect=gnu2)
 
 # `_start.cpp` lives on `cat`'s `INTERFACE_SOURCES` (each consumer compiles it
 # with their own `CAT_NO_ARGC_ARGV`). Mirror the entry on `cat-impl-shared` so
