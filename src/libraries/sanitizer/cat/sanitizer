@@ -130,6 +130,388 @@ __sanitizer_annotate_contiguous_container(
 }
 #endif
 
+// Define either hooks or shims for tsan. These match
+// `<sanitizer/tsan_interface.h>`.
+
+// NOLINTBEGIN(bugprone-reserved-identifier)
+
+// Mutex creation flags are passed to `__tsan_mutex_create`. If a mutex has no
+// constructor and `__tsan_mutex_create` is not called, they may be passed to
+// `__tsan_mutex_pre_lock` and `__tsan_mutex_post_lock` instead.
+
+// The mutex has static storage duration and no-op constructor and destructor.
+// This makes TSan ignore `__tsan_mutex_destroy`.
+inline constexpr uint4 __tsan_mutex_linker_init = 0b1u;
+// The mutex is write reentrant.
+inline constexpr uint4 __tsan_mutex_write_reentrant = 0b10u;
+// The mutex is read reentrant.
+inline constexpr uint4 __tsan_mutex_read_reentrant = 0b100u;
+// The mutex does not have static storage duration, and must not be used after
+// its destructor runs. This is the opposite of `__tsan_mutex_linker_init`. If
+// this is passed to `__tsan_mutex_destroy`, the destruction is ignored unless
+// this flag was previously set on the mutex.
+inline constexpr uint4 __tsan_mutex_not_static = 0b1'0000'0000u;
+
+// Mutex operation flags.
+
+// A read lock operation.
+inline constexpr uint4 __tsan_mutex_read_lock = 0b1000u;
+// A try lock operation.
+inline constexpr uint4 __tsan_mutex_try_lock = 0b1'0000u;
+// A try lock operation failed to acquire the mutex.
+inline constexpr uint4 __tsan_mutex_try_lock_failed = 0b10'0000u;
+// The lock operation acquires as many recursion levels as its `recursion`
+// argument.
+inline constexpr uint4 __tsan_mutex_recursive_lock = 0b100'0000u;
+// The unlock operation releases all recursion levels. The number released is
+// returned, and must later be passed to the matching `__tsan_mutex_post_lock`.
+inline constexpr uint4 __tsan_mutex_recursive_unlock = 0b1000'0000u;
+
+inline constexpr uint4 __tsan_mutex_try_read_lock =
+   __tsan_mutex_read_lock | __tsan_mutex_try_lock;
+inline constexpr uint4 __tsan_mutex_try_read_lock_failed =
+   __tsan_mutex_try_read_lock | __tsan_mutex_try_lock_failed;
+
+// Do not establish a happens-before relation between fibers in
+// `__tsan_switch_to_fiber`.
+inline constexpr uint4 __tsan_switch_to_fiber_no_sync = 0b1u;
+
+extern "C" {
+// These are callbacks the user may define. TSan calls them when it is enabled.
+
+// Invoked on TSan initialization.
+void
+__tsan_on_initialize();
+
+// Invoked on TSan shutdown. `failed` is nonzero if TSan reported issues. Return
+// 0 to exit as if no issues were reported, or nonzero to exit as if they were.
+auto
+__tsan_on_finalize(int4 failed) -> int4;
+
+// Default TSan options.
+auto
+__tsan_default_options() -> char const* _Nullable;
+
+// Default TSan suppressions.
+auto
+__tsan_default_suppressions() -> char const* _Nullable;
+}
+
+#if __has_feature(thread_sanitizer)
+extern "C" {
+// `__tsan_release` establishes a happens-before relation with a later
+// `__tsan_acquire` on the same address.
+void
+__tsan_acquire(void* _Nonnull p_address) noexcept;
+
+void
+__tsan_release(void* _Nonnull p_address) noexcept;
+
+// Annotations for custom mutexes give better reports, detect mutex misuse,
+// races between lock and unlock and destruction, and potential deadlocks.
+// Accesses between a `pre` and its `post` are ignored, so a mutex's own atomics
+// and fences do not need to be visible to TSan, but the mutex code itself is
+// not checked for correctness.
+
+// Annotate creation of a mutex. Takes mutex creation flags.
+void
+__tsan_mutex_create(void* _Nonnull p_address, uint4 flags) noexcept;
+
+// Annotate destruction of a mutex. Takes `__tsan_mutex_linker_init` and
+// `__tsan_mutex_not_static`.
+void
+__tsan_mutex_destroy(void* _Nonnull p_address, uint4 flags) noexcept;
+
+// Annotate the start of a lock operation. Takes `__tsan_mutex_read_lock`,
+// `__tsan_mutex_try_lock`, and mutex creation flags.
+void
+__tsan_mutex_pre_lock(void* _Nonnull p_address, uint4 flags) noexcept;
+
+// Annotate the end of a lock operation. Takes `__tsan_mutex_read_lock` and
+// `__tsan_mutex_try_lock` (matching `__tsan_mutex_pre_lock`),
+// `__tsan_mutex_try_lock_failed`, `__tsan_mutex_recursive_lock`, and mutex
+// creation flags.
+void
+__tsan_mutex_post_lock(
+   void* _Nonnull p_address, uint4 flags, int4 recursion
+) noexcept;
+
+// Annotate the start of an unlock operation. Takes `__tsan_mutex_read_lock`
+// and `__tsan_mutex_recursive_unlock`. Returns the number of recursion levels
+// released.
+auto
+__tsan_mutex_pre_unlock(void* _Nonnull p_address, uint4 flags) noexcept -> int4;
+
+// Annotate the end of an unlock operation. Takes `__tsan_mutex_read_lock`
+// (matching `__tsan_mutex_pre_unlock`).
+void
+__tsan_mutex_post_unlock(void* _Nonnull p_address, uint4 flags) noexcept;
+
+// Annotate the start and end of a notify, signal, or broadcast operation.
+// These take no flags.
+void
+__tsan_mutex_pre_signal(void* _Nonnull p_address, uint4 flags) noexcept;
+
+void
+__tsan_mutex_post_signal(void* _Nonnull p_address, uint4 flags) noexcept;
+
+// Annotate a region where a lock, unlock, or signal operation diverts to
+// unrelated code, such as another annotated mutex. These must only be called
+// inside a `pre` and `post` pair. These take no flags.
+void
+__tsan_mutex_pre_divert(void* _Nonnull p_address, uint4 flags) noexcept;
+
+void
+__tsan_mutex_post_divert(void* _Nonnull p_address, uint4 flags) noexcept;
+
+// Report a bug if the current thread holds any mutexes.
+void
+__tsan_check_no_mutexes_held() noexcept;
+
+// External race detection lets uninstrumented code report unsafe use of its
+// objects. `p_caller_pc` should be the user's program counter, such as from
+// `__builtin_return_address(0)`. A tag names an object type in reports.
+auto
+__tsan_external_register_tag(char const* _Nonnull p_object_type) noexcept
+   -> void* _Nullable;
+
+void
+__tsan_external_register_header(
+   void* _Nullable p_tag, char const* _Nonnull p_header
+) noexcept;
+
+// Optionally mark a heap object with a tag.
+void
+__tsan_external_assign_tag(
+   void* _Nonnull p_address, void* _Nullable p_tag
+) noexcept;
+
+void
+__tsan_external_read(
+   void* _Nonnull p_address, void* _Nullable p_caller_pc, void* _Nullable p_tag
+) noexcept;
+
+void
+__tsan_external_write(
+   void* _Nonnull p_address, void* _Nullable p_caller_pc, void* _Nullable p_tag
+) noexcept;
+
+// Fiber switching. `__tsan_switch_to_fiber` must be called immediately before
+// switching to a fiber.
+auto
+__tsan_get_current_fiber() noexcept -> void* _Nullable;
+
+auto
+__tsan_create_fiber(uint4 flags) noexcept -> void* _Nullable;
+
+void
+__tsan_destroy_fiber(void* _Nonnull p_fiber) noexcept;
+
+void
+__tsan_switch_to_fiber(void* _Nonnull p_fiber, uint4 flags) noexcept;
+
+void
+__tsan_set_fiber_name(
+   void* _Nonnull p_fiber, char const* _Nonnull p_name
+) noexcept;
+
+// Release TSan's internal memory in a best-effort manner.
+void
+__tsan_flush_memory() noexcept;
+
+// These functions are only for debugging. They inspect the report on the
+// current thread, and each returns 1 on success and 0 otherwise. `trace_size`
+// is a buffer size in bytes.
+
+// Get a report's description, its number of duplicates, the counts of each of
+// its arrays, and the stack trace of a `sleep()` it involved.
+[[gnu::used]]
+auto
+__tsan_get_report_data(
+   void* _Nonnull p_report, char const* _Nullable* _Nonnull pp_description,
+   int4* _Nonnull p_count, int4* _Nonnull p_stack_count,
+   int4* _Nonnull p_memory_operation_count, int4* _Nonnull p_location_count,
+   int4* _Nonnull p_mutex_count, int4* _Nonnull p_thread_count,
+   int4* _Nonnull p_unique_thread_id_count,
+   void* _Nullable* _Nonnull pp_sleep_trace, uword trace_size
+) noexcept -> int4;
+
+[[gnu::used]]
+auto
+__tsan_get_report_stack(
+   void* _Nonnull p_report, uword index, void* _Nullable* _Nonnull pp_trace,
+   uword trace_size
+) noexcept -> int4;
+
+[[gnu::used]]
+auto
+__tsan_get_report_mop(
+   void* _Nonnull p_report, uword index, int4* _Nonnull p_thread_id,
+   void* _Nullable* _Nonnull pp_address, int4* _Nonnull p_size,
+   int4* _Nonnull p_write, int4* _Nonnull p_atomic,
+   void* _Nullable* _Nonnull pp_trace, uword trace_size
+) noexcept -> int4;
+
+[[gnu::used]]
+auto
+__tsan_get_report_loc(
+   void* _Nonnull p_report, uword index,
+   char const* _Nullable* _Nonnull pp_type,
+   void* _Nullable* _Nonnull pp_address, void* _Nullable* _Nonnull pp_start,
+   uword* _Nonnull p_size, int4* _Nonnull p_thread_id,
+   int4* _Nonnull p_file_descriptor, int4* _Nonnull p_suppressable,
+   void* _Nullable* _Nonnull pp_trace, uword trace_size
+) noexcept -> int4;
+
+[[gnu::used]]
+auto
+__tsan_get_report_mutex(
+   void* _Nonnull p_report, uword index, uint8* _Nonnull p_mutex_id,
+   void* _Nullable* _Nonnull pp_address, int4* _Nonnull p_destroyed,
+   void* _Nullable* _Nonnull pp_trace, uword trace_size
+) noexcept -> int4;
+
+[[gnu::used]]
+auto
+__tsan_get_report_thread(
+   void* _Nonnull p_report, uword index, int4* _Nonnull p_thread_id,
+   uint8* _Nonnull p_os_id, int4* _Nonnull p_running,
+   char const* _Nullable* _Nonnull pp_name, int4* _Nonnull p_parent_thread_id,
+   void* _Nullable* _Nonnull pp_trace, uword trace_size
+) noexcept -> int4;
+
+[[gnu::used]]
+auto
+__tsan_get_report_unique_tid(
+   void* _Nonnull p_report, uword index, int4* _Nonnull p_thread_id
+) noexcept -> int4;
+
+// Get the report TSan is currently making on this thread, if there is one.
+[[gnu::used]]
+auto
+__tsan_get_current_report() noexcept -> void* _Nullable;
+}
+#else
+// No-op functions are provided when tsan is not available.
+inline void
+__tsan_acquire(void* _Nonnull /*unused*/) noexcept {
+}
+
+inline void
+__tsan_release(void* _Nonnull /*unused*/) noexcept {
+}
+
+inline void
+__tsan_mutex_create(void* _Nonnull /*unused*/, uint4 /*unused*/) noexcept {
+}
+
+inline void
+__tsan_mutex_destroy(void* _Nonnull /*unused*/, uint4 /*unused*/) noexcept {
+}
+
+inline void
+__tsan_mutex_pre_lock(void* _Nonnull /*unused*/, uint4 /*unused*/) noexcept {
+}
+
+inline void
+__tsan_mutex_post_lock(
+   void* _Nonnull /*unused*/, uint4 /*unused*/, int4 /*unused*/
+) noexcept {
+}
+
+inline auto
+__tsan_mutex_pre_unlock(void* _Nonnull /*unused*/, uint4 /*unused*/) noexcept
+   -> int4 {
+   return 0;
+}
+
+inline void
+__tsan_mutex_post_unlock(void* _Nonnull /*unused*/, uint4 /*unused*/) noexcept {
+}
+
+inline void
+__tsan_mutex_pre_signal(void* _Nonnull /*unused*/, uint4 /*unused*/) noexcept {
+}
+
+inline void
+__tsan_mutex_post_signal(void* _Nonnull /*unused*/, uint4 /*unused*/) noexcept {
+}
+
+inline void
+__tsan_mutex_pre_divert(void* _Nonnull /*unused*/, uint4 /*unused*/) noexcept {
+}
+
+inline void
+__tsan_mutex_post_divert(void* _Nonnull /*unused*/, uint4 /*unused*/) noexcept {
+}
+
+inline void
+__tsan_check_no_mutexes_held() noexcept {
+}
+
+inline auto
+__tsan_external_register_tag(char const* _Nonnull /*unused*/) noexcept
+   -> void* _Nullable {
+   return nullptr;
+}
+
+inline void
+__tsan_external_register_header(
+   void* _Nullable /*unused*/, char const* _Nonnull /*unused*/
+) noexcept {
+}
+
+inline void
+__tsan_external_assign_tag(
+   void* _Nonnull /*unused*/, void* _Nullable /*unused*/
+) noexcept {
+}
+
+inline void
+__tsan_external_read(
+   void* _Nonnull /*unused*/, void* _Nullable /*unused*/,
+   void* _Nullable /*unused*/
+) noexcept {
+}
+
+inline void
+__tsan_external_write(
+   void* _Nonnull /*unused*/, void* _Nullable /*unused*/,
+   void* _Nullable /*unused*/
+) noexcept {
+}
+
+inline auto
+__tsan_get_current_fiber() noexcept -> void* _Nullable {
+   return nullptr;
+}
+
+inline auto
+__tsan_create_fiber(uint4 /*unused*/) noexcept -> void* _Nullable {
+   return nullptr;
+}
+
+inline void
+__tsan_destroy_fiber(void* _Nonnull /*unused*/) noexcept {
+}
+
+inline void
+__tsan_switch_to_fiber(void* _Nonnull /*unused*/, uint4 /*unused*/) noexcept {
+}
+
+inline void
+__tsan_set_fiber_name(
+   void* _Nonnull /*unused*/, char const* _Nonnull /*unused*/
+) noexcept {
+}
+
+inline void
+__tsan_flush_memory() noexcept {
+}
+#endif
+
+// NOLINTEND(bugprone-reserved-identifier)
+
 template <typename T>
 [[gnu::nodebug, gnu::always_inline]]
 constexpr void

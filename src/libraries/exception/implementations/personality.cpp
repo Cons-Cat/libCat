@@ -184,6 +184,20 @@ __gxx_personality_v0(
    return unwind_reason_code::install_context;
 }
 
+#if __has_feature(thread_sanitizer)
+// TSan wraps every function that may throw in a cleanup pad that calls
+// `__tsan_func_exit`, naming the C personality when the function has none.
+// The unwinder ignores the CIE personality pointer and always dispatches to
+// `__gxx_personality_v0`, so this only has to resolve at link time.
+extern "C" [[gnu::alias("__gxx_personality_v0")]]
+auto
+// NOLINTNEXTLINE(bugprone-reserved-identifier)
+__gcc_personality_v0(
+   int4 version, unwind_action actions, uint8 exception_class,
+   unwind_exception* p_exception, unwind_context* p_context
+) noexcept(!__has_feature(cxx_exceptions)) -> unwind_reason_code;
+#endif
+
 }  // namespace cat::detail
 
 #endif

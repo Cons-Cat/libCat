@@ -11,6 +11,7 @@
 #include <cat/atomic>
 #include <cat/chrono>
 #include <cat/mutex>
+#include <cat/sanitizer>
 #include <cat/thread>
 
 namespace cat {
@@ -25,18 +26,27 @@ class mutex_spin {
 
    void
    lock() noexcept(!__has_feature(cxx_exceptions)) {
+      __tsan_mutex_pre_lock(this, 0u);
       uint1 count = 1;
       while (m_flag.test(memory_order::relaxed)
              || m_flag.test_and_set(memory_order::acquire)) {
          backoff(count);
       }
+      __tsan_mutex_post_lock(this, 0u, 0);
    }
 
    [[nodiscard]]
    auto
    try_lock() noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      return !m_flag.test(memory_order::relaxed)
-             && !m_flag.test_and_set(memory_order::acquire);
+      __tsan_mutex_pre_lock(this, __tsan_mutex_try_lock);
+      bool const is_locked = try_acquire();
+      __tsan_mutex_post_lock(
+         this,
+         is_locked ? __tsan_mutex_try_lock
+                   : __tsan_mutex_try_lock | __tsan_mutex_try_lock_failed,
+         0
+      );
+      return is_locked;
    }
 
    template <is_duration Duration>
@@ -55,24 +65,43 @@ class mutex_spin {
       !__has_feature(cxx_exceptions)
    ) -> bool {
       typename Clock::duration const deadline = timeout.time_since_epoch();
+      __tsan_mutex_pre_lock(this, __tsan_mutex_try_lock);
+      bool is_locked = true;
       uint1 count = 1;
-      while (!try_lock()) {
+      while (!try_acquire()) {
          typename Clock::duration const now =
             Clock::now().assert().time_since_epoch();
          if (now >= deadline) {
-            return false;
+            is_locked = false;
+            break;
          }
          backoff(count);
       }
-      return true;
+      __tsan_mutex_post_lock(
+         this,
+         is_locked ? __tsan_mutex_try_lock
+                   : __tsan_mutex_try_lock | __tsan_mutex_try_lock_failed,
+         0
+      );
+      return is_locked;
    }
 
    void
    unlock() noexcept(!__has_feature(cxx_exceptions)) {
+      auto _ = __tsan_mutex_pre_unlock(this, 0u);
       m_flag.clear(memory_order::release);
+      __tsan_mutex_post_unlock(this, 0u);
    }
 
  private:
+   // `try_lock()` without its TSan annotations.
+   [[nodiscard]]
+   auto
+   try_acquire() noexcept -> bool {
+      return !m_flag.test(memory_order::relaxed)
+             && !m_flag.test_and_set(memory_order::acquire);
+   }
+
    static void
    backoff(uint1& count) noexcept(!__has_feature(cxx_exceptions)) {
       // 16 spins is the limit used by Intel Thread Building Blocks.

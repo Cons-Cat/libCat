@@ -3,9 +3,9 @@
 extern "C" {
 
 [[deprecated("strlen() is deprecated! Use cat::string_length() instead.")]]
-#if __has_feature(address_sanitizer)
-// asan has its own `strlen` shim that interposes the libc one. We should prefer
-// that.
+#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
+// ASan and TSan use their own `strlen()` by DLL injection, so we must prefer
+// those.
 [[gnu::visibility("hidden")]]
 #endif
 auto

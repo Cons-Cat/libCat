@@ -103,8 +103,10 @@ run_phase_one(
    }
 }
 
-// ASan inserts a pthread TLS hook before noreturn register install.
-[[nodiscard, gnu::no_sanitize_address]]
+// ASan inserts a pthread TLS hook before noreturn register install. TSan's
+// `__tsan_func_entry` would never be balanced, because the register install
+// abandons this frame.
+[[nodiscard, clang::disable_sanitizer_instrumentation]]
 auto
 run_phase_two(
    register_context snapshot, unwind_exception* _Nonnull p_exception,
@@ -183,7 +185,9 @@ run_phase_two(
 
 }  // namespace
 
-extern "C" [[gnu::noinline]]
+// TSan must not wrap these in a `__tsan_func_exit` cleanup pad. Phase two would
+// find that pad in this very frame and resume into it forever.
+extern "C" [[gnu::noinline, clang::disable_sanitizer_instrumentation]]
 auto
 _Unwind_RaiseException(unwind_exception* _Nonnull p_exception_object)
    -> unwind_reason_code {
@@ -206,7 +210,7 @@ _Unwind_RaiseException(unwind_exception* _Nonnull p_exception_object)
    );
 }
 
-extern "C" [[gnu::noinline]]
+extern "C" [[gnu::noinline, clang::disable_sanitizer_instrumentation]]
 void
 _Unwind_Resume(unwind_exception* p_exception_object) {
    register_context snapshot{};

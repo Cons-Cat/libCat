@@ -158,7 +158,9 @@ __cxa_free_exception(void* p_object) {
    deallocate_exception(header_from_user(p_object));
 }
 
-[[noreturn]]
+// The unwinder abandons this frame, so TSan could never balance its
+// `__tsan_func_entry`.
+[[noreturn, clang::disable_sanitizer_instrumentation]]
 // NOLINTNEXTLINE(bugprone-reserved-identifier)
 void
 __cxa_throw(
@@ -219,7 +221,9 @@ __cxa_end_catch() {
    }
 }
 
-[[noreturn]]
+// The unwinder abandons this frame, so TSan could never balance its
+// `__tsan_func_entry`.
+[[noreturn, clang::disable_sanitizer_instrumentation]]
 // NOLINTNEXTLINE(bugprone-reserved-identifier)
 void
 __cxa_rethrow() {

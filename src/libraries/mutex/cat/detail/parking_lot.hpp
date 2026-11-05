@@ -11,6 +11,7 @@
 #include <cat/linux>
 #include <cat/new>
 #include <cat/propagate>
+#include <cat/sanitizer>
 #include <cat/utility>
 
 namespace cat::detail::mutex_parking_lot {
@@ -260,6 +261,7 @@ destroy_hash_table(
       assert(current.m_p_queue_head == nullptr);
       assert(current.m_p_queue_tail == nullptr);
       current.m_mutex.unlock();
+      __tsan_mutex_destroy(&current.m_mutex, 0u);
       current.~bucket();
    }
 

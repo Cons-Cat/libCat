@@ -1,7 +1,7 @@
 #include <cat/string>
 
 extern "C"
-#if __has_feature(address_sanitizer)
+#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
    [[gnu::visibility("hidden")]]
 #endif
    auto

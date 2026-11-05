@@ -6,6 +6,7 @@
 #include <cat/chrono>
 #include <cat/linux>
 #include <cat/mutex>
+#include <cat/sanitizer>
 #include <cat/thread>
 
 namespace cat {
@@ -24,21 +25,28 @@ class mutex_native {
 
    void
    lock() noexcept(!__has_feature(cxx_exceptions)) {
+      __tsan_mutex_pre_lock(this, 0u);
       uint4 expected = unlocked;
       if (!m_futex.m_value.compare_exchange_strong(
              expected, locked, memory_order::acquire, memory_order::relaxed
           )) {
          lock_contended();
       }
+      __tsan_mutex_post_lock(this, 0u, 0);
    }
 
    [[nodiscard]]
    auto
    try_lock() noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      uint4 expected = unlocked;
-      return m_futex.m_value.compare_exchange_strong(
-         expected, locked, memory_order::acquire, memory_order::relaxed
+      __tsan_mutex_pre_lock(this, __tsan_mutex_try_lock);
+      bool const is_locked = try_acquire();
+      __tsan_mutex_post_lock(
+         this,
+         is_locked ? __tsan_mutex_try_lock
+                   : __tsan_mutex_try_lock | __tsan_mutex_try_lock_failed,
+         0
       );
+      return is_locked;
    }
 
    template <is_duration Duration>
@@ -56,23 +64,40 @@ class mutex_native {
    try_lock_until(time_point<Clock, Duration> timeout) noexcept(
       !__has_feature(cxx_exceptions)
    ) -> bool {
-      if (try_lock()) {
-         return true;
-      }
-      return lock_contended_until(timeout);
+      __tsan_mutex_pre_lock(this, __tsan_mutex_try_lock);
+      bool const is_locked = try_acquire() || lock_contended_until(timeout);
+      __tsan_mutex_post_lock(
+         this,
+         is_locked ? __tsan_mutex_try_lock
+                   : __tsan_mutex_try_lock | __tsan_mutex_try_lock_failed,
+         0
+      );
+      return is_locked;
    }
 
    void
    unlock() noexcept {
+      auto _ = __tsan_mutex_pre_unlock(this, 0u);
       if (m_futex.m_value.release().exchange(unlocked) == contended) {
          auto _ = m_futex.wake();
       }
+      __tsan_mutex_post_unlock(this, 0u);
    }
 
  private:
    static constexpr uint4 unlocked = 0u;
    static constexpr uint4 locked = 1u;
    static constexpr uint4 contended = 2u;
+
+   // `try_lock()` without its TSan annotations.
+   [[nodiscard]]
+   auto
+   try_acquire() noexcept -> bool {
+      uint4 expected = unlocked;
+      return m_futex.m_value.compare_exchange_strong(
+         expected, locked, memory_order::acquire, memory_order::relaxed
+      );
+   }
 
    [[nodiscard]]
    auto

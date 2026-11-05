@@ -56,6 +56,7 @@ endblock()
 unset(CAT_USE_SANITIZERS CACHE)
 set(CAT_USE_ASAN OFF)
 set(CAT_USE_UBSAN OFF)
+set(CAT_USE_TSAN OFF)
 separate_arguments(_cat_cxx_flags NATIVE_COMMAND "${CMAKE_CXX_FLAGS}")
 foreach(_flag IN LISTS _cat_cxx_flags)
   if (_flag MATCHES "^-fsanitize=(.+)$")
@@ -65,6 +66,9 @@ foreach(_flag IN LISTS _cat_cxx_flags)
     endif()
     if ("undefined" IN_LIST _sanitizers)
       set(CAT_USE_UBSAN ON)
+    endif()
+    if ("thread" IN_LIST _sanitizers)
+      set(CAT_USE_TSAN ON)
     endif()
   endif()
 endforeach()
@@ -86,6 +90,11 @@ if (NOT CAT_THREAD_LOCAL_SIZE STREQUAL "")
   add_compile_definitions(CAT_THREAD_LOCAL_SIZE=${CAT_THREAD_LOCAL_SIZE})
 endif()
 
+if (CAT_USE_ASAN AND CAT_USE_TSAN)
+  message(FATAL_ERROR
+    "`-fsanitize=address` and `-fsanitize=thread` are mutually exclusive!")
+endif()
+
 if (CAT_USE_ASAN)
   if (NOT CAT_ASAN_RUNTIME_PATH)
     message(FATAL_ERROR
@@ -95,6 +104,22 @@ if (CAT_USE_ASAN)
       "remove `address` from `-fsanitize`.")
   endif()
   message(VERBOSE "ASan: using ${CAT_ASAN_RUNTIME_PATH}")
+endif()
+
+if (CAT_USE_TSAN)
+  execute_process(
+    COMMAND "${CMAKE_CXX_COMPILER}" -print-file-name=libclang_rt.tsan-x86_64.so
+    OUTPUT_VARIABLE CAT_TSAN_RUNTIME_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (NOT IS_ABSOLUTE "${CAT_TSAN_RUNTIME_PATH}"
+      OR NOT EXISTS "${CAT_TSAN_RUNTIME_PATH}")
+    message(FATAL_ERROR
+      "`-fsanitize=thread` was requested but "
+      "`libclang_rt.tsan-x86_64.so` could not be located for "
+      "`${CMAKE_CXX_COMPILER}`. Install the matching Clang TSan runtime or "
+      "remove `thread` from `-fsanitize`.")
+  endif()
+  message(VERBOSE "TSan: using ${CAT_TSAN_RUNTIME_PATH}")
 endif()
 
 # sccache compiler launcher. Enabled by default and paired with
@@ -124,6 +149,10 @@ endif()
 option(CAT_NO_VDSO "Disable Linux vDSO runtime hooks." OFF)
 option(CAT_USE_PTHREAD
   "Run `cat::thread` on POSIX threads from a dynamically linked `libc.so`." OFF)
+# TSan only knows about threads that `pthread_create` makes.
+if (CAT_USE_TSAN)
+  set(CAT_USE_PTHREAD ON)
+endif()
 option(CAT_NO_STACKTRACE
   "Omit frame pointers. Disables reliable `%rbp` stack traces." OFF)
 
@@ -230,7 +259,7 @@ list(
 # conditional adds `-fvisibility=hidden` only to `Release` (`RelWithDebInfo`
 # already captured the list above), keeping `RelWithDebInfo` inspectable in
 # tools like `nm` or debuggers.
-if (NOT CAT_USE_ASAN AND NOT CAT_USE_UBSAN)
+if (NOT CAT_USE_ASAN AND NOT CAT_USE_UBSAN AND NOT CAT_USE_TSAN)
   list(
     APPEND CAT_CXX_FLAGS_RELEASE
     -flto=auto
@@ -297,7 +326,7 @@ list(
 # `-static`, `--no-pie`, and `-Wl,-N` (omagic) can't be used under any
 # dynamic linking scenario.
 if (NOT CAT_USE_SHARED AND NOT CAT_USE_ASAN AND NOT CAT_USE_UBSAN
-    AND NOT CAT_USE_PTHREAD)
+    AND NOT CAT_USE_PTHREAD AND NOT CAT_USE_TSAN)
   list(
     APPEND CAT_LINK_OPTIONS_RELEASE
     "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>:-static>"
@@ -349,6 +378,14 @@ if (CAT_USE_ASAN)
   # shell.
   # `CAT_ASAN_RUNTIME_PATH` was populated and verified at the top of this file.
   cmake_path(GET CAT_ASAN_RUNTIME_PATH PARENT_PATH _rpath_dir)
+  target_link_options(cat INTERFACE "-Wl,-rpath,${_rpath_dir}")
+endif()
+
+if (CAT_USE_TSAN)
+  # `-nostdlib` drops the libc that the static TSan runtime depends on, so link
+  # the shared runtime, which carries its own `DT_NEEDED` on libc.
+  target_link_options(cat INTERFACE -shared-libsan -Wl,-z,norelro)
+  cmake_path(GET CAT_TSAN_RUNTIME_PATH PARENT_PATH _rpath_dir)
   target_link_options(cat INTERFACE "-Wl,-rpath,${_rpath_dir}")
 endif()
 

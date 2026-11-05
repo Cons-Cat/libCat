@@ -51,6 +51,7 @@
 #include <cat/atomic>
 #include <cat/chrono>
 #include <cat/meta>
+#include <cat/sanitizer>
 #include <cat/thread>
 
 namespace cat {
@@ -130,31 +131,28 @@ class mutex {
 
    void
    lock() noexcept(!__has_feature(cxx_exceptions)) {
+      __tsan_mutex_pre_lock(this, 0u);
       uint1 expected = 0;
       if (!m_state.compare_exchange_weak(
              expected, locked_bit, memory_order::acquire, memory_order::relaxed
           )) {
          lock_slow();
       }
+      __tsan_mutex_post_lock(this, 0u, 0);
    }
 
    [[nodiscard]]
    auto
    try_lock() noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      uint1 state = m_state.load(memory_order::relaxed);
-      for (;;) {
-         if ((state & locked_bit) != 0) {
-            return false;
-         }
-         if (
-            m_state.compare_exchange_weak(
-               state, state | locked_bit, memory_order::acquire,
-               memory_order::relaxed
-            )
-         ) {
-            return true;
-         }
-      }
+      __tsan_mutex_pre_lock(this, __tsan_mutex_try_lock);
+      bool const is_locked = try_acquire();
+      __tsan_mutex_post_lock(
+         this,
+         is_locked ? __tsan_mutex_try_lock
+                   : __tsan_mutex_try_lock | __tsan_mutex_try_lock_failed,
+         0
+      );
+      return is_locked;
    }
 
    template <is_duration Duration>
@@ -170,43 +168,74 @@ class mutex {
    [[nodiscard]]
    auto
    try_lock_until(time_point<Clock, Duration> timeout) noexcept -> bool {
-      if (try_lock()) {
-         return true;
-      }
-      return lock_slow(timeout);
+      __tsan_mutex_pre_lock(this, __tsan_mutex_try_lock);
+      bool const is_locked = try_acquire() || lock_slow(timeout);
+      __tsan_mutex_post_lock(
+         this,
+         is_locked ? __tsan_mutex_try_lock
+                   : __tsan_mutex_try_lock | __tsan_mutex_try_lock_failed,
+         0
+      );
+      return is_locked;
    }
 
    void
    yield_to_waiters() noexcept(!__has_feature(cxx_exceptions)) {
       if ((m_state.load(memory_order::relaxed) & parked_bit) != 0) {
+         auto _ = __tsan_mutex_pre_unlock(this, 0u);
          unlock_slow<true>();
+         __tsan_mutex_post_unlock(this, 0u);
          lock();
       }
    }
 
    void
    unlock() noexcept(!__has_feature(cxx_exceptions)) {
+      auto _ = __tsan_mutex_pre_unlock(this, 0u);
       uint1 expected = locked_bit;
       if (!m_state.compare_exchange_strong(
              expected, 0, memory_order::release, memory_order::relaxed
           )) {
          unlock_slow();
       }
+      __tsan_mutex_post_unlock(this, 0u);
    }
 
    void
    unlock_fair() noexcept(!__has_feature(cxx_exceptions)) {
+      auto _ = __tsan_mutex_pre_unlock(this, 0u);
       uint1 expected = locked_bit;
       if (!m_state.compare_exchange_strong(
              expected, 0, memory_order::release, memory_order::relaxed
           )) {
          unlock_slow<true>();
       }
+      __tsan_mutex_post_unlock(this, 0u);
    }
 
  private:
    static constexpr uint1 locked_bit = 0b01;
    static constexpr uint1 parked_bit = 0b10;
+
+   // `try_lock()` without its TSan annotations.
+   [[nodiscard]]
+   auto
+   try_acquire() noexcept -> bool {
+      uint1 state = m_state.load(memory_order::relaxed);
+      for (;;) {
+         if ((state & locked_bit) != 0) {
+            return false;
+         }
+         if (
+            m_state.compare_exchange_weak(
+               state, state | locked_bit, memory_order::acquire,
+               memory_order::relaxed
+            )
+         ) {
+            return true;
+         }
+      }
+   }
 
    class spin_wait {
     public:
@@ -280,6 +309,8 @@ class mutex {
          }
 
          uword const key = __builtin_bit_cast(uword, this);
+         // The parking lot locks an annotated bucket `word_lock`.
+         __tsan_mutex_pre_divert(this, 0u);
          detail::mutex_parking_lot::park_result result = [&] {
             if (!timeout.has_value()) {
                return detail::mutex_parking_lot::park(
@@ -308,6 +339,7 @@ class mutex {
                timeout.value()
             );
          }();
+         __tsan_mutex_post_divert(this, 0u);
          if (
             result.m_status == detail::mutex_parking_lot::park_status::unparked
             && result.m_token
@@ -331,6 +363,8 @@ class mutex {
    void
    unlock_slow() noexcept(!__has_feature(cxx_exceptions)) {
       uword const key = __builtin_bit_cast(uword, this);
+      // The parking lot locks an annotated bucket `word_lock`.
+      __tsan_mutex_pre_divert(this, 0u);
       detail::mutex_parking_lot::unpark_one(
          key, [this](detail::mutex_parking_lot::unpark_result const result) {
             if (
@@ -351,6 +385,7 @@ class mutex {
             return detail::mutex_parking_lot::unpark_token::normal;
          }
       );
+      __tsan_mutex_post_divert(this, 0u);
    }
 
    atomic<uint1> m_state;

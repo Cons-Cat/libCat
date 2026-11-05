@@ -7,6 +7,7 @@
 
 #include <cat/atomic>
 #include <cat/linux>
+#include <cat/sanitizer>
 #include <cat/thread>
 
 namespace cat::detail {
@@ -21,26 +22,28 @@ class word_lock {
 
    void
    lock() noexcept(!__has_feature(cxx_exceptions)) {
+      __tsan_mutex_pre_lock(this, 0u);
       uword expected = 0u;
-      if (
-         m_state.compare_exchange_weak(
-            expected, locked_bit, memory_order::acquire, memory_order::relaxed
-         )
-      ) {
-         return;
+      if (!m_state.compare_exchange_weak(
+             expected, locked_bit, memory_order::acquire, memory_order::relaxed
+          )) {
+         lock_slow();
       }
-      lock_slow();
+      __tsan_mutex_post_lock(this, 0u, 0);
    }
 
    void
    unlock() noexcept {
+      // TSan does not model the standalone fences in `unlock_slow()`, so the
+      // queue accesses must be hidden inside these annotations.
+      auto _ = __tsan_mutex_pre_unlock(this, 0u);
       uword const previous = m_state.release().fetch_sub(locked_bit);
       if (
-         (previous & queue_locked_bit) != 0u || (previous & queue_mask) == 0u
+         (previous & queue_locked_bit) == 0u && (previous & queue_mask) != 0u
       ) {
-         return;
+         unlock_slow();
       }
-      unlock_slow();
+      __tsan_mutex_post_unlock(this, 0u);
    }
 
  private:

@@ -57,7 +57,7 @@ can_skip_configure(sanitizers) := if sanitizers == "" { "true" } else { "false" 
 
 # Assemble a `cmake --build` command.
 build *args:
-    @asan=""; ubsan=""; verbose=""; no_warnings="false"; cxx_flags=""; modes=""; unset CAT_JUST_BUILD_TOOL_TRAILER_B64; set -- "$@"; \
+    @asan=""; ubsan=""; tsan=""; verbose=""; no_warnings="false"; cxx_flags=""; modes=""; unset CAT_JUST_BUILD_TOOL_TRAILER_B64; set -- "$@"; \
       while [ $# -gt 0 ]; do \
         case "$1" in \
           --) shift; \
@@ -66,12 +66,14 @@ build *args:
               export CAT_JUST_BUILD_TOOL_TRAILER_B64; \
             fi; \
             break ;; \
-          san) asan=ON; ubsan=ON; shift ;; \
-          nosan) asan=OFF; ubsan=OFF; shift ;; \
+          san) if [ "$asan" != ON ]; then asan=SAN; fi; ubsan=ON; shift ;; \
+          nosan) asan=OFF; ubsan=OFF; tsan=OFF; shift ;; \
           asan) asan=ON; shift ;; \
           noasan) asan=OFF; shift ;; \
           ubsan) ubsan=ON; shift ;; \
           noubsan) ubsan=OFF; shift ;; \
+          tsan) tsan=ON; shift ;; \
+          notsan) tsan=OFF; shift ;; \
           -v) verbose="$1"; shift ;; \
           -w) no_warnings="true"; shift ;; \
           -*) cxx_flags="${cxx_flags:+$cxx_flags }$1"; shift ;; \
@@ -79,8 +81,12 @@ build *args:
           *) printf '%s\n' "just build: unknown flag '$1'!" >&2; exit 1 ;; \
         esac; \
       done; \
-      san="${asan},${ubsan}"; \
-      if [ "$san" = "," ]; then san=""; fi; \
+      if [ "$asan" = ON ] && [ "$tsan" = ON ]; then \
+        printf '%s\n' "just: 'asan' and 'tsan' are mutually exclusive!" >&2; \
+        exit 1; \
+      fi; \
+      san="${asan},${ubsan},${tsan}"; \
+      if [ "$san" = ",," ]; then san=""; fi; \
       if [ -z "$modes" ]; then modes="{{ last_mode }}"; fi; \
       for mode in $modes; do \
         just _build-mode "$mode" "$san" "$verbose" "$no_warnings" "$cxx_flags" \
@@ -185,7 +191,7 @@ opt-report mode=last_mode verbose="":
 #                               `fmt`).
 ir *args:
     @set -e; \
-      mode=""; asan=""; ubsan=""; verbose=""; \
+      mode=""; asan=""; ubsan=""; tsan=""; verbose=""; \
       kinds=""; selectors=""; cxx_flags=""; \
       fmt=""; pass=""; fn=""; syntax="intel"; \
       saw_trailer=false; trailer=""; \
@@ -199,12 +205,14 @@ ir *args:
               else trailer="${trailer};${arg}"; fi; \
             done; \
             break ;; \
-          san) asan=ON; ubsan=ON; shift ;; \
-          nosan) asan=OFF; ubsan=OFF; shift ;; \
+          san) if [ "$asan" != ON ]; then asan=SAN; fi; ubsan=ON; shift ;; \
+          nosan) asan=OFF; ubsan=OFF; tsan=OFF; shift ;; \
           asan) asan=ON; shift ;; \
           noasan) asan=OFF; shift ;; \
           ubsan) ubsan=ON; shift ;; \
           noubsan) ubsan=OFF; shift ;; \
+          tsan) tsan=ON; shift ;; \
+          notsan) tsan=OFF; shift ;; \
           fmt|no-fmt) fmt="$1"; shift ;; \
           ii|bc|ll|s) add_kind "$1"; shift ;; \
           intel) add_kind s; syntax="intel"; shift ;; \
@@ -233,8 +241,12 @@ ir *args:
              add_sel "$sel"; shift ;; \
         esac; \
       done; \
-      san="${asan},${ubsan}"; \
-      if [ "$san" = "," ]; then san=""; fi; \
+      if [ "$asan" = ON ] && [ "$tsan" = ON ]; then \
+        printf '%s\n' "just: 'asan' and 'tsan' are mutually exclusive!" >&2; \
+        exit 1; \
+      fi; \
+      san="${asan},${ubsan},${tsan}"; \
+      if [ "$san" = ",," ]; then san=""; fi; \
       if [ -z "$kinds" ]; then \
         printf '%s\n' "just ir: pick at least one IR: ii, s/intel/att, bc, or ll" >&2; \
         exit 1; \
@@ -440,7 +452,7 @@ _elf-mode mode=last_mode verbose="" selector="":
       fi
 
 test *args:
-    @asan=""; ubsan=""; verbose=""; modes=""; tests=""; full="false"; list="false"; \
+    @asan=""; ubsan=""; tsan=""; verbose=""; modes=""; tests=""; full="false"; list="false"; \
       unset CAT_JUST_TEST_TOOL_TRAILER_B64; \
       add_test_selector() { \
         case " $tests " in \
@@ -459,12 +471,14 @@ test *args:
               export CAT_JUST_TEST_TOOL_TRAILER_B64; \
             fi; \
             break ;; \
-          san) asan=ON; ubsan=ON; shift ;; \
-          nosan) asan=OFF; ubsan=OFF; shift ;; \
+          san) if [ "$asan" != ON ]; then asan=SAN; fi; ubsan=ON; shift ;; \
+          nosan) asan=OFF; ubsan=OFF; tsan=OFF; shift ;; \
           asan) asan=ON; shift ;; \
           noasan) asan=OFF; shift ;; \
           ubsan) ubsan=ON; shift ;; \
           noubsan) ubsan=OFF; shift ;; \
+          tsan) tsan=ON; shift ;; \
+          notsan) tsan=OFF; shift ;; \
           -v) verbose="$1"; shift ;; \
           debug|release|relwithdebinfo|build|all) modes="${modes:+$modes }$lower"; shift ;; \
           unit) \
@@ -478,12 +492,16 @@ test *args:
           full) full="true"; shift ;; \
           list) list="true"; shift ;; \
           *) printf '%s\n' "just test: unknown option '$arg'!" >&2; \
-             printf '%s\n' "options: unit, gdb, arithmetic, runtime, full, list, san, nosan, asan, noasan, ubsan, noubsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
+             printf '%s\n' "options: unit, gdb, arithmetic, runtime, full, list, san, nosan, asan, noasan, ubsan, noubsan, tsan, notsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
              exit 1 ;; \
         esac; \
       done; \
-      san="${asan},${ubsan}"; \
-      if [ "$san" = "," ]; then san=""; fi; \
+      if [ "$asan" = ON ] && [ "$tsan" = ON ]; then \
+        printf '%s\n' "just: 'asan' and 'tsan' are mutually exclusive!" >&2; \
+        exit 1; \
+      fi; \
+      san="${asan},${ubsan},${tsan}"; \
+      if [ "$san" = ",," ]; then san=""; fi; \
       if [ "$full" = "true" ] && [ -n "$tests" ]; then \
         printf '%s\n' "just test: 'full' cannot be combined with named tests!" >&2; \
         exit 1; \
@@ -508,7 +526,7 @@ test *args:
 # Any empty fields are folded in non-verbose output.
 # The potential fields are:
 #   Build mode
-#   ASan, UBSan
+#   ASan, UBSan, TSan
 #   CMAKE_CXX_COMPILER
 #   CMAKE_LINKER_TYPE (or "Linker" if specified by `-fuse-ld`)
 #   ISA
@@ -713,7 +731,7 @@ _print-build-mode mode=last_mode:
 [private]
 _apply-sanitizers cxx_flags requests:
     @bash -c 'set -euo pipefail; cxx_flags=$1; requests=$2; \
-      asan=false; ubsan=false; flags=(); sanitizers=(); \
+      asan=false; ubsan=false; tsan=false; flags=(); sanitizers=(); \
       add_sanitizer() { \
         local value; \
         for value in "${sanitizers[@]}"; do \
@@ -729,17 +747,23 @@ _apply-sanitizers cxx_flags requests:
               case "${value}" in \
                 address) asan=true ;; \
                 undefined) ubsan=true ;; \
+                thread) tsan=true ;; \
                 *) add_sanitizer "${value}" ;; \
               esac; \
             done ;; \
           *) flags+=("${flag}") ;; \
         esac; \
       done; \
-      IFS=, read -r asan_request ubsan_request <<< "${requests}"; \
-      case "${asan_request}" in ON) asan=true ;; OFF) asan=false ;; esac; \
+      IFS=, read -r asan_request ubsan_request tsan_request <<< "${requests}"; \
+      case "${tsan_request}" in ON) tsan=true ;; OFF) tsan=false ;; esac; \
       case "${ubsan_request}" in ON) ubsan=true ;; OFF) ubsan=false ;; esac; \
+      case "${asan_request}" in \
+        ON) asan=true; tsan=false ;; SAN) asan=true ;; OFF) asan=false ;; \
+      esac; \
+      if [[ "${tsan}" == true ]]; then asan=false; fi; \
       if [[ "${asan}" == true ]]; then add_sanitizer address; fi; \
       if [[ "${ubsan}" == true ]]; then add_sanitizer undefined; fi; \
+      if [[ "${tsan}" == true ]]; then add_sanitizer thread; fi; \
       if [[ ${#sanitizers[@]} -gt 0 ]]; then \
         joined="$(IFS=,; printf "%s" "${sanitizers[*]}")"; \
         flags+=("-fsanitize=${joined}"); \
@@ -879,7 +903,7 @@ _build-custom mode="" san="" verbose="" no_warnings="false" cxx_flags="":
 
 [private]
 _print-sanitizer-status build_dir san="":
-    @flags=""; asan=OFF; ubsan=OFF; source=cached; \
+    @flags=""; asan=OFF; ubsan=OFF; tsan=OFF; source=cached; \
       if [ -n "{{ san }}" ]; then source=requested; fi; \
       if [ -f "{{ build_dir }}/CMakeCache.txt" ]; then \
         flags="$(sed -n 's/^CMAKE_CXX_FLAGS:STRING=//p' "{{ build_dir }}/CMakeCache.txt")"; \
@@ -889,13 +913,15 @@ _print-sanitizer-status build_dir san="":
               values="${flag#-fsanitize=}"; \
               old_ifs="$IFS"; IFS=,; \
               for value in $values; do \
-                case "$value" in address) asan=ON ;; undefined) ubsan=ON ;; esac; \
+                case "$value" in \
+                  address) asan=ON ;; undefined) ubsan=ON ;; thread) tsan=ON ;; \
+                esac; \
               done; \
               IFS="$old_ifs" ;; \
           esac; \
         done; \
       else \
-        asan=n/a; ubsan=n/a; \
+        asan=n/a; ubsan=n/a; tsan=n/a; \
       fi; \
       case "$asan" in \
         ON) asan="$(printf '\033[36mON\033[0m')" ;; \
@@ -907,8 +933,13 @@ _print-sanitizer-status build_dir san="":
         OFF) ubsan="$(printf '\033[91mOFF\033[0m')" ;; \
         n/a) ubsan="$(printf '\033[90mn/a\033[0m')" ;; \
       esac; \
-      printf '\033[1mASan: \033[0m%s, \033[1mUBSan: \033[0m%s \033[90m(%s)\033[0m\n' \
-        "$asan" "$ubsan" "$source"
+      case "$tsan" in \
+        ON) tsan="$(printf '\033[36mON\033[0m')" ;; \
+        OFF) tsan="$(printf '\033[91mOFF\033[0m')" ;; \
+        n/a) tsan="$(printf '\033[90mn/a\033[0m')" ;; \
+      esac; \
+      printf '\033[1mASan: \033[0m%s, \033[1mUBSan: \033[0m%s, \033[1mTSan: \033[0m%s \033[90m(%s)\033[0m\n' \
+        "$asan" "$ubsan" "$tsan" "$source"
 
 [private]
 _print-sccache-status build_dir show_path="false":

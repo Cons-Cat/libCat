@@ -2,9 +2,9 @@
 #include <cat/string>
 
 extern "C"
-#if __has_feature(address_sanitizer)
-   // asan has its own `memset` shim that interposes the libc one. We should
-   // prefer that.
+#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
+   // ASan and TSan use their own `memset()` by DLL injection, so we must
+   // prefer those.
    [[gnu::visibility("hidden")]]
 #endif
    auto
