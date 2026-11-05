@@ -178,11 +178,7 @@ $test(exceptions_public_base_and_pointer_conversion) {
 
 $test(exceptions_parallel_throws) {
    cat::atomic<int4> passed{0};
-   // ASan's `throw` hook calls pthread TLS. cat::thread does not provide that.
-   // TODO: Make `cat::thread` transparently become a pthread when ASan is
-   // enabled.
-   auto const worker = [&] [[gnu::no_sanitize_address]]
-   {
+   auto const worker = [&] {
       for (idx i = 0u; i < 100u; ++i) {
          try {
             throw i;  // NOLINT

@@ -1051,15 +1051,16 @@ class pcg_engine {
             m_states[chain] = detail::pcg_pack_states<batch_type>(states);
          }
 
-         state_type multiplier_coefficient = 1u;
-         state_type increment_coefficient = 0u;
+         wrapping_state multiplier_coefficient = 1u;
+         wrapping_state increment_coefficient = 0u;
          for (idx index = 0u; index < lanes * chain_count; ++index) {
             increment_coefficient =
                increment_coefficient * multiplier_value + 1u;
             multiplier_coefficient *= multiplier_value;
          }
-         m_multiplier = batch_state(multiplier_coefficient);
-         m_increment = batch_state(increment_coefficient * increment_value);
+         m_multiplier = batch_state(state_type(multiplier_coefficient));
+         m_increment =
+            batch_state(state_type(increment_coefficient * increment_value));
       }
 
       template <idx chain>
@@ -1098,16 +1099,16 @@ class pcg_engine {
       constexpr idx lanes = batch_type::abi_type::lanes;
       array<state_type, lanes> multiplier_coefficients;
       array<state_type, lanes> increment_coefficients;
-      state_type multiplier_coefficient = 1u;
-      state_type increment_coefficient = 0u;
+      wrapping_state multiplier_coefficient = 1u;
+      wrapping_state increment_coefficient = 0u;
 
       for (idx lane = 0u; lane < lanes; ++lane) {
          if constexpr (!output_previous) {
             increment_coefficient = increment_coefficient * multiplier() + 1u;
             multiplier_coefficient *= multiplier();
          }
-         multiplier_coefficients[lane] = multiplier_coefficient;
-         increment_coefficients[lane] = increment_coefficient;
+         multiplier_coefficients[lane] = state_type(multiplier_coefficient);
+         increment_coefficients[lane] = state_type(increment_coefficient);
          if constexpr (output_previous) {
             increment_coefficient = increment_coefficient * multiplier() + 1u;
             multiplier_coefficient *= multiplier();
@@ -1119,8 +1120,9 @@ class pcg_engine {
             * batch_state(m_state)
          + detail::pcg_pack_states<batch_type>(increment_coefficients)
               * batch_state(increment());
-      m_state =
-         multiplier_coefficient * m_state + increment_coefficient * increment();
+      m_state = state_type(
+         multiplier_coefficient * m_state + increment_coefficient * increment()
+      );
       return detail::pcg_output<batch_type, batch_state, permutation>(states);
    }
 
@@ -1155,25 +1157,25 @@ class pcg_engine {
  private:
    constexpr void
    advance(state_type count) noexcept {
-      state_type accumulated_multiplier = 1u;
-      state_type accumulated_increment = 0u;
-      state_type current_multiplier = multiplier();
-      state_type current_increment = increment();
+      wrapping_state accumulated_multiplier = 1u;
+      wrapping_state accumulated_increment = 0u;
+      wrapping_state current_multiplier = multiplier();
+      wrapping_state current_increment = increment();
 
       while (count != 0u) {
          if ((count & 1u) != 0u) {
             accumulated_multiplier *= current_multiplier;
             accumulated_increment =
-               state_type(wrapping_state(accumulated_increment)
-                             .fma(current_multiplier, current_increment));
+               accumulated_increment.fma(current_multiplier, current_increment);
          }
          current_increment *= current_multiplier + 1u;
          current_multiplier *= current_multiplier;
          count >>= 1u;
       }
 
-      m_state = state_type(wrapping_state(accumulated_multiplier)
-                              .fma(m_state, accumulated_increment));
+      m_state = state_type(accumulated_multiplier.fma(
+         wrapping_state(m_state), accumulated_increment
+      ));
    }
 
  public:

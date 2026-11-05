@@ -130,6 +130,12 @@ def build_xcc_args(build_dir: Path) -> list[str]:
     for kind, val in kept:
         if kind == "cc1":
             out.extend(["-Xclang", val])
+        elif val.startswith(("-fsanitize=", "-fno-sanitize=")):
+            # `clang-repl` splits `--Xcc` values on commas, which would turn
+            # `-fsanitize=address,undefined` into an input file `undefined`.
+            # One flag per sanitizer is equivalent.
+            flag, _, names = val.partition("=")
+            out.extend(f"{flag}={name}" for name in names.split(","))
         else:
             out.append(val)
     return out

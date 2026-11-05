@@ -296,7 +296,10 @@ auto
 find_subspan_simd(
    byte const* p_haystack, byte const* p_needle, idx size, idx needle_size
 ) -> maybe<idx> {
-   return $simd_switch($abi((avx512, avx2, sse2), {
+   // TODO: Investigate making AVX-512 work again, then restore `avx512` to
+   // this `$abi` list. Disabled since clang passes 64-byte `simd` values
+   // differently across `gnu::target` boundaries.
+   return $simd_switch($abi((avx2, sse2), {
       return find_subspan_large<native_simd<Raw>, Raw>(
          p_haystack, p_needle, size, needle_size
       );

@@ -106,7 +106,10 @@ template <typename Raw>
 auto
 find_element_simd(byte const* p_haystack, byte const* p_needle, idx size)
    -> maybe<idx> {
-   return $simd_switch($abi((avx512, avx2, sse2), {
+   // TODO: Investigate making AVX-512 work again, then restore `avx512` to
+   // this `$abi` list. Disabled since clang passes 64-byte `simd` values
+   // differently across `gnu::target` boundaries.
+   return $simd_switch($abi((avx2, sse2), {
       return find_element_large<native_simd<Raw>, Raw>(
          p_haystack, p_needle, size
       );
@@ -186,7 +189,10 @@ auto
 find_grouped_element_simd(
    byte const* p_haystack, byte const* p_needle, idx size
 ) -> maybe<idx> {
-   return $simd_switch($abi((avx512, avx2, sse2), {
+   // TODO: Investigate making AVX-512 work again, then restore `avx512` to
+   // this `$abi` list. Disabled since clang passes 64-byte `simd` values
+   // differently across `gnu::target` boundaries.
+   return $simd_switch($abi((avx2, sse2), {
       return find_grouped_element_large<
          native_simd<unsigned char>, element_bytes>(p_haystack, p_needle, size);
    }));

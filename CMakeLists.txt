@@ -149,8 +149,9 @@ endif()
 option(CAT_NO_VDSO "Disable Linux vDSO runtime hooks." OFF)
 option(CAT_USE_PTHREAD
   "Run `cat::thread` on POSIX threads from a dynamically linked `libc.so`." OFF)
-# TSan only knows about threads that `pthread_create` makes.
-if (CAT_USE_TSAN)
+# ASan and TSan keep per-thread state that only `pthread_create` sets up, and
+# ASan's `__cxa_throw` interceptor crashes without it.
+if (CAT_USE_ASAN OR CAT_USE_TSAN)
   set(CAT_USE_PTHREAD ON)
 endif()
 option(CAT_NO_STACKTRACE
