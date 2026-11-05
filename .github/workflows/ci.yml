@@ -376,6 +376,43 @@ jobs:
           fi
           echo "OK: build-debug/.gdbinit"
 
+      - name: Configure and build (Debug, TSan)
+        if: ${{ !cancelled() }}
+        # TSan cannot be combined with ASan, so it gets its own build. It also
+        # runs `cat::thread` on POSIX threads.
+        run: |
+          cmake -S . -B build-debug-tsan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS=-fsanitize=thread,undefined
+          cmake --build build-debug-tsan
+
+      - name: Test (Debug, TSan)
+        if: ${{ !cancelled() }}
+        run: |
+          ctest --test-dir build-debug-tsan -R '^UnitTests$' --verbose --output-on-failure \
+            --timeout 300
+
+      - name: Run example binaries (Debug, TSan)
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+
+          out=$(build-debug-tsan/examples/hello)
+          printf 'hello (Debug+TSan) output: %s\n' "${out}"
+          if [ "${out}" != "Meow, world!" ]; then
+            echo 'FAIL: hello (Debug+TSan) did not produce the expected greeting.'
+            exit 1
+          fi
+          echo 'OK: hello (Debug+TSan)'
+
+          out=$(build-debug-tsan/examples/echo foo moooo boo)
+          printf 'echo foo moooo boo (Debug+TSan) output: %s\n' "${out}"
+          if [ "${out}" != "foo moooo boo" ]; then
+            echo 'FAIL: echo (Debug+TSan) output did not match "foo moooo boo".'
+            exit 1
+          fi
+          echo 'OK: echo foo moooo boo (Debug+TSan)'
+
   release:
     # Release build and tests. The build dir is uploaded for the
     # `gdb-pretty-printers` job so that job can reuse this configuration and PCH.
@@ -547,6 +584,43 @@ jobs:
           fi
           echo 'OK: echo foo moooo boo (Release+ASan)'
 
+      - name: Configure and build (Release, TSan)
+        if: ${{ !cancelled() }}
+        # TSan cannot be combined with ASan, so it gets its own build. It also
+        # runs `cat::thread` on POSIX threads.
+        run: |
+          cmake -S . -B build-release-tsan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_FLAGS=-fsanitize=thread,undefined
+          cmake --build build-release-tsan
+
+      - name: Test (Release, TSan)
+        if: ${{ !cancelled() }}
+        run: |
+          ctest --test-dir build-release-tsan -R '^UnitTests$' --verbose --output-on-failure \
+            --timeout 300
+
+      - name: Run example binaries (Release, TSan)
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+
+          out=$(build-release-tsan/examples/hello)
+          printf 'hello (Release+TSan) output: %s\n' "${out}"
+          if [ "${out}" != "Meow, world!" ]; then
+            echo 'FAIL: hello (Release+TSan) did not produce the expected greeting.'
+            exit 1
+          fi
+          echo 'OK: hello (Release+TSan)'
+
+          out=$(build-release-tsan/examples/echo foo moooo boo)
+          printf 'echo foo moooo boo (Release+TSan) output: %s\n' "${out}"
+          if [ "${out}" != "foo moooo boo" ]; then
+            echo 'FAIL: echo (Release+TSan) output did not match "foo moooo boo".'
+            exit 1
+          fi
+          echo 'OK: echo foo moooo boo (Release+TSan)'
+
   gdb-pretty-printers:
     # GDB checks run after Debug and Release so they can reuse those build dirs
     # and their PCH outputs instead of configuring separate GDB-only builds.
@@ -684,6 +758,45 @@ jobs:
             echo 'FAIL: libcat.so is exporting libc/libm symbols (would interpose at runtime).'
             exit 1
           fi
+
+      - name: Configure and build (CAT_USE_SHARED=ON, Debug, TSan)
+        if: ${{ !cancelled() }}
+        # TSan cannot be combined with ASan, so it gets its own build. It also
+        # runs `cat::thread` on POSIX threads.
+        run: |
+          cmake -S . -B build-shared-tsan -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS=-fsanitize=thread,undefined \
+            -DCAT_USE_SHARED=ON \
+            -DCAT_NO_EXCEPTIONS=ON
+          cmake --build build-shared-tsan
+
+      - name: Test (CAT_USE_SHARED=ON, Debug, TSan)
+        if: ${{ !cancelled() }}
+        run: |
+          ctest --test-dir build-shared-tsan -R '^UnitTests$' --verbose --output-on-failure \
+            --timeout 300
+
+      - name: Run example binaries (CAT_USE_SHARED=ON, Debug, TSan)
+        if: ${{ !cancelled() }}
+        run: |
+          set -eu
+
+          out=$(build-shared-tsan/examples/hello)
+          printf 'hello (Shared+TSan) output: %s\n' "${out}"
+          if [ "${out}" != "Meow, world!" ]; then
+            echo 'FAIL: hello (Shared+TSan) did not produce the expected greeting.'
+            exit 1
+          fi
+          echo 'OK: hello (Shared+TSan)'
+
+          out=$(build-shared-tsan/examples/echo foo moooo boo)
+          printf 'echo foo moooo boo (Shared+TSan) output: %s\n' "${out}"
+          if [ "${out}" != "foo moooo boo" ]; then
+            echo 'FAIL: echo (Shared+TSan) output did not match "foo moooo boo".'
+            exit 1
+          fi
+          echo 'OK: echo foo moooo boo (Shared+TSan)'
 
   tools:
     # Tooling-adjacent invariants:
