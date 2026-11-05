@@ -1,9 +1,7 @@
 # This file is flagrantly `"vibe-coded"`. It may not be up to the standards of
 # most libCat code.
 
-# Source formatting (`cat-format`, `cat-format-check`) and `full-line` comment
-# restyling (`cat-restyle-comments`, `cat-restyle-comments-check`, see
-# `scripts/restyle_prefix_comment_paragraphs.py`).
+# Source formatting (`cat-format`, `cat-format-check`).
 #
 # Module mode (`include()`): locates a `clang-format` whose major matches the
 # configured Clang, gathers libCat's sources, public headers from the `cat` /
@@ -14,8 +12,7 @@
 # or `-j`, see the script help).
 # `APPLY` rewrites mismatches. `CHECK` is `read-only`, `non-zero` on drift.
 #
-# Requires `python3` on `PATH` for `cat-format`, `cat-format-check`, and
-# `cat-restyle-*`.
+# Requires `python3` on `PATH` for `cat-format` and `cat-format-check`.
 
 if (NOT CMAKE_SCRIPT_MODE_FILE)
   # Module mode:
@@ -66,8 +63,8 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
     ${_cat_impl_sources}
     ${_cat_iface_sources}
     ${CAT_HEADER_FILES})
-  # `tests/` is not on `cat` or `cat-impl`, add so `cat-format` and restyles
-  # stay consistent with the rest of the tree.
+  # `tests/` is not on `cat` or `cat-impl`, add so `cat-format` stays
+  # consistent with the rest of the tree.
   if (TARGET cat-tests)
     get_target_property(_cat_test_format_SOURCES cat-tests INTERFACE_SOURCES)
     if (NOT _cat_test_format_SOURCES STREQUAL
@@ -86,7 +83,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   list(FILTER _cat_format_file_list EXCLUDE REGEX "^$")
   find_program(CAT_PYTHON3
     NAMES python3
-    DOC "Python 3 for `cat-format` and `cat-restyle-comments`")
+    DOC "Python 3 for `cat-format`")
   # `cat-format` rewrites mismatches in place. `cat-format-check` is the
   # `read-only` CI variant. Both use `cat_format_worktree.py` in parallel
   # (capped at 4 workers, default. Tune down with `CAT_LIBCAT_JOBS` or `-j`).
@@ -138,102 +135,5 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
 
   _cat_add_format_target(cat-format       APPLY)
   _cat_add_format_target(cat-format-check CHECK)
-
-  # `cat-restyle-comments`/`cat-restyle-comments-check` run source files plus
-  # CMake and Python helper files through
-  # `scripts/restyle_prefix_comment_paragraphs.py` (comment prose restyling,
-  # then `word-preserving` wrap to 80 columns, `URL-safe`). `CHECK` is
-  # `read-only`, like `cat-format-check`.
-  # Restyling is not a substitute for `clang-format`.
-  set(_cat_restyle_script "${CMAKE_SOURCE_DIR}/scripts/restyle_prefix_comment_paragraphs.py")
-  if (CAT_PYTHON3)
-    if (EXISTS "${_cat_restyle_script}")
-      file(GLOB_RECURSE _cat_restyle_cmake_files CONFIGURE_DEPENDS
-        "${CMAKE_SOURCE_DIR}/cmake/*.cmake"
-        "${CMAKE_SOURCE_DIR}/src/CMakeLists.txt"
-        "${CMAKE_SOURCE_DIR}/tests/CMakeLists.txt"
-        "${CMAKE_SOURCE_DIR}/examples/CMakeLists.txt")
-      file(GLOB_RECURSE _cat_restyle_python_files CONFIGURE_DEPENDS
-        "${CMAKE_SOURCE_DIR}/cmake/*.py"
-        "${CMAKE_SOURCE_DIR}/gdb_pretty_printers/*.py"
-        "${CMAKE_SOURCE_DIR}/scripts/*.py")
-      set(_cat_restyle_files
-        ${_cat_format_files}
-        ${_cat_restyle_cmake_files}
-        ${_cat_restyle_python_files}
-        "${CMAKE_SOURCE_DIR}/CMakeLists.txt")
-      list(FILTER _cat_restyle_files EXCLUDE REGEX "^$")
-      list(REMOVE_DUPLICATES _cat_restyle_files)
-      add_custom_target(
-        cat-restyle-comments
-        COMMAND
-          ${CAT_PYTHON3}
-          "${_cat_restyle_script}"
-          --max-col
-          80
-          ${_cat_restyle_files}
-        DEPENDS
-          ${_cat_restyle_files}
-        WORKING_DIRECTORY
-          "${CMAKE_SOURCE_DIR}"
-        COMMENT
-          "Restyle full-line comments in place"
-        VERBATIM)
-      add_custom_target(
-        cat-restyle-comments-check
-        COMMAND
-          ${CAT_PYTHON3}
-          "${_cat_restyle_script}"
-          --check
-          --max-col
-          80
-          ${_cat_restyle_files}
-        DEPENDS
-          ${_cat_restyle_files}
-        WORKING_DIRECTORY
-          "${CMAKE_SOURCE_DIR}"
-        COMMENT
-          "Check comment restyling (read-only; `cat-restyle-comments` to fix)"
-        VERBATIM)
-    else()
-      add_custom_target(
-        cat-restyle-comments
-        COMMAND
-          ${CMAKE_COMMAND}
-          -E
-          echo
-          "cat-restyle-comments: missing `${_cat_restyle_script}`"
-        COMMAND ${CMAKE_COMMAND} -E false
-        VERBATIM)
-      add_custom_target(
-        cat-restyle-comments-check
-        COMMAND
-          ${CMAKE_COMMAND}
-          -E
-          echo
-          "cat-restyle-comments-check: missing `${_cat_restyle_script}`"
-        COMMAND ${CMAKE_COMMAND} -E false
-        VERBATIM)
-    endif()
-  else()
-    add_custom_target(
-      cat-restyle-comments
-      COMMAND
-        ${CMAKE_COMMAND}
-        -E
-        echo
-        "cat-restyle-comments: `python3` not found on PATH"
-      COMMAND ${CMAKE_COMMAND} -E false
-      VERBATIM)
-    add_custom_target(
-      cat-restyle-comments-check
-      COMMAND
-        ${CMAKE_COMMAND}
-        -E
-        echo
-        "cat-restyle-comments-check: `python3` not found on PATH"
-      COMMAND ${CMAKE_COMMAND} -E false
-      VERBATIM)
-  endif()
 
 endif()

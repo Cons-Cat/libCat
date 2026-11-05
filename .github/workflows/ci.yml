@@ -265,15 +265,6 @@ jobs:
         # `just format "${CAT_LINT_BUILD_DIR}"`.
         run: just format-check "${CAT_LINT_BUILD_DIR}"
 
-      - name: cat-restyle-comments-check
-        # Advisory. Emits a warning annotation instead of failing the job.
-        if: ${{ !cancelled() }}
-        run: |
-          if ! just restyle-comments-check "${CAT_LINT_BUILD_DIR}"
-          then
-            echo "::warning title=cat-restyle-comments-check::Comment styling drift detected! Run the `cat-restyle-comments` target to fix it."
-          fi
-
   debug:
     # Debug build, run twice: once with sanitizers and once without. The
     # `build-debug` artifact (sanitizer-instrumented) is uploaded for the

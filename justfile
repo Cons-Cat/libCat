@@ -147,12 +147,6 @@ format-python:
 format-python-check:
     ruff format --check gdb_pretty_printers
 
-restyle-comments mode=last_mode verbose="":
-    @just cmake_target cat-restyle-comments {{ mode }} {{ verbose }}
-
-restyle-comments-check mode=last_mode verbose="":
-    @just cmake_target cat-restyle-comments-check {{ mode }} {{ verbose }}
-
 tidy mode=last_mode verbose="":
     @just cmake_target cat-tidy {{ mode }} {{ verbose }}
 

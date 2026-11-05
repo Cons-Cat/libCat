@@ -528,8 +528,7 @@ enable_testing()
 add_subdirectory(tests/)
 add_subdirectory(examples/)
 
-# Source-formatting targets (`cat-format`, `cat-format-check`,
-# `cat-restyle-comments`, `cat-restyle-comments-check`).
+# Source-formatting targets (`cat-format`, `cat-format-check`).
 include(${CMAKE_SOURCE_DIR}/cmake/format.cmake)
 
 # Source-tidying targets (`cat-tidy`, `cat-tidy-check`).
