@@ -16,7 +16,7 @@ jobs:
   install-toolchain:
     # Prime the mise cache once so parallel jobs do not all download and extract
     # the Clang package set on a cold cache in the same workflow run.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
 
@@ -25,13 +25,13 @@ jobs:
   lscpu:
     # Log host CPU and ISA up front so a CPU-dependent failure
     # anywhere in the matrix is diagnosable from the run log. The
-    # `ubuntu-24.04` label does not pin a microarchitecture. In
+    # `ubuntu-26.04` label does not pin a microarchitecture. In
     # practice based on previous runs, the Azure SKU rotates
     # across Intel Ice Lake-SP (Xeon Platinum 8370C) and AMD
     # EPYC (Milan-era 7763, Genoa-era 9V74) within the same
     # hour, with no advance notice and with materially different
     # feature flags (AVX-512, AVX-VNNI, GFNI-on-VEX, etc.).
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: install-toolchain
     steps:
       - uses: actions/checkout@v4
@@ -94,7 +94,7 @@ jobs:
           echo "::endgroup::"
 
   detect-changes:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       compile: ${{ steps.compile.outputs.compile }}
       gdb_symlink: ${{ steps.gdb-symlink.outputs.gdb_symlink }}
@@ -185,7 +185,7 @@ jobs:
     # Lightweight static checks on the source tree. Runs in parallel
     # with the heavier compile / test jobs to gate invariants that don't
     # require compiling.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: install-toolchain
     steps:
       - uses: actions/checkout@v4
@@ -285,7 +285,7 @@ jobs:
     # `if: ${{ !cancelled() }}` on the nosan step preserves the matrix-style
     # behaviour: a failure in the san variant still surfaces results from
     # the nosan variant.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
@@ -392,7 +392,7 @@ jobs:
   release:
     # Release build and tests. The build dir is uploaded for the
     # `gdb-pretty-printers` job so that job can reuse this configuration and PCH.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
@@ -551,7 +551,7 @@ jobs:
   gdb-pretty-printers:
     # GDB checks run after Debug and Release so they can reuse those build dirs
     # and their PCH outputs instead of configuring separate GDB-only builds.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: [install-toolchain, detect-changes, debug, release]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
@@ -602,7 +602,7 @@ jobs:
   arithmetic-negative:
     # Clang `-verify` arithmetic type check. Run when the arithmetic/meta/bit
     # surface or the verify TU changes.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.arithmetic_negative == 'true' }}
     steps:
@@ -616,7 +616,7 @@ jobs:
   shared:
     # `libcat.so` build smoke: configure, build, run unit tests and the
     # `hello`/`echo` examples against the shared library.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
@@ -692,7 +692,7 @@ jobs:
     #     x {ASan, no ASan} matrix.
     # The SDE-pinned `cpuid` run (commented out below)
     # also lands here so the cached toolchain is reused.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs: [install-toolchain, detect-changes]
     if: ${{ needs.detect-changes.outputs.compile == 'true' }}
     steps:
