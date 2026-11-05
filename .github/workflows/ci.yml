@@ -371,6 +371,7 @@ jobs:
           echo 'OK: echo foo moooo boo (Debug, nosan)'
 
       - name: Upload Debug build for GDB pretty printers
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: build-debug
@@ -436,6 +437,7 @@ jobs:
           echo 'OK: echo foo moooo boo (Release)'
 
       - name: Upload Release build for GDB pretty printers
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
           name: build-release
@@ -553,7 +555,8 @@ jobs:
     # and their PCH outputs instead of configuring separate GDB-only builds.
     runs-on: ubuntu-26.04
     needs: [install-toolchain, detect-changes, debug, release]
-    if: ${{ needs.detect-changes.outputs.compile == 'true' }}
+    # Unit test failures in `debug` / `release` should not hide GDB checks.
+    if: ${{ !cancelled() && needs.detect-changes.outputs.compile == 'true' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -633,7 +636,8 @@ jobs:
           cmake -S . -B build-shared -G Ninja \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_FLAGS=-fsanitize=address,undefined \
-            -DCAT_USE_SHARED=ON
+            -DCAT_USE_SHARED=ON \
+            -DCAT_NO_EXCEPTIONS=ON
           cmake --build build-shared
 
       - name: Test (CAT_USE_SHARED=ON, Debug)
