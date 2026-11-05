@@ -115,6 +115,8 @@ Arguments choose CTest entries:
 - =unit= runs =UnitTests=.
 - =gdb= runs =GdbPrettyPrinters=.
 - =arithmetic= runs =ArithmeticTypeCheck=.
+- =runtime= runs =RuntimeTests=.
+- =rng= runs =RandomMatrixTests=, the combinatorial RNG matrix.
 
 Use =full= to run every registered CTest entry in the selected mode. Use =list=
 to print the matching CTest entries without running them. =full= and test

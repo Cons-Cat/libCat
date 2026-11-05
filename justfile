@@ -483,10 +483,12 @@ test *args:
             add_test_selector ArithmeticTypeCheck; shift ;; \
           runtime|runtimetests) \
             add_test_selector RuntimeTests; shift ;; \
+          rng|randommatrixtests) \
+            add_test_selector RandomMatrixTests; shift ;; \
           full) full="true"; shift ;; \
           list) list="true"; shift ;; \
           *) printf '%s\n' "just test: unknown option '$arg'!" >&2; \
-             printf '%s\n' "options: unit, gdb, arithmetic, runtime, full, list, san, nosan, asan, noasan, ubsan, noubsan, tsan, notsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
+             printf '%s\n' "options: unit, gdb, arithmetic, runtime, rng, full, list, san, nosan, asan, noasan, ubsan, noubsan, tsan, notsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
              exit 1 ;; \
         esac; \
       done; \

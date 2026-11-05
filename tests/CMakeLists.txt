@@ -160,7 +160,6 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_chrono.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_clock_tsc.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_random.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_random_combinatoric.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_pcg.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_splitmix.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_xoshiro.cpp
@@ -203,6 +202,41 @@ if(CAT_BUILD_UNIT_TESTS)
     UnitTests
     PROPERTIES
       LABELS "unit")
+
+  # The combinatorial RNG matrix gets its own test binary, which takes a long
+  # time to compile. It is not built by default. Instead, CTest builds it as a
+  # fixture whenever `RandomMatrixTests` is selected, such as by `just test rng`
+  # or `just test full`.
+  add_executable(
+    random_matrix_tests
+    EXCLUDE_FROM_ALL
+    unit_tests.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_random_combinatoric.cpp)
+  target_link_libraries(random_matrix_tests PRIVATE cat-tests-base)
+  if(CAT_PCH)
+    if(CAT_USE_SHARED)
+      target_precompile_headers(random_matrix_tests REUSE_FROM cat-impl-shared)
+    else()
+      target_precompile_headers(random_matrix_tests REUSE_FROM cat-impl)
+    endif()
+  endif()
+  add_test(
+    NAME BuildRandomMatrixTests
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config $<CONFIG>
+      --target random_matrix_tests)
+  # The compile can outlast a `ctest --timeout` meant for running tests.
+  set_tests_properties(
+    BuildRandomMatrixTests
+    PROPERTIES
+      FIXTURES_SETUP random_matrix
+      TIMEOUT 3600
+      LABELS "random")
+  add_test(NAME RandomMatrixTests COMMAND random_matrix_tests)
+  set_tests_properties(
+    RandomMatrixTests
+    PROPERTIES
+      FIXTURES_REQUIRED random_matrix
+      LABELS "random")
 
   # A PIE linked with `libcat.ld` alone, without libCat or sanitizers, so that
   # its `.got` and `.tdata` are empty.
