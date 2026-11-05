@@ -62,8 +62,8 @@ runs:
         MISE_HTTP_TIMEOUT: 120
       run: |
         set -eu
-        cc=$(mise exec -- command -v clang)
-        cxx=$(mise exec -- command -v clang++)
+        cc=$(mise exec -- bash -c 'command -v clang')
+        cxx=$(mise exec -- bash -c 'command -v clang++')
         mise bin-paths >> "${GITHUB_PATH}"
         echo "CC=${cc}" >> "${GITHUB_ENV}"
         echo "CXX=${cxx}" >> "${GITHUB_ENV}"
