@@ -154,7 +154,7 @@ struct io_uring_params {
    cat::uint4 sq_thread_idle;
    io_uring_features features;
    cat::uint4 wq_fd;
-   cat::uint4 _[3];
+   cat::uint4 _[3];  // NOLINT
    io_sqring_offsets sq_off;
    io_cqring_offsets cq_off;
 };
@@ -483,19 +483,19 @@ struct io_uring_sqe {
 
       struct {
          cat::uint2 address_length;
-         cat::uint2 _[1];
+         cat::uint2 _[1];  // NOLINT
       };
 
       struct {
          cat::uint1 write_stream;
-         cat::uint1 _[3];
+         cat::uint1 _[3];  // NOLINT
       };
    };
 
    union {
       struct {
          cat::uint8 address_3;
-         cat::uint8 _[1];
+         cat::uint8 _[1];  // NOLINT
       };
 
       struct {
@@ -541,7 +541,7 @@ enum class [[clang::enum_extensibility(
 
 struct io_uring_files_update {
    cat::uint4 offset;
-   cat::uint4 _;
+   cat::uint4 _ = 0u;
    cat::uint8 file_descriptors;
 };
 
@@ -559,7 +559,7 @@ struct io_uring_region_descriptor {
    cat::uint4 flags;
    cat::uint4 id;
    cat::uint8 mmap_offset;
-   cat::uint8 _[4];
+   cat::uint8 _[4];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_region_descriptor) == 64);
@@ -575,7 +575,7 @@ enum class
 struct io_uring_memory_region_registration {
    cat::uint8 region_pointer;
    io_uring_memory_region_flags flags;
-   cat::uint8 _[2];
+   cat::uint8 _[2];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_memory_region_registration) == 32);
@@ -591,7 +591,7 @@ enum class
 struct io_uring_resource_register {
    cat::uint4 count;
    io_uring_resource_register_flags flags;
-   cat::uint8 _;
+   cat::uint8 _ = 0u;
    cat::uint8 data;
    cat::uint8 tags;
 };
@@ -600,7 +600,7 @@ static_assert(sizeof(io_uring_resource_register) == 32);
 
 struct io_uring_resource_update {
    cat::uint4 offset;
-   cat::uint4 _;
+   cat::uint4 _ = 0u;
    cat::uint8 data;
 };
 
@@ -637,7 +637,7 @@ struct io_uring_probe {
    io_uring_opcode last_opcode;
    cat::uint1 operations_length;
    cat::uint2 _;
-   cat::uint4 _[3];
+   cat::uint4 _[3];  // NOLINT
    io_uring_probe_opcode operations[];
 };
 
@@ -663,7 +663,7 @@ struct io_uring_restriction {
    };
 
    cat::uint1 _;
-   cat::uint4 _[3];
+   cat::uint4 _[3];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_restriction) == 16);
@@ -671,7 +671,7 @@ static_assert(sizeof(io_uring_restriction) == 16);
 struct io_uring_task_restriction {
    cat::uint2 flags;
    cat::uint2 restriction_count;
-   cat::uint4 _[3];
+   cat::uint4 _[3];  // NOLINT
    io_uring_restriction restrictions[];
 };
 
@@ -679,7 +679,7 @@ static_assert(sizeof(io_uring_task_restriction) == 16);
 
 struct io_uring_clock_register {
    cat::uint4 clock_id;
-   cat::uint4 _[3];
+   cat::uint4 _[3];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_clock_register) == 16);
@@ -699,7 +699,7 @@ struct io_uring_clone_buffers {
    cat::uint4 source_offset;
    cat::uint4 destination_offset;
    cat::uint4 count;
-   cat::uint4 _[3];
+   cat::uint4 _[3];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_clone_buffers) == 32);
@@ -743,7 +743,7 @@ struct io_uring_buffer_register {
    cat::uint2 buffer_group_id;
    io_uring_buffer_ring_flags flags;
    cat::uint4 minimum_left;
-   cat::uint4 _[5];
+   cat::uint4 _[5];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_buffer_register) == 40);
@@ -751,7 +751,7 @@ static_assert(sizeof(io_uring_buffer_register) == 40);
 struct io_uring_buffer_status {
    cat::uint4 buffer_group;
    cat::uint4 head;
-   cat::uint4 _[8];
+   cat::uint4 _[8];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_buffer_status) == 40);
@@ -776,7 +776,7 @@ struct io_uring_napi {
    cat::uint4 busy_poll_timeout;
    cat::uint1 prefer_busy_poll;
    io_uring_napi_opcode opcode;
-   cat::uint1 _[2];
+   cat::uint1 _[2];  // NOLINT
    cat::uint4 opcode_parameter;
    cat::uint4 _;
 };
@@ -803,8 +803,8 @@ struct io_uring_registered_wait {
    io_uring_wait_flags flags;
    cat::uint8 signal_mask;
    cat::uint4 signal_mask_size;
-   cat::uint4 _[3];
-   cat::uint8 _[2];
+   cat::uint4 _[3];  // NOLINT
+   cat::uint8 _[2];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_registered_wait) == 64);
@@ -824,8 +824,8 @@ struct io_uring_sync_cancel_register {
    io_uring_async_cancel_flags flags;
    io_uring_timespec timeout;
    io_uring_opcode opcode;
-   cat::uint1 _[7];
-   cat::uint8 _[3];
+   cat::uint1 _[7];  // NOLINT
+   cat::uint8 _[3];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_sync_cancel_register) == 64);
@@ -884,7 +884,7 @@ struct io_uring_query_header {
    io_uring_query_opcode query_opcode;
    cat::uint4 size;
    cat::int4 result;
-   cat::uint4 _[3];
+   cat::uint4 _[3];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_query_header) == 40);
@@ -919,7 +919,7 @@ struct io_uring_query_zcrx_event {
    cat::uint4 statistics_size;
    cat::uint4 statistics_offset_alignment;
    cat::uint4 _;
-   cat::uint8 _[4];
+   cat::uint8 _[4];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_query_zcrx_event) == 48);
@@ -954,7 +954,7 @@ struct io_uring_zcrx_offsets {
    cat::uint4 tail;
    cat::uint4 refill_entries;
    cat::uint4 _;
-   cat::uint8 _[2];
+   cat::uint8 _[2];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_zcrx_offsets) == 32);
@@ -972,7 +972,7 @@ struct io_uring_zcrx_area_register {
    cat::uint8 refill_area_token;
    io_uring_zcrx_area_flags flags;
    cat::uint4 dma_buffer_file_descriptor;
-   cat::uint8 _[2];
+   cat::uint8 _[2];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_zcrx_area_register) == 48);
@@ -1022,7 +1022,7 @@ struct io_uring_zcrx_event_descriptor {
    cat::uint4 type_mask;
    io_uring_zcrx_event_descriptor_flags flags;
    cat::uint8 statistics_offset;
-   cat::uint8 _[9];
+   cat::uint8 _[9];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_zcrx_event_descriptor) == 96);
@@ -1038,7 +1038,7 @@ struct io_uring_zcrx_ifq_register {
    cat::uint4 zcrx_id;
    cat::uint4 receive_buffer_length;
    cat::uint8 event_descriptor;
-   cat::uint8 _[2];
+   cat::uint8 _[2];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_zcrx_ifq_register) == 96);
@@ -1053,17 +1053,17 @@ enum class [[clang::enum_extensibility(
 };
 
 struct io_uring_zcrx_control_flush {
-   cat::uint8 _[6];
+   cat::uint8 _[6];  // NOLINT
 };
 
 struct io_uring_zcrx_control_export {
    cat::uint4 zcrx_file_descriptor;
-   cat::uint4 _[11];
+   cat::uint4 _[11];  // NOLINT
 };
 
 struct io_uring_zcrx_control_arm_event {
    io_uring_zcrx_event_type event_type;
-   cat::uint4 _[11];
+   cat::uint4 _[11];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_zcrx_control_flush) == 48);
@@ -1073,7 +1073,7 @@ static_assert(sizeof(io_uring_zcrx_control_arm_event) == 48);
 struct io_uring_zcrx_control {
    cat::uint4 zcrx_id;
    io_uring_zcrx_control_opcode opcode;
-   cat::uint8 _[2];
+   cat::uint8 _[2];  // NOLINT
 
    union {
       io_uring_zcrx_control_export export_queue;
@@ -1089,7 +1089,7 @@ struct io_uring_bpf_context {
    io_uring_opcode opcode;
    io_uring_sqe_flags sqe_flags;
    cat::uint1 payload_size;
-   cat::uint1 _[5];
+   cat::uint1 _[5];  // NOLINT
 
    union {
       struct {
@@ -1107,7 +1107,7 @@ struct io_uring_bpf_context {
       struct {
          cat::uint4 family;
          cat::uint2 port;
-         cat::uint1 _[2];
+         cat::uint1 _[2];  // NOLINT
 
          union {
             cat::uint4 ipv4_address;
@@ -1132,9 +1132,9 @@ struct io_uring_bpf_filter {
    io_uring_bpf_flags flags;
    cat::uint4 filter_length;
    cat::uint1 payload_size;
-   cat::uint1 _[3];
+   cat::uint1 _[3];  // NOLINT
    cat::uint8 filter_pointer;
-   cat::uint8 _[5];
+   cat::uint8 _[5];  // NOLINT
 };
 
 static_assert(sizeof(io_uring_bpf_filter) == 64);

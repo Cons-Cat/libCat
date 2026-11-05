@@ -1,4 +1,5 @@
-#include <cat/io_uring>
+#include <cat/allocator_page>
+#include <cat/raii_io_uring>
 
 #include "../unit_tests.hpp"
 
@@ -6,16 +7,18 @@
 
 namespace {
 
+cat::allocator_page ring_pager;
+
 [[nodiscard]]
 auto
 make_ring(cat::uint4 entries = 8u, nix::io_uring_params params = {})
-   -> cat::scaredy<nix::io_uring, nix::linux_error> {
-   auto made = nix::make_io_uring(entries, params);
+   -> cat::scaredy<nix::raii::io_uring<>, nix::linux_error> {
+   auto made =
+      nix::raii::make_io_uring(cat::allocator_dyn(ring_pager), entries, params);
    if (made.is_empty()) {
       cat::verify(
          made.error() == nix::linux_error::perm
          || made.error() == nix::linux_error::nosys
-         || made.error() == nix::linux_error::opnotsupp
       );
    }
    return made;
@@ -23,19 +26,13 @@ make_ring(cat::uint4 entries = 8u, nix::io_uring_params params = {})
 
 [[nodiscard]]
 auto
-make_and_close_ring() -> nix::scaredy_nix<nix::file_descriptor> {
-   nix::io_uring ring =
-      $prop(nix::make_io_uring(4u));  // NOLINT(misc-const-correctness)
-   nix::file_descriptor const descriptor = ring.descriptor();
-   $defer {
-      ring.close().verify();
-   };
-   return descriptor;
+is_registered(nix::manual::io_uring const& ring) -> bool {
+   return (ring.params().flags & nix::io_uring_setup_flags::registered_fd_only)
+          != nix::io_uring_setup_flags::none;
 }
 
 void
-verify_empty(nix::io_uring const& ring) {
-   cat::verify(ring.descriptor().value == nix::invalid_file_descriptor.value);
+verify_empty(nix::manual::io_uring const& ring) {
    cat::verify(ring.params().sq_entries == 0u);
    cat::verify(ring.params().cq_entries == 0u);
    cat::verify(ring.params().flags == nix::io_uring_setup_flags::none);
@@ -43,33 +40,19 @@ verify_empty(nix::io_uring const& ring) {
 }
 
 void
-verify_setup(nix::io_uring const& ring, nix::io_uring_setup_flags flags) {
-   cat::verify(ring.descriptor().value != nix::invalid_file_descriptor.value);
+verify_setup(
+   nix::manual::io_uring const& ring, nix::io_uring_setup_flags flags
+) {
    cat::verify(ring.params().sq_entries != 0u);
    cat::verify(ring.params().cq_entries != 0u);
-   cat::verify(ring.params().flags == flags);
    cat::verify(
-      (ring.params().features & nix::io_uring_features::single_mmap)
-      != nix::io_uring_features::none
+      ring.params().flags
+      == (flags | nix::io_uring_setup_flags::no_mmap | nix::io_uring_setup_flags::registered_fd_only)
    );
 }
 
 void
-verify_open(nix::file_descriptor descriptor) {
-   cat::verify(
-      nix::sys_fcntl(descriptor, nix::fcntl_command::get_fd_flags).has_value()
-   );
-}
-
-void
-verify_closed(nix::file_descriptor descriptor) {
-   auto result = nix::sys_fcntl(descriptor, nix::fcntl_command::get_fd_flags);
-   cat::verify(result.is_empty());
-   cat::verify(result.error() == nix::linux_error::badf);
-}
-
-void
-queue_nop(nix::io_uring& ring, cat::uint8 user_data) {
+queue_nop(nix::manual::io_uring& ring, cat::uint8 user_data) {
    nix::io_uring_sqe* p_submission = ring.submission_queue().get_sqe();
    cat::verify(p_submission != nullptr);
    p_submission->opcode = nix::io_uring_opcode::nop;
@@ -77,7 +60,7 @@ queue_nop(nix::io_uring& ring, cat::uint8 user_data) {
 }
 
 void
-verify_nop_completion(nix::io_uring& ring, cat::uint8 user_data) {
+verify_nop_completion(nix::manual::io_uring& ring, cat::uint8 user_data) {
    nix::io_uring_cqe const* p_completion = ring.completion_queue().peek();
    cat::verify(p_completion != nullptr);
    cat::verify(p_completion->user_data == user_data);
@@ -86,7 +69,7 @@ verify_nop_completion(nix::io_uring& ring, cat::uint8 user_data) {
 }
 
 void
-complete_nop(nix::io_uring& ring, cat::uint8 user_data) {
+complete_nop(nix::manual::io_uring& ring, cat::uint8 user_data) {
    cat::verify(ring.submit_and_wait(1u).verify() == 1u);
    verify_nop_completion(ring, user_data);
 }
@@ -122,37 +105,14 @@ $test(syscall_io_uring) {
    nix::sys_close(ring).verify();
 }
 
-$test(io_uring_factory_rejects_no_mmap) {
-   nix::io_uring_params params{};
-   params.flags = nix::io_uring_setup_flags::no_mmap;
-
-   auto made = nix::make_io_uring(4u, params);
-   cat::verify(made.is_empty());
-   cat::verify(made.error() == nix::linux_error::inval);
-}
-
-$test(io_uring_factory_prop_defer) {
-   auto made = make_and_close_ring();
-   if (made.is_empty()) {
-      cat::verify(
-         made.error() == nix::linux_error::perm
-         || made.error() == nix::linux_error::nosys
-         || made.error() == nix::linux_error::opnotsupp
-      );
-      return;
-   }
-   verify_closed(made.value());
-}
-
 $test(io_uring_factory_and_queues) {
    auto made = make_ring();
    if (made.is_empty()) {
       return;
    }
-   nix::io_uring ring = cat::move(made).value();
+   nix::raii::io_uring<> ring = cat::move(made).value();
 
    verify_setup(ring, nix::io_uring_setup_flags::none);
-   verify_open(ring.descriptor());
    cat::verify(&ring.submission_queue() == &ring.submission_queue());
    cat::verify(&ring.completion_queue() == &ring.completion_queue());
 
@@ -203,7 +163,7 @@ $test(io_uring_factory_and_queues) {
    cat::verify(submission_queue.dropped_count() == 0u);
    cat::verify(submission_queue.space_left() == entries);
 
-   ring.close().verify();
+   ring.free();
    verify_empty(ring);
 }
 
@@ -212,7 +172,7 @@ $test(io_uring_submit_paths) {
    if (made.is_empty()) {
       return;
    }
-   nix::io_uring ring = cat::move(made).value();
+   nix::raii::io_uring<> ring = cat::move(made).value();
 
    cat::verify(ring.submit().verify() == 0u);
 
@@ -241,7 +201,7 @@ $test(io_uring_extended_entries) {
    if (made.is_empty()) {
       return;
    }
-   nix::io_uring ring = cat::move(made).value();
+   nix::raii::io_uring<> ring = cat::move(made).value();
 
    verify_setup(ring, params.flags);
    nix::io_uring_submission_queue& submission_queue = ring.submission_queue();
@@ -274,7 +234,7 @@ $test(io_uring_no_sq_array) {
    if (made.is_empty()) {
       return;
    }
-   nix::io_uring ring = cat::move(made).value();
+   nix::raii::io_uring<> ring = cat::move(made).value();
 
    verify_setup(ring, params.flags);
    cat::verify(ring.submission_queue().ready_count() == 0u);
@@ -292,7 +252,7 @@ $test(io_uring_completion_overflow) {
    if (made.is_empty()) {
       return;
    }
-   nix::io_uring ring = cat::move(made).value();
+   nix::raii::io_uring<> ring = cat::move(made).value();
    cat::verify(
       (ring.params().features & nix::io_uring_features::no_drop)
       != nix::io_uring_features::none
@@ -331,7 +291,7 @@ $test(io_uring_sq_poll_wakeup) {
    if (made.is_empty()) {
       return;
    }
-   nix::io_uring ring = cat::move(made).value();
+   nix::raii::io_uring<> ring = cat::move(made).value();
 
    for (cat::idx attempt = 0u;
         attempt < 100'000u && !ring.submission_queue().needs_wakeup();
@@ -346,63 +306,79 @@ $test(io_uring_sq_poll_wakeup) {
    verify_nop_completion(ring, 601u);
 }
 
-$test(io_uring_factory_independent_owners) {
-   auto made = make_ring();
+$test(io_uring_multiple_pages) {
+   // Queues spanning several pages need Linux 6.10.
+   auto made = make_ring(4'096u);
    if (made.is_empty()) {
       return;
    }
-   nix::io_uring ring = cat::move(made).value();
+   nix::raii::io_uring<> ring = cat::move(made).value();
+   cat::verify(ring.params().sq_entries == 4'096u);
 
-   nix::file_descriptor const first_descriptor = ring.descriptor();
-   queue_nop(ring, 701u);
-
-   nix::io_uring_params rejected_params{};
-   rejected_params.flags = nix::io_uring_setup_flags::no_mmap;
-   auto rejected = nix::make_io_uring(4u, rejected_params);
-   cat::verify(rejected.is_empty());
-   cat::verify(rejected.error() == nix::linux_error::inval);
-   cat::verify(ring.descriptor().value == first_descriptor.value);
-   complete_nop(ring, 701u);
-
-   auto second_made = make_ring(4u);
-   if (second_made.is_empty()) {
-      return;
+   for (cat::idx index = 0u; index < 4'096u; ++index) {
+      queue_nop(ring, 801u);
    }
-   nix::io_uring second = cat::move(second_made).value();
-   nix::file_descriptor const second_descriptor = second.descriptor();
-   cat::verify(second_descriptor.value != first_descriptor.value);
-   ring.close().verify();
-   verify_closed(first_descriptor);
-   verify_open(second_descriptor);
-   verify_setup(second, nix::io_uring_setup_flags::none);
-   queue_nop(second, 702u);
-   complete_nop(second, 702u);
+   cat::verify(ring.submit_and_wait(4'096u).verify() == 4'096u);
+   for (cat::idx index = 0u; index < 4'096u; ++index) {
+      verify_nop_completion(ring, 801u);
+   }
 }
 
-$test(io_uring_close_and_destruct) {
-   nix::file_descriptor descriptor;
+$test(io_uring_registered_slots_fallback) {
+   // A thread has 16 registered ring slots. Later rings use a descriptor.
+   cat::array<nix::manual::io_uring, 17u> rings;
+   cat::idx made_count = 0u;
+   $defer {
+      for (cat::idx index = 0u; index < made_count; ++index) {
+         rings[index].free(cat::allocator_dyn(ring_pager));
+      }
+   };
+   for (nix::manual::io_uring& ring : rings) {
+      auto made =
+         nix::manual::make_io_uring(cat::allocator_dyn(ring_pager), 4u);
+      if (made.is_empty()) {
+         return;
+      }
+      ring = cat::move(made).value();
+      ++made_count;
+   }
+
+   cat::verify(is_registered(rings[0]));
+   cat::verify(!is_registered(rings[16]));
+   for (nix::manual::io_uring& ring : rings) {
+      queue_nop(ring, 901u);
+      complete_nop(ring, 901u);
+   }
+
+   // Freeing a registered ring returns its slot.
+   rings[0].free(cat::allocator_dyn(ring_pager));
+   auto made = nix::manual::make_io_uring(cat::allocator_dyn(ring_pager), 4u);
+   cat::verify(made.has_value());
+   rings[0] = cat::move(made).value();
+   cat::verify(is_registered(rings[0]));
+}
+
+$test(io_uring_free_and_destruct) {
    {
       auto made = make_ring();
       if (made.is_empty()) {
          return;
       }
-      nix::io_uring const ring = cat::move(made).value();
-
-      descriptor = ring.descriptor();
-      verify_open(descriptor);
+      nix::raii::io_uring<> const ring = cat::move(made).value();
+      verify_setup(ring, nix::io_uring_setup_flags::none);
    }
-   verify_closed(descriptor);
 
    auto made = make_ring();
    if (made.is_empty()) {
       return;
    }
-   nix::io_uring ring = cat::move(made).value();
-   descriptor = ring.descriptor();
-   ring.close().verify();
+   nix::raii::io_uring<> ring = cat::move(made).value();
+   queue_nop(ring, 151u);
+   complete_nop(ring, 151u);
+   ring.cfree();
    verify_empty(ring);
-   verify_closed(descriptor);
-   ring.close().verify();
+   ring.free();
+   verify_empty(ring);
 }
 
 $test(io_uring_move_construct) {
@@ -410,48 +386,37 @@ $test(io_uring_move_construct) {
    if (made.is_empty()) {
       return;
    }
-   nix::io_uring source = cat::move(made).value();
-
-   nix::file_descriptor const descriptor = source.descriptor();
+   nix::raii::io_uring<> source = cat::move(made).value();
    queue_nop(source, 101u);
 
-   nix::io_uring moved = cat::move(source);
+   nix::raii::io_uring<> moved = cat::move(source);
    verify_empty(source);  // NOLINT(bugprone-use-after-move)
-   source.close().verify();
-   verify_open(descriptor);
+   source.free();
 
    complete_nop(moved, 101u);
-   moved.close().verify();
-   verify_closed(descriptor);
-   moved.close().verify();
+   moved.free();
+   verify_empty(moved);
+   moved.free();
 }
 
 $test(io_uring_move_assign) {
-   auto source_made = make_ring();
+   auto source_made = make_ring(4u);
    if (source_made.is_empty()) {
       return;
    }
-   nix::io_uring source = cat::move(source_made).value();
-   auto destination_made = make_ring();
+   nix::raii::io_uring<> source = cat::move(source_made).value();
+   auto destination_made = make_ring(8u);
    if (destination_made.is_empty()) {
       return;
    }
-   nix::io_uring destination = cat::move(destination_made).value();
-
-   nix::file_descriptor const source_descriptor = source.descriptor();
-   nix::file_descriptor const previous_descriptor = destination.descriptor();
+   nix::raii::io_uring<> destination = cat::move(destination_made).value();
    queue_nop(source, 102u);
 
    destination = cat::move(source);
    verify_empty(source);  // NOLINT(bugprone-use-after-move)
-   verify_closed(previous_descriptor);
-   source.close().verify();
-   verify_open(source_descriptor);
+   cat::verify(destination.params().sq_entries == 4u);
 
    complete_nop(destination, 102u);
-   destination.close().verify();
-   verify_closed(source_descriptor);
-   destination.close().verify();
 }
 
 $test(io_uring_self_move_assign) {
@@ -459,9 +424,7 @@ $test(io_uring_self_move_assign) {
    if (made.is_empty()) {
       return;
    }
-   nix::io_uring ring = cat::move(made).value();
-
-   nix::file_descriptor const descriptor = ring.descriptor();
+   nix::raii::io_uring<> ring = cat::move(made).value();
    cat::uint4 const entries = ring.params().sq_entries;
    queue_nop(ring, 103u);
 
@@ -470,47 +433,80 @@ $test(io_uring_self_move_assign) {
    ring = cat::move(ring);  // NOLINT
 #pragma clang diagnostic pop
 
-   cat::verify(ring.descriptor().value == descriptor.value);
    cat::verify(ring.params().sq_entries == entries);
-   verify_open(descriptor);
    complete_nop(ring, 103u);
-
-   ring.close().verify();
-   verify_closed(descriptor);
-   ring.close().verify();
 }
 
 $test(io_uring_swap) {
-   auto left_made = make_ring();
+   auto left_made = make_ring(4u);
    if (left_made.is_empty()) {
       return;
    }
-   nix::io_uring left = cat::move(left_made).value();
-   auto right_made = make_ring();
+   nix::raii::io_uring<> left = cat::move(left_made).value();
+   auto right_made = make_ring(8u);
    if (right_made.is_empty()) {
       return;
    }
-   nix::io_uring right = cat::move(right_made).value();
-
-   nix::file_descriptor const left_descriptor = left.descriptor();
-   nix::file_descriptor const right_descriptor = right.descriptor();
+   nix::raii::io_uring<> right = cat::move(right_made).value();
    queue_nop(left, 104u);
    queue_nop(right, 105u);
 
    left.swap(right);
-   cat::verify(left.descriptor().value == right_descriptor.value);
-   cat::verify(right.descriptor().value == left_descriptor.value);
+   cat::verify(left.params().sq_entries == 8u);
+   cat::verify(right.params().sq_entries == 4u);
    complete_nop(left, 105u);
    complete_nop(right, 104u);
+}
 
-   left.close().verify();
-   verify_closed(right_descriptor);
-   verify_open(left_descriptor);
-   left.close().verify();
+namespace {
 
-   right.close().verify();
-   verify_closed(left_descriptor);
-   right.close().verify();
+struct counted_operation : nix::io_uring_operation {
+   cat::int4 result;
+   cat::idx completions;
+};
+
+void
+count_completion(
+   nix::io_uring_operation& operation, nix::io_uring_cqe const& completion
+) noexcept {
+   auto& counted = static_cast<counted_operation&>(operation);
+   counted.result = completion.result;
+   ++counted.completions;
+}
+
+}  // namespace
+
+$test(io_uring_dispatch_and_files) {
+   auto made = make_ring();
+   if (made.is_empty()) {
+      return;
+   }
+   nix::raii::io_uring<> ring = cat::move(made).value();
+   ring.register_file_table(4u).verify();
+
+   // Fixed file slots are handed out and returned.
+   nix::file_descriptor pipe[2];
+   nix::sys_pipe(pipe).verify();
+   cat::uint4 const read_slot = ring.register_file(pipe[0]).verify();
+   cat::uint4 const write_slot = ring.register_file(pipe[1]).verify();
+   cat::verify(read_slot != write_slot);
+
+   // `dispatch()` hands each CQE to the operation in its `user_data`.
+   counted_operation first{{count_completion}, -1, 0u};
+   counted_operation second{{count_completion}, -1, 0u};
+   for (counted_operation* p_operation : {&first, &second}) {
+      nix::io_uring_sqe* p_submission = ring.submission_queue().get_sqe();
+      p_submission->opcode = nix::io_uring_opcode::nop;
+      p_submission->user_data = __builtin_bit_cast(cat::uword, p_operation);
+   }
+   ring.dispatch(2u).verify();
+   cat::verify(first.completions == 1u && first.result == 0);
+   cat::verify(second.completions == 1u && second.result == 0);
+
+   ring.unregister_file(read_slot).verify();
+   ring.unregister_file(write_slot).verify();
+   nix::sys_close(pipe[0]).verify();
+   nix::sys_close(pipe[1]).verify();
 }
 
 // NOLINTEND(readability-magic-numbers)

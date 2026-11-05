@@ -1,0 +1,104 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `nix::raii::io_uring` wraps a `nix::manual::io_uring` and binds the allocator
+// which holds its queues for the lifetime of the ring.
+//
+// As this is an `raii` namespace container, its destructor deallocates storage
+// automatically through the bound allocator.
+
+#include <cat/io_uring>
+
+namespace nix::raii {
+
+// A `manual::io_uring` which frees its ring into its allocator when destroyed
+// or assigned over. Outstanding operations are not submitted, drained, or
+// cancelled, so they must have completed first.
+template <cat::is_allocator Allocator = cat::allocator_dyn>
+class [[gsl::Owner]]
+io_uring : public manual::io_uring {
+ public:
+   // Take ownership of `ring`, whose memory came from `allocator`.
+   io_uring(
+      cat::allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+      ,
+      manual::io_uring&& ring
+   ) noexcept
+       : manual::io_uring(cat::move(ring)), m_allocator(allocator) {
+   }
+
+   io_uring(io_uring&&) = default;
+
+   ~io_uring() {
+      free();
+   }
+
+   // Free the owned ring, then transfer `other` and leave it empty.
+   [[clang::reinitializes]]
+   auto
+   operator=(io_uring&& other) noexcept -> io_uring& {
+      if (this != __builtin_addressof(other)) {
+         free();
+         manual::io_uring::operator=(cat::move(other));
+         m_allocator = other.m_allocator;
+      }
+
+      return *this;
+   }
+
+   // See `manual::io_uring::free()`.
+   [[clang::reinitializes]]
+   void
+   free() noexcept(!__has_feature(cxx_exceptions)) {
+      manual::io_uring::free<Allocator>(m_allocator);
+   }
+
+   // See `manual::io_uring::cfree()`.
+   [[clang::reinitializes]]
+   void
+   cfree() noexcept(!__has_feature(cxx_exceptions)) {
+      manual::io_uring::cfree<Allocator>(m_allocator);
+   }
+
+   // Release ownership of the ring to a `manual::io_uring`, which must later
+   // be freed with this allocator.
+   [[nodiscard, clang::reinitializes]]
+   auto
+   release() noexcept -> manual::io_uring {
+      return manual::io_uring(cat::move(*this));
+   }
+
+ private:
+   [[no_unique_address]]
+   cat::allocator_ref<Allocator> m_allocator;
+};
+
+// Create an owning ring with its queues in memory from `allocator`, which must
+// outlive it.
+template <cat::is_allocator Allocator>
+[[nodiscard]]
+auto
+make_io_uring(
+   cat::allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   cat::uint4 entries, io_uring_params params = {}
+) noexcept(!__has_feature(cxx_exceptions))
+   -> cat::scaredy<io_uring<Allocator>, linux_error> {
+   return io_uring<Allocator>(
+      allocator,
+      $prop(manual::make_io_uring<Allocator>(allocator, entries, params))
+   );
+}
+
+// Create an owning ring with its queues in memory from `allocator`, which must
+// outlive it.
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+inline auto
+make_io_uring(
+   cat::allocator_dyn allocator, cat::uint4 entries, io_uring_params params = {}
+) noexcept(!__has_feature(cxx_exceptions))
+   -> cat::scaredy<io_uring<>, linux_error> {
+   return raii::make_io_uring<cat::allocator_dyn>(allocator, entries, params);
+}
+
+}  // namespace nix::raii

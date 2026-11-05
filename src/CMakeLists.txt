@@ -454,6 +454,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/limits/cat/limits
   ${CATLIB}/linux/cat/inode
   ${CATLIB}/linux/cat/io_uring
+  ${CATLIB}/linux/cat/raii_io_uring
   ${CATLIB}/linux/cat/linux
   ${CATLIB}/linux/cat/raii_process
   ${CATLIB}/linux/cat/detail/vdso.hpp

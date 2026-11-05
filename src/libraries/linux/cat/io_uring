@@ -2,24 +2,45 @@
 // vim: set ft=cpp:
 #pragma once
 
-// `nix::io_uring` is a lightweight RAII interface to a Linux `io_uring`
-// instance. It uses a single submission and completion queue ring allocation
-// rather than splitting it into two allocations like many implementations.
+// `nix::io_uring` is a lightweight interface to a Linux `io_uring` instance. It
+// leverages many optimizations from modern Linux, and it is recommended to use
+// with at least Linux 6.13.
 //
-// Queue references and SQE/CQE pointers borrow storage from their `io_uring`.
-// They must not outlive the owner or be retained across its move, swap, or
-// close. An SQE must not be used after submission, and a CQE must not be used
-// after the completion queue advances past it. Queue cursor access is not
-// internally synchronized, so access to each queue must be serialized, and
-// move, swap, close, and destruction must not race with access to either queue.
+// It is NOT thread-safe, and for performance and safety reasons it is
+// recommended that all instances are `thread_local` if in a multi-threaded
+// application.
 //
-// TODO: We should support an alternative `no_mmap` implementation.
+// As this is a `manual` namespace type, its destructor does not deallocate
+// storage. To deallocate it and release from the kernel, call
+// `.free(allocator)` or
+// `.cfree(allocator)`.
+//
+// The `nix::raii::io_uring` deallocates its own memory automatically.
+//
+// Queue references and pointers to Submission Queue Events and Completion Queue
+// Events borrow storage from their `io_uring`. They must not outlive the owner
+// or be retained across its `move`, `swap`, or `free`. An SQE must not be used
+// after submission, and a CQE must not be used after the completion queue
+// advances past it.
 
+#include <cat/allocator_parameters>
 #include <cat/linux>
 
 namespace nix {
 
+inline namespace manual {
 class io_uring;
+}  // namespace manual
+
+// An operation submitted to a ring that other code shares. An SQE's
+// `user_data` holds the address of one of these, and `.dispatch()`
+// passes that SQE's CQE to `p_complete`. Embed this in a larger struct to keep
+// per-operation state.
+struct io_uring_operation {
+   void (*_Nonnull p_complete)(
+      io_uring_operation& operation, io_uring_cqe const& completion
+   ) noexcept;
+};
 
 class io_uring_submission_queue {
  public:
@@ -42,7 +63,14 @@ class io_uring_submission_queue {
       auto* p_sqe = __builtin_bit_cast(
          io_uring_sqe* _Nonnull, m_p_sqes + index * m_sqe_stride
       );
-      __builtin_memset(p_sqe, 0, m_sqe_stride);
+
+      // Constant sizes let the zeroing inline.
+      if (m_sqe_stride == sizeof(io_uring_sqe)) {
+         __builtin_memset_inline(p_sqe, 0, sizeof(io_uring_sqe));
+      } else {
+         __builtin_memset_inline(p_sqe, 0, sizeof(io_uring_sqe) * 2u);
+      }
+
       m_sqe_tail = m_sqe_tail.wrap() + 1u;
       return p_sqe;
    }
@@ -60,6 +88,7 @@ class io_uring_submission_queue {
       ) {
          return get_sqe();
       }
+
       if (
          (m_setup_flags & io_uring_setup_flags::sqe_mixed)
          == io_uring_setup_flags::none
@@ -86,7 +115,7 @@ class io_uring_submission_queue {
       auto* p_sqe = __builtin_bit_cast(
          io_uring_sqe* _Nonnull, m_p_sqes + large_index * sizeof(io_uring_sqe)
       );
-      __builtin_memset(p_sqe, 0, sizeof(io_uring_sqe) * 2u);
+      __builtin_memset_inline(p_sqe, 0, sizeof(io_uring_sqe) * 2u);
       m_sqe_tail = m_sqe_tail.wrap() + 2u;
       return p_sqe;
    }
@@ -144,6 +173,27 @@ class io_uring_submission_queue {
       return submitted;
    }
 
+   // Return the SQ slots published by `.flush()` that Linux has not consumed
+   // yet. A failed `io_uring_enter` leaves them for the next one.
+   [[nodiscard]]
+   auto
+   unconsumed_count() const noexcept(!__has_feature(cxx_exceptions))
+      -> cat::uint4 {
+      cat::uint4 const head =
+         cat::atomic<cat::uint4&>(*m_p_head).load(cat::memory_order::acquire);
+      return m_sqe_head.wrap() - head;
+   }
+
+   // Report whether completions wait for this thread to enter the ring. Linux
+   // only reports this for rings set up with `taskrun_flag`.
+   [[nodiscard]]
+   auto
+   has_task_work() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
+      cat::uint4 const flags =
+         cat::atomic<cat::uint4&>(*m_p_flags).load(cat::memory_order::relaxed);
+      return (flags & cat::to_underlying(io_uring_sq_flags::taskrun)) != 0u;
+   }
+
    // Report whether the kernel currently requests an SQ polling thread wakeup.
    [[nodiscard]]
    auto
@@ -163,7 +213,7 @@ class io_uring_submission_queue {
    }
 
  private:
-   friend class io_uring;
+   friend class manual::io_uring;
 
    cat::uint4* _Nullable m_p_head = nullptr;
    cat::uint4* _Nullable m_p_tail = nullptr;
@@ -208,6 +258,7 @@ class io_uring_completion_queue {
          ) {
             return p_cqe;
          }
+
          advance();
       }
    }
@@ -219,6 +270,7 @@ class io_uring_completion_queue {
    advance() noexcept(!__has_feature(cxx_exceptions)) {
       io_uring_cqe const* p_cqe = current();
       cat::uint4 step = 1u;
+
       if (
          (m_setup_flags & io_uring_setup_flags::cqe_mixed)
             != io_uring_setup_flags::none
@@ -227,6 +279,7 @@ class io_uring_completion_queue {
       ) {
          step = 2u;
       }
+
       m_cqe_head = m_cqe_head.wrap() + step;
       cat::atomic<cat::uint4&>(*m_p_head).store(
          m_cqe_head, cat::memory_order::release
@@ -252,7 +305,7 @@ class io_uring_completion_queue {
    }
 
  private:
-   friend class io_uring;
+   friend class manual::io_uring;
 
    [[nodiscard]]
    auto
@@ -273,24 +326,28 @@ class io_uring_completion_queue {
    io_uring_setup_flags m_setup_flags = io_uring_setup_flags::none;
 };
 
+inline namespace manual {
+
 class [[gsl::Owner]] io_uring {
  public:
+   // Construct an empty owner. `make_io_uring()` creates a ring.
+   io_uring() = default;
+
    // Transfer the complete ring into this owner and leave `other` empty.
    io_uring(io_uring&& other);
 
    // Ring ownership cannot be copied.
    io_uring(io_uring const&) = delete;
 
-   // Release mappings and the descriptor. Cleanup errors are discarded and
-   // outstanding operations are not submitted, drained, or cancelled.
-   ~io_uring();
+   // This does not release the ring, so call `.free(allocator)` first.
+   ~io_uring() = default;
 
    // Ring ownership cannot be copied.
    auto
    operator=(io_uring const&) noexcept -> io_uring& = delete;
 
-   // Release any currently owned ring, transfer `other`, and leave it empty.
-   // Self-assignment leaves the ring unchanged.
+   // Transfer `other` and leave it empty. This must not own a ring, so call
+   // `.free(allocator)` first. Self-assignment leaves the ring unchanged.
    [[clang::reinitializes]]
    auto
    operator=(io_uring&& other) noexcept -> io_uring&;
@@ -313,20 +370,12 @@ class [[gsl::Owner]] io_uring {
       return m_completion_queue;
    }
 
-   // Return the kernel-filled setup parameters. They reset on close. The
+   // Return the kernel-filled setup parameters. They reset on free. The
    // reference requires unchanged ring state.
    [[nodiscard]]
    auto
    params() const noexcept [[clang::lifetimebound]] -> io_uring_params const& {
       return m_params;
-   }
-
-   // Return the owned descriptor value without transferring it. An empty owner
-   // returns `invalid_file_descriptor`.
-   [[nodiscard]]
-   auto
-   descriptor() const noexcept -> file_descriptor {
-      return m_file_descriptor;
    }
 
    // Enter Linux with the supplied counts and flags without flushing local SQ
@@ -356,11 +405,80 @@ class [[gsl::Owner]] io_uring {
       io_uring_enter_flags flags = io_uring_enter_flags::none
    ) noexcept -> scaredy_nix<cat::idx>;
 
-   // Attempt every unmap and close, returning the first cleanup error. The
-   // owner becomes empty even on error. Queue references must not be retained.
+   // Submit pending SQEs, wait until at least `minimum_complete` CQEs are
+   // ready, then pass every ready CQE to the `io_uring_operation` that its
+   // `user_data` points to. Interruptions and a full completion queue are not
+   // errors here, because collecting completions is how they are resolved, so
+   // callers wait again until their operations complete. An error means the
+   // ring cannot be used, and its operations may never complete.
    [[nodiscard]]
    auto
-   close() noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<void>;
+   dispatch(cat::uint4 minimum_complete) noexcept -> scaredy_nix<void>;
+
+   // Register a fixed file table of `count` empty slots, which
+   // `.register_file()` or a `files_update` operation fills.
+   [[nodiscard]]
+   auto
+   register_file_table(cat::uint4 count) noexcept -> scaredy_nix<void>;
+
+   // Put `descriptor` in a free fixed file slot, and return that slot's index
+   // for SQEs flagged with `io_uring_sqe_flags::fixed_file`.
+   [[nodiscard]]
+   auto
+   register_file(file_descriptor descriptor) noexcept
+      -> scaredy_nix<cat::uint4>;
+
+   // Empty a slot filled by `.register_file()`. This drops the ring's
+   // reference to that file once no submitted operation uses it.
+   [[nodiscard]]
+   auto
+   unregister_file(cat::uint4 index) noexcept -> scaredy_nix<void>;
+
+   // Destroy the ring, then deallocate its memory from `allocator`. Every
+   // submitted operation must have completed first, because Linux writes their
+   // completions into this memory. This leaves the owner empty, and does
+   // nothing if it already is. Queue references must not be retained.
+   template <cat::is_allocator Allocator>
+   [[clang::reinitializes]]
+   void
+   free(cat::allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
+      cat::span<cat::byte> const memory = destroy();
+      if (memory.data() != nullptr) {
+         allocator.free_multi(memory);
+      }
+   }
+
+   // Destroy the ring, then deallocate its memory from `allocator`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   void
+   free(cat::allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
+      free<cat::allocator_dyn>(allocator);
+   }
+
+   // Destroy the ring, then zero and deallocate its memory from `allocator`.
+   // The same requirements as `.free()` apply.
+   template <cat::is_allocator Allocator>
+   [[clang::reinitializes]]
+   void
+   cfree(cat::allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
+      cat::span<cat::byte> const memory = destroy();
+      if (memory.data() != nullptr) {
+         allocator.cfree_multi(memory);
+      }
+   }
+
+   // Destroy the ring, then zero and deallocate its memory from `allocator`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   void
+   cfree(cat::allocator_dyn allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
+      cfree<cat::allocator_dyn>(allocator);
+   }
 
    // Exchange complete ring ownership and queue state. Existing queue
    // references and mapped entry pointers must not be retained.
@@ -368,33 +486,93 @@ class [[gsl::Owner]] io_uring {
    swap(io_uring& other);
 
  private:
+   template <cat::is_allocator Allocator>
    friend auto
-   make_io_uring(cat::uint4 entries, io_uring_params params) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> cat::scaredy<io_uring, linux_error>;
+   make_io_uring(
+      cat::allocator_ref<Allocator> allocator, cat::uint4 entries,
+      io_uring_params params
+   ) noexcept(!__has_feature(cxx_exceptions))
+      -> cat::scaredy<io_uring, linux_error>;
 
-   io_uring() = default;
+   // The SQE array comes first, then the rings, each starting on a page.
+   struct memory_layout {
+      cat::idx sqe_size;
+      cat::idx ring_size;
+   };
+
+   // Mirror Linux's sizing of the queues that `make_io_uring()` requests.
+   [[nodiscard]]
+   static auto
+   layout(cat::uint4 entries, io_uring_params const& params) noexcept
+      -> cat::scaredy<memory_layout, linux_error>;
 
    [[nodiscard, clang::reinitializes]]
    auto
-   setup(cat::uint4 entries, io_uring_params params) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> scaredy_nix<void>;
+   setup(
+      cat::span<cat::byte> memory, memory_layout layout, cat::uint4 entries,
+      io_uring_params params
+   ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<void>;
 
-   file_descriptor m_file_descriptor = invalid_file_descriptor;
+   // Destroy the ring and empty this owner, returning its memory.
+   [[nodiscard, clang::reinitializes]]
+   auto
+   destroy() noexcept(!__has_feature(cxx_exceptions)) -> cat::span<cat::byte>;
+
+   // Call `io_uring_register` on this ring, however it is identified.
+   [[nodiscard]]
+   auto
+   register_with_ring(
+      io_uring_register_op operation, void* _Nullable p_argument,
+      cat::uint4 count
+   ) noexcept -> scaredy_nix<cat::idx>;
+
+   // A registered ring index, unless `m_enter_flags` is `none`, in which case
+   // this is a plain descriptor.
+   file_descriptor m_ring = invalid_file_descriptor;
+   io_uring_enter_flags m_enter_flags = io_uring_enter_flags::none;
    io_uring_params m_params{};
    io_uring_submission_queue m_submission_queue;
    io_uring_completion_queue m_completion_queue;
-   cat::span<cat::byte> m_ring_mapping = nullptr;
-   cat::span<cat::byte> m_sqe_mapping = nullptr;
+   cat::span<cat::byte> m_memory = nullptr;
 };
 
-// Create and map an owning ring using `entries` and the supplied parameters.
-// Failure releases every resource acquired during initialization.
+// Create an owning ring using `entries` and the supplied parameters, with its
+// queues in memory from `allocator`. Failure releases everything acquired.
+template <cat::is_allocator Allocator>
 [[nodiscard]]
 auto
-make_io_uring(cat::uint4 entries, io_uring_params params = {}) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> cat::scaredy<io_uring, linux_error>;
+make_io_uring(
+   cat::allocator_ref<Allocator> allocator, cat::uint4 entries,
+   io_uring_params params = {}
+) noexcept(!__has_feature(cxx_exceptions))
+   -> cat::scaredy<io_uring, linux_error> {
+   io_uring::memory_layout const layout =
+      $prop(io_uring::layout(entries, params));
+   cat::span<cat::byte> const memory = $prop_as(
+      allocator.template align_alloc_multi<cat::byte>(
+         cat::page_size, layout.sqe_size + layout.ring_size
+      ),
+      linux_error::nomem
+   );
+   io_uring ring;
+   scaredy_nix<void> const set_up = ring.setup(memory, layout, entries, params);
+   if (set_up.is_empty()) {
+      allocator.free_multi(memory);
+      return set_up.error();
+   }
+   return cat::move(ring);
+}
+
+// Create an owning ring with its queues in memory from `allocator`.
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+inline auto
+make_io_uring(
+   cat::allocator_dyn allocator, cat::uint4 entries, io_uring_params params = {}
+) noexcept(!__has_feature(cxx_exceptions))
+   -> cat::scaredy<io_uring, linux_error> {
+   return manual::make_io_uring<cat::allocator_dyn>(allocator, entries, params);
+}
+
+}  // namespace manual
 
 }  // namespace nix
