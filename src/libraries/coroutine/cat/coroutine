@@ -1,0 +1,472 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// This file provides low-level standard coroutine support. Coroutines can be
+// allocated by `cat::make_coroutine()`, which hooks `operator new` into cat
+// allocator machinery. This permits HALO to participate.
+
+#include <cat/allocator>
+#include <cat/allocator_parameters>
+#include <cat/compare>
+
+// Clang looks up `std::coroutine_traits` and `std::coroutine_handle` by name
+// to lower `co_await`, `co_yield`, and `co_return`, so they must live in `std`.
+// NOLINTBEGIN(bugprone-std-namespace-modification)
+
+namespace std {
+
+// Find a coroutine's `promise_type` from its signature.
+template <typename Return, typename... Args>
+struct coroutine_traits {};
+
+template <typename Return, typename... Args>
+   requires(requires { typename Return::promise_type; })
+struct coroutine_traits<Return, Args...> {
+   using promise_type = Return::promise_type;
+};
+
+template <typename Promise = void>
+struct coroutine_handle;
+
+// A type-erased handle to a coroutine frame.
+template <>
+struct coroutine_handle<void> {
+   constexpr coroutine_handle() noexcept = default;
+
+   constexpr coroutine_handle(typeof(nullptr)) noexcept {
+   }
+
+   constexpr auto
+   operator=(typeof(nullptr)) noexcept -> coroutine_handle& {
+      m_p_frame = nullptr;
+      return *this;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   address() const noexcept -> void* _Nullable {
+      return m_p_frame;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   from_address(void* _Nullable p_address) noexcept -> coroutine_handle {
+      coroutine_handle handle;
+      handle.m_p_frame = p_address;
+      return handle;
+   }
+
+   constexpr explicit
+   operator bool() const noexcept {
+      return m_p_frame != nullptr;
+   }
+
+   // A coroutine is done once it suspends at its final suspend point.
+   [[nodiscard]]
+   auto
+   done() const noexcept -> bool {
+      return __builtin_coro_done(m_p_frame);
+   }
+
+   void
+   operator()() const {
+      resume();
+   }
+
+   void
+   resume() const {
+      __builtin_coro_resume(m_p_frame);
+   }
+
+   void
+   destroy() const {
+      __builtin_coro_destroy(m_p_frame);
+   }
+
+ private:
+   void* _Nullable m_p_frame = nullptr;
+};
+
+// Every `coroutine_handle` converts to `coroutine_handle<>`, so these compare
+// any two handles by their frames, including `nullptr`.
+[[nodiscard]]
+constexpr auto
+operator==(coroutine_handle<> lhs, coroutine_handle<> rhs) noexcept -> bool {
+   return lhs.address() == rhs.address();
+}
+
+[[nodiscard]]
+constexpr auto
+operator<=>(coroutine_handle<> lhs, coroutine_handle<> rhs) noexcept
+   -> strong_ordering {
+   return lhs.address() <=> rhs.address();
+}
+
+// A handle to a coroutine frame whose promise is `Promise`.
+template <typename Promise>
+struct coroutine_handle {
+   constexpr coroutine_handle() noexcept = default;
+
+   constexpr coroutine_handle(typeof(nullptr)) noexcept {
+   }
+
+   constexpr auto
+   operator=(typeof(nullptr)) noexcept -> coroutine_handle& {
+      m_p_frame = nullptr;
+      return *this;
+   }
+
+   // The promise lives at a fixed offset in its frame.
+   [[nodiscard]]
+   static auto
+   from_promise(Promise& promise) noexcept -> coroutine_handle {
+      coroutine_handle handle;
+      handle.m_p_frame = __builtin_coro_promise(
+         __builtin_addressof(promise), alignof(Promise), true
+      );
+      return handle;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   address() const noexcept -> void* _Nullable {
+      return m_p_frame;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   from_address(void* _Nullable p_address) noexcept -> coroutine_handle {
+      coroutine_handle handle;
+      handle.m_p_frame = p_address;
+      return handle;
+   }
+
+   constexpr
+   operator coroutine_handle<>() const noexcept {
+      return coroutine_handle<>::from_address(m_p_frame);
+   }
+
+   constexpr explicit
+   operator bool() const noexcept {
+      return m_p_frame != nullptr;
+   }
+
+   [[nodiscard]]
+   auto
+   done() const noexcept -> bool {
+      return __builtin_coro_done(m_p_frame);
+   }
+
+   void
+   operator()() const {
+      resume();
+   }
+
+   void
+   resume() const {
+      __builtin_coro_resume(m_p_frame);
+   }
+
+   void
+   destroy() const {
+      __builtin_coro_destroy(m_p_frame);
+   }
+
+   [[nodiscard]]
+   auto
+   promise() const -> Promise& {
+      return *static_cast<Promise*>(
+         __builtin_coro_promise(m_p_frame, alignof(Promise), false)
+      );
+   }
+
+ private:
+   void* _Nullable m_p_frame = nullptr;
+};
+
+// The promise of a coroutine that does nothing when resumed or destroyed.
+struct noop_coroutine_promise {};
+
+// A noop coroutine is never done, and resuming or destroying it is a no-op.
+template <>
+struct coroutine_handle<noop_coroutine_promise> {
+   constexpr explicit
+   operator bool() const noexcept {
+      return true;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   done() const noexcept -> bool {
+      return false;
+   }
+
+   constexpr void
+   operator()() const noexcept {
+   }
+
+   constexpr void
+   resume() const noexcept {
+   }
+
+   constexpr void
+   destroy() const noexcept {
+   }
+
+   // `__builtin_coro_noop()`'s frame has no storage for a promise, so this
+   // returns a promise which lives outside of it. Every noop promise is
+   // stateless.
+   [[nodiscard]]
+   auto
+   promise() const noexcept -> noop_coroutine_promise& {
+      static constinit noop_coroutine_promise promise;
+      return promise;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   address() const noexcept -> void* _Nonnull {
+      return m_p_frame;
+   }
+
+   constexpr
+   operator coroutine_handle<>() const noexcept {
+      return coroutine_handle<>::from_address(m_p_frame);
+   }
+
+ private:
+   friend auto
+   noop_coroutine() noexcept -> coroutine_handle<noop_coroutine_promise>;
+
+   coroutine_handle() noexcept = default;
+
+   void* _Nonnull m_p_frame = __builtin_coro_noop();
+};
+
+using noop_coroutine_handle = coroutine_handle<noop_coroutine_promise>;
+
+[[nodiscard]]
+inline auto
+noop_coroutine() noexcept -> noop_coroutine_handle {
+   return {};
+}
+
+struct suspend_never {
+   [[nodiscard]]
+   constexpr auto
+   await_ready() const noexcept -> bool {
+      return true;
+   }
+
+   constexpr void
+   await_suspend(coroutine_handle<> /*unused*/) const noexcept {
+   }
+
+   constexpr void
+   await_resume() const noexcept {
+   }
+};
+
+struct suspend_always {
+   [[nodiscard]]
+   constexpr auto
+   await_ready() const noexcept -> bool {
+      return false;
+   }
+
+   constexpr void
+   await_suspend(coroutine_handle<> /*unused*/) const noexcept {
+   }
+
+   constexpr void
+   await_resume() const noexcept {
+   }
+};
+
+}  // namespace std
+
+// NOLINTEND(bugprone-std-namespace-modification)
+
+namespace cat {
+
+using std::coroutine_handle;
+using std::coroutine_traits;
+using std::noop_coroutine;
+using std::noop_coroutine_handle;
+using std::noop_coroutine_promise;
+using std::suspend_always;
+using std::suspend_never;
+
+namespace detail {
+
+struct coro_frame_allocator {
+   void* _Nullable p_handle = nullptr;
+   auto (*_Nullable p_allocate)(void* _Nonnull, idx)
+      -> void* _Nullable = nullptr;
+};
+
+inline constinit thread_local coro_frame_allocator current_coro_frame_allocator;
+
+using frame_free = void (*_Nonnull)(void* _Nonnull, idx);
+
+// A coroutine frame is followed by a `frame_tail`, which holds a copy of the
+// allocator handle that allocated it, and the function that frees it.
+template <typename Handle>
+struct frame_tail {
+   frame_free p_free;
+   Handle handle;
+};
+
+// Every `frame_tail` starts at the same offset, so `operator delete` can find
+// its `p_free` without knowing its handle's type.
+[[nodiscard]]
+constexpr auto
+frame_tail_offset(idx frame_size) -> idx {
+   return align_up(frame_size, alignof(frame_free));
+}
+
+template <typename Handle>
+[[nodiscard]]
+constexpr auto
+frame_allocation_size(idx frame_size) -> idx {
+   static_assert(alignof(frame_tail<Handle>) == alignof(frame_free));
+   return frame_tail_offset(frame_size) + idx(sizeof(frame_tail<Handle>));
+}
+
+template <typename Handle>
+[[nodiscard]]
+auto
+frame_tail_of(void* _Nonnull p_frame, idx frame_size)
+   -> frame_tail<Handle>* _Nonnull {
+   return reinterpret_cast<frame_tail<Handle>*>(
+      static_cast<byte*>(p_frame) + frame_tail_offset(frame_size)
+   );
+}
+
+template <typename Handle>
+void
+free_frame(void* _Nonnull p_frame, idx frame_size) {
+   Handle handle = frame_tail_of<Handle>(p_frame, frame_size)->handle;
+   handle.free(span(
+      static_cast<byte*>(p_frame), frame_allocation_size<Handle>(frame_size)
+   ));
+}
+
+// Allocate a frame from the `Handle` at `p_handle`, or return `nullptr` if that
+// fails.
+template <typename Handle>
+auto
+allocate_frame(void* _Nonnull p_handle, idx frame_size) -> void* _Nullable {
+   Handle& handle = *static_cast<Handle*>(p_handle);
+   maybe memory = handle.template align_alloc_multi<byte>(
+      __STDCPP_DEFAULT_NEW_ALIGNMENT__,
+      frame_allocation_size<Handle>(frame_size)
+   );
+   if (!memory.has_value()) {
+      return nullptr;
+   }
+   void* const p_frame = memory.value().data();
+   new (frame_tail_of<Handle>(p_frame, frame_size))
+      frame_tail<Handle>{.p_free = free_frame<Handle>, .handle = handle};
+   return p_frame;
+}
+
+template <typename Handle, typename Function, typename... Arguments>
+auto
+make_allocated_coroutine(
+   Handle handle, Function&& function, Arguments&&... arguments
+) -> maybe<__typeof_unqual($fwd(function)($fwd(arguments)...))> {
+   using coroutine = __typeof_unqual($fwd(function)($fwd(arguments)...));
+   static_assert(
+      requires(coroutine const& value) { static_cast<bool>(value); },
+      "A coroutine made by `cat::make_coroutine()` must be explicitly "
+      "convertible to `bool`!"
+   );
+   coro_frame_allocator const previous = current_coro_frame_allocator;
+   current_coro_frame_allocator = {
+      .p_handle = __builtin_addressof(handle),
+      .p_allocate = allocate_frame<Handle>,
+   };
+
+   // Restore the previous allocator even if the coroutine throws before its
+   // first suspension.
+   struct restore {
+      coro_frame_allocator previous;
+
+      ~restore() {
+         current_coro_frame_allocator = previous;
+      }
+   } const restorer{previous};
+
+   coroutine made = $fwd(function)($fwd(arguments)...);
+   if (!made) {
+      return nullopt;
+   }
+   return move(made);
+}
+
+}  // namespace detail
+
+// TODO: If an eager coroutine's `unhandled_exception()` rethrows before its
+// first suspension, the frame is freed, but a coroutine object returned
+// directly by `get_return_object()` still destroys its handle. That's a double
+// free. Returning `coroutine_handle` from `get_return_object()` makes Clang
+// defer constructing the coroutine object until the call returns.
+//
+// We should better decide how coroutine types in libCat should propagate
+// exceptions.
+struct allocated_promise {
+   static auto
+   operator new(unsigned long size) noexcept -> void* _Nullable {
+      detail::coro_frame_allocator const allocator =
+         detail::current_coro_frame_allocator;
+      cat::assert(
+         allocator.p_handle != nullptr,
+         "This coroutine must be called through `cat::make_coroutine()`."
+      );
+      return allocator.p_allocate(allocator.p_handle, idx(size));
+   }
+
+   static void
+   operator delete(void* _Nonnull p_frame, unsigned long size) noexcept {
+      detail::frame_free const p_free = *reinterpret_cast<detail::frame_free*>(
+         static_cast<byte*>(p_frame) + detail::frame_tail_offset(idx(size))
+      );
+      p_free(p_frame, idx(size));
+   }
+};
+
+// Call `function(arguments...)`, a coroutine whose promise inherits
+// `allocated_promise`, and allocate its frame from `allocator`. This returns an
+// empty `maybe` if the frame failed to allocate. The frame keeps
+// a copy of this handle, so the allocator it refers to must outlive the
+// coroutine. Coroutines that it calls before its first suspension also
+// allocate from `allocator`. Coroutines that it calls after resuming must be
+// made by `make_coroutine()` themselves.
+template <is_allocator Allocator, typename Function, typename... Arguments>
+auto
+make_coroutine(
+   allocator_ref<Allocator> allocator, Function&& function,
+   Arguments&&... arguments
+) -> maybe<__typeof_unqual($fwd(function)($fwd(arguments)...))> {
+   return detail::make_allocated_coroutine(
+      allocator, $fwd(function), $fwd(arguments)...
+   );
+}
+
+// The frame copies `allocator` itself rather than referring to this parameter,
+// so unlike other `allocator_dyn` overloads, this does not forward to
+// `make_coroutine<allocator_dyn>()`.
+template <typename Function, typename... Arguments>
+[[gnu::always_inline, gnu::nodebug]]
+auto
+make_coroutine(
+   allocator_dyn allocator, Function&& function, Arguments&&... arguments
+) -> maybe<__typeof_unqual($fwd(function)($fwd(arguments)...))> {
+   return detail::make_allocated_coroutine(
+      allocator, $fwd(function), $fwd(arguments)...
+   );
+}
+
+}  // namespace cat
