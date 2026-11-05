@@ -13,6 +13,7 @@
 
 #include <cat/allocator_parameters>
 #include <cat/array>
+#include <cat/debug>
 #include <cat/linux>
 #include <cat/runtime>
 #include <cat/tuple>
@@ -61,7 +62,7 @@ pthread_join(pthread_t thread, void* _Nullable* _Nullable pp_result) noexcept
 // thread carries. It is weak because other C libraries, such as musl, lack it.
 [[gnu::weak]]
 void
-_dl_get_tls_static_info(  // NOLINT(bugprone-reserved-identifier)
+_dl_get_tls_static_info(  // NOLINT
    cat::idx* _Nonnull p_size, cat::idx* _Nonnull p_alignment
 ) noexcept;
 }
@@ -141,22 +142,22 @@ pthread_spawn(
       cat::align_up(p_stack_bottom + pthread_stack_size, alignof(start_type))
    ) start_type{
       {},
-      arguments_type{$fwd(callback), $fwd(arguments)...}
+      arguments_type{$fwd(callback), $fwd(arguments)...},
    };
 
+   // Only `pthread_create` can fail for reasons beyond libCat's control. The
+   // attribute calls only fail for invalid arguments.
    pthread_attr_t attributes;
-   int error = pthread_attr_init(&attributes);
+   cat::verify(pthread_attr_init(&attributes) == 0);
+   cat::verify(
+      pthread_attr_setstack(&attributes, p_stack_bottom, pthread_stack_size)
+      == 0
+   );
    pthread_t handle = 0u;
-   if (error == 0) {
-      error =
-         pthread_attr_setstack(&attributes, p_stack_bottom, pthread_stack_size);
-      if (error == 0) {
-         error = pthread_create(
-            &handle, &attributes, &pthread_entry<arguments_type>, p_start
-         );
-      }
-      auto _ = pthread_attr_destroy(&attributes);
-   }
+   int const error = pthread_create(
+      &handle, &attributes, &pthread_entry<arguments_type>, p_start
+   );
+   cat::verify(pthread_attr_destroy(&attributes) == 0);
 
    if (error != 0) {
       p_start->~start_type();
