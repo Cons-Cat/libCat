@@ -24,7 +24,7 @@ jobs:
     # so `git push` would fail. Skip cleanly. The advisory check in
     # `ci.yml` still surfaces drift for those PRs.
     if: github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@v4
         with:

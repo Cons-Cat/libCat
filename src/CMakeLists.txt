@@ -398,6 +398,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bitvec/cat/bitvec
   ${CATLIB}/bitvec/cat/raii_bitvec
   ${CATLIB}/container/cat/container
+  ${CATLIB}/container/cat/detail/exception_defer.hpp
   ${CATLIB}/container/cat/detail/initializer_list.hpp
   ${CATLIB}/container/cat/detail/vec_flags.hpp
   ${CATLIB}/container/implementations/container_interface.tpp
@@ -606,9 +607,11 @@ set(CAT_HEADER_FILES
   ${CATLIB}/string/cat/detail/str_vec.hpp
   ${CATLIB}/string/cat/detail/raii_str_vec.hpp
   ${CATLIB}/stacktrace/cat/stacktrace
+  ${CATLIB}/stacktrace/implementations/dwarf_line.hpp
   ${CATLIB}/demangle/cat/demangle
   ${CATLIB}/exception/cat/exception
   ${CATLIB}/exception/implementations/format_exception.tpp
+  ${CATLIB}/exception/implementations/cfi_program.hpp
   ${CATLIB}/exception/cat/detail/cxa_abi.hpp
   ${CATLIB}/exception/cat/detail/dwarf_cfi.hpp
   ${CATLIB}/exception/cat/detail/eh_frame_hdr.hpp
