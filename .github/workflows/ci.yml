@@ -261,17 +261,13 @@ jobs:
             -DCAT_PCH=OFF
 
       - name: cat-format-check
-        # Advisory. Emits a warning annotation instead of gating the merge. Fix
-        # locally with
+        # Fails the job on drift. Fix locally with
         # `just format "${CAT_LINT_BUILD_DIR}"`.
-        run: |
-          if ! just format-check "${CAT_LINT_BUILD_DIR}"
-          then
-            echo "::warning title=cat-format-check::Formatting drift detected! Run the `cat-format` target to fix it."
-          fi
+        run: just format-check "${CAT_LINT_BUILD_DIR}"
 
       - name: cat-restyle-comments-check
-        # Same advisory policy as `cat-format-check` above.
+        # Advisory. Emits a warning annotation instead of failing the job.
+        if: ${{ !cancelled() }}
         run: |
           if ! just restyle-comments-check "${CAT_LINT_BUILD_DIR}"
           then

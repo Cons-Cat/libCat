@@ -2,9 +2,9 @@
 
 name: Auto-format
 
-# Companion to `ci.yml`'s advisory `cat-format-check`: when a PR has
+# Companion to `ci.yml`'s `cat-format-check`: when a PR has
 # formatting drift, run `cat-format` (in-place) and push the fix back
-# as a commit on the PR branch. The advisory check in `ci.yml` remains
+# as a commit on the PR branch. The check in `ci.yml` remains
 # the source of truth for fork PRs (which this workflow cannot push to,
 # see the `if:` gate below).
 #
@@ -21,7 +21,7 @@ permissions:
 jobs:
   auto-format:
     # `GITHUB_TOKEN` is read-only on `pull_request` events from forks,
-    # so `git push` would fail. Skip cleanly. The advisory check in
+    # so `git push` would fail. Skip cleanly. The check in
     # `ci.yml` still surfaces drift for those PRs.
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-26.04
