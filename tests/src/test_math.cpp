@@ -101,6 +101,7 @@ $test(math_abs) {
 $test(math_fma) {
    using namespace cat::arithmetic_literals;
 
+#ifdef __FMA__
    auto raw_result = cat::fma(2.f, 3.f, 4.f);
    static_assert(cat::is_same<decltype(raw_result), float4>);
    cat::verify(raw_result == 10_f4);
@@ -108,6 +109,7 @@ $test(math_fma) {
    auto raw8_result = cat::fma(2., 3., 4.);
    static_assert(cat::is_same<decltype(raw8_result), float8>);
    cat::verify(raw8_result == 10_f8);
+#endif
 
    auto integer_result = cat::fma(5_i4, 3_i4, 2_i4);
    static_assert(cat::is_same<decltype(integer_result), int4>);
@@ -121,6 +123,7 @@ $test(math_fma) {
    static_assert(cat::is_same<decltype(intptr_result), intptr<int>>);
    cat::verify(intptr_result == 17);
 
+#ifdef __FMA__
    auto float_result = cat::fma(2_f4, 3_f4, 4_f4);
    static_assert(cat::is_same<decltype(float_result), float4>);
    cat::verify(float_result == 10_f4);
@@ -138,6 +141,7 @@ $test(math_fma) {
       cat::fma(float8_fast(2_f8), float8_fast(3_f8), float8_fast(4_f8));
    static_assert(cat::is_same<decltype(fast_float8_result), float8_fast>);
    cat::verify(fast_float8_result == 10_f8);
+#endif
 }
 
 $test(math_pow) {

@@ -179,7 +179,7 @@ list(
 
   # Enable CPU intrinsics:
   # TODO: These should be optional, like SIMD flags.
-  -mfma
+  #-mfma
   -mlzcnt
   -mbmi
   -mbmi2

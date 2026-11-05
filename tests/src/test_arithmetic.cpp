@@ -435,13 +435,13 @@ $test(arithmetic_overflow_reference_compound_assignment) {
    cat::verify(referent == 12_u1);
 }
 
-#ifdef CAT_ENABLE_FMA_TESTS
 $test(arithmetic_fma_members) {
    int4 integer = 5_i4;
    auto integer_result = integer.fma(3_i4, 2_i4);
    static_assert(cat::is_same<decltype(integer_result), int4>);
    cat::verify(integer_result == 17_i4);
 
+#ifdef __FMA__
    float4 value = 2_f4;
    auto precise_result = value.fma(3_f4, 4_f4);
    static_assert(cat::is_same<decltype(precise_result), float4>);
@@ -455,8 +455,8 @@ $test(arithmetic_fma_members) {
    auto reference_result = value.fast().fma(3_f4, 4_f4);
    static_assert(cat::is_same<decltype(reference_result), float4_fast>);
    cat::verify(reference_result == 10_f4);
-}
 #endif
+}
 
 $test(arithmetic_traits_is_assignable) {
    static_assert(cat::is_assignable<int8, uint4>);

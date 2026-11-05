@@ -2519,7 +2519,7 @@ $test(simd_precision_reference_accessors) {
    cat::verify(precise_sum[0u] == 2_f4);
    cat::verify(precise_sum[3u] == 8_f4);
 
-#ifdef CAT_ENABLE_FMA_TESTS
+#ifdef __FMA__
    auto precise_fma = value.fma(increment, stable);
    static_assert(cat::is_same<decltype(precise_fma), float4x4>);
    cat::verify(precise_fma[0u] == 4_f4);
