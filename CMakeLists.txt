@@ -210,7 +210,8 @@ list(
   # Lifetime analysis.
   -Wdangling
   -Wdangling-gsl
-  # TODO: -Wlifetime-safety-permissive.
+  -Wlifetime-safety
+  -Wlifetime-safety-suggestions
 )
 
 if(CAT_USE_PTHREAD)

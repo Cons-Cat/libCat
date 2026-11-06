@@ -303,7 +303,10 @@ class [[gsl::Owner]] connection {
    }
 
  private:
-   connection(manual::connection&& core, cat::allocator_dyn allocator) noexcept
+   connection(
+      manual::connection&& core,
+      cat::allocator_dyn allocator [[clang::lifetimebound]]
+   ) noexcept
        : m_core(cat::move(core)), m_allocator(allocator) {
    }
 

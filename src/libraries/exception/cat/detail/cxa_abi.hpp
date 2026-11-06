@@ -24,7 +24,7 @@ header_from_unwind(unwind_exception* p_exception) -> exception_header* {
 }
 
 inline auto
-header_from_user(void* p_object) -> exception_header* {
+header_from_user(void* p_object [[clang::lifetimebound]]) -> exception_header* {
    return static_cast<exception_header*>(p_object) - 1;
 }
 

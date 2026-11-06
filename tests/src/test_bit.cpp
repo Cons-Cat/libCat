@@ -26,7 +26,9 @@ struct proxy_bit_popcount_context {
 
    using element_type = cat::bit_reference<cat::uint1>;
 
-   constexpr proxy_bit_popcount_context(cat::uint1* p_storage)
+   constexpr proxy_bit_popcount_context(
+      cat::uint1* p_storage [[clang::lifetimebound]]
+   )
        : m_p_storage(p_storage) {
    }
 
@@ -61,7 +63,7 @@ struct proxy_bit_popcount_source : cat::iterable_interface<> {
    }
 
    constexpr auto
-   iterate() -> proxy_bit_popcount_context {
+   iterate() [[clang::lifetimebound]] -> proxy_bit_popcount_context {
       return {&m_storage};
    }
 };

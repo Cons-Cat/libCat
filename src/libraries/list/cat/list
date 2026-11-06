@@ -915,7 +915,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
     public:
       using element_type = Element&;
 
-      constexpr explicit list_iteration_context(Node* _Nonnull p_node)
+      constexpr explicit list_iteration_context(
+         Node* _Nonnull p_node [[clang::lifetimebound]]
+      )
           : m_p_node(p_node) {
       }
 
@@ -950,7 +952,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
     public:
       using element_type = Element&;
 
-      constexpr explicit list_reverse_iteration_context(Node* _Nonnull p_node)
+      constexpr explicit list_reverse_iteration_context(
+         Node* _Nonnull p_node [[clang::lifetimebound]]
+      )
           : m_p_node(p_node) {
       }
 
@@ -1132,20 +1136,22 @@ class list_stepanov_iterator
    using node_type = list_node<T>;
 
    // Construct iterator from a node pointer.
-   constexpr list_stepanov_iterator(node_type* _Nullable p_range)
+   constexpr list_stepanov_iterator(
+      node_type* _Nullable p_range [[clang::lifetimebound]]
+   )
        : m_p_node(p_range) {
    }
 
    // Move iterator to next node.
    constexpr auto
-   increment() -> list_stepanov_iterator& {
+   increment() [[clang::lifetimebound]] -> list_stepanov_iterator& {
       m_p_node = m_p_node->p_next_node;
       return *this;
    }
 
    // Move iterator to previous node.
    constexpr auto
-   decrement() -> list_stepanov_iterator& {
+   decrement() [[clang::lifetimebound]] -> list_stepanov_iterator& {
       m_p_node = m_p_node->p_previous_node;
       return *this;
    }

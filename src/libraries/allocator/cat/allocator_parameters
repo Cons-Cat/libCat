@@ -638,7 +638,7 @@ struct dyn_name {
 // Non-owning, dynamic-dispatch handle to an `Allocator`. This erases the type
 // of underlying allocators to minimize code generation.
 template <typename... Methods>
-class [[clang::trivial_abi, gsl::Owner]] basic_allocator_dyn
+class [[clang::trivial_abi, gsl::Pointer]] basic_allocator_dyn
     : public allocator_interface<basic_allocator_dyn<Methods...>> {
    friend allocator_interface<basic_allocator_dyn>;
    friend struct allocator_dyn_friend;
@@ -1224,7 +1224,9 @@ allocator_ref<basic_allocator_dyn<Methods...>>
                              "Pass an allocator l-value instead.");
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr allocator_ref(basic_allocator_dyn<Methods...> allocator)
+   constexpr allocator_ref(
+      basic_allocator_dyn<Methods...> allocator [[clang::lifetimebound]]
+   )
        : m_allocator(allocator) {
    }
 

@@ -52,14 +52,15 @@ swap(T (&left)[extent], T (&right)[extent]) noexcept(
 
 template <typename T>
 constexpr auto
-unconst(T const& value) noexcept -> T& {
+unconst(T const& value [[clang::lifetimebound]]) noexcept -> T& {
    return const_cast<T&>(value);
 }
 
 template <typename T>
 [[gnu::returns_nonnull]]
 constexpr auto
-unconst(T const* _Nonnull p_value) noexcept -> T* _Nonnull {
+unconst(T const* _Nonnull p_value [[clang::lifetimebound]]) noexcept
+   -> T* _Nonnull {
    return const_cast<T*>(p_value);
 }
 

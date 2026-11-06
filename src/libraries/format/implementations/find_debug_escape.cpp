@@ -44,8 +44,10 @@ struct debug_escape_scanner {
 
    [[nodiscard]]
    auto
-   find(char const* _Nonnull p_current, char const* _Nonnull p_end) const
-      -> char const* _Nonnull {
+   find(
+      char const* _Nonnull p_current [[clang::lifetimebound]],
+      char const* _Nonnull p_end [[clang::lifetimebound]]
+   ) const -> char const* _Nonnull {
       constexpr idx vector_size = sizeof(Simd);
       iword remaining = p_end - p_current;
       while (remaining >= vector_size) {
@@ -150,8 +152,8 @@ append_escaped(format_context& context, str_view string, char quote)
       return append_escaped_loop(
          context, string, quote,
          [&](
-            char const* _Nonnull p_current, char const* _Nonnull p_end,
-            char /*quote*/
+            char const* _Nonnull p_current [[clang::lifetimebound]],
+            char const* _Nonnull p_end [[clang::lifetimebound]], char /*quote*/
          ) {
             return scanner.find(p_current, p_end);
          }

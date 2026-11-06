@@ -216,7 +216,8 @@ make_allocator_linear(span<byte>& span [[clang::lifetimebound]]) noexcept
      "unintentionally leak memory. Copy an l-value `cat::span` instead."
   )]]
 constexpr auto
-make_allocator_linear(span<byte>&& span) noexcept -> allocator_linear {
+make_allocator_linear(span<byte>&& span [[clang::lifetimebound]]) noexcept
+   -> allocator_linear {
    return make_allocator_linear(span);
 }
 

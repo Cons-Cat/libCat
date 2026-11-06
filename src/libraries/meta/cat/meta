@@ -989,7 +989,7 @@ using std::move;
 template <typename T>
 [[nodiscard, gnu::nodebug]]
 constexpr auto
-move_if_noexcept(T& input) noexcept -> conditional<
+move_if_noexcept(T& input [[clang::lifetimebound]]) noexcept -> conditional<
    !is_nothrow_move_constructible<T> && is_copy_constructible<T>, T const&,
    T&&> {
    return move(input);
@@ -1058,7 +1058,7 @@ template <typename T>
    requires(is_unary_addressable<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-addressof(T& value) -> T* _Nonnull {
+addressof(T& value [[clang::lifetimebound]]) -> T* _Nonnull {
    return __builtin_addressof(value);
 }
 

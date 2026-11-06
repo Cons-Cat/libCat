@@ -902,7 +902,8 @@ namespace {
 struct tracked {
    int4* p_dtor_counter;
 
-   constexpr tracked(int4& counter) : p_dtor_counter(&counter) {
+   constexpr tracked(int4& counter [[clang::lifetimebound]])
+       : p_dtor_counter(&counter) {
    }
 
    constexpr ~tracked() {

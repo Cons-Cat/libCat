@@ -179,7 +179,9 @@ class
 
    // Zero-overhead string literal constructor.
    template <idx other_length>
-   consteval basic_str_span(CharT (&string)[other_length]) noexcept {
+   consteval basic_str_span(
+      CharT (&string [[clang::lifetimebound]])[other_length]
+   ) noexcept {
       // Verify that the final character is null terminator. This is necessary
       // if `constexpr char` arrays are passed in rather than string literals.
       [[assume(string[other_length.raw - 1uz] == remove_const<CharT>{'\0'})]];

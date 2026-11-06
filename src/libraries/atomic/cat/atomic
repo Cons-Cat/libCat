@@ -283,7 +283,9 @@ class atomic_overflow_reference {
    using value_type = atomic_type::value_type;
    using raw_value = atomic_type::raw_value;
 
-   constexpr explicit atomic_overflow_reference(Atomic& atomic) noexcept
+   constexpr explicit atomic_overflow_reference(
+      Atomic& atomic [[clang::lifetimebound]]
+   ) noexcept
        : m_p_atomic(addressof(atomic)) {
    }
 
@@ -626,12 +628,12 @@ class atomic<T> {
    }
 
    constexpr auto
-   relaxed() & noexcept
-      -> memory_order_reference<atomic, memory_order::relaxed>;
+   relaxed() & noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic, memory_order::relaxed>;
 
    constexpr auto
-   relaxed() const& noexcept
-      -> memory_order_reference<atomic const, memory_order::relaxed>;
+   relaxed() const& noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic const, memory_order::relaxed>;
 
    constexpr auto
    relaxed() && = delete;
@@ -644,8 +646,8 @@ class atomic<T> {
       -> memory_order_reference<atomic, memory_order::acquire>;
 
    constexpr auto
-   acquire() const& noexcept
-      -> memory_order_reference<atomic const, memory_order::acquire>;
+   acquire() const& noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic const, memory_order::acquire>;
 
    constexpr auto
    acquire() && = delete;
@@ -654,8 +656,8 @@ class atomic<T> {
    acquire() const&& = delete;
 
    constexpr auto
-   release() & noexcept
-      -> memory_order_reference<atomic, memory_order::release>;
+   release() & noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic, memory_order::release>;
 
    constexpr auto
    release() const& noexcept
@@ -705,8 +707,8 @@ class atomic<T> {
    }
 
    constexpr auto
-   wrap() & noexcept
-      -> detail::atomic_overflow_reference<atomic, overflow_policies::wrap>
+   wrap() & noexcept [[clang::lifetimebound]]
+   -> detail::atomic_overflow_reference<atomic, overflow_policies::wrap>
       requires(!is_same<T, bool>)
    {
       return detail::atomic_overflow_reference<atomic, overflow_policies::wrap>(

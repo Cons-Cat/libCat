@@ -99,7 +99,9 @@ struct simd_dispatch_arch {
    idx length;
 
    template <idx extent>
-   consteval simd_dispatch_arch(char const (&data)[extent]) noexcept
+   consteval simd_dispatch_arch(
+      char const (&data [[clang::lifetimebound]])[extent]
+   ) noexcept
        : p_data(data), length(extent - 1u) {
    }
 

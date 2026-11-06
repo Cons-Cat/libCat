@@ -204,14 +204,16 @@ class bitset_enum : public bitwise_interface<bitset_enum<Flags>> {
    }
 
    constexpr auto
-   fill(bit_value value = true) noexcept -> bitset_enum& {
+   fill(bit_value value = true) noexcept [[clang::lifetimebound]]
+   -> bitset_enum& {
       m_bits = value ? valid_bits : bitset_type();
       return *this;
    }
 
    template <typename... Arguments>
    constexpr auto
-   fill_random(Arguments&&... arguments) -> bitset_enum& {
+   fill_random(Arguments&&... arguments) [[clang::lifetimebound]]
+   -> bitset_enum& {
       m_bits.fill_random($fwd(arguments)...);
       m_bits &= valid_bits;
       return *this;

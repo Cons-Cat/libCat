@@ -299,7 +299,8 @@ class mapped_file_handle {
 
  private:
    constexpr mapped_file_handle(
-      file_handle&& file, byte* _Nullable p_mapping, idx mapping_length
+      file_handle&& file, byte* _Nullable p_mapping [[clang::lifetimebound]],
+      idx mapping_length
    ) noexcept
        : m_file(move(file)),
          m_p_mapping(p_mapping),

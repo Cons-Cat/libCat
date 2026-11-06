@@ -344,7 +344,7 @@ class pcg_simd_state<Word, true> {
 
    constexpr auto
    operator>>=(idx count) noexcept(!__has_feature(cxx_exceptions))
-      -> pcg_simd_state& {
+      [[clang::lifetimebound]] -> pcg_simd_state& {
       m_words[0u] >>= uint8(count.raw);
       m_words[1u] >>= uint8(count.raw);
       return *this;
@@ -352,7 +352,7 @@ class pcg_simd_state<Word, true> {
 
    constexpr auto
    operator<<=(idx count) noexcept(!__has_feature(cxx_exceptions))
-      -> pcg_simd_state& {
+      [[clang::lifetimebound]] -> pcg_simd_state& {
       m_words[0u] <<= uint8(count.raw);
       m_words[1u] <<= uint8(count.raw);
       return *this;
@@ -538,7 +538,7 @@ class pcg_simd_state<Word, false> {
    }
 
    constexpr auto
-   operator>>=(idx count) noexcept -> pcg_simd_state& {
+   operator>>=(idx count) noexcept [[clang::lifetimebound]] -> pcg_simd_state& {
       *this = *this >> count;
       return *this;
    }

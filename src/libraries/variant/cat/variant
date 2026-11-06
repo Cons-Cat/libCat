@@ -90,7 +90,7 @@ struct variant_node<Alternative> {
 
    template <idx index>
    constexpr auto
-   get(this auto&& self) -> auto&& {
+   get(this auto&& self [[clang::lifetimebound]]) -> auto&& {
       static_assert(
          index == 0u, "`variant_node` leaf only owns the index-`0` slot."
       );
@@ -125,7 +125,7 @@ struct variant_node<Alternative, Remaining...> {
    // cannot wrap below zero.
    template <idx index>
    constexpr auto
-   get(this auto&& self) -> auto&& {
+   get(this auto&& self [[clang::lifetimebound]]) -> auto&& {
       if constexpr (index == 0u) {
          return $fwd(self).storage;
       } else {
@@ -390,7 +390,8 @@ class variant {
    template <typename Self>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   as_base(this Self&& self) -> copy_cvref_from<Self&&, variant> {
+   as_base(this Self&& self [[clang::lifetimebound]])
+      -> copy_cvref_from<Self&&, variant> {
       // C-cast preserves cvref while upcasting through the inheritance
       // chain, so callers reach `variant`'s overload set instead of a
       // derived class's shadowing overloads.

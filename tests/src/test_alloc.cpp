@@ -33,7 +33,8 @@ struct alloc_non_trivial_huge_object {
 struct alloc_uninit_lifetime {
    idx* _Nonnull p_live;
 
-   constexpr explicit alloc_uninit_lifetime(idx& live) : p_live(&live) {
+   constexpr explicit alloc_uninit_lifetime(idx& live [[clang::lifetimebound]])
+       : p_live(&live) {
       ++live;
    }
 

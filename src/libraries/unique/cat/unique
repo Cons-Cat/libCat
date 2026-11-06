@@ -101,7 +101,7 @@ class unique {
    }
 
    constexpr auto
-   borrow() noexcept -> T&& {
+   borrow() noexcept [[clang::lifetimebound]] -> T&& {
       return $fwd(this->storage);
    }
 
@@ -191,7 +191,7 @@ class unique_weak {
    }
 
    constexpr auto
-   borrow() -> T&& {
+   borrow() [[clang::lifetimebound]] -> T&& {
       this->owns_data = false;
       return $fwd(this->storage);
    }

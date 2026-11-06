@@ -11,13 +11,13 @@ namespace {
 
 [[gnu::always_inline]]
 inline auto
-done_ref(cat::uword* _Nonnull p_guard) -> cat::uint1& {
+done_ref(cat::uword* _Nonnull p_guard [[clang::lifetimebound]]) -> cat::uint1& {
    return reinterpret_cast<cat::uint1* _Nonnull>(p_guard)[0];
 }
 
 [[gnu::always_inline]]
 inline auto
-lock_ref(cat::uword* _Nonnull p_guard) -> cat::uint1& {
+lock_ref(cat::uword* _Nonnull p_guard [[clang::lifetimebound]]) -> cat::uint1& {
    return reinterpret_cast<cat::uint1* _Nonnull>(p_guard)[1];
 }
 

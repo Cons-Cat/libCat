@@ -2082,7 +2082,8 @@ class
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U* _Nullable p_operand) const noexcept -> U* _Nullable {
+   add(U* _Nullable p_operand [[clang::lifetimebound]]) const noexcept
+      -> U* _Nullable {
       return raw + p_operand;
    }
 
@@ -2665,7 +2666,7 @@ class
    }
 
    constexpr auto
-   wrap() & noexcept -> overflow_reference<
+   wrap() & noexcept [[clang::lifetimebound]] -> overflow_reference<
       basic_int<T, overflow_policy, quantity>, overflow_policies::wrap>;
 
    constexpr auto
@@ -3759,7 +3760,8 @@ basic_idx :
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(T* _Nullable p_other) const noexcept -> T* _Nullable {
+   add(T* _Nullable p_other [[clang::lifetimebound]]) const noexcept
+      -> T* _Nullable {
       return p_other + raw;
    }
 

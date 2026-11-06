@@ -34,13 +34,13 @@ struct tiny_array
 
    [[nodiscard]]
    constexpr auto
-   data() -> T* {
+   data() [[clang::lifetimebound]] -> T* {
       return m_data;
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const -> T const* {
+   data() const [[clang::lifetimebound]] -> T const* {
       return m_data;
    }
 
@@ -99,7 +99,9 @@ class tiny_list : public cat::iterable_interface<> {
     public:
       using element_type = T const&;
 
-      constexpr iteration_context(tiny_list const* p_list, cat::idx start)
+      constexpr iteration_context(
+         tiny_list const* p_list [[clang::lifetimebound]], cat::idx start
+      )
           : m_p_list(p_list), m_current(start) {
       }
 
@@ -125,7 +127,7 @@ class tiny_list : public cat::iterable_interface<> {
    };
 
    constexpr auto
-   iterate() const -> iteration_context {
+   iterate() const [[clang::lifetimebound]] -> iteration_context {
       return iteration_context{this, m_head};
    }
 
@@ -142,7 +144,9 @@ class tiny_list : public cat::iterable_interface<> {
     public:
       using element_type = T const&;
 
-      constexpr reverse_iteration_context(tiny_list const* p_list)
+      constexpr reverse_iteration_context(
+         tiny_list const* p_list [[clang::lifetimebound]]
+      )
           : m_p_list(p_list), m_remaining(p_list->m_size) {
          cat::idx node_index = p_list->m_head;
          cat::idx slot;
@@ -176,7 +180,8 @@ class tiny_list : public cat::iterable_interface<> {
    };
 
    constexpr auto
-   reverse_iterate() const -> reverse_iteration_context {
+   reverse_iterate() const [[clang::lifetimebound]]
+   -> reverse_iteration_context {
       return reverse_iteration_context{this};
    }
 };
@@ -408,7 +413,9 @@ struct sized_count_iteration_context {
 
    using element_type = int;
 
-   constexpr sized_count_iteration_context(bool* p_iteration_used)
+   constexpr sized_count_iteration_context(
+      bool* p_iteration_used [[clang::lifetimebound]]
+   )
        : m_p_iteration_used(p_iteration_used) {
    }
 
@@ -432,7 +439,9 @@ struct sized_count_iteration_context {
 struct sized_count_source : cat::iterable_interface<> {
    bool* m_p_iteration_used = nullptr;
 
-   constexpr explicit sized_count_source(bool* p_iteration_used)
+   constexpr explicit sized_count_source(
+      bool* p_iteration_used [[clang::lifetimebound]]
+   )
        : m_p_iteration_used(p_iteration_used) {
    }
 

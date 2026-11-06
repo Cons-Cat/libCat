@@ -111,7 +111,9 @@ class container_stepanov_iterator
    operator=(container_stepanov_iterator&&)
       -> container_stepanov_iterator& = default;
 
-   constexpr container_stepanov_iterator(idx index, T* _Nonnull p_in_array)
+   constexpr container_stepanov_iterator(
+      idx index, T* _Nonnull p_in_array [[clang::lifetimebound]]
+   )
        : m_current_index(index), m_p_array(p_in_array) {
    }
 
@@ -244,14 +246,14 @@ class random_access_stepanov_iterable_interface
  public:
    [[nodiscard]]
    constexpr auto
-   begin(this auto&& container) {
+   begin(this auto&& container [[clang::lifetimebound]]) {
       // `container_stepanov_iterator` deduces `const`-ness for us here.
       return detail::container_stepanov_iterator(0u, $fwd(container).data());
    }
 
    [[nodiscard]]
    constexpr auto
-   end(this auto&& container) {
+   end(this auto&& container [[clang::lifetimebound]]) {
       idx size = container.size();
       auto* _Nonnull p_data = $fwd(container).data();
       // `container_stepanov_iterator` deduces `const`-ness for us here.

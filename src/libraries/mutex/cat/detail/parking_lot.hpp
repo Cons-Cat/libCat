@@ -170,7 +170,7 @@ struct parker {
    }
 
    auto
-   unpark_lock() noexcept -> nix::futex* {
+   unpark_lock() noexcept [[clang::lifetimebound]] -> nix::futex* {
       m_futex.m_value.release() = 0;
       return &m_futex;
    }

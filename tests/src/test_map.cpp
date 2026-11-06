@@ -434,7 +434,7 @@ struct assoc_array {
    }
 
    auto
-   operator[](int4 key) -> cat::maybe<int4&> {
+   operator[](int4 key) [[clang::lifetimebound]] -> cat::maybe<int4&> {
       cat::maybe<idx> const i = find(key);
       if (!i.has_value()) {
          return cat::nullopt;
@@ -443,7 +443,8 @@ struct assoc_array {
    }
 
    auto
-   operator[](int4 key) const -> cat::maybe<int4 const&> {
+   operator[](int4 key) const [[clang::lifetimebound]]
+   -> cat::maybe<int4 const&> {
       cat::maybe<idx> const i = find(key);
       if (!i.has_value()) {
          return cat::nullopt;

@@ -128,7 +128,7 @@ class memory_order_reference
 
  private:
    static constexpr auto
-   target(Atomic& atomic) noexcept -> target_type& {
+   target(Atomic& atomic [[clang::lifetimebound]]) noexcept -> target_type& {
       if constexpr (detail::memory_order_traits<Atomic>::is_reference) {
          return *atomic.m_p_value;
       } else {

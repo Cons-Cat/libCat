@@ -285,7 +285,7 @@ struct scaredy_compact_storage {
    }
 
    constexpr auto
-   value(this auto&& self) -> auto&& {
+   value(this auto&& self [[clang::lifetimebound]]) -> auto&& {
       return $fwd(self).m_storage;
    }
 
@@ -403,7 +403,8 @@ class
    template <typename Self>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   as_base(this Self&& self) -> copy_cvref_from<Self&&, scaredy> {
+   as_base(this Self&& self [[clang::lifetimebound]])
+      -> copy_cvref_from<Self&&, scaredy> {
       // C-cast preserves cvref while upcasting through the inheritance
       // chain, so callers reach `scaredy`'s overload set instead of a
       // derived class's shadowing overloads.

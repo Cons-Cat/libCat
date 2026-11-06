@@ -95,7 +95,8 @@ make_io_uring(
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
 make_io_uring(
-   cat::allocator_dyn allocator, cat::uint4 entries, io_uring_params params = {}
+   cat::allocator_dyn allocator [[clang::lifetimebound]], cat::uint4 entries,
+   io_uring_params params = {}
 ) noexcept(!__has_feature(cxx_exceptions))
    -> cat::scaredy<io_uring<>, linux_error> {
    return raii::make_io_uring<cat::allocator_dyn>(allocator, entries, params);

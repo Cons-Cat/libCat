@@ -58,7 +58,9 @@ class vectorized_stepanov_iterator
    constexpr vectorized_stepanov_iterator(self_type const&) = default;
    constexpr vectorized_stepanov_iterator(self_type&&) = default;
 
-   constexpr explicit vectorized_stepanov_iterator(storage_pointer ptr) noexcept
+   constexpr explicit vectorized_stepanov_iterator(
+      storage_pointer ptr [[clang::lifetimebound]]
+   ) noexcept
        : p(ptr) {
    }
 
@@ -105,7 +107,7 @@ class vectorized_stepanov_iterator
 template <typename Lane, idx width>
 [[nodiscard]]
 constexpr auto
-as_vectorized(Lane const* _Nonnull p_lane) noexcept
+as_vectorized(Lane const* _Nonnull p_lane [[clang::lifetimebound]]) noexcept
    -> vectorized_stepanov_iterator<Lane, width, true>
    requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
 {
@@ -115,7 +117,7 @@ as_vectorized(Lane const* _Nonnull p_lane) noexcept
 template <typename Lane, idx width>
 [[nodiscard]]
 constexpr auto
-as_vectorized(Lane* _Nonnull p_lane) noexcept
+as_vectorized(Lane* _Nonnull p_lane [[clang::lifetimebound]]) noexcept
    -> vectorized_stepanov_iterator<Lane, width, false>
    requires(vectorizable_element<Lane> && is_arithmetic<Lane>)
 {

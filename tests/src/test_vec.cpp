@@ -102,7 +102,9 @@ struct constexpr_lifetime_probe {
 
    constexpr constexpr_lifetime_probe() = default;
 
-   constexpr constexpr_lifetime_probe(idx& live, int4 new_value)
+   constexpr constexpr_lifetime_probe(
+      idx& live [[clang::lifetimebound]], int4 new_value
+   )
        : p_live(&live), value(new_value) {
       ++live;
    }

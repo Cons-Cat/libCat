@@ -111,21 +111,21 @@ class bit_reference {
 
    // Assign a true or false value to this bit.
    constexpr auto
-   assign(bool value) noexcept -> bit_reference& {
+   assign(bool value) noexcept [[clang::lifetimebound]] -> bit_reference& {
       value ? this->set() : this->unset();
       return *this;
    }
 
    // Flag this bit on.
    constexpr auto
-   set() noexcept -> bit_reference& {
+   set() noexcept [[clang::lifetimebound]] -> bit_reference& {
       *m_p_storage |= m_bit_mask;
       return *this;
    }
 
    // Flag this bit off.
    constexpr auto
-   unset() noexcept -> bit_reference& {
+   unset() noexcept [[clang::lifetimebound]] -> bit_reference& {
       *m_p_storage &= ~m_bit_mask;
       return *this;
    }
@@ -175,9 +175,9 @@ class bit_reference {
    }
 
    // This constructor is only used by the free factory functions.
-   constexpr bit_reference(Storage& in_storage, Storage in_mask) noexcept(
-      !__has_feature(cxx_exceptions)
-   )
+   constexpr bit_reference(
+      Storage& in_storage [[clang::lifetimebound]], Storage in_mask
+   ) noexcept(!__has_feature(cxx_exceptions))
        : m_p_storage(addressof(in_storage)), m_bit_mask(in_mask) {
       assert(has_single_bit(in_mask));
    }

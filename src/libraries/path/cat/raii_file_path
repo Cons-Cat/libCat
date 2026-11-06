@@ -290,13 +290,15 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   filename() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
+   filename() const noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> str_view {
       return m_path.filename();
    }
 
    [[nodiscard]]
    constexpr auto
-   stem() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
+   stem() const noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> str_view {
       return m_path.stem();
    }
 
@@ -356,7 +358,7 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   components() const noexcept -> path_components {
+   components() const noexcept [[clang::lifetimebound]] -> path_components {
       return m_path.components();
    }
 

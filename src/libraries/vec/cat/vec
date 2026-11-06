@@ -248,7 +248,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <bool is_move_only>
    [[nodiscard]]
    static constexpr auto
-   relocation_source(T& value) noexcept -> auto&& {
+   relocation_source(T& value [[clang::lifetimebound]]) noexcept -> auto&& {
       if constexpr (__has_feature(cxx_exceptions) && !is_move_only) {
          return move_if_noexcept(value);
       } else if constexpr (is_move_constructible<T>) {

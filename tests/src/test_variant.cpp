@@ -1041,7 +1041,9 @@ struct destruct_tracer {
 
    constexpr destruct_tracer() = default;
 
-   constexpr destruct_tracer(int4& counter, int4 in_tag)
+   constexpr destruct_tracer(
+      int4& counter [[clang::lifetimebound]], int4 in_tag
+   )
        : p_counter(&counter), tag(in_tag) {
    }
 

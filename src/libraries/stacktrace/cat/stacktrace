@@ -49,7 +49,9 @@ class stacktrace_entry {
 
    constexpr stacktrace_entry() = default;
 
-   explicit constexpr stacktrace_entry(native_handle_type p_native) noexcept
+   explicit constexpr stacktrace_entry(
+      native_handle_type p_native [[clang::lifetimebound]]
+   ) noexcept
        : m_p_native(p_native) {
    }
 
@@ -93,7 +95,9 @@ class stacktrace
    constexpr stacktrace() =
       delete ("`cat::stacktrace` cannot be created without an allocator!");
 
-   constexpr explicit stacktrace(allocator_dyn allocator) noexcept
+   constexpr explicit stacktrace(
+      allocator_dyn allocator [[clang::lifetimebound]]
+   ) noexcept
        : m_frames(allocator) {
    }
 

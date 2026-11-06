@@ -30,7 +30,8 @@ struct dyn_map_lookup {
    template <typename Map>
    [[gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   do_invoke(Map const& self, dyn_map_in<Key> key) -> maybe<T const&> {
+   do_invoke(Map const& self [[clang::lifetimebound]], dyn_map_in<Key> key)
+      -> maybe<T const&> {
       return self[key];
    }
 };

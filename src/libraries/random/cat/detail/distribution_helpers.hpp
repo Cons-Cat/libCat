@@ -54,7 +54,9 @@ class distribution_batch_engine {
  public:
    using result_type = distribution_batch_simd<Result, Abi>;
 
-   constexpr explicit distribution_batch_engine(Generator& generator) noexcept
+   constexpr explicit distribution_batch_engine(
+      Generator& generator [[clang::lifetimebound]]
+   ) noexcept
        : m_generator(generator) {
    }
 

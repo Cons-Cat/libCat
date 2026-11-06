@@ -70,7 +70,7 @@ class exception {
 
    [[nodiscard]]
    auto
-   what() const noexcept -> str_view {
+   what() const noexcept [[clang::lifetimebound]] -> str_view {
       return m_message.span();
    }
 

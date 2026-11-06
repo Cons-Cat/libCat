@@ -1602,7 +1602,7 @@ class
    template <typename U>
       requires(is_constructible<scalar_type, U>)
    constexpr auto
-   fill(U value) noexcept -> simd& {
+   fill(U value) noexcept [[clang::lifetimebound]] -> simd& {
       scalar_type const fill_value = static_cast<scalar_type>(value);
       memory_lane const lane = detail::simd_lane_to_storage(fill_value);
       this->raw = raw_type(lane);
@@ -1636,7 +1636,8 @@ class
    // than `.load_aligned()`.
    [[gnu::always_inline]]
    constexpr auto
-   load(value_type const* _Nonnull p_data) noexcept -> simd& {
+   load(value_type const* _Nonnull p_data) noexcept [[clang::lifetimebound]]
+   -> simd& {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             this->set_lane(i, static_cast<T>(p_data[i]));

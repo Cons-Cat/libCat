@@ -127,7 +127,10 @@ class demangle_parser {
    static constexpr cat::idx maximum_references = 256u;
 
  public:
-   demangle_parser(allocator_type allocator, cat::str_view input)
+   demangle_parser(
+      allocator_type allocator [[clang::lifetimebound]],
+      cat::str_view input [[clang::lifetimebound]]
+   )
        : m_input(input),
          m_result(allocator),
          m_name(allocator),

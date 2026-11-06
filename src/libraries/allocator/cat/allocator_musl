@@ -155,10 +155,15 @@ class basic_allocator_musl
       !__has_feature(cxx_exceptions)
    ) -> maybe_non_zero<idx>;
 
+   // The result is a new allocation, not a borrow of `allocation`, even though
+   // it can share an address.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-intra-tu-suggestions"
    auto
    reallocate_memory(
       span<byte> allocation, idx new_bytes, uword* _Nullable p_feedback_bytes
    ) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nullable;
+#pragma clang diagnostic pop
 
    auto
    reallocate(span<byte> allocation, idx new_bytes) noexcept(

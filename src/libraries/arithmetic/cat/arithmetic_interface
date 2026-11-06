@@ -349,7 +349,9 @@ struct plus_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
+   operator+=(
+      Derived& self [[clang::lifetimebound]], decay_derived const& rhs
+   ) noexcept -> Derived&
       requires(
          detail::has_plus_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -361,7 +363,8 @@ struct plus_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+=(Derived& self, decay_derived&& rhs) -> Derived&
+   operator+=(Derived& self [[clang::lifetimebound]], decay_derived&& rhs)
+      -> Derived&
       requires(
          detail::has_plus_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived&&>
@@ -379,7 +382,7 @@ struct plus_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+=(Derived& self, T&& other) -> Derived& {
+   operator+=(Derived& self [[clang::lifetimebound]], T&& other) -> Derived& {
       self = self.add($fwd(other));
       return self;
    }
@@ -439,7 +442,7 @@ struct plus_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator++(Derived& self) noexcept -> Derived&
+   operator++(Derived& self [[clang::lifetimebound]]) noexcept -> Derived&
       requires(detail::has_unary_increment<Derived>)
    {
       self = self.add(Derived(1));
@@ -569,7 +572,7 @@ struct minus_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-=(Derived& self, T&& other) -> Derived& {
+   operator-=(Derived& self [[clang::lifetimebound]], T&& other) -> Derived& {
       self = self.subtract_by($fwd(other));
       return self;
    }
@@ -629,7 +632,7 @@ struct minus_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator--(Derived& self) noexcept -> Derived&
+   operator--(Derived& self [[clang::lifetimebound]]) noexcept -> Derived&
       requires(detail::has_unary_decrement<Derived>)
    {
       self = self.subtract_by(static_cast<decay_derived::raw_type>(1));
@@ -1065,7 +1068,9 @@ struct bit_and_interface {
    // Same-type compound assignment when `bit_and(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator&=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
+   operator&=(
+      Derived& self [[clang::lifetimebound]], decay_derived const& rhs
+   ) noexcept -> Derived&
       requires(
          detail::has_bit_and_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -1077,7 +1082,8 @@ struct bit_and_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator&=(Derived& self, decay_derived&& rhs) -> Derived&
+   operator&=(Derived& self [[clang::lifetimebound]], decay_derived&& rhs)
+      -> Derived&
       requires(
          detail::has_bit_and_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived&&>
@@ -1233,7 +1239,9 @@ struct bit_or_interface {
    // Same-type compound assignment when `bit_or(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator|=(Derived& self, decay_derived const& rhs) noexcept -> Derived&
+   operator|=(
+      Derived& self [[clang::lifetimebound]], decay_derived const& rhs
+   ) noexcept -> Derived&
       requires(
          detail::has_bit_or_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -1245,7 +1253,8 @@ struct bit_or_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator|=(Derived& self, decay_derived&& rhs) -> Derived&
+   operator|=(Derived& self [[clang::lifetimebound]], decay_derived&& rhs)
+      -> Derived&
       requires(
          detail::has_bit_or_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived&&>
@@ -1263,7 +1272,7 @@ struct bit_or_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator|=(Derived& self, T&& other) -> Derived& {
+   operator|=(Derived& self [[clang::lifetimebound]], T&& other) -> Derived& {
       self = self.bit_or($fwd(other));
       return self;
    }
@@ -1936,7 +1945,7 @@ struct shift_right_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator>>=(Derived& self, T&& other) -> Derived& {
+   operator>>=(Derived& self [[clang::lifetimebound]], T&& other) -> Derived& {
       self = self.shift_right_by($fwd(other));
       return self;
    }

@@ -302,7 +302,7 @@ struct maybe_value_storage {
 
    [[nodiscard]]
    constexpr auto
-   value(this auto&& self) -> auto&& {
+   value(this auto&& self [[clang::lifetimebound]]) -> auto&& {
       return $fwd(self).m_storage;
    }
 
@@ -400,7 +400,9 @@ struct maybe_reference_storage {
 
    template <typename U>
       requires(is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
-   constexpr maybe_reference_storage(U& in_value) noexcept
+   constexpr maybe_reference_storage(
+      U& in_value [[clang::lifetimebound]]
+   ) noexcept
        : p_storage(addressof(static_cast<value_type>(in_value))) {
    }
 
@@ -646,7 +648,7 @@ struct maybe_compact_storage {
    // The following methods are homogenous to all `maybe...storage_type` types.
    [[nodiscard]]
    constexpr auto
-   value(this auto&& self) -> auto&& {
+   value(this auto&& self [[clang::lifetimebound]]) -> auto&& {
       return $fwd(self).m_storage;
    }
 
@@ -755,7 +757,8 @@ class
    template <typename Self>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   as_base(this Self&& self) -> copy_cvref_from<Self&&, maybe> {
+   as_base(this Self&& self [[clang::lifetimebound]])
+      -> copy_cvref_from<Self&&, maybe> {
       // C-cast preserves cvref while upcasting through the inheritance
       // chain, so callers reach `maybe`'s overload set instead of a
       // derived class's shadowing overloads.
@@ -856,7 +859,7 @@ class
          && !__reference_constructs_from_temporary(value_type, U&)
       )
    constexpr explicit(!__is_convertible(U&, value_type)) maybe(
-      U& input
+      U& input [[clang::lifetimebound]]
    ) noexcept
        : m_storage(static_cast<value_type>(input)) {
    }

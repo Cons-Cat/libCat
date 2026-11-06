@@ -123,7 +123,7 @@ class bitset_shared {
       friend class bitset_shared;
 
       constexpr reference(
-         atomic<storage_type>& word, storage_type mask
+         atomic<storage_type>& word [[clang::lifetimebound]], storage_type mask
       ) noexcept
           : m_word(&word), m_mask(mask) {
       }
@@ -543,7 +543,7 @@ class bitset_shared {
    constexpr auto
    clear(memory_order order = memory_order::seq_cst) noexcept(
       !__has_feature(cxx_exceptions)
-   ) -> bitset_shared& {
+   ) [[clang::lifetimebound]] -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].store(storage_type(0u), order);
       }
@@ -553,7 +553,7 @@ class bitset_shared {
    constexpr auto
    fill(memory_order order = memory_order::seq_cst) noexcept(
       !__has_feature(cxx_exceptions)
-   ) -> bitset_shared& {
+   ) [[clang::lifetimebound]] -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].store(sanitize(word, storage_type::max()), order);
       }
@@ -562,14 +562,14 @@ class bitset_shared {
 
    constexpr auto
    fill(bool value, memory_order order = memory_order::seq_cst) noexcept
-      -> bitset_shared& {
+      [[clang::lifetimebound]] -> bitset_shared& {
       return value ? fill(order) : clear(order);
    }
 
    constexpr auto
    set_even(memory_order order = memory_order::seq_cst) noexcept(
       !__has_feature(cxx_exceptions)
-   ) -> bitset_shared& {
+   ) [[clang::lifetimebound]] -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_or(sanitize(word, even_bits_pattern), order);
       }
@@ -579,7 +579,7 @@ class bitset_shared {
    constexpr auto
    set_odd(memory_order order = memory_order::seq_cst) noexcept(
       !__has_feature(cxx_exceptions)
-   ) -> bitset_shared& {
+   ) [[clang::lifetimebound]] -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_or(sanitize(word, odd_bits_pattern), order);
       }
@@ -589,7 +589,7 @@ class bitset_shared {
    constexpr auto
    unset_even(memory_order order = memory_order::seq_cst) noexcept(
       !__has_feature(cxx_exceptions)
-   ) -> bitset_shared& {
+   ) [[clang::lifetimebound]] -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_and(~even_bits_pattern, order);
       }
@@ -599,7 +599,7 @@ class bitset_shared {
    constexpr auto
    unset_odd(memory_order order = memory_order::seq_cst) noexcept(
       !__has_feature(cxx_exceptions)
-   ) -> bitset_shared& {
+   ) [[clang::lifetimebound]] -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
          m_data[word.raw].fetch_and(~odd_bits_pattern, order);
       }

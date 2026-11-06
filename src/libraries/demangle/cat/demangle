@@ -45,7 +45,9 @@ class demangled_name {
    demangle(basic_allocator_dyn<dyn_reallocate> allocator, str_view mangled)
       -> maybe<demangled_name>;
 
-   explicit demangled_name(basic_allocator_dyn<dyn_reallocate> allocator);
+   explicit demangled_name(
+      basic_allocator_dyn<dyn_reallocate> allocator [[clang::lifetimebound]]
+   );
 
    [[nodiscard]]
    auto

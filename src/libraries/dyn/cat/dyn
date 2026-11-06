@@ -422,8 +422,9 @@ class [[gsl::Pointer]] dyn_ref {
    void* _Nonnull m_p_value;
 
    constexpr dyn_ref(
-      vtable<Methods...> const* _Nonnull p_vt, dyn_type_id_ptr p_td,
-      void* _Nonnull p_v
+      vtable<Methods...> const* _Nonnull p_vt [[clang::lifetimebound]],
+      dyn_type_id_ptr p_td [[clang::lifetimebound]],
+      void* _Nonnull p_v [[clang::lifetimebound]]
    )
        : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }

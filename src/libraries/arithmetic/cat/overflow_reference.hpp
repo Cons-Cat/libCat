@@ -25,7 +25,9 @@ template <typename Int, overflow_policies overflow_policy>
 class overflow_reference
     : public arithmetic_interface<overflow_reference<Int, overflow_policy>> {
  public:
-   constexpr explicit overflow_reference(Int& w) noexcept
+   constexpr explicit overflow_reference(
+      Int& w [[clang::lifetimebound]]
+   ) noexcept
        : m_wrapped(addressof(w)) {
    }
 

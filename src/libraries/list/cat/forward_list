@@ -584,7 +584,9 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
     public:
       using element_type = Element&;
 
-      constexpr explicit forward_list_iteration_context(Node* _Nonnull p_node)
+      constexpr explicit forward_list_iteration_context(
+         Node* _Nonnull p_node [[clang::lifetimebound]]
+      )
           : m_p_node(p_node) {
       }
 
@@ -757,13 +759,15 @@ class forward_list_stepanov_iterator
 
    using node_type = forward_list_node<T>;
 
-   constexpr forward_list_stepanov_iterator(node_type* _Nullable p_range)
+   constexpr forward_list_stepanov_iterator(
+      node_type* _Nullable p_range [[clang::lifetimebound]]
+   )
        : m_p_node(p_range) {
    }
 
    // Advance iterator to the next node.
    constexpr auto
-   increment() -> forward_list_stepanov_iterator& {
+   increment() [[clang::lifetimebound]] -> forward_list_stepanov_iterator& {
       m_p_node = m_p_node->p_next_node;
       return *this;
    }

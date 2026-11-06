@@ -17,7 +17,8 @@ struct fill_random_impl {
    template <is_iterable Range>
       requires(!is_const<Range>)
    friend constexpr auto
-   operator|(Range&& range, fill_random_impl self) -> decltype(auto) {
+   operator|(Range&& range [[clang::lifetimebound]], fill_random_impl self)
+      -> decltype(auto) {
       auto&& generator = $fwd(self).generator;
       cat::fill_random(range, $fwd(generator));
       return $fwd(range);
@@ -32,8 +33,9 @@ struct fill_random_distribution_impl {
    template <is_iterable Range>
       requires(!is_const<Range>)
    friend constexpr auto
-   operator|(Range&& range, fill_random_distribution_impl self)
-      -> decltype(auto) {
+   operator|(
+      Range&& range [[clang::lifetimebound]], fill_random_distribution_impl self
+   ) -> decltype(auto) {
       auto&& generator = $fwd(self).generator;
       auto&& distribution = $fwd(self).distribution;
       cat::fill_random(range, $fwd(generator), $fwd(distribution));

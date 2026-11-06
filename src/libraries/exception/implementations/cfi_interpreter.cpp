@@ -177,7 +177,8 @@ parse_cie(byte const* _Nonnull p_cie_record, cie_info& out) noexcept(
 [[nodiscard]]
 auto
 find_cie_for_fde(
-   byte const* _Nonnull p_cie_pointer_field, uint4 cie_pointer_value
+   byte const* _Nonnull p_cie_pointer_field [[clang::lifetimebound]],
+   uint4 cie_pointer_value
 ) -> byte const* _Nonnull {
    return p_cie_pointer_field - cie_pointer_value.raw;
 }

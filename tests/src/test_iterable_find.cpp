@@ -12,13 +12,13 @@ struct tiny_array
 
    [[nodiscard]]
    constexpr auto
-   data() -> T* {
+   data() [[clang::lifetimebound]] -> T* {
       return m_data;
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const -> T const* {
+   data() const [[clang::lifetimebound]] -> T const* {
       return m_data;
    }
 
@@ -67,7 +67,9 @@ class tiny_list : public cat::iterable_interface<> {
     public:
       using element_type = T const&;
 
-      constexpr iteration_context(tiny_list const* p_list, cat::idx start)
+      constexpr iteration_context(
+         tiny_list const* p_list [[clang::lifetimebound]], cat::idx start
+      )
           : m_p_list(p_list), m_current(start) {
       }
 
@@ -93,7 +95,7 @@ class tiny_list : public cat::iterable_interface<> {
    };
 
    constexpr auto
-   iterate() const -> iteration_context {
+   iterate() const [[clang::lifetimebound]] -> iteration_context {
       return iteration_context{this, m_head};
    }
 };

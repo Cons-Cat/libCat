@@ -65,7 +65,7 @@ struct mem_handle {
    T* _Nonnull p_storage;
 
    constexpr auto
-   get() -> mem_handle& {
+   get() [[clang::lifetimebound]] -> mem_handle& {
       return *this;
    }
 
@@ -142,7 +142,7 @@ struct multi_memory_handle {
 
    // Get the allocator-specific handle type.
    constexpr auto
-   get() & -> decltype(auto) {
+   get() & [[clang::lifetimebound]] -> decltype(auto) {
       return this->handle.get();
    }
 
@@ -163,7 +163,7 @@ struct multi_memory_handle {
    }
 
    constexpr auto
-   get_inline_ptr() noexcept -> value_type* _Nonnull {
+   get_inline_ptr() noexcept [[clang::lifetimebound]] -> value_type* _Nonnull {
       return this->handle.get_inline_ptr();
    }
 
@@ -360,7 +360,7 @@ struct inline_memory_handle {
 
    // Get the allocator-specific handle type.
    auto
-   get() & -> decltype(auto) {
+   get() & [[clang::lifetimebound]] -> decltype(auto) {
       return this->handle.get();
    }
 
@@ -383,7 +383,7 @@ struct inline_memory_handle {
    }
 
    constexpr auto
-   get_inline_ptr() noexcept -> value_type* _Nonnull {
+   get_inline_ptr() noexcept [[clang::lifetimebound]] -> value_type* _Nonnull {
       return __builtin_addressof(inline_storage);
    }
 
@@ -5828,7 +5828,7 @@ class allocator_interface {
 
  private:
    constexpr auto
-   self() noexcept -> Derived& {
+   self() noexcept [[clang::lifetimebound]] -> Derived& {
       return static_cast<Derived&>(*this);
    }
 

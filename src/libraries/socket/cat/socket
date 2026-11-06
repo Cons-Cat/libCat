@@ -104,7 +104,7 @@ class unix_socket_address {
 
    [[nodiscard]]
    constexpr auto
-   path_data() const noexcept -> char const* _Nonnull {
+   path_data() const noexcept [[clang::lifetimebound]] -> char const* _Nonnull {
       return m_path;
    }
 
@@ -161,7 +161,8 @@ class ipv4_socket_address {
 
    [[nodiscard]]
    constexpr auto
-   address() const noexcept -> array<uint1, 4u> const& {
+   address() const noexcept [[clang::lifetimebound]]
+   -> array<uint1, 4u> const& {
       return m_address;
    }
 
@@ -216,7 +217,8 @@ class ipv6_socket_address {
 
    [[nodiscard]]
    constexpr auto
-   address() const noexcept -> array<uint1, 16u> const& {
+   address() const noexcept [[clang::lifetimebound]]
+   -> array<uint1, 16u> const& {
       return m_address;
    }
 

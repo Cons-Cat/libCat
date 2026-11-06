@@ -307,7 +307,7 @@ struct tuple : detail::tuple_storage<
       requires(index < types::size())
    [[gnu::always_inline]]
    constexpr auto
-   get(this auto&& self) -> decltype(auto) {
+   get(this auto&& self [[clang::lifetimebound]]) -> decltype(auto) {
       return $fwd(self)[index];
    }
 

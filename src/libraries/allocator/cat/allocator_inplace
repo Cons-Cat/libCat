@@ -74,7 +74,8 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(idx allocation_bytes) noexcept -> void* _Nullable {
+   allocate(idx allocation_bytes) noexcept [[clang::lifetimebound]]
+   -> void* _Nullable {
       if (!m_is_allocated && allocation_bytes <= arena_bytes) {
          // Mark future over-allocation.
          m_is_allocated = true;
@@ -117,6 +118,11 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
 
    // Resize the one outstanding allocation in place. The buffer is already
    // reserved, so this keeps the same address when the new size still fits.
+   // The result is a new allocation, not a borrow of `allocation`, even though
+   // it can share an address.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-intra-tu-suggestions"
+
    auto
    reallocate(span<byte> allocation, idx new_bytes) noexcept
       -> void* _Nullable {
@@ -139,6 +145,8 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
       unpoison_memory_region(p_allocation, new_bytes);
       return p_allocation;
    }
+
+#pragma clang diagnostic pop
 
  public:
    // The buffer is aligned strongly enough for any scalar type.

@@ -91,7 +91,8 @@ template <typename Segment>
    requires(is_char_safe_string<Segment>)
 [[nodiscard]]
 constexpr auto
-path_segment_view(Segment const& segment) noexcept -> str_view {
+path_segment_view(Segment const& segment [[clang::lifetimebound]]) noexcept
+   -> str_view {
    return str_view(segment);
 }
 
@@ -289,7 +290,7 @@ class path_component_stepanov_iterator
    constexpr path_component_stepanov_iterator() = default;
 
    constexpr path_component_stepanov_iterator(
-      str_view value, idx position
+      str_view value [[clang::lifetimebound]], idx position
    ) noexcept(!__has_feature(cxx_exceptions))
        : m_value(value), m_start(position), m_end(position) {
       seek();
@@ -302,8 +303,8 @@ class path_component_stepanov_iterator
    }
 
    constexpr auto
-   increment() noexcept(!__has_feature(cxx_exceptions))
-      -> path_component_stepanov_iterator& {
+   increment() noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> path_component_stepanov_iterator& {
       m_start = m_end;
       seek();
       return *this;
@@ -392,7 +393,8 @@ class path_components : public iterable_interface<path_components> {
 
    constexpr path_components() = default;
 
-   constexpr path_components(str_view value) noexcept : m_value(value) {
+   constexpr path_components(str_view value [[clang::lifetimebound]]) noexcept
+       : m_value(value) {
    }
 
    [[nodiscard]]
@@ -710,7 +712,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   filename() const -> str_view {
+   filename() const [[clang::lifetimebound]] -> str_view {
       str_view const value = view();
       if (value.size() == 0u || value[idx(value.size() - 1u)] == '/') {
          return {};
@@ -724,7 +726,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   stem() const -> str_view {
+   stem() const [[clang::lifetimebound]] -> str_view {
       str_view const name = filename();
       if (name == "." || name == "..") {
          return name;
@@ -800,7 +802,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   components() const noexcept -> path_components {
+   components() const noexcept [[clang::lifetimebound]] -> path_components {
       return view();
    }
 

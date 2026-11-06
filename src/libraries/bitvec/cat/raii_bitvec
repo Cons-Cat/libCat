@@ -532,7 +532,8 @@ class [[gsl::Owner]] basic_bitvec
 
    // Set every logical bit to the requested value.
    constexpr auto
-   fill(bit_value value = true) noexcept -> basic_bitvec& {
+   fill(bit_value value = true) noexcept [[clang::lifetimebound]]
+   -> basic_bitvec& {
       m_core.fill(value);
       return *this;
    }
@@ -541,7 +542,7 @@ class [[gsl::Owner]] basic_bitvec
    constexpr auto
    set(idx bit_index, bit_value value = true) noexcept(
       !__has_feature(cxx_exceptions)
-   ) -> basic_bitvec& {
+   ) [[clang::lifetimebound]] -> basic_bitvec& {
       m_core.set(bit_index, value);
       return *this;
    }
@@ -549,7 +550,7 @@ class [[gsl::Owner]] basic_bitvec
    // Reset one bit to false.
    constexpr auto
    reset(idx bit_index) noexcept(!__has_feature(cxx_exceptions))
-      -> basic_bitvec& {
+      [[clang::lifetimebound]] -> basic_bitvec& {
       m_core.reset(bit_index);
       return *this;
    }
@@ -557,7 +558,7 @@ class [[gsl::Owner]] basic_bitvec
    // Flip one bit in place.
    constexpr auto
    flip(idx bit_index) noexcept(!__has_feature(cxx_exceptions))
-      -> basic_bitvec& {
+      [[clang::lifetimebound]] -> basic_bitvec& {
       m_core.flip(bit_index);
       return *this;
    }

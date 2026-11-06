@@ -344,7 +344,7 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    }
 
    constexpr auto
-   operator++(this auto&& self) -> decltype(auto) {
+   operator++(this auto&& self [[clang::lifetimebound]]) -> decltype(auto) {
       if constexpr (detail::has_increment<__typeof_unqual(self)>) {
          self.increment();
       } else {

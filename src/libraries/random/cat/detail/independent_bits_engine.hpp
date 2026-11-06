@@ -35,7 +35,7 @@ class independent_bits_engine {
    }
 
    constexpr auto
-   base() const noexcept -> Engine const& {
+   base() const noexcept [[clang::lifetimebound]] -> Engine const& {
       return m_engine;
    }
 

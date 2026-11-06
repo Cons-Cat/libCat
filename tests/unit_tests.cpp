@@ -63,7 +63,11 @@ main() -> int {
 
    // Set the jump buffer pointer before any constructors are called.
    cat::jmp_buffer jump_buffer;
+   // `jump_buffer` outlives every use of `p_jump_buffer`.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-dangling-global-in-main"
    p_jump_buffer = &jump_buffer;
+#pragma clang diagnostic pop
 
    // Register the exception allocator once before any test runs.
    cat::alloc_exception_runtime(g_tests_alloc);

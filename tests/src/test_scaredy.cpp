@@ -90,7 +90,8 @@ struct scaredy_destruct_tracer {
 
    constexpr scaredy_destruct_tracer() = default;
 
-   constexpr scaredy_destruct_tracer(int4& live) : p_live(&live) {
+   constexpr scaredy_destruct_tracer(int4& live [[clang::lifetimebound]])
+       : p_live(&live) {
       ++live;
    }
 

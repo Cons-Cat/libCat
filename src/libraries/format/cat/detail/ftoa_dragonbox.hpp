@@ -3329,13 +3329,16 @@ namespace to_chars_detail {
 template <class Float, class FloatTraits>
 extern char*
 to_chars(
-   typename FloatTraits::carrier_uint significand, int exponent, char* buffer
+   typename FloatTraits::carrier_uint significand, int exponent,
+   char* buffer [[clang::lifetimebound]]
 ) noexcept;
 
 // Avoid needless ABI overhead incurred by tag dispatch.
 template <class PolicyHolder, class Float, class FloatTraits>
 char*
-to_chars_n_impl(float_bits<Float, FloatTraits> br, char* buffer) noexcept {
+to_chars_n_impl(
+   float_bits<Float, FloatTraits> br, char* buffer [[clang::lifetimebound]]
+) noexcept {
    auto const exponent_bits = br.extract_exponent_bits();
    auto const s = br.remove_exponent_bits(exponent_bits);
 
@@ -3378,7 +3381,9 @@ template <
    class Float, class FloatTraits = default_float_traits<Float>,
    class... Policies>
 char*
-to_chars_n(Float x, char* buffer, Policies... policies) noexcept {
+to_chars_n(
+   Float x, char* buffer [[clang::lifetimebound]], Policies... policies
+) noexcept {
    using namespace cat::detail::dragonbox::detail::policy_impl;
    using policy_holder = decltype(make_policy_holder(
       base_default_pair_list<
@@ -3402,7 +3407,9 @@ template <
    class Float, class FloatTraits = default_float_traits<Float>,
    class... Policies>
 char*
-to_chars(Float x, char* buffer, Policies... policies) noexcept {
+to_chars(
+   Float x, char* buffer [[clang::lifetimebound]], Policies... policies
+) noexcept {
    auto ptr = to_chars_n<Float, FloatTraits>(x, buffer, policies...);
    *ptr = '\0';
    return ptr;

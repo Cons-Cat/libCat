@@ -1082,9 +1082,9 @@ make_bit_reference_from_mask(Storage& reference, Mask mask) noexcept(
 
 template <is_unsigned_integral Storage>
 constexpr auto
-make_bit_reference_from_offset(Storage& reference, uword offset) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> bit_reference<Storage>;
+make_bit_reference_from_offset(
+   Storage& reference [[clang::lifetimebound]], uword offset
+) noexcept(!__has_feature(cxx_exceptions)) -> bit_reference<Storage>;
 
 template <is_unsigned_integral Storage>
    requires(!is_const<Storage>)
@@ -1105,9 +1105,10 @@ make_bit_ptr_from_offset(Storage* _Nonnull p_storage, Offset offset) noexcept(
 
 namespace detail {
 constexpr auto
-get_bit_value(bit_value& value) noexcept -> bool&;
+get_bit_value(bit_value& value [[clang::lifetimebound]]) noexcept -> bool&;
 constexpr auto
-get_bit_value(bit_value const& value) noexcept -> bool const&;
+get_bit_value(bit_value const& value [[clang::lifetimebound]]) noexcept
+   -> bool const&;
 }  // namespace detail
 
 }  // namespace cat
@@ -1247,21 +1248,21 @@ class bit_value {
 
    // Flag this bit on.
    constexpr auto
-   set() noexcept -> bit_value& {
+   set() noexcept [[clang::lifetimebound]] -> bit_value& {
       m_value = true;
       return *this;
    }
 
    // Flag this bit off.
    constexpr auto
-   unset() noexcept -> bit_value& {
+   unset() noexcept [[clang::lifetimebound]] -> bit_value& {
       m_value = false;
       return *this;
    }
 
    // Flag this bit as the opposite of its current state.
    constexpr auto
-   flip() noexcept -> bit_value& {
+   flip() noexcept [[clang::lifetimebound]] -> bit_value& {
       m_value = !m_value;
       return *this;
    }

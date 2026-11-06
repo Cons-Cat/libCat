@@ -428,8 +428,10 @@ make_forward_list(
 template <typename T, is_convertible<T> U, is_convertible<T>... Args>
 [[nodiscard]]
 constexpr auto
-make_forward_list(allocator_dyn allocator, U&& value, Args&&... remaining)
-   -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
+make_forward_list(
+   allocator_dyn allocator [[clang::lifetimebound]], U&& value,
+   Args&&... remaining
+) -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
    return cat::raii::make_forward_list<T, allocator_dyn>(
       allocator_ref<allocator_dyn>(allocator), $fwd(value), $fwd(remaining)...
    );
