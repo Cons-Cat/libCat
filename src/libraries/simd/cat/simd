@@ -2144,10 +2144,7 @@ class
 
    // Move-assign the raw value of another `simd` into this.
    constexpr auto
-   operator=(mask_type&& operand) -> mask_type& {
-      this->raw = move(operand).raw;
-      return *this;
-   }
+   operator=(mask_type&& operand) -> mask_type& = default;
 
    // Compare equality for each lane to another mask's lanes. Integral lane
    // storage matches `raw ==`. floating-point lanes use logical equality so
