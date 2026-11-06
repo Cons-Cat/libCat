@@ -103,9 +103,9 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    constexpr bitset(bitset&&) = default;
 
    constexpr auto
-   operator=(bitset const&) noexcept -> bitset& = default;
+   operator=(bitset const&) -> bitset& = default;
    constexpr auto
-   operator=(bitset&&) noexcept -> bitset& = default;
+   operator=(bitset&&) -> bitset& = default;
 
    [[nodiscard]]
    static constexpr auto

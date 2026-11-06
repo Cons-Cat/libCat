@@ -24,7 +24,7 @@ class initializer_list {
    using iterator = T const*;
    using const_iterator = T const*;
 
-   constexpr initializer_list() noexcept = default;
+   constexpr initializer_list() = default;
 
    [[nodiscard]]
    constexpr auto

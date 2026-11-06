@@ -104,8 +104,7 @@ class stacktrace
    constexpr stacktrace(stacktrace&&) = default;
 
    constexpr auto
-   operator=(stacktrace&&) noexcept(!__has_feature(cxx_exceptions))
-      -> stacktrace& = default;
+   operator=(stacktrace&&) -> stacktrace& = default;
 
    constexpr stacktrace(stacktrace const&) =
       delete ("Implicit copying of `cat::stacktrace` is forbidden. Call "

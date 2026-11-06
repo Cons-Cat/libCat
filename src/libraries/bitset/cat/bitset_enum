@@ -53,9 +53,9 @@ class bitset_enum : public bitwise_interface<bitset_enum<Flags>> {
    constexpr bitset_enum(bitset_enum&&) = default;
 
    constexpr auto
-   operator=(bitset_enum const&) noexcept -> bitset_enum& = default;
+   operator=(bitset_enum const&) -> bitset_enum& = default;
    constexpr auto
-   operator=(bitset_enum&&) noexcept -> bitset_enum& = default;
+   operator=(bitset_enum&&) -> bitset_enum& = default;
 
    [[nodiscard]]
    static constexpr auto

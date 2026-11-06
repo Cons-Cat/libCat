@@ -81,7 +81,7 @@ struct variant_node<Alternative> {
    // user-declared destructor: the enclosing `cat::variant` destroys the
    // active alternative through its own discriminant before the node's
    // destructor runs.
-   constexpr ~variant_node() noexcept(!__has_feature(cxx_exceptions)) = default;
+   constexpr ~variant_node() = default;
 
    constexpr ~variant_node()
       requires(!is_trivially_destructible<Alternative>)
@@ -109,7 +109,7 @@ struct variant_node<Alternative, Remaining...> {
    constexpr variant_node() noexcept {
    }
 
-   constexpr ~variant_node() noexcept(!__has_feature(cxx_exceptions)) = default;
+   constexpr ~variant_node() = default;
 
    constexpr ~variant_node()
       requires(
@@ -609,7 +609,7 @@ class variant {
 
    // Destructor: destroy the active alternative if any. Trivially-destructible
    // alternatives use the implicitly-generated trivial destructor.
-   constexpr ~variant() noexcept(!__has_feature(cxx_exceptions)) = default;
+   constexpr ~variant() = default;
 
    constexpr ~variant()
       requires(

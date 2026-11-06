@@ -86,7 +86,7 @@ union map_slot {
    constexpr map_slot() {
    }
 
-   constexpr ~map_slot() noexcept(!__has_feature(cxx_exceptions))
+   constexpr ~map_slot()
       requires(is_trivially_destructible<tuple<Key, T>>)
    = default;
 
@@ -144,7 +144,7 @@ struct map_group {
       guard.commit();
    }
 
-   constexpr ~map_group() noexcept(!__has_feature(cxx_exceptions))
+   constexpr ~map_group()
       requires(is_trivially_destructible<tuple<Key, T>>)
    = default;
 
@@ -489,7 +489,7 @@ class [[gsl::Owner]] map_base {
    operator=(map_base const&) -> map_base& = default;
    constexpr auto
    operator=(map_base&&) -> map_base& = default;
-   constexpr ~map_base() noexcept(!__has_feature(cxx_exceptions)) = default;
+   constexpr ~map_base() = default;
 
  private:
    using group_type = detail::map_group<Key, T>;

@@ -611,7 +611,7 @@ class atomic<T> {
    constexpr atomic(T desired) noexcept : m_value(desired) {
    }
 
-   ~atomic() noexcept(!__has_feature(cxx_exceptions)) = default;
+   ~atomic() = default;
    atomic(atomic const&) = delete;
    auto
    operator=(atomic const&) noexcept -> atomic& = delete;
@@ -1454,7 +1454,7 @@ class atomic<T&> {
    static constexpr bool wait_is_always_signal_safe = true;
 
    atomic() = delete;
-   ~atomic() noexcept(!__has_feature(cxx_exceptions)) = default;
+   ~atomic() = default;
 
    constexpr atomic(T& value [[clang::lifetimebound]]) noexcept
        : m_p_value(&value) {

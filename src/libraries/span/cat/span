@@ -130,11 +130,9 @@ span
               "immediately dangle!");
 
    constexpr auto
-   operator=(span<T, fixed_extent> const&) noexcept
-      -> span<T, fixed_extent>& = default;
+   operator=(span<T, fixed_extent> const&) -> span<T, fixed_extent>& = default;
    constexpr auto
-   operator=(span<T, fixed_extent>&&) noexcept
-      -> span<T, fixed_extent>& = default;
+   operator=(span<T, fixed_extent>&&) -> span<T, fixed_extent>& = default;
 
    template <is_random_access R>
       requires(

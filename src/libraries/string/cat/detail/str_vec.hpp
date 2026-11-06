@@ -453,8 +453,7 @@ class
               "`.clone()` or move instead!");
 
    constexpr auto
-   operator=(basic_str_vec&&) noexcept(!__has_feature(cxx_exceptions))
-      -> basic_str_vec& = default;
+   operator=(basic_str_vec&&) -> basic_str_vec& = default;
 
    [[nodiscard]]
    constexpr auto

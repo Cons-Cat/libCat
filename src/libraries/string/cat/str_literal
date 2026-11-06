@@ -140,7 +140,7 @@ class
 
    constexpr basic_str_literal(basic_str_literal const&) = default;
    constexpr auto
-   operator=(basic_str_literal const&) noexcept -> basic_str_literal& = default;
+   operator=(basic_str_literal const&) -> basic_str_literal& = default;
 
    static constexpr detail::str_literal_constant<fixed_size> size{};
    static constexpr detail::str_literal_constant<fixed_size> length{};

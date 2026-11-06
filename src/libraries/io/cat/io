@@ -108,7 +108,7 @@ class native_handle {
    }
 
    constexpr auto
-   operator=(native_handle const&) noexcept -> native_handle& = default;
+   operator=(native_handle const&) -> native_handle& = default;
 
    constexpr auto
    operator=(native_handle&& other) noexcept -> native_handle& {

@@ -1410,9 +1410,9 @@ class
    }
 
    constexpr auto
-   operator=(basic_float const&) noexcept -> basic_float& = default;
+   operator=(basic_float const&) -> basic_float& = default;
    constexpr auto
-   operator=(basic_float&&) noexcept -> basic_float& = default;
+   operator=(basic_float&&) -> basic_float& = default;
 
    template <is_arithmetic U>
       requires(
@@ -2001,9 +2001,9 @@ class
    }
 
    constexpr auto
-   operator=(basic_int const&) noexcept -> basic_int& = default;
+   operator=(basic_int const&) -> basic_int& = default;
    constexpr auto
-   operator=(basic_int&&) noexcept -> basic_int& = default;
+   operator=(basic_int&&) -> basic_int& = default;
 
    template <is_arithmetic U>
       requires(
@@ -2773,10 +2773,10 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    }
 
    constexpr auto
-   operator=(basic_ualign const&) noexcept -> basic_ualign& = default;
+   operator=(basic_ualign const&) -> basic_ualign& = default;
 
    constexpr auto
-   operator=(basic_ualign&&) noexcept -> basic_ualign& = default;
+   operator=(basic_ualign&&) -> basic_ualign& = default;
 
    template <is_raw_integral U>
       requires(is_safe_arithmetic_conversion<raw_type, U>)
@@ -3167,7 +3167,7 @@ basic_intptr :
    constexpr auto operator=(basic_intptr const&) -> basic_intptr& = default;
 
    constexpr auto
-   operator=(basic_intptr&&) noexcept -> basic_intptr& = default;
+   operator=(basic_intptr&&) -> basic_intptr& = default;
 
    template <is_integral U>
       requires(is_safe_arithmetic_conversion<U, Storage>)
@@ -3697,9 +3697,9 @@ basic_idx :
    }
 
    constexpr auto
-   operator=(basic_idx const&) noexcept -> basic_idx& = default;
+   operator=(basic_idx const&) -> basic_idx& = default;
    constexpr auto
-   operator=(basic_idx&&) noexcept -> basic_idx& = default;
+   operator=(basic_idx&&) -> basic_idx& = default;
 
    // `basic_idx` can safely compare against any other integer type, including
    // `iword`. Negative right-hand operands compare strictly less than any

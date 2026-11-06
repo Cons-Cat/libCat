@@ -129,8 +129,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    );
 
    constexpr auto
-   operator=(basic_bitvec&&) noexcept(!__has_feature(cxx_exceptions))
-      -> basic_bitvec& = default;
+   operator=(basic_bitvec&&) -> basic_bitvec& = default;
    auto
    operator=(basic_bitvec const&) noexcept -> basic_bitvec& =
       delete ("Implicit copying of `cat::basic_bitvec` is forbidden. "

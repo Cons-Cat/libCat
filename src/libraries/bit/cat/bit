@@ -1151,7 +1151,7 @@ class bit_value {
    }
 
    constexpr auto
-   operator=(bit_value const& other) noexcept -> bit_value& = default;
+   operator=(bit_value const& other) -> bit_value& = default;
 
    template <is_unsigned_integral T>
    constexpr auto

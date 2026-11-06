@@ -229,8 +229,7 @@ struct maybe_value_storage {
 
    // If other destructors are not conditionally specialized by their
    // `requires`, they should be `default` or deleted.
-   constexpr ~maybe_value_storage() noexcept(!__has_feature(cxx_exceptions)) =
-      default;
+   constexpr ~maybe_value_storage() = default;
 
    // If `T` is not trivially-destructible, then manually invoke its destructor.
    constexpr ~maybe_value_storage()
@@ -390,9 +389,7 @@ struct maybe_reference_storage {
       -> maybe_reference_storage& = default;
    constexpr auto
    operator=(maybe_reference_storage&&) -> maybe_reference_storage& = default;
-   constexpr ~maybe_reference_storage() noexcept(
-      !__has_feature(cxx_exceptions)
-   ) = default;
+   constexpr ~maybe_reference_storage() = default;
 
    constexpr maybe_reference_storage(detail::nullopt_type /*nullopt*/) noexcept
        : p_storage(nullptr) {
@@ -541,8 +538,7 @@ struct maybe_compact_storage {
 
    // If other destructors are not conditionally specialized by their
    // `requires`, they should be `default` or deleted.
-   constexpr ~maybe_compact_storage() noexcept(!__has_feature(cxx_exceptions)) =
-      default;
+   constexpr ~maybe_compact_storage() = default;
 
    // If `value_type` is not trivially-destructible, then manually invoke its
    // destructor.

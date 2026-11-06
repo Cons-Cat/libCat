@@ -142,10 +142,10 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    }
 
    constexpr auto
-   operator=(bit_span const&) noexcept -> bit_span& = default;
+   operator=(bit_span const&) -> bit_span& = default;
 
    constexpr auto
-   operator=(bit_span&&) noexcept -> bit_span& = default;
+   operator=(bit_span&&) -> bit_span& = default;
 
    [[nodiscard]]
    constexpr auto

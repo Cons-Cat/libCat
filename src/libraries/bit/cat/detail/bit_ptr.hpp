@@ -45,10 +45,10 @@ bit_ptr : public plus_interface<bit_ptr<Storage>>,
    }
 
    constexpr auto
-   operator=(bit_ptr const&) noexcept -> bit_ptr& = default;
+   operator=(bit_ptr const&) -> bit_ptr& = default;
 
    constexpr auto
-   operator=(bit_ptr&&) noexcept -> bit_ptr& = default;
+   operator=(bit_ptr&&) -> bit_ptr& = default;
 
    constexpr auto
    operator=(decltype(nullptr)) noexcept -> bit_ptr& {

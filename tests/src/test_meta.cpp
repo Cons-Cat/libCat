@@ -993,15 +993,15 @@ $test(meta_is_predicate) {
 }
 
 struct nothrow_element {
-   nothrow_element() noexcept = default;
-   nothrow_element(nothrow_element&&) noexcept = default;
+   nothrow_element() = default;
+   nothrow_element(nothrow_element&&) = default;
    auto
-   operator=(nothrow_element&&) noexcept -> nothrow_element& = default;
+   operator=(nothrow_element&&) -> nothrow_element& = default;
 };
 
 struct throwing_move_element {
-   throwing_move_element() noexcept = default;
-   throwing_move_element(throwing_move_element const&) noexcept = default;
+   throwing_move_element() = default;
+   throwing_move_element(throwing_move_element const&) = default;
 
    throwing_move_element(throwing_move_element&&) noexcept(false) {
    }

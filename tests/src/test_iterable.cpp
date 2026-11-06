@@ -1515,11 +1515,10 @@ struct for_each_move_only_callable {
    operator=(for_each_move_only_callable const&)
       -> for_each_move_only_callable& = delete;
 
-   constexpr for_each_move_only_callable(
-      for_each_move_only_callable&&
-   ) noexcept = default;
+   constexpr for_each_move_only_callable(for_each_move_only_callable&&) =
+      default;
    constexpr auto
-   operator=(for_each_move_only_callable&&) noexcept
+   operator=(for_each_move_only_callable&&)
       -> for_each_move_only_callable& = default;
 
    constexpr void

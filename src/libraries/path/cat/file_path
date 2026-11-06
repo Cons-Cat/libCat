@@ -484,7 +484,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
       delete ("Implicit copying of `cat::basic_file_path` is forbidden. Call "
               "`.clone()` or move instead.");
    constexpr auto
-   operator=(basic_file_path&&) noexcept -> basic_file_path& = default;
+   operator=(basic_file_path&&) -> basic_file_path& = default;
    auto
    operator=(basic_file_path const&) noexcept -> basic_file_path& =
       delete ("Implicit copying of `cat::basic_file_path` is forbidden. Call "

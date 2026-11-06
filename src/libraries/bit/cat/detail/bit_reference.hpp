@@ -43,8 +43,7 @@ class bit_reference {
    constexpr bit_reference(bit_value&& other) = delete;
 
    constexpr auto
-   operator=(bit_reference<Storage> const& other) & noexcept
-      -> bit_reference& = default;
+   operator=(bit_reference<Storage> const& other) & -> bit_reference& = default;
 
    constexpr auto
    operator=(bit_reference<Storage>&& other) & noexcept -> bit_reference& {
