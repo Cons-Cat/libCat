@@ -1,0 +1,98 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::raii::basic_set` wraps a `cat::manual::basic_set` and binds an
+// allocator for the container.
+//
+// As this is an `raii` namespace container, its destructor deallocates storage
+// automatically through the bound allocator.
+//
+// It is parameterized by `cat::map_flags`, the same as `cat::manual::set`.
+//
+// Convenience type aliases are provided for these configurations:
+//
+//  `cat::raii::set<Key, Allocator>`, with 4 inline entries.
+//  `cat::raii::set_small<Key, Allocator, n>`, with `n` inline entries.
+//  `cat::raii::set_big<Key, Allocator>`, without inline storage.
+
+#include <cat/raii_map>
+#include <cat/set>
+
+namespace cat::raii {
+
+template <
+   typename Key, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = manual::vec_big<detail::map_group<Key, monostate_type>>,
+   is_allocator Allocator = allocator_dyn, map_flags flags = {}>
+class basic_set;
+
+template <
+   typename Key, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = manual::vec_big<detail::map_group<Key, monostate_type>>,
+   is_allocator Allocator = allocator_dyn, map_flags flags = {}>
+using set = basic_set<
+   Key, Hash, KeyEqual, Container, Allocator,
+   map_flags::inline_storage(4u) | flags>;
+
+template <
+   typename Key, is_allocator Allocator, idx inline_count, map_flags flags = {}>
+using set_small = basic_set<
+   Key, __typeof_unqual(hash), detail::binary_comparator<detail::equal_to_op>,
+   manual::vec_big<detail::map_group<Key, monostate_type>>, Allocator,
+   map_flags::inline_storage(inline_count) | flags>;
+
+template <
+   typename Key, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = manual::vec_big<detail::map_group<Key, monostate_type>>,
+   is_allocator Allocator = allocator_dyn, map_flags flags = {}>
+using set_big = basic_set<Key, Hash, KeyEqual, Container, Allocator, flags>;
+
+template <
+   typename Key, typename Hash, typename KeyEqual, typename Container,
+   is_allocator Allocator, map_flags flags>
+class
+   [[clang::preferred_name(
+        set<Key, Hash, KeyEqual, Container, Allocator, flags>
+     ),
+     clang::preferred_name(
+        set_big<Key, Hash, KeyEqual, Container, Allocator, flags>
+     ),
+     gsl::Owner]]
+   basic_set : public detail::raii_map_base<
+                  Key, manual::basic_set<Key, Hash, KeyEqual, Container, flags>,
+                  Allocator> {
+ public:
+   using detail::raii_map_base<
+      Key, manual::basic_set<Key, Hash, KeyEqual, Container, flags>,
+      Allocator>::raii_map_base;
+
+   constexpr basic_set() = delete ("`cat::raii::basic_set` cannot be created "
+                                   "without an allocator.");
+
+   constexpr basic_set(basic_set&&) = default;
+
+   constexpr basic_set(basic_set const&) =
+      delete ("Implicit copying of `cat::raii::basic_set` is forbidden. Call "
+              "`.clone()` or move instead!");
+
+   [[clang::reinitializes]]
+   constexpr auto
+   operator=(basic_set&&) -> basic_set& = default;
+
+   auto
+   operator=(basic_set const&)
+      -> basic_set& = delete ("Implicit copying of `cat::raii::basic_set` is "
+                              "forbidden. Call `.clone()` or move instead!");
+
+   [[nodiscard]]
+   constexpr auto
+   insert(Key key) -> maybe<void> {
+      return this->m_core.insert(this->m_allocator, move(key));
+   }
+};
+
+}  // namespace cat::raii

@@ -1,6 +1,7 @@
 #include <cat/allocator_linear>
 #include <cat/allocator_page>
 #include <cat/map>
+#include <cat/raii_map>
 
 #include "../unit_tests.hpp"
 
@@ -65,6 +66,81 @@ struct seeded_hash {
       return cat::hash(key, seed);
    }
 };
+
+struct throwing_destructor {
+   ~throwing_destructor() noexcept(false) {
+   }
+};
+
+// A group's destructor may throw iff its entries' destructors may throw.
+static_assert(cat::is_nothrow_destructible<cat::detail::map_group<int4, int4>>);
+static_assert(
+   cat::is_nothrow_destructible<cat::detail::map_group<int4, tracked>>
+);
+static_assert(!cat::is_nothrow_destructible<
+              cat::detail::map_group<int4, throwing_destructor>>);
+static_assert(cat::is_nothrow_destructible<
+              cat::detail::map_slot<int4, throwing_destructor>>);
+static_assert(
+   !cat::is_nothrow_destructible<cat::raii::map_big<int4, throwing_destructor>>
+);
+static_assert(cat::is_nothrow_destructible<cat::raii::map_big<int4, tracked>>);
+
+// Manual maps destroy their entries through `vec`, which must propagate this.
+static_assert(
+   !cat::is_nothrow_destructible<cat::map_big<int4, throwing_destructor>>
+);
+
+struct throwing_move_hash {
+   throwing_move_hash() = default;
+   throwing_move_hash(throwing_move_hash const&) = default;
+
+   throwing_move_hash(throwing_move_hash&&) noexcept(false) {
+   }
+
+   auto
+   operator=(throwing_move_hash&&) noexcept(false) -> throwing_move_hash& {
+      return *this;
+   }
+
+   static constexpr auto
+   operator()(int4 key) -> uint8 {
+      return cat::hash(key);
+   }
+};
+
+// Moving a map may throw iff moving its `Hash` or `KeyEqual` may throw.
+static_assert(cat::is_nothrow_move_constructible<cat::map_big<int4, int4>>);
+static_assert(cat::is_nothrow_move_assignable<cat::map_big<int4, int4>>);
+static_assert(cat::is_nothrow_move_constructible<cat::map_big<int4, tracked>>);
+static_assert(
+   cat::is_nothrow_move_constructible<cat::map_big<int4, int4, seeded_hash>>
+);
+static_assert(!cat::is_nothrow_move_constructible<
+              cat::map_big<int4, int4, throwing_move_hash>>);
+static_assert(!cat::is_nothrow_move_assignable<
+              cat::map_big<int4, int4, throwing_move_hash>>);
+static_assert(
+   cat::is_nothrow_move_constructible<cat::raii::map_big<int4, int4>>
+);
+static_assert(cat::is_nothrow_move_assignable<cat::raii::map_big<int4, int4>>);
+
+// Not trivially copyable, so groups of these use the user-provided move
+// constructor.
+struct nothrow_move {
+   nothrow_move(nothrow_move&&) noexcept {
+   }
+
+   ~nothrow_move() {
+   }
+};
+
+// A group's move constructor may throw iff its entries' may.
+static_assert(cat::is_nothrow_move_constructible<
+              cat::detail::map_group<int4, nothrow_move>>);
+static_assert(
+   !cat::is_nothrow_move_constructible<cat::detail::map_group<int4, tracked>>
+);
 
 consteval auto
 map_consteval_insert_lookup() -> bool {
@@ -913,4 +989,31 @@ $test(map_ref_conversions) {
 
 $test(map_ref_consteval) {
    static_assert(map_ref_consteval());
+}
+
+$test(map_moved_from_is_reusable) {
+   cat::map_big<int4, int4> source;
+   cat::verify(source.insert<cat::allocator_page>(pager, 1, 2).has_value());
+
+   cat::map_big<int4, int4> moved = cat::move(source);
+   cat::verify(source.size() == 0u && !source.contains(1));
+   cat::verify(source.insert<cat::allocator_page>(pager, 3, 4).has_value());
+   cat::verify(source[3].value() == 4);
+
+   moved.free<cat::allocator_page>(pager);
+   moved = cat::move(source);
+   cat::verify(moved[3].value() == 4 && source.size() == 0u);
+   moved.free<cat::allocator_page>(pager);
+}
+
+$test(raii_map_move_assign) {
+   cat::allocator_dyn allocator(pager);
+   cat::raii::map_big<int4, int4> left(allocator);
+   cat::raii::map_big<int4, int4> right(allocator);
+   cat::verify(left.insert(1, 1).has_value());
+   cat::verify(right.insert(2, 2).has_value());
+
+   left = cat::move(right);
+   cat::verify(!left.contains(1) && left[2].value() == 2);
+   cat::verify(right.insert(3, 3).has_value());
 }

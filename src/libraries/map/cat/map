@@ -91,16 +91,17 @@ union map_slot {
    = default;
 
    // The owning map destroys constructed slots.
-   constexpr ~map_slot() {
+   constexpr ~map_slot() noexcept {
    }
 };
 
 template <typename Key, typename T>
 struct map_group {
-   // A 16-wide vector of bytes. These bytes are 0 when a corresponding bucket
-   // is empty, 1 when it is a sentinel, or a hash in the range [2,255].
-   // This is nifty because searching for an empty bucket is just a SIMD compare
-   // to 0.
+   // A 16-wide vector of bytes. These bytes are 0 when a corresponding
+   // bucket is empty, 1 when it is a sentinel, or a hash in the range
+   // [2,255]. This is nifty because searching for an empty bucket is just a
+   // SIMD compare to 0.
+   //
    // The left-most byte is an overflow marker. Its `hash % 8`'th bit is set
    // when an entry with that hash was pushed past this group because it was
    // full.
@@ -120,10 +121,9 @@ struct map_group {
    = default;
 
    // Only occupied slots are moved.
-   constexpr map_group(map_group&& other) noexcept(
-      is_nothrow_move_constructible<tuple<Key, T>>
-      && !__has_feature(cxx_exceptions)
-   )
+   constexpr map_group(
+      map_group&& other
+   ) noexcept(is_nothrow_move_constructible<tuple<Key, T>>)
        : metadata(other.metadata) {
       idx i = 0u;
       // The destructor does not run if this constructor throws.
@@ -149,7 +149,7 @@ struct map_group {
    = default;
 
    // Only occupied slots are destroyed.
-   constexpr ~map_group() noexcept(!__has_feature(cxx_exceptions)) {
+   constexpr ~map_group() noexcept(is_nothrow_destructible<tuple<Key, T>>) {
       for (idx i = 0u; i < 15u; ++i) {
          if (is_occupied(i)) {
             map_slots[i].value.~tuple();
@@ -484,14 +484,60 @@ class [[gsl::Owner]] map_base {
    }
 
    constexpr map_base(map_base const&) = default;
-   constexpr map_base(map_base&&) = default;
+
+   // Moving a map only moves its groups' pointer, which cannot throw unless
+   // `Container` stores groups inline.
+   static constexpr bool moves_groups_by_pointer =
+      requires { requires Container::flags.inline_storage_count == 0u; };
+
+   // `Hash` and `KeyEqual` move first, so that if either throws, `other` is
+   // left intact. A moved-from map is empty, so it may be inserted into again.
+   constexpr map_base(map_base&& other) noexcept(
+      is_nothrow_move_constructible<Hash>
+      && is_nothrow_move_constructible<KeyEqual>
+      && (moves_groups_by_pointer || is_nothrow_move_constructible<Container>)
+   )
+       : m_hash(move(other.m_hash)),
+         m_key_equal(move(other.m_key_equal)),
+         m_groups(move(other.m_groups)) {
+      take_counters_from(other);
+   }
+
    constexpr auto
    operator=(map_base const&) -> map_base& = default;
+
    constexpr auto
-   operator=(map_base&&) -> map_base& = default;
+   operator=(map_base&& other) noexcept(
+      is_nothrow_move_assignable<Hash> && is_nothrow_move_assignable<KeyEqual>
+      && (moves_groups_by_pointer || is_nothrow_move_assignable<Container>)
+   ) -> map_base& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+      m_hash = move(other.m_hash);
+      m_key_equal = move(other.m_key_equal);
+      m_groups = move(other.m_groups);
+      take_counters_from(other);
+      return *this;
+   }
+
    constexpr ~map_base() = default;
 
  private:
+   // Take the counters of `other`, whose groups were just moved, and leave it
+   // empty so that it may be inserted into again.
+   constexpr void
+   take_counters_from(map_base& other) noexcept {
+      m_size = other.m_size;
+      m_max_load = other.m_max_load;
+      m_groups_size_index = other.m_groups_size_index;
+      m_groups_size_mask = other.m_groups_size_mask;
+      other.m_size = 0u;
+      other.m_max_load = 0u;
+      other.m_groups_size_index = 0u;
+      other.m_groups_size_mask = 0u;
+   }
+
    using group_type = detail::map_group<Key, T>;
 
    static constexpr idx group_slots = detail::map_group_slots;
@@ -644,8 +690,7 @@ class [[gsl::Owner]] map_base {
    move_entries_from(
       allocator_ref<Allocator> allocator, Container&& old_groups
    ) {
-      // If hashing or moving an entry throws, clear this `map` rather than
-      // lose track of its entries, like `boost::unordered_flat_map`.
+      // If hashing or moving an entry throws, clear this `map`.
       detail::exception_defer guard([&] {
          old_groups.free(allocator);
          free(allocator);
@@ -675,9 +720,8 @@ class [[gsl::Owner]] map_base {
    grow(allocator_ref<Allocator> allocator, uint8 hash, Key&& key, T&& value)
       -> maybe<void> {
       // Make room for one more entry at the maximum load factor. The extra 1/61
-      // of `m_size` keeps anti-drift the maximum load factor. The extra 1/61 of
-      // `m_size` keeps anti-drift from bringing the table back to its current
-      // size.
+      // of `m_size` keeps anti-drift from bringing the table back to its
+      // current size.
       Container groups;
       $prop(make_groups(
          allocator, groups,
@@ -694,13 +738,13 @@ class [[gsl::Owner]] map_base {
       return monostate;
    }
 
-   Container m_groups;
-
    [[no_unique_address]]
    Hash m_hash;
 
    [[no_unique_address]]
    KeyEqual m_key_equal;
+
+   Container m_groups;
 
    idx m_size = 0u;
    idx m_max_load = 0u;
@@ -719,6 +763,9 @@ template <
 class
    [[clang::preferred_name(
         map<Key, T, Hash, KeyEqual, Container, configuration>
+     ),
+     clang::preferred_name(
+        map_big<Key, T, Hash, KeyEqual, Container, configuration>
      ),
      gsl::Owner]]
    basic_map : public detail::map_base<Key, T, Hash, KeyEqual, Container> {

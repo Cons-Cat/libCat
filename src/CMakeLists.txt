@@ -647,6 +647,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/map/cat/map
   ${CATLIB}/map/cat/hash
   ${CATLIB}/map/cat/raii_map
+  ${CATLIB}/map/cat/set
+  ${CATLIB}/map/cat/raii_set
   ${CATLIB}/map/cat/detail/dyn_map.hpp
   ${CATLIB}/map/cat/detail/map_flags.hpp
   ${CATLIB}/map/cat/detail/map_ref.hpp

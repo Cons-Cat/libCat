@@ -1,0 +1,384 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::set` is libCat's recommended general purpose set container. It is
+// essentially a `cat::map` wrapper whose `Value` is zero-size.
+//
+//    `.insert(key)`, inserts a `key` iff it has not been inserted previously.
+//    A `maybe<void>` is returned engaged if `key` has been inserted, or empty
+//    if `key` had already been inserted or allocation failed.
+//
+//    `.remove(key)` and `.contains(key)` behave like those of `cat::map`.
+//
+// Convenience type aliases are provided for these configurations:
+//
+//  `cat::set<Key>`, a `basic_set` with 4 inline entries.
+//  `cat::set_small<Key, n>`, a `basic_set` with `n` inline entries.
+//  `cat::set_big<Key>`, a `basic_set` without inline storage.
+//
+// There also exist the following non-owning set-like containers.
+//
+//  `cat::set_ref<Key>`, a reference to any `basic_set` regardless of its
+//  `map_flags`. It supports every operation of `basic_set` and dispatches
+//  statically.
+//  `cat::dyn_set<Key>`, a type-erased reference to any set that may insert and
+//  remove through a `allocator_dyn`.
+//  `cat::set_view<Key>`, a type-erased view of any set that only looks up keys.
+
+#include <cat/map>
+
+namespace cat::inline manual {
+
+template <
+   typename Key, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = vec_big<detail::map_group<Key, monostate_type>>>
+class set_ref;
+
+template <typename Key>
+class dyn_set;
+
+template <typename Key>
+class set_view;
+
+template <
+   typename Key, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = vec_big<detail::map_group<Key, monostate_type>>,
+   map_flags flags = {}>
+class basic_set;
+
+template <
+   typename Key, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = vec_big<detail::map_group<Key, monostate_type>>,
+   map_flags flags = {}>
+using set = basic_set<
+   Key, Hash, KeyEqual, Container, map_flags::inline_storage(4u) | flags>;
+
+template <typename Key, idx inline_count, map_flags flags = {}>
+using set_small = basic_set<
+   Key, __typeof_unqual(hash), detail::binary_comparator<detail::equal_to_op>,
+   vec_big<detail::map_group<Key, monostate_type>>,
+   map_flags::inline_storage(inline_count) | flags>;
+
+template <
+   typename Key, typename Hash = __typeof_unqual(hash),
+   typename KeyEqual = detail::binary_comparator<detail::equal_to_op>,
+   typename Container = vec_big<detail::map_group<Key, monostate_type>>,
+   map_flags flags = {}>
+using set_big = basic_set<Key, Hash, KeyEqual, Container, flags>;
+
+}  // namespace cat::inline manual
+
+namespace cat::detail {
+
+// Everything about a `basic_set` that does not depend on its `map_flags`, so
+// that `set_ref` can refer to any of them. It cannot be created, copied, or
+// destroyed on its own. Its `map_base` is private, so that a set exposes no
+// values.
+template <typename Key, typename Hash, typename KeyEqual, typename Container>
+class [[gsl::Owner]] set_base
+    : private map_base<Key, monostate_type, Hash, KeyEqual, Container> {
+   using base = map_base<Key, monostate_type, Hash, KeyEqual, Container>;
+
+ public:
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   insert(allocator_ref<Allocator> allocator, Key key) -> maybe<void> {
+      return base::insert(allocator, move(key), monostate_type{});
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(allocator_dyn allocator, Key key) -> maybe<void> {
+      return insert<allocator_dyn>(allocator, move(key));
+   }
+
+   using base::capacity;
+   using base::cfree;
+   using base::contains;
+   using base::free;
+   using base::rehash;
+   using base::remove;
+   using base::reserve;
+   using base::size;
+
+ protected:
+   constexpr set_base() = default;
+
+   constexpr explicit set_base(Hash hash, KeyEqual key_equal)
+       : base(move(hash), move(key_equal)) {
+   }
+
+   constexpr set_base(set_base const&) = default;
+   constexpr set_base(set_base&&) = default;
+   constexpr auto
+   operator=(set_base const&) -> set_base& = default;
+   constexpr auto
+   operator=(set_base&&) -> set_base& = default;
+   constexpr ~set_base() = default;
+};
+
+}  // namespace cat::detail
+
+namespace cat::inline manual {
+
+template <
+   typename Key, typename Hash, typename KeyEqual, typename Container,
+   map_flags configuration>
+class
+   [[clang::preferred_name(set<Key, Hash, KeyEqual, Container, configuration>),
+     clang::preferred_name(
+        set_big<Key, Hash, KeyEqual, Container, configuration>
+     ),
+     gsl::Owner]]
+   basic_set : public detail::set_base<Key, Hash, KeyEqual, Container> {
+ public:
+   static constexpr map_flags flags = configuration;
+
+   constexpr basic_set() = default;
+
+   constexpr explicit basic_set(Hash hash, KeyEqual key_equal = {})
+       : detail::set_base<Key, Hash, KeyEqual, Container>(
+            move(hash), move(key_equal)
+         ) {
+   }
+};
+
+// A non-owning reference to any non-`const` `basic_set` of `Key`, regardless
+// of its `map_flags`.
+template <typename Key, typename Hash, typename KeyEqual, typename Container>
+class [[gsl::Pointer]] set_ref {
+   using set_type = detail::set_base<Key, Hash, KeyEqual, Container>;
+
+   set_type* _Nonnull m_p_set;
+
+ public:
+   constexpr set_ref(set_type& set [[clang::lifetimebound]])
+       : m_p_set(__builtin_addressof(set)) {
+   }
+
+   // These bind the referenced set rather than this `set_ref`.
+   [[nodiscard]]
+   constexpr
+   operator dyn_set<Key>() const {
+      return dyn_set<Key>(*m_p_set);
+   }
+
+   [[nodiscard]]
+   constexpr
+   operator set_view<Key>() const {
+      return set_view<Key>(*m_p_set);
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   insert(allocator_ref<Allocator> allocator, Key key) const -> maybe<void> {
+      return m_p_set->insert(allocator, move(key));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(allocator_dyn allocator, Key key) const -> maybe<void> {
+      return insert<allocator_dyn>(allocator, move(key));
+   }
+
+   constexpr auto
+   remove(Key const& key) const -> maybe<void> {
+      return m_p_set->remove(key);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   contains(Key const& key) const -> bool {
+      return m_p_set->contains(key);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const -> idx {
+      return m_p_set->size();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   capacity() const -> idx {
+      return m_p_set->capacity();
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   rehash(allocator_ref<Allocator> allocator, idx slots) const -> maybe<void> {
+      return m_p_set->rehash(allocator, slots);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   rehash(allocator_dyn allocator, idx slots) const -> maybe<void> {
+      return rehash<allocator_dyn>(allocator, slots);
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   reserve(allocator_ref<Allocator> allocator, idx count) const -> maybe<void> {
+      return m_p_set->reserve(allocator, count);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   reserve(allocator_dyn allocator, idx count) const -> maybe<void> {
+      return reserve<allocator_dyn>(allocator, count);
+   }
+
+   // Deallocate the referenced set's storage from `allocator`.
+   template <is_allocator Allocator>
+   constexpr void
+   free(allocator_ref<Allocator> allocator) const {
+      m_p_set->free(allocator);
+   }
+
+   // Deallocate the referenced set's storage from `allocator`.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr void
+   free(allocator_dyn allocator) const {
+      free<allocator_dyn>(allocator);
+   }
+
+   // Deallocate the referenced set's storage from `allocator`.
+   template <is_allocator Allocator>
+   constexpr void
+   cfree(allocator_ref<Allocator> allocator) const {
+      m_p_set->cfree(allocator);
+   }
+
+   // Deallocate the referenced set's storage from `allocator`.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr void
+   cfree(allocator_dyn allocator) const {
+      cfree<allocator_dyn>(allocator);
+   }
+};
+
+}  // namespace cat::inline manual
+
+namespace cat::detail {
+
+// The `cat::dyn` method of `dyn_set` beyond those of `set_view`.
+template <typename Key>
+struct dyn_set_insert {
+   using signature = auto(allocator_dyn&, dyn_map_sink<Key>) -> maybe<void>;
+
+   template <typename Set>
+   [[gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   do_invoke(Set& self, allocator_dyn& allocator, dyn_map_sink<Key> key)
+      -> maybe<void> {
+      return self.insert(allocator, move(key));
+   }
+};
+
+}  // namespace cat::detail
+
+namespace cat::inline manual {
+
+// A non-owning, type-erased reference to any non-`const` set of `Key`. This
+// erases its hash, key equality, storage, and `map_flags`. Insertions allocate
+// through a `allocator_dyn`.
+template <typename Key>
+class [[gsl::Pointer]] dyn_set {
+   friend class set_view<Key>;
+
+   // `set_view`'s methods come first so that converting to it is free.
+   detail::dyn_map_ref<
+      detail::dyn_map_contains<Key>, detail::dyn_map_size,
+      detail::dyn_set_insert<Key>, detail::dyn_map_remove<Key>>
+      m_set;
+
+ public:
+   template <typename Set>
+      requires(
+         !is_const<Set>
+         && is_neither<Set, dyn_set, set_view<Key>>
+         // A `set_ref` binds the set that it references.
+         && !is_specialization<Set, set_ref>
+      )
+   [[gnu::always_inline, gnu::nodebug]] constexpr dyn_set(
+      Set& set [[clang::lifetimebound]]
+   )
+       : m_set(set) {
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(allocator_dyn allocator, Key key) const -> maybe<void> {
+      return m_set.template invoke<detail::dyn_set_insert<Key>>(
+         allocator, move(key)
+      );
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   remove(Key const& key) const -> maybe<void> {
+      return m_set.template invoke<detail::dyn_map_remove<Key>>(key);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   contains(Key const& key) const -> bool {
+      return m_set.template invoke<detail::dyn_map_contains<Key>>(key);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   size() const -> idx {
+      return m_set.template invoke<detail::dyn_map_size>();
+   }
+};
+
+// A non-owning, type-erased view of any set of `Key`, which may be `const`.
+// This erases its hash, key equality, storage, and `map_flags`. It exposes no
+// insertion or other mutating methods.
+template <typename Key>
+class [[gsl::Pointer]] set_view {
+   detail::dyn_map_ref<detail::dyn_map_contains<Key>, detail::dyn_map_size>
+      m_set;
+
+ public:
+   template <typename Set>
+      requires(
+         is_neither<remove_const<Set>, set_view, dyn_set<Key>>
+         // A `set_ref` binds the set that it references.
+         && !is_specialization<remove_const<Set>, set_ref>
+      )
+   [[gnu::always_inline, gnu::nodebug]] constexpr set_view(
+      Set& set [[clang::lifetimebound]]
+   )
+       : m_set(set) {
+   }
+
+   // This narrows the vtable rather than viewing the `dyn_set` itself.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr set_view(dyn_set<Key> set)
+       : m_set(set.m_set) {
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   contains(Key const& key) const -> bool {
+      return m_set.template invoke<detail::dyn_map_contains<Key>>(key);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   size() const -> idx {
+      return m_set.template invoke<detail::dyn_map_size>();
+   }
+};
+
+}  // namespace cat::inline manual
