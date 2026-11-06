@@ -34,7 +34,8 @@ popcount_words_scalar(uword const* _Nonnull p_words, idx words, uword tail_mask)
 // Count set bits in an unmasked word buffer using a CSA SIMD accumulator.
 template <typename Simd>
    requires(is_same<typename Simd::memory_lane, uword::raw_type>)
-[[nodiscard]]
+// We must inline to infer the `gnu::target`.
+[[nodiscard, gnu::always_inline]]
 auto
 popcount_words_simd_unmasked(uword const* _Nonnull p_words, idx words) -> idx {
    using lane = Simd::value_type;

@@ -50,6 +50,8 @@
 //    fixed_size_simd<float4, 71u> huge{};
 //    auto const roots = simd_sqrt(huge);
 
+#include <cat/detail/compact.hpp>
+
 #include <cat/arithmetic>
 #include <cat/utility>
 
@@ -337,6 +339,58 @@ simd_lane_from_raw(simd_vector_element<T> slot) noexcept -> T {
    return static_cast<T>(static_cast<raw_arithmetic_type<T>>(slot));
 }
 
+// The widest vector, in bytes, that the baseline target passes and returns by
+// value by registers.
+#ifdef __AVX512F__
+inline constexpr idx simd_register_abi_bytes = 64u;
+#elifdef __AVX__
+inline constexpr idx simd_register_abi_bytes = 32u;
+#else
+inline constexpr idx simd_register_abi_bytes = 16u;
+#endif
+
+template <typename T, typename Abi>
+using simd_raw_vector [[clang::ext_vector_type(Abi::lanes.raw)]] =
+   simd_vector_element<T>;
+
+template <typename Raw, bool = (sizeof(Raw) > simd_register_abi_bytes)>
+struct simd_storage {
+   constexpr simd_storage() = default;
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr simd_storage(Raw const& value) noexcept
+       : raw(value) {
+   }
+
+   Raw raw;
+};
+
+template <typename Raw>
+struct simd_storage<Raw, true> {
+   constexpr simd_storage() = default;
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr simd_storage(Raw const& value) noexcept
+       : raw(value) {
+   }
+
+   Raw raw;
+
+   // This zero-size member exists for a very subtle reason.
+   //
+   // Clang cannot inline functions into others with differing `gnu::target`
+   // attributes ONLY WHEN a vector wider than the native width (e.g. AVX2 when
+   // compiling for SSE2) is passed or returned by value. The calls left behind
+   // have an ABI mismatch.
+   //
+   // Because `simd` is generic, it can't add `gnu::target` attributes to
+   // its methods, so they would break if they take a SIMD vector by value. This
+   // member changes the ABI such that they are always passed over stack rather
+   // than registers, which works around the ABI mismatch.
+   [[no_unique_address]]
+   monostate_type memory_abi;
+};
+
 }  // namespace detail
 
 template <typename T, typename Abi>
@@ -456,7 +510,8 @@ class
      clang::preferred_name(native_simd<T>),
      clang::preferred_name(scalar_simd<T>),
      clang::preferred_name(x64::avx_simd<T>),
-     clang::preferred_name(x64::sse_simd<T>)]] simd {
+     clang::preferred_name(x64::sse_simd<T>)]] simd
+    : public detail::simd_storage<detail::simd_raw_vector<T, Abi>> {
  public:
    using value_type = T;
    // TODO: Figure out what `reference` should be for lane values.
@@ -471,7 +526,8 @@ class
    using iterator = detail::simd_range_stepanov_iterator<simd>;
    using const_iterator = detail::simd_range_stepanov_iterator<simd const>;
 
-   using raw_type [[clang::ext_vector_type(Abi::lanes.raw)]] = memory_lane;
+   using raw_type = detail::simd_raw_vector<T, Abi>;
+   using storage_type = detail::simd_storage<raw_type>;
 
  private:
    static constexpr bool raw_storage_has_no_padding =
@@ -485,16 +541,12 @@ class
 
    constexpr simd(simd&& operand) = default;
 
-// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
+   // `raw_type` is taken by reference so that no vector crosses this call by
+   // value, which would differ across `[[gnu::target(...)]]` boundaries.
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr simd(raw_type values) noexcept
-       : raw(values) {
+   constexpr simd(raw_type const& values) noexcept
+       : storage_type(values) {
    }
-
-#pragma clang diagnostic pop
 
    // One scalar `value` is converted to `T` and that value is stored in every
    // lane. This is not the multi-argument per-lane constructor.
@@ -528,7 +580,7 @@ class
       requires(sizeof...(Us) > 1u && sizeof...(Us) == Abi::lanes.raw)
    [[gnu::nodebug]] constexpr simd(Us&&... arguments)
        // Clang requires curly braces here.
-       : raw(
+       : storage_type(
             raw_type{
                detail::simd_lane_to_storage(static_cast<T>($fwd(arguments)))...
             }
@@ -541,7 +593,9 @@ class
    template <typename U, U... Us>
       requires(sizeof...(Us) == Abi::lanes.raw)
    [[gnu::nodebug]] constexpr simd(value_type_list<U, Us...> /*unused*/)
-       : raw(raw_type{detail::simd_lane_to_storage(static_cast<T>(Us))...}) {
+       : storage_type(
+            raw_type{detail::simd_lane_to_storage(static_cast<T>(Us))...}
+         ) {
    }
 
    // `simd` from `simd_mask` by way of unary + on the mask.
@@ -623,10 +677,6 @@ class
       return true;
    }
 
-// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
    // Compare greater-than for each lane to another `simd`'s lanes, and store
    // the results in a new `simd`.
    [[nodiscard, gnu::always_inline]]
@@ -634,8 +684,6 @@ class
    operator>(simd const& operand) const noexcept -> simd_mask<T, abi_type> {
       return this->raw > operand.raw;
    }
-
-#pragma clang diagnostic pop
 
    // Compare greater-than-or-equal for each lane to another `simd`'s lanes, and
    // store the results in a new `simd`.
@@ -1209,17 +1257,11 @@ class
       return old;
    }
 
-// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator&(simd const& operand) const noexcept -> simd {
       return this->raw & operand.raw;
    }
-
-#pragma clang diagnostic pop
 
    [[gnu::always_inline]]
    constexpr auto
@@ -1228,17 +1270,11 @@ class
       return *this;
    }
 
-// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator|(simd const& operand) const noexcept -> simd {
       return this->raw | operand.raw;
    }
-
-#pragma clang diagnostic pop
 
    [[gnu::always_inline]]
    constexpr auto
@@ -1298,17 +1334,11 @@ class
       return *this;
    }
 
-// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
    [[nodiscard, gnu::always_inline]]
    constexpr auto
    operator^(simd const& operand) const noexcept -> simd {
       return this->raw ^ operand.raw;
    }
-
-#pragma clang diagnostic pop
 
    [[gnu::always_inline]]
    constexpr auto
@@ -1322,7 +1352,7 @@ class
    [[nodiscard, gnu::no_sanitize("bounds"), gnu::always_inline]]
    constexpr auto
    operator[](idx index) const noexcept -> T {
-      return detail::simd_lane_from_raw<T>(raw[index.raw]);
+      return detail::simd_lane_from_raw<T>(this->raw[index.raw]);
    }
 
    // Per-lane equality producing a `simd_mask`. Use `operator==` for value
@@ -1370,7 +1400,7 @@ class
    [[gnu::always_inline]]
    constexpr auto
    set_lane(idx index, scalar_type value) noexcept -> void {
-      raw[index.raw] = detail::simd_lane_to_storage(value);
+      this->raw[index.raw] = detail::simd_lane_to_storage(value);
    }
 
    // P2664R11 permuting subscript `v[indices]` and C++26 multi-subscript
@@ -1388,10 +1418,6 @@ class
    constexpr auto
    operator[](Ts&&... lanes) const;
 
-// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
    // Count set bits in each unsigned integer lane.
    [[nodiscard, gnu::always_inline]]
    constexpr auto
@@ -1400,8 +1426,6 @@ class
    {
       return simd(__builtin_elementwise_popcount(this->raw));
    }
-
-#pragma clang diagnostic pop
 
    [[nodiscard, gnu::always_inline]]
    constexpr auto
@@ -1821,13 +1845,13 @@ class
    [[nodiscard, gnu::always_inline, gnu::returns_nonnull]]
    constexpr auto
    data() noexcept [[clang::lifetimebound]] -> T* _Nonnull {
-      return __builtin_bit_cast(T*, &raw);
+      return __builtin_bit_cast(T*, &this->raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::returns_nonnull]]
    constexpr auto
    data() const noexcept [[clang::lifetimebound]] -> T* _Nonnull {
-      return __builtin_bit_cast(T const*, &raw);
+      return __builtin_bit_cast(T const*, &this->raw);
    }
 
    // Invoke `callback` on each lane in order, with a Clang vectorization
@@ -1851,8 +1875,6 @@ class
          }
       }
    }
-
-   raw_type raw;
 };
 
 // `operator+` where `cat::simd` is the right-hand side operand.
@@ -1997,7 +2019,9 @@ class
      clang::preferred_name(native_simd_mask<T>),
      clang::preferred_name(scalar_simd_mask<T>),
      clang::preferred_name(x64::avx_simd_mask<T>),
-     clang::preferred_name(x64::sse_simd_mask<T>)]] simd_mask {
+     clang::preferred_name(x64::sse_simd_mask<T>)]] simd_mask
+    : public detail::simd_storage<
+         typename Abi::template simd_mask_lane<T>::raw_type> {
  public:
    // The `[[gnu::always_inline]]` policy on intrinsic-/operator-using
    // members is the same as `cat::simd`'s -- see the comment at the top
@@ -2015,6 +2039,7 @@ class
    using lane_scalar = mask_traits::lane_scalar;
    using raw_type = mask_traits::raw_type;
    using comparison_raw_type = decltype(raw_type{} == raw_type{});
+   using storage_type = detail::simd_storage<raw_type>;
 
    using iterator = detail::simd_range_stepanov_iterator<mask_type>;
    using const_iterator = detail::simd_range_stepanov_iterator<mask_type const>;
@@ -2025,13 +2050,10 @@ class
 
    constexpr simd_mask(simd_mask<T, Abi>&& operand) = default;
 
-// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
+   // Vectors are taken by reference for the same reason as in `simd`.
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr simd_mask(raw_type value) noexcept
-       : raw(value) {
+   constexpr simd_mask(raw_type const& value) noexcept
+       : storage_type(value) {
    }
 
    template <typename Raw>
@@ -2040,11 +2062,9 @@ class
          && !is_same<comparison_raw_type, raw_type>
       )
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr simd_mask(Raw value) noexcept
-       : raw(__builtin_bit_cast(raw_type, value)) {
+   constexpr simd_mask(Raw const& value) noexcept
+       : storage_type(__builtin_bit_cast(raw_type, value)) {
    }
-
-#pragma clang diagnostic pop
 
    constexpr simd_mask(bool value) noexcept {
       // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3844r2.pdf
@@ -2331,13 +2351,13 @@ class
    [[nodiscard, gnu::no_sanitize("bounds"), gnu::always_inline]]
    constexpr auto
    operator[](idx index) const noexcept -> bool {
-      return mask_traits::decode_lane(raw, index);
+      return mask_traits::decode_lane(this->raw, index);
    }
 
    [[gnu::always_inline]]
    constexpr auto
    set_lane(idx index, bool value) noexcept -> void {
-      mask_traits::encode_lane(raw, index, value);
+      mask_traits::encode_lane(this->raw, index, value);
    }
 
    // Logical NOT per lane (`simd_mask` stays a mask).
@@ -2414,7 +2434,7 @@ class
    constexpr auto
    lane_byte(idx index) const noexcept -> unsigned char const& {
       return *(
-         reinterpret_cast<unsigned char const*>(&raw)
+         reinterpret_cast<unsigned char const*>(&this->raw)
          + (index.raw * sizeof(lane_scalar))
       );
    }
@@ -2601,14 +2621,14 @@ class
    [[nodiscard, gnu::always_inline, gnu::returns_nonnull]]
    constexpr auto
    data() noexcept [[clang::lifetimebound]] -> lane_scalar* _Nonnull {
-      return __builtin_bit_cast(lane_scalar*, &raw);
+      return __builtin_bit_cast(lane_scalar*, &this->raw);
    }
 
    [[nodiscard, gnu::always_inline, gnu::returns_nonnull]]
    constexpr auto
    data() const noexcept [[clang::lifetimebound]]
    -> lane_scalar const* _Nonnull {
-      return __builtin_bit_cast(lane_scalar const*, &raw);
+      return __builtin_bit_cast(lane_scalar const*, &this->raw);
    }
 
    // Invoke `callback` on each lane in order. Unlike `std::for_each`, the
@@ -2631,8 +2651,6 @@ class
          }
       }
    }
-
-   raw_type raw;
 };
 
 // Count all true lanes in this mask.

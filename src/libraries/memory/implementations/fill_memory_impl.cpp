@@ -13,6 +13,8 @@
 namespace cat::detail {
 
 template <typename Simd>
+// We must inline to infer the `gnu::target`.
+[[gnu::always_inline]]
 void
 fill_memory_large(
    byte* _Nonnull p_destination, byte byte_value, idx bytes

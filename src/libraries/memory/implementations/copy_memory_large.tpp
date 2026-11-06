@@ -12,6 +12,8 @@
 namespace cat::detail {
 
 template <typename Simd>
+// We must inline to infer the `gnu::target`.
+[[gnu::always_inline]]
 void
 copy_memory_large(
    byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes

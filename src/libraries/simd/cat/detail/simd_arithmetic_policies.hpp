@@ -8,6 +8,25 @@
 
 namespace cat::detail {
 
+// `simd_float_divide()` for `simd` operands, which are taken by reference so
+// that no vector crosses this call by value.
+template <precision_policies precision, typename T, typename Abi>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+simd_float_divide(
+   cat::simd<T, Abi> const& lhs, cat::simd<T, Abi> const& rhs
+) noexcept -> cat::simd<T, Abi> {
+   // NOLINTBEGIN(bugprone-branch-clone)
+   if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+      return cat::simd<T, Abi>(lhs.raw / rhs.raw);
+   } else {
+#pragma float_control(precise, off)
+      return cat::simd<T, Abi>(lhs.raw / rhs.raw);
+   }
+   // NOLINTEND(bugprone-branch-clone)
+}
+
 template <typename T, typename Abi>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -50,11 +69,8 @@ simd_integral_lanewise_op(
 // Reinterpret the raw vector as its unsigned-lane twin. The bit layout is
 // identical, so this is a pure bitcast wrapping arithmetic on the unsigned
 // twin avoids the signed-overflow UB the C++ standard would assign to a
-// signed `+`, `-`, `*`, or `<<`.
-// Benign `-Wpsabi` under `always_inline`. No 64-byte by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
+// signed `+`, `-`, `*`, or `<<`. The vector is returned in `simd_storage` so
+// that it crosses this call the same way as a `simd` does.
 template <typename T, typename Abi>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -63,7 +79,9 @@ simd_to_unsigned_raw(cat::simd<T, Abi> const& value) noexcept {
    using unsigned_scalar = make_unsigned_type<raw_scalar>;
    using unsigned_raw [[clang::ext_vector_type(Abi::lanes.raw)]] =
       unsigned_scalar;
-   return __builtin_bit_cast(unsigned_raw, value.raw);
+   return simd_storage<unsigned_raw>(
+      __builtin_bit_cast(unsigned_raw, value.raw)
+   );
 }
 
 template <typename T, typename Abi, typename UnsignedRaw>
@@ -89,7 +107,7 @@ simd_integral_add_policy(
       policy == overflow_policies::wrap && is_signed<raw_arithmetic_type<T>>
    ) {
       return simd_from_unsigned_raw<T, Abi>(
-         simd_to_unsigned_raw(left) + simd_to_unsigned_raw(right)
+         simd_to_unsigned_raw(left).raw + simd_to_unsigned_raw(right).raw
       );
    } else {
       return cat::simd<T, Abi>(left.raw + right.raw);
@@ -111,7 +129,7 @@ simd_integral_sub_policy(
       policy == overflow_policies::wrap && is_signed<raw_arithmetic_type<T>>
    ) {
       return simd_from_unsigned_raw<T, Abi>(
-         simd_to_unsigned_raw(left) - simd_to_unsigned_raw(right)
+         simd_to_unsigned_raw(left).raw - simd_to_unsigned_raw(right).raw
       );
    } else {
       return cat::simd<T, Abi>(left.raw - right.raw);
@@ -131,7 +149,7 @@ simd_integral_mul_policy(
       policy == overflow_policies::wrap && is_signed<raw_arithmetic_type<T>>
    ) {
       return simd_from_unsigned_raw<T, Abi>(
-         simd_to_unsigned_raw(left) * simd_to_unsigned_raw(right)
+         simd_to_unsigned_raw(left).raw * simd_to_unsigned_raw(right).raw
       );
    } else {
       return cat::simd<T, Abi>(left.raw * right.raw);
@@ -238,8 +256,6 @@ simd_integral_shr_policy(
       return cat::simd<T, Abi>(left.raw >> right.raw);
    }
 }
-
-#pragma clang diagnostic pop
 
 template <typename T, typename Abi>
    requires(is_floating_point<T>)

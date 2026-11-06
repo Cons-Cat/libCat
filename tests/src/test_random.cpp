@@ -1001,13 +1001,11 @@ verify_xoshiro_relaxed_bulk_tails() {
    }
 }
 
-// TODO: Investigate making AVX-512 work again. Disabled since clang passes
-// 64-byte `simd` values differently across `gnu::target` boundaries.
-// [[gnu::target("avx512f,avx512cd,avx512bw,avx512dq,avx512vl")]]
-// void
-// verify_xoshiro_relaxed_bulk_avx512_tails() {
-//    verify_xoshiro_relaxed_bulk_tails<x64::avx512_abi<cat::uint8>>();
-// }
+[[gnu::target("avx512f,avx512cd,avx512bw,avx512dq,avx512vl")]]
+void
+verify_xoshiro_relaxed_bulk_avx512_tails() {
+   verify_xoshiro_relaxed_bulk_tails<x64::avx512_abi<cat::uint8>>();
+}
 
 template <cat::idx size, typename Distribution>
 void
@@ -1118,16 +1116,14 @@ $test(random_fill_xoshiro_relaxed_bulk_accounting) {
 
    verify_xoshiro_relaxed_bulk_tails<x64::sse_abi<cat::uint8>>();
    verify_xoshiro_relaxed_bulk_tails<x64::avx_abi<cat::uint8>>();
-   // TODO: Investigate making AVX-512 work again. Disabled since clang passes
-   // 64-byte `simd` values differently across `gnu::target` boundaries.
-   // if (
-   //    __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512cd")
-   //    && __builtin_cpu_supports("avx512bw")
-   //    && __builtin_cpu_supports("avx512dq")
-   //    && __builtin_cpu_supports("avx512vl")
-   // ) {
-   //    verify_xoshiro_relaxed_bulk_avx512_tails();
-   // }
+   if (
+      __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("avx512cd")
+      && __builtin_cpu_supports("avx512bw")
+      && __builtin_cpu_supports("avx512dq")
+      && __builtin_cpu_supports("avx512vl")
+   ) {
+      verify_xoshiro_relaxed_bulk_avx512_tails();
+   }
 }
 
 $test(random_fill_xoshiro_relaxed_distributions) {

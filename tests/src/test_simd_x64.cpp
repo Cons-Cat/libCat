@@ -129,78 +129,74 @@ verify_avx2_compress_matches_reference(
    }
 }
 
-// TODO: Investigate making AVX-512 work again. Disabled since clang passes
-// 64-byte `simd` values differently across `gnu::target` boundaries.
-// [[nodiscard]]
-// auto
-// has_avx512_runtime_support() -> bool {
-//    return __builtin_cpu_supports("avx512f")
-//           && __builtin_cpu_supports("avx512cd")
-//           && __builtin_cpu_supports("avx512bw")
-//           && __builtin_cpu_supports("avx512dq")
-//           && __builtin_cpu_supports("avx512vl");
-// }
+[[nodiscard]]
+auto
+has_avx512_runtime_support() -> bool {
+   return __builtin_cpu_supports("avx512f")
+          && __builtin_cpu_supports("avx512cd")
+          && __builtin_cpu_supports("avx512bw")
+          && __builtin_cpu_supports("avx512dq")
+          && __builtin_cpu_supports("avx512vl");
+}
 
-// [[gnu::target("avx512f,avx512cd,avx512bw,avx512dq,avx512vl")]]
-// auto
-// verify_avx512_abi_runtime_hooks() -> void {
-//    cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint1>>());
-//    cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint2>>());
-//    cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint4>>());
-//    cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint8>>());
-//    cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int1>>());
-//    cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int2>>());
-//    cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int4>>());
-//    cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int8>>());
+[[gnu::target("avx512f,avx512cd,avx512bw,avx512dq,avx512vl")]]
+auto
+verify_avx512_abi_runtime_hooks() -> void {
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint1>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint2>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint4>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::uint8>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int1>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int2>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int4>>());
+   cat::verify(verify_rotate_counts<x64::avx512_simd<cat::int8>>());
 
-//    verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint1>>();
-//    verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint2>>();
-//    verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint4>>();
-//    verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint8>>();
+   verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint1>>();
+   verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint2>>();
+   verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint4>>();
+   verify_mask_hooks_match_fixed_size<x64::avx512_simd_mask<cat::uint8>>();
 
-//    x64::avx512_simd<cat::uint8> const words{
-//       1u, 3u, 7u, 15u, 31u, 63u, 127u, cat::uint8::max()
-//    };
-//    auto const counts = words.popcount();
-//    cat::verify(counts[0u] == 1u);
-//    cat::verify(counts[1u] == 2u);
-//    cat::verify(counts[7u] == 64u);
-//    cat::verify(counts.sum() == 92u);
+   x64::avx512_simd<cat::uint8> const words{1u,  3u,  7u,   15u,
+                                            31u, 63u, 127u, cat::uint8::max()};
+   auto const counts = words.popcount();
+   cat::verify(counts[0u] == 1u);
+   cat::verify(counts[1u] == 2u);
+   cat::verify(counts[7u] == 64u);
+   cat::verify(counts.sum() == 92u);
 
-//    x64::avx512_simd<cat::uint4> const lanes{
-//       1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u
-//    };
-//    x64::avx512_simd<cat::uint4> const threshold{
-//       8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u
-//    };
-//    auto const high_lanes = lanes > threshold;
-//    cat::verify(high_lanes.count_if_true() == 8u);
-//    cat::verify(high_lanes.find_if_true() == 8u);
-//    cat::verify(high_lanes.find_last_if_true() == 15u);
+   x64::avx512_simd<cat::uint4> const lanes{
+      1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u, 15u, 16u
+   };
+   x64::avx512_simd<cat::uint4> const threshold{8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u,
+                                                8u, 8u, 8u, 8u, 8u, 8u, 8u, 8u};
+   auto const high_lanes = lanes > threshold;
+   cat::verify(high_lanes.count_if_true() == 8u);
+   cat::verify(high_lanes.find_if_true() == 8u);
+   cat::verify(high_lanes.find_last_if_true() == 15u);
 
-//    cat::bitset<16u> const bits = high_lanes.to_bitset();
-//    for (cat::idx i = 0u; i < 8u; ++i) {
-//       cat::verify(!bits[i]);
-//    }
-//    for (cat::idx i = 8u; i < 16u; ++i) {
-//       cat::verify(bits[i]);
-//    }
+   cat::bitset<16u> const bits = high_lanes.to_bitset();
+   for (cat::idx i = 0u; i < 8u; ++i) {
+      cat::verify(!bits[i]);
+   }
+   for (cat::idx i = 8u; i < 16u; ++i) {
+      cat::verify(bits[i]);
+   }
 
-//    x64::avx512_simd<cat::float4_fast> const geometry{1_f4, 1_f4, 1_f4, 1_f4,
-//                                                      1_f4, 1_f4, 1_f4, 1_f4,
-//                                                      1_f4, 1_f4, 1_f4, 1_f4,
-//                                                      1_f4, 1_f4, 1_f4, 1_f4};
-//    cat::verify(cat::simd_dot(geometry, geometry) == 16_f4);
+   x64::avx512_simd<cat::float4_fast> const geometry{1_f4, 1_f4, 1_f4, 1_f4,
+                                                     1_f4, 1_f4, 1_f4, 1_f4,
+                                                     1_f4, 1_f4, 1_f4, 1_f4,
+                                                     1_f4, 1_f4, 1_f4, 1_f4};
+   cat::verify(cat::simd_dot(geometry, geometry) == 16_f4);
 
-//    x64::avx512_simd<cat::int4> const source{1, 2,  3,  4,  5,  6,  7,  8,
-//                                             9, 10, 11, 12, 13, 14, 15, 16};
-//    cat::fixed_size_simd<cat::int4, 16u> const reverse{
-//       15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
-//    };
-//    auto const permuted = cat::simd_permute(source, reverse);
-//    cat::verify(permuted[0u] == 16);
-//    cat::verify(permuted[15u] == 1);
-// }
+   x64::avx512_simd<cat::int4> const source{1, 2,  3,  4,  5,  6,  7,  8,
+                                            9, 10, 11, 12, 13, 14, 15, 16};
+   cat::fixed_size_simd<cat::int4, 16u> const reverse{
+      15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
+   };
+   auto const permuted = cat::simd_permute(source, reverse);
+   cat::verify(permuted[0u] == 16);
+   cat::verify(permuted[15u] == 1);
+}
 
 }  // namespace
 
@@ -498,19 +494,17 @@ $test(simd_avx_abi_hooks_mask_reductions_and_bitset) {
    }
 }
 
-// TODO: Investigate making AVX-512 work again. Disabled since clang passes
-// 64-byte `simd` values differently across `gnu::target` boundaries.
-// $test(simd_avx512_abi_layout_and_runtime_hooks) {
-//    static_assert(x64::avx512_simd<cat::uint8>::size() == 8u);
-//    static_assert(x64::avx512_simd<cat::uint4>::size() == 16u);
-//    static_assert(x64::avx512_simd<cat::uint1>::size() == 64u);
-//    static_assert(alignof(x64::avx512_simd<cat::uint8>) == 64u);
-//    static_assert(x64::avx512_simd_mask<cat::uint4>::size() == 16u);
+$test(simd_avx512_abi_layout_and_runtime_hooks) {
+   static_assert(x64::avx512_simd<cat::uint8>::size() == 8u);
+   static_assert(x64::avx512_simd<cat::uint4>::size() == 16u);
+   static_assert(x64::avx512_simd<cat::uint1>::size() == 64u);
+   static_assert(alignof(x64::avx512_simd<cat::uint8>) == 64u);
+   static_assert(x64::avx512_simd_mask<cat::uint4>::size() == 16u);
 
-//    if (has_avx512_runtime_support()) {
-//       verify_avx512_abi_runtime_hooks();
-//    }
-// }
+   if (has_avx512_runtime_support()) {
+      verify_avx512_abi_runtime_hooks();
+   }
+}
 
 // AVX2 `simd_compress` hooks (`simd_avx2_compress.hpp`). One test per lane
 // width covers the four specializations: 32-bit and 64-bit go through the
