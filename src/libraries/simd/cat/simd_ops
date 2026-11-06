@@ -2603,9 +2603,9 @@ struct simd_rsqrt_impl : simd_elementwise_interface<simd_rsqrt_impl> {
          return simd_abi_apply_unary_full<simd_abi::op_rsqrt, T, Abi>(input);
       } else {
          simd<T, Abi> one{T(1)};
-         return simd<T, Abi>(simd_float_divide<simd_float_precision_policy<T>>(
-            one.raw, __builtin_elementwise_sqrt(input.raw)
-         ));
+         return simd_float_divide<simd_float_precision_policy<T>>(
+            one, simd<T, Abi>(__builtin_elementwise_sqrt(input.raw))
+         );
       }
    }
 
@@ -2655,9 +2655,6 @@ struct simd_dot_masked_impl {
    }
 };
 
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
 struct simd_dot_impl {
    template <typename T, typename Abi>
       requires(is_arithmetic<T> && !is_bool<T>)
@@ -2690,8 +2687,6 @@ struct simd_dot_impl {
       return {lane_mask};
    }
 };
-
-#pragma clang diagnostic pop
 
 template <typename SimdMask>
 struct simd_normalize_masked_impl {
@@ -2886,9 +2881,7 @@ struct simd_rcbrt_impl : simd_elementwise_interface<simd_rcbrt_impl> {
    invoke_full(simd<T, Abi> input) const noexcept -> simd<T, Abi> {
       simd<T, Abi> const cbrt = simd_cbrt_impl{}.invoke_full(input);
       simd<T, Abi> const one{T(1)};
-      return simd<T, Abi>(
-         simd_float_divide<simd_float_precision_policy<T>>(one.raw, cbrt.raw)
-      );
+      return simd_float_divide<simd_float_precision_policy<T>>(one, cbrt);
    }
 
    template <typename T>
@@ -2914,15 +2907,11 @@ struct simd_rnroot_impl
       }
       if (n == 1) {
          simd<T, Abi> const one{T(1)};
-         return simd<T, Abi>(simd_float_divide<simd_float_precision_policy<T>>(
-            one.raw, input.raw
-         ));
+         return simd_float_divide<simd_float_precision_policy<T>>(one, input);
       }
       simd<T, Abi> const root = simd_nroot_impl{}.invoke_full(input, n);
       simd<T, Abi> const one{T(1)};
-      return simd<T, Abi>(
-         simd_float_divide<simd_float_precision_policy<T>>(one.raw, root.raw)
-      );
+      return simd_float_divide<simd_float_precision_policy<T>>(one, root);
    }
 
    template <typename T>
@@ -3011,10 +3000,6 @@ struct simd_permute_impl {
 
 template <int... indices>
 struct simd_shuffle_impl {
-// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
    template <typename T, typename Abi>
       requires(sizeof...(indices) > 0u)
    [[nodiscard, gnu::always_inline]]
@@ -3040,8 +3025,6 @@ struct simd_shuffle_impl {
          __builtin_shufflevector(left.raw, right.raw, indices...)
       );
    }
-
-#pragma clang diagnostic pop
 };
 
 struct simd_reverse_impl {
@@ -3203,10 +3186,6 @@ struct simd_expand_impl {
    }
 };
 
-// Benign -Wpsabi under always_inline. No 512-bit by-value ABI boundary.
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpsabi"
-
 struct simd_rotate_left_impl
     : simd_elementwise_unary_int_interface<simd_rotate_left_impl> {
    constexpr simd_rotate_left_impl() = default;
@@ -3217,8 +3196,8 @@ struct simd_rotate_left_impl
    constexpr auto
    invoke_full(simd<T, Abi> input, iword count) const noexcept -> simd<T, Abi> {
       if constexpr (is_signed<T>) {
-         auto const value = simd_to_unsigned_raw(input);
-         auto const counts = simd_to_unsigned_raw(simd<T, Abi>(T(count)));
+         auto const value = simd_to_unsigned_raw(input).raw;
+         auto const counts = simd_to_unsigned_raw(simd<T, Abi>(T(count))).raw;
          return simd_from_unsigned_raw<T, Abi>(
             __builtin_elementwise_fshl(value, value, counts)
          );
@@ -3265,8 +3244,8 @@ struct simd_rotate_right_impl
    constexpr auto
    invoke_full(simd<T, Abi> input, iword count) const noexcept -> simd<T, Abi> {
       if constexpr (is_signed<T>) {
-         auto const value = simd_to_unsigned_raw(input);
-         auto const counts = simd_to_unsigned_raw(simd<T, Abi>(T(count)));
+         auto const value = simd_to_unsigned_raw(input).raw;
+         auto const counts = simd_to_unsigned_raw(simd<T, Abi>(T(count))).raw;
          return simd_from_unsigned_raw<T, Abi>(
             __builtin_elementwise_fshr(value, value, counts)
          );
@@ -3302,8 +3281,6 @@ struct simd_rotate_right_impl
       );
    }
 };
-
-#pragma clang diagnostic pop
 
 struct simd_min_impl : simd_elementwise_binary_interface<simd_min_impl> {
    constexpr simd_min_impl() = default;

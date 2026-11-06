@@ -29,7 +29,8 @@ struct simd_precision_scalar<
 template <typename T, typename RawVector>
 [[nodiscard]]
 constexpr auto
-simd_reduce_policy_fadd(RawVector raw) noexcept -> raw_arithmetic_type<T> {
+simd_reduce_policy_fadd(RawVector const& raw) noexcept
+   -> raw_arithmetic_type<T> {
    if constexpr (simd_float_precision_policy<T> == precision_policies::fast) {
       return __builtin_reduce_assoc_fadd(raw);
    } else {
@@ -40,7 +41,7 @@ simd_reduce_policy_fadd(RawVector raw) noexcept -> raw_arithmetic_type<T> {
 template <typename T, typename RawVector>
 [[nodiscard]]
 constexpr auto
-simd_reduce_policy_fadd(RawVector raw, T seed) noexcept
+simd_reduce_policy_fadd(RawVector const& raw, T seed) noexcept
    -> raw_arithmetic_type<T> {
    raw_arithmetic_type<T> const raw_seed = make_raw_arithmetic(seed);
    if constexpr (simd_float_precision_policy<T> == precision_policies::fast) {

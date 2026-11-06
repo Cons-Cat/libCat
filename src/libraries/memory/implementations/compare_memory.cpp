@@ -79,6 +79,8 @@ compare_memory_first_mismatch_in_batch(
 }
 
 template <typename Simd>
+// We must inline to infer the `gnu::target`.
+[[gnu::always_inline]]
 auto
 compare_memory_large(
    byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes

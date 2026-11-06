@@ -3813,6 +3813,27 @@ $test(simd_dispatch_returns_non_int) {
    cat::verify(result == (has_avx2 ? 2.5f : 1.5f));
 }
 
+$test(simd_dispatch_avx2_arithmetic) {
+   // `simd` functions called from a `[[gnu::target("avx2")]]` body must agree
+   // with it on the by-value calling convention, or results are garbage.
+   int const result =
+      $simd_switch($abi(
+                      avx2,
+                      {
+                         int4x_ const left = cat::simd_iota<int4x_>(0);
+                         int4x_ const right(3);
+                         int4x_ const product = (left + right) * right;
+                         if ((left < right).count_if_true() != 3u) {
+                            return -2;
+                         }
+                         return product.sum().raw;
+                      }
+                   ),
+                   default : return -1;);
+   // (0 + 1 + ... + 7 + 8 * 3) * 3 = 156.
+   cat::verify(result == (__builtin_cpu_supports("avx2") ? 156 : -1));
+}
+
 $test(simd_dispatch_statement_form_default_only) {
    // Default-only fallback also works in statement form.
    int sink = 0;

@@ -62,6 +62,9 @@ target_compile_options(cat-tests-base INTERFACE
   # Tests should be allowed to have unused variables.
   -Wno-unused-variable
   -Wno-self-assign-overloaded
+  # A vector passed by value with a calling convention that differs across
+  # `gnu::target` boundaries is a miscompile, not a style issue.
+  -Werror=psabi
 )
 
 # `cat-impl-shared`'s PCH is `-fPIC`. Without this, Clang rejects PCH reuse with
