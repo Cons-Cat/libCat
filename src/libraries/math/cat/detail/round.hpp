@@ -2,7 +2,64 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/ldexp.hpp>
+
 #include <cat/arithmetic>
+
+namespace cat::detail {
+
+// Ported from LLVM libc's `fputil::floor()` and `fputil::ceil()`.
+template <is_raw_floating_point Float>
+[[nodiscard]]
+constexpr auto
+emulated_trunc(Float argument) noexcept -> Float {
+   using traits = ldexp_float_bits<Float>;
+   using uint_type = traits::uint_type;
+   constexpr uint_type sign_mask = uint_type(1) << (sizeof(uint_type) * 8 - 1);
+
+   if (!is_finite(argument)) {
+      return argument;
+   }
+   uint_type bits = __builtin_bit_cast(uint_type, argument);
+   int const exponent =
+      static_cast<int>((bits & ~sign_mask) >> traits::fraction_width)
+      - traits::exponent_bias;
+   // `argument` is already an integer.
+   if (exponent >= traits::fraction_width) {
+      return argument;
+   }
+   // The magnitude of `argument` is less than 1.
+   if (exponent <= -1) {
+      return __builtin_bit_cast(Float, bits & sign_mask);
+   }
+   int const trim_size = traits::fraction_width - exponent;
+   bits = (bits >> trim_size) << trim_size;
+   return __builtin_bit_cast(Float, bits);
+}
+
+template <is_raw_floating_point Float>
+[[nodiscard]]
+constexpr auto
+emulated_ceil(Float argument) noexcept -> Float {
+   Float const truncated = emulated_trunc(argument);
+   // Truncating a negative value, or an integer, already rounds it up.
+   if (truncated == argument || argument < 0) {
+      return truncated;
+   }
+   return truncated + 1;
+}
+
+template <is_raw_floating_point Float>
+[[nodiscard]]
+constexpr auto
+emulated_floor(Float argument) noexcept -> Float {
+   if (argument < 0) {
+      return -emulated_ceil(-argument);
+   }
+   return emulated_trunc(argument);
+}
+
+}  // namespace cat::detail
 
 namespace cat {
 
@@ -17,24 +74,10 @@ template <is_floating_point Float>
 [[nodiscard]]
 constexpr auto
 floor(Float value) noexcept -> Float {
-   using raw_type = raw_arithmetic_type<Float>;
-   raw_type const raw_value = make_raw_arithmetic(value);
    if consteval {
-      if (!is_finite(raw_value) || raw_value == 0.f) {
-         return value;
-      }
-      constexpr raw_type exact_integer_limit =
-         is_same<raw_type, float> ? 0x1p24f : 0x1p53;
-      if (
-         raw_value >= exact_integer_limit || raw_value <= -exact_integer_limit
-      ) {
-         return value;
-      }
-      raw_type const integral =
-         static_cast<raw_type>(static_cast<long long>(raw_value));
-      return integral > raw_value ? integral - 1.f : integral;
+      return Float(detail::emulated_floor(make_raw_arithmetic(value)));
    }
-   return Float(__builtin_elementwise_floor(raw_value));
+   return Float(__builtin_elementwise_floor(make_raw_arithmetic(value)));
 }
 
 template <is_integral T>
@@ -48,27 +91,10 @@ template <is_floating_point Float>
 [[nodiscard]]
 constexpr auto
 ceil(Float value) noexcept -> Float {
-   using raw_type = raw_arithmetic_type<Float>;
-   raw_type const raw_value = make_raw_arithmetic(value);
    if consteval {
-      if (!is_finite(raw_value) || raw_value == 0) {
-         return value;
-      }
-      constexpr raw_type exact_integer_limit =
-         is_same<raw_type, float> ? 0x1p24f : 0x1p53;
-      if (
-         raw_value >= exact_integer_limit || raw_value <= -exact_integer_limit
-      ) {
-         return value;
-      }
-      raw_type const integral =
-         static_cast<raw_type>(static_cast<long long>(raw_value));
-      if (integral < raw_value) {
-         return integral + 1.f;
-      }
-      return integral == 0 && raw_value < 0 ? -0.f : integral;
+      return Float(detail::emulated_ceil(make_raw_arithmetic(value)));
    }
-   return Float(__builtin_elementwise_ceil(raw_value));
+   return Float(__builtin_elementwise_ceil(make_raw_arithmetic(value)));
 }
 
 }  // namespace cat

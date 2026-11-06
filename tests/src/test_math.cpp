@@ -281,6 +281,52 @@ $test(math_floor_ceil) {
    cat::verify(fast_ceil == cat::float4_fast(-1.f));
 }
 
+extern "C" {
+auto
+floorf(float) -> float;
+auto
+floor(double) -> double;
+auto
+ceilf(float) -> float;
+auto
+ceil(double) -> double;
+auto
+fmaf(float, float, float) -> float;
+}
+
+$test(math_libm_libcalls) {
+   // libCat's own definitions of the libcalls Clang emits without SSE4.1 and
+   // FMA. `volatile` keeps Clang from constant-folding these calls.
+   float volatile half = 0.5f;
+   double volatile wide = 4'503'599'627'370'497.5;  // 2^52 + 1.5
+   auto const is_negative_zero = [](float value) {
+      return value == 0.f && __builtin_signbit(value);
+   };
+
+   cat::verify(floorf(half) == 0.f);
+   cat::verify(floorf(-half) == -1.f);
+   cat::verify(is_negative_zero(floorf(-0.f * half)));
+   cat::verify(floorf(3.f * half) == 1.f);
+   cat::verify(floorf(0x1p30f * half) == 0x1p29f);
+   cat::verify(floorf(__builtin_inff() * half) == __builtin_inff());
+   cat::verify(__builtin_isnan(floorf(__builtin_nanf("") * half)));
+   cat::verify(ceilf(half) == 1.f);
+   cat::verify(is_negative_zero(ceilf(-half)));
+   cat::verify(ceilf(-3.f * half) == -1.f);
+   cat::verify(floor(-wide) == -4'503'599'627'370'498.);
+   cat::verify(ceil(wide) == 4'503'599'627'370'498.);
+   cat::verify(floor(half * 5.) == 2.);
+   cat::verify(ceil(half * -5.) == -2.);
+
+   cat::verify(fmaf(half * 4.f, 3.f, 4.f) == 10.f);
+   // Rounding through `double` would give 1 + 2^-11 here. From LLVM libc.
+   float volatile near_one = 1.f + 0x1p-12f;
+   cat::verify(
+      fmaf(near_one, near_one, 0x1p-53f * half * 2.f)
+      == 1.f + 0x1p-11f + 0x1p-23f
+   );
+}
+
 $test(math_div_floor) {
    using namespace cat::arithmetic_literals;
 

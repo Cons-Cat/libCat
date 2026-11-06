@@ -69,9 +69,11 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/math/implementations/cos.cpp
   ${CATLIB}/math/implementations/cosh.cpp
   ${CATLIB}/math/implementations/exp.cpp
+  ${CATLIB}/math/implementations/fma.cpp
   ${CATLIB}/math/implementations/lgamma.cpp
   ${CATLIB}/math/implementations/log.cpp
   ${CATLIB}/math/implementations/pow.cpp
+  ${CATLIB}/math/implementations/round.cpp
   ${CATLIB}/math/implementations/sin.cpp
   ${CATLIB}/math/implementations/sinh.cpp
   ${CATLIB}/math/implementations/sqrt.cpp
