@@ -174,7 +174,7 @@ class file_handle {
    cat::native_handle m_handle;
 };
 
-class mapped_file_handle {
+class [[gsl::Owner]] mapped_file_handle {
  public:
    constexpr mapped_file_handle() = default;
 
@@ -249,13 +249,14 @@ class mapped_file_handle {
 
    [[nodiscard]]
    constexpr auto
-   address() const noexcept -> byte const* _Nullable {
+   address() const noexcept [[clang::lifetimebound]] -> byte const* _Nullable {
       return m_p_mapping;
    }
 
    [[nodiscard]]
    constexpr auto
-   mutable_address() noexcept -> scaredy<byte* _Nullable, io_error> {
+   mutable_address() noexcept [[clang::lifetimebound]]
+   -> scaredy<byte* _Nullable, io_error> {
       if (!native_handle().is_writable()) {
          return io_error::permission_denied;
       }
@@ -264,7 +265,7 @@ class mapped_file_handle {
 
    [[nodiscard]]
    constexpr auto
-   view() const noexcept -> span<byte const> {
+   view() const noexcept [[clang::lifetimebound]] -> span<byte const> {
       if (!is_mapped()) {
          return nullptr;
       }
@@ -273,7 +274,8 @@ class mapped_file_handle {
 
    [[nodiscard]]
    constexpr auto
-   mutable_view() noexcept -> scaredy<span<byte>, io_error> {
+   mutable_view() noexcept [[clang::lifetimebound]]
+   -> scaredy<span<byte>, io_error> {
       if (!native_handle().is_writable()) {
          return io_error::permission_denied;
       }

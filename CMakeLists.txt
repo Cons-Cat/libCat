@@ -212,6 +212,7 @@ list(
   -Wdangling-gsl
   -Wlifetime-safety
   -Wlifetime-safety-suggestions
+  -Wlifetime-safety-experimental-invalidation
 )
 
 if(CAT_USE_PTHREAD)

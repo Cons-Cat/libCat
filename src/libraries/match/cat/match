@@ -96,7 +96,7 @@ struct one_of_types : pattern {
 
    template <typename Callback>
    constexpr auto
-   then_do(Callback&& callback) {
+   then_do(Callback&& callback [[clang::lifetimebound]]) {
       return pattern_invocable{[&](auto& matching) -> bool {
          using unqualified_matching = __typeof_unqual(matching);
          if constexpr (has_member_is_type<unqualified_matching>) {
@@ -128,7 +128,8 @@ struct is_a_value_type : pattern {
 
    template <typename Callback>
    constexpr auto
-   then_do(Callback&& callback) {
+   then_do(Callback&& callback [[clang::lifetimebound]])
+      [[clang::lifetimebound]] {
       return pattern_invocable{
          [&](auto& matching) -> bool {
             using unqualified_matching = __typeof_unqual(matching);
@@ -183,7 +184,10 @@ namespace detail {
 template <typename T>
 struct match_patterns {
    // This isn't needed in C++20, but it prevents a clangd false diagnostic.
-   match_patterns(T& input) : matching(input) {
+   match_patterns(
+      T& input [[clang::lifetimebound]]
+   )
+       : matching(input) {
    }
 
    // Base case.
@@ -242,7 +246,7 @@ struct match_patterns {
 
 template <typename T>
 constexpr auto
-match(T& matching) -> detail::match_patterns<T> {
+match(T& matching [[clang::lifetimebound]]) -> detail::match_patterns<T> {
    return detail::match_patterns(matching);
 }
 

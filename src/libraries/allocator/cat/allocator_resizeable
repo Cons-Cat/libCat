@@ -202,7 +202,8 @@ allocator_resizeable
 
    [[gnu::malloc, clang::ownership_returns(libcat)]]
    auto
-   allocate(idx allocation_bytes) noexcept -> void* _Nullable;
+   allocate(idx allocation_bytes) noexcept [[clang::lifetimebound]]
+   -> void* _Nullable;
 
    [[clang::ownership_takes(libcat, 2)]]
    void
