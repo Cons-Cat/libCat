@@ -146,7 +146,44 @@ verify_irregular_fixed_size_simd() {
    }
 }
 
+// `simd` and `simd_mask` must be as cheap to copy and lay out as their raw
+// vector, including when `memory_abi` is present.
+template <typename Vector>
+constexpr bool has_raw_vector_properties =
+   cat::is_trivially_copyable<Vector>
+   && cat::is_trivially_default_constructible<Vector>
+   && cat::is_trivially_copy_constructible<Vector>
+   && cat::is_trivially_move_constructible<Vector>
+   && cat::is_trivially_copy_assignable<Vector>
+   && cat::is_trivially_move_assignable<Vector>
+   && cat::is_trivially_destructible<Vector> && __is_standard_layout(Vector)
+   && sizeof(Vector) == sizeof(typename Vector::raw_type)
+   && alignof(Vector) == alignof(typename Vector::raw_type);
+
+template <typename Simd>
+constexpr bool has_simd_type_properties =
+   has_raw_vector_properties<Simd>
+   && has_raw_vector_properties<typename Simd::mask_type>;
+
 }  // namespace
+
+$test(simd_type_properties) {
+   static_assert(has_simd_type_properties<cat::scalar_simd<cat::int4>>);
+   static_assert(has_simd_type_properties<cat::fixed_size_simd<cat::int1, 3u>>);
+   // 16, 32, and 64 bytes, which are pinned to memory or not depending on the
+   // baseline target.
+   static_assert(has_simd_type_properties<float4x4>);
+   static_assert(has_simd_type_properties<float4x8>);
+   static_assert(has_simd_type_properties<cat::fixed_size_simd<float4, 16u>>);
+   static_assert(has_simd_type_properties<cat::fixed_size_simd<int8, 8u>>);
+   static_assert(
+      has_simd_type_properties<cat::fixed_size_simd<cat::int1, 64u>>
+   );
+   static_assert(has_simd_type_properties<x64::sse_simd<cat::int4>>);
+   static_assert(has_simd_type_properties<x64::avx_simd<cat::int4>>);
+   static_assert(has_simd_type_properties<x64::avx512_simd<cat::uint8>>);
+   static_assert(has_simd_type_properties<x64::avx512_simd<float4>>);
+}
 
 $test(simd) {
    static_assert(has_simd_undef_accessor<int4x4>);
