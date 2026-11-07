@@ -1114,45 +1114,6 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       return resize_with(allocator, size, fill);
    }
 
-   // Try to change the size of this `vec`, default-initializing any new
-   // elements. Trivial elements are left uninitialized, to be overwritten.
-   template <is_allocator Allocator>
-      requires(is_default_constructible<T>)
-   [[nodiscard]]
-   constexpr auto
-   resize_for_overwrite(allocator_ref<Allocator> allocator, idx size)
-      -> maybe<void>
-      requires(!flags.is_fixed_size)
-   {
-      idx const old_size = this->size();
-      auto fill = [&](T* _Nonnull p_gap) {
-         if constexpr (!is_trivially_default_constructible<T>) {
-            idx constructed;
-            detail::exception_defer guard([&] {
-               destroy_n_elements(p_gap, constructed);
-            });
-
-            for (; constructed < idx(size - old_size); ++constructed) {
-               new (p_gap + constructed) T;
-            }
-
-            guard.commit();
-         }
-      };
-
-      return resize_with(allocator, size, fill);
-   }
-
-   // Try to change the size of this `vec`, default-initializing any new
-   // elements. Trivial elements are left uninitialized, to be overwritten.
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   resize_for_overwrite(allocator_dyn allocator, idx size) -> maybe<void>
-      requires(!flags.is_fixed_size && is_default_constructible<T>)
-   {
-      return resize_for_overwrite<allocator_dyn>(allocator, size);
-   }
-
    // Destroy the elements from `size` onwards. `size` must not exceed the
    // current size.
    constexpr void
@@ -1562,7 +1523,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       )
    [[nodiscard]]
    constexpr auto
-   insert(
+   insert_n(
       allocator_ref<Allocator> allocator, idx position, idx count,
       T const& value
    ) -> maybe<void>
@@ -1576,7 +1537,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       // Shifting the tail may move `value`, so copy it first if it aliases.
       if (is_pointer_in_range(&value, span(*this))) {
          T const copy = value;
-         return insert(allocator, position, count, copy);
+         return insert_n(allocator, position, count, copy);
       }
 
       return insert_n_elements(
@@ -1596,14 +1557,14 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // of this `vec`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   insert(allocator_dyn allocator, idx position, idx count, T const& value)
+   insert_n(allocator_dyn allocator, idx position, idx count, T const& value)
       -> maybe<void>
       requires(
          !flags.is_fixed_size && is_copy_constructible<T>
          && is_copy_assignable<T> && is_assignable<T&, T&&>
       )
    {
-      return insert<allocator_dyn>(allocator, position, count, value);
+      return insert_n<allocator_dyn>(allocator, position, count, value);
    }
 
    // Remove and return the last element. Returns `nullopt` when the vec

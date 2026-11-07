@@ -25,6 +25,7 @@
 #include <cat/iterable>
 #include <cat/maybe>
 #include <cat/propagate>
+#include <cat/span>
 #include <cat/utility>
 
 namespace cat {
@@ -277,18 +278,188 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
       return monostate;
    }
 
-   template <is_iterable Range>
-      requires(has_size<Range>)
+   // Append `count` copies of `value`, which may be an element of this
+   // `vec_inplace`.
    [[nodiscard]]
    constexpr auto
-   append_range(Range&& range) -> maybe<void> {
-      idx const count = range.size();
+   append(idx count, T const& value) -> maybe<void>
+      requires(is_copy_constructible<T>)
+   {
       if (count > inline_capacity - size()) {
          return nullopt;
       }
-      for (auto&& value : range) {
-         construct_back($fwd(value));
+      resize_unchecked(size() + count, value);
+      return monostate;
+   }
+
+   // Append every element of `range`. If constructing an element throws, the
+   // elements appended before it are kept.
+   template <is_iterable Range>
+   [[nodiscard]]
+   constexpr auto
+   append_range(Range&& range) -> maybe<void> {
+      if constexpr (has_size<Range>) {
+         idx const count = range.size();
+         if (count > inline_capacity - size()) {
+            return nullopt;
+         }
+
+         for (auto&& value : range) {
+            construct_back($fwd(value));
+         }
+
+         return monostate;
+      } else {
+         // The size of a single-pass range is only known by reaching its end,
+         // so roll back if it overflows.
+         idx const old_size = size();
+         bool does_fit = true;
+         iterate(range).run_while([&](auto&& value) -> bool {
+            if (this->is_full()) {
+               does_fit = false;
+               return false;
+            }
+
+            construct_back($fwd(value));
+            return true;
+         });
+
+         if (!does_fit) {
+            destroy_back_to(old_size);
+            return nullopt;
+         }
+
+         return monostate;
       }
+   }
+
+   // Construct an element before `position`. `arguments` may refer to an
+   // element of this `vec_inplace`.
+   template <typename... Args>
+      requires(
+         is_constructible<T, Args...> && is_move_constructible<T>
+         && is_move_assignable<T>
+      )
+   [[nodiscard]]
+   constexpr auto
+   emplace(idx position, Args&&... arguments) [[clang::lifetimebound]]
+   -> maybe<T&> {
+      assert(position <= size());
+      if (this->is_full()) {
+         return nullopt;
+      }
+
+      idx const old_size = size();
+      construct_back($fwd(arguments)...);
+      rotate_into_place(position, old_size);
+      return data()[position];
+   }
+
+   // Insert `value` before `position`.
+   [[nodiscard]]
+   constexpr auto
+   insert(idx position, T const& value) -> maybe<void>
+      requires(is_copy_constructible<T> && is_move_assignable<T>)
+   {
+      if (emplace(position, value).is_empty()) {
+         return nullopt;
+      }
+      return monostate;
+   }
+
+   // Insert `value` before `position`.
+   [[nodiscard]]
+   constexpr auto
+   insert(idx position, T&& value) -> maybe<void>
+      requires(is_move_constructible<T> && is_move_assignable<T>)
+   {
+      if (emplace(position, move(value)).is_empty()) {
+         return nullopt;
+      }
+      return monostate;
+   }
+
+   // Insert `count` copies of `value` before `position`.
+   [[nodiscard]]
+   constexpr auto
+   insert_n(idx position, idx count, T const& value) -> maybe<void>
+      requires(is_copy_constructible<T> && is_move_assignable<T>)
+   {
+      assert(position <= size());
+      idx const old_size = size();
+      $prop(append(count, value));
+      rotate_into_place(position, old_size);
+      return monostate;
+   }
+
+   // Insert every element of `range` before `position`. They are appended and
+   // then rotated into place, so `range` may be part of this `vec_inplace`.
+   template <is_iterable Range>
+      requires(is_move_constructible<T> && is_move_assignable<T>)
+   [[nodiscard]]
+   constexpr auto
+   insert_range(idx position, Range&& range) -> maybe<void> {
+      assert(position <= size());
+      idx const old_size = size();
+      $prop(append_range($fwd(range)));
+      rotate_into_place(position, old_size);
+      return monostate;
+   }
+
+   // Replace `[first, last)` with every element of `range`, which may be part
+   // of this `vec_inplace`.
+   template <is_iterable Range>
+      requires(is_move_constructible<T> && is_move_assignable<T>)
+   [[nodiscard]]
+   constexpr auto
+   replace_with_range(idx first, idx last, Range&& range) -> maybe<void> {
+      assert(first <= last);
+      assert(last <= size());
+      if constexpr (
+         is_contiguous_iterable<Range>
+         && is_same<remove_cvref<decltype(*declval<Range&>().data())>, T>
+      ) {
+         if (!is_pointer_in_range(range.data(), span(*this))) {
+            constexpr bool is_move =
+               is_rvalue_reference<iterable_element_type<Range>>;
+            return replace_n_elements<is_move>(
+               first, last, range.size(), range.data()
+            );
+         }
+      }
+
+      vec_inplace replacement;
+      $prop(replacement.append_range($fwd(range)));
+      return replace_n_elements<true>(
+         first, last, replacement.size(), replacement.data()
+      );
+   }
+
+   // Replace the contents with every element of `range`.
+   template <is_iterable Range>
+      requires(is_move_constructible<T> && is_move_assignable<T>)
+   [[nodiscard]]
+   constexpr auto
+   assign_range(Range&& range) -> maybe<void> {
+      return replace_with_range(0u, size(), $fwd(range));
+   }
+
+   // Replace the contents with `count` copies of `value`.
+   [[nodiscard]]
+   constexpr auto
+   assign(idx count, T const& value) -> maybe<void>
+      requires(is_copy_constructible<T> && is_copy_assignable<T>)
+   {
+      if (count > inline_capacity) {
+         return nullopt;
+      }
+
+      // If `value` is an element, it is only destroyed after its last use.
+      idx const overlap = min(count, size());
+      for (idx i; i < overlap; ++i) {
+         data()[i] = value;
+      }
+      resize_unchecked(count, value);
       return monostate;
    }
 
@@ -309,10 +480,22 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    [[clang::reinitializes]]
    constexpr void
    clear() noexcept {
-      while (m_size != 0u) {
-         m_size = idx(m_size - 1u);
-         destroy(m_size);
-      }
+      destroy_back_to(0u);
+   }
+
+   // Destroy the elements from `new_size` onwards. `new_size` must not exceed
+   // the current size.
+   constexpr void
+   truncate(idx new_size) noexcept(!__has_feature(cxx_exceptions)) {
+      assert(new_size <= size());
+      destroy_back_to(new_size);
+   }
+
+   // Destroy the last `count` elements, which must exist.
+   constexpr void
+   pop_back_n(idx count) noexcept(!__has_feature(cxx_exceptions)) {
+      assert(count <= size());
+      destroy_back_to(idx(size() - count));
    }
 
    constexpr void
@@ -380,36 +563,90 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
       }
    }
 
+   // Reverse `[first, last)` in place.
    constexpr void
-   resize_unchecked(idx new_size)
-      requires(is_default_constructible<T>)
-   {
-      if (new_size < size()) {
-         while (m_size != new_size) {
-            m_size = idx(m_size - 1u);
-            destroy(m_size);
+   reverse_range(idx first, idx last) {
+      while (first < last) {
+         last = idx(last - 1u);
+         if (first == last) {
+            break;
          }
-      } else {
-         while (m_size != new_size) {
-            construct_back();
-         }
+
+         cat::swap(data()[first], data()[last]);
+         ++first;
       }
    }
 
+   // Rotate `[first, size())` so that the elements from `middle` come first.
+   // This moves elements appended at `middle` to `first`.
    constexpr void
-   resize_unchecked(idx new_size, T const& value)
-      requires(is_copy_constructible<T>)
-   {
-      if (new_size < size()) {
-         while (m_size != new_size) {
-            m_size = idx(m_size - 1u);
-            destroy(m_size);
-         }
-      } else {
-         while (m_size != new_size) {
-            construct_back(value);
-         }
+   rotate_into_place(idx first, idx middle) {
+      reverse_range(first, middle);
+      reverse_range(middle, size());
+      reverse_range(first, size());
+   }
+
+   // Destroy elements from the back until `size()` is `new_size`.
+   constexpr void
+   destroy_back_to(idx new_size) noexcept {
+      while (m_size > new_size) {
+         m_size = idx(m_size - 1u);
+         destroy(m_size);
       }
+   }
+
+   // If constructing a new element throws, every new element is destroyed, so
+   // this has no effects.
+   template <typename... Args>
+   constexpr void
+   resize_unchecked(idx new_size, Args const&... arguments) {
+      idx const old_size = size();
+      detail::exception_defer guard([&] {
+         destroy_back_to(old_size);
+      });
+      while (m_size < new_size) {
+         construct_back(arguments...);
+      }
+      guard.commit();
+      destroy_back_to(new_size);
+   }
+
+   // Replace `[first, last)` with `count` elements from `p_source`, moving
+   // them if `is_move`. `p_source` must not point into this `vec_inplace`.
+   template <bool is_move, typename Source>
+   constexpr auto
+   replace_n_elements(idx first, idx last, idx count, Source* _Nonnull p_source)
+      -> maybe<void> {
+      idx const removed = idx(last - first);
+      idx const old_size = size();
+      if (count > inline_capacity - idx(old_size - removed)) {
+         return nullopt;
+      }
+
+      auto source = [&](idx i) -> decltype(auto) {
+         if constexpr (is_move) {
+            return move(p_source[i]);
+         } else {
+            return p_source[i];
+         }
+      };
+
+      // Assign over the replaced elements, then erase or insert the rest.
+      idx const overlap = min(count, removed);
+      for (idx i; i < overlap; ++i) {
+         data()[first + i] = source(i);
+      }
+
+      if (count < removed) {
+         erase(first + count, last);
+         return monostate;
+      }
+
+      for (idx i = overlap; i < count; ++i) {
+         construct_back(source(i));
+      }
+      rotate_into_place(last, old_size);
+      return monostate;
    }
 
    static constexpr bool uses_preconstructed_storage =

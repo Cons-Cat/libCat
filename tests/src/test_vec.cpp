@@ -1814,11 +1814,11 @@ $test(vec_emplace_and_insert_single) {
 $test(vec_insert_repeated_value) {
    cat::vec_big<int4> vector;
    fill_ints(vector, 4);
-   cat::verify(vector.insert(g_tests_alloc, 1u, 2u, 9).has_value());
+   cat::verify(vector.insert_n(g_tests_alloc, 1u, 2u, 9).has_value());
    verify_ints(vector, cat::array<int4, 6u>{0, 9, 9, 1, 2, 3});
 
    // An element of this `vec` is copied before the tail shifts.
-   cat::verify(vector.insert(g_tests_alloc, 0u, 3u, vector[5]).has_value());
+   cat::verify(vector.insert_n(g_tests_alloc, 0u, 3u, vector[5]).has_value());
    verify_ints(vector, cat::array<int4, 9u>{3, 3, 3, 0, 9, 9, 1, 2, 3});
    vector.free(g_tests_alloc);
 
@@ -1826,7 +1826,7 @@ $test(vec_insert_repeated_value) {
    cat::verify(objects.reserve(g_tests_alloc, 16u).has_value());
    cat::verify(objects.push_back(g_tests_alloc, self_pointer(0)).has_value());
    cat::verify(objects.push_back(g_tests_alloc, self_pointer(1)).has_value());
-   cat::verify(objects.insert(g_tests_alloc, 1u, 3u, objects[0]).has_value());
+   cat::verify(objects.insert_n(g_tests_alloc, 1u, 3u, objects[0]).has_value());
    verify_self_pointers(objects, cat::array<int4, 5u>{0, 0, 0, 0, 1});
    objects.free(g_tests_alloc);
 }
@@ -1862,10 +1862,10 @@ $test(vec_append_and_assign_values) {
    vector.free(g_tests_alloc);
 }
 
-$test(vec_resize_for_overwrite_and_truncate) {
+$test(vec_resize_and_truncate) {
    cat::vec_big<int4> vector;
    fill_ints(vector, 3);
-   cat::verify(vector.resize_for_overwrite(g_tests_alloc, 64u).has_value());
+   cat::verify(vector.resize(g_tests_alloc, 64u).has_value());
    cat::verify(vector.size() == 64u);
    verify_ints(
       cat::span<int4>(vector.data(), 3u), cat::array<int4, 3u>{0, 1, 2}
@@ -2005,7 +2005,7 @@ consteval_modifiers() -> bool {
             && has_values(values, cat::array<int4, 7u>{0, 10, 11, 12, 1, 2, 3});
    result = result && values.insert(pager, 0u, 20).has_value();
    result = result && values.emplace(pager, 2u, 30).has_value();
-   result = result && values.insert(pager, 1u, 2u, values[3]).has_value();
+   result = result && values.insert_n(pager, 1u, 2u, values[3]).has_value();
    result =
       result
       && has_values(
@@ -2076,7 +2076,7 @@ consteval_modifier_lifetimes() -> bool {
    {
       cat::vec_big<constexpr_lifetime_probe> values;
       result = result && values.resize(pager, 3u, value).has_value();
-      result = result && values.insert(pager, 1u, 2u, value).has_value();
+      result = result && values.insert_n(pager, 1u, 2u, value).has_value();
       result = result && live == values.size() + 1u;
       values.erase(0u, 2u);
       result = result && live == values.size() + 1u;
@@ -2141,7 +2141,7 @@ exercise_self_references() {
    vector.truncate(6u);
 
    cat::verify(vector.reserve(g_tests_alloc, 16u).has_value());
-   cat::verify(vector.insert(g_tests_alloc, 2u, 3u, vector[1]).has_value());
+   cat::verify(vector.insert_n(g_tests_alloc, 2u, 3u, vector[1]).has_value());
    cat::verify(
       has_values(vector, cat::array<int4, 9u>{1, 0, 0, 0, 0, 1, 0, 1, 1})
    );
@@ -2356,7 +2356,7 @@ $test(vec_empty_and_end_edge_cases) {
    vector.pop_back_n(0u);
    cat::verify(vector.pop_back().is_empty());
    cat::verify(vector.insert_range(g_tests_alloc, 0u, empty).has_value());
-   cat::verify(vector.insert(g_tests_alloc, 0u, 0u, 5).has_value());
+   cat::verify(vector.insert_n(g_tests_alloc, 0u, 0u, 5).has_value());
    cat::verify(
       vector.replace_with_range(g_tests_alloc, 0u, 0u, empty).has_value()
    );
@@ -2378,9 +2378,11 @@ $test(vec_empty_and_end_edge_cases) {
    cat::verify(
       vector.insert_range(g_tests_alloc, vector.size(), tail).has_value()
    );
-   cat::verify(vector.insert(g_tests_alloc, vector.size(), 2u, 9).has_value());
+   cat::verify(
+      vector.insert_n(g_tests_alloc, vector.size(), 2u, 9).has_value()
+   );
    cat::verify(vector.insert_range(g_tests_alloc, 2u, empty).has_value());
-   cat::verify(vector.insert(g_tests_alloc, 2u, 0u, 5).has_value());
+   cat::verify(vector.insert_n(g_tests_alloc, 2u, 0u, 5).has_value());
    verify_ints(vector, cat::array<int4, 8u>{0, 1, 2, 3, 7, 8, 9, 9});
    vector.erase(idx(vector.size() - 1u));
    vector.erase(2u, 2u);
@@ -2751,7 +2753,7 @@ $test(vec_insert_repeated_basic_guarantee) {
 
          fragile::arm(failure);
          bool const threw = throws_injected_failure([&] {
-            auto _ = vector.insert(g_tests_alloc, position, 3u, value);
+            auto _ = vector.insert_n(g_tests_alloc, position, 3u, value);
          });
          fragile::disarm();
          cat::verify(fragile::live == iword(vector.size()) + 1);
