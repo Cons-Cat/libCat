@@ -93,35 +93,43 @@ struct wyhash_impl {
       } else {
          idx offset = 0u;
          idx remaining = length;
+
          if (remaining >= 48u) {
             uint8 state_1 = state;
             uint8 state_2 = state;
+
             do {
                state = wyhash_mix(
                   wyhash_read(bytes, offset, 8u) ^ secret[1u],
                   wyhash_read(bytes, offset + 8u, 8u) ^ state
                );
+
                state_1 = wyhash_mix(
                   wyhash_read(bytes, offset + 16u, 8u) ^ secret[2u],
                   wyhash_read(bytes, offset + 24u, 8u) ^ state_1
                );
+
                state_2 = wyhash_mix(
                   wyhash_read(bytes, offset + 32u, 8u) ^ secret[3u],
                   wyhash_read(bytes, offset + 40u, 8u) ^ state_2
                );
+
                offset += 48u;
                remaining = idx(remaining - 48u);
             } while (remaining >= 48u);
-            state ^= state_1 ^ state_2;
+            state ^= (state_1 ^ state_2);
          }
+
          while (remaining > 16u) {
             state = wyhash_mix(
                wyhash_read(bytes, offset, 8u) ^ secret[1u],
                wyhash_read(bytes, offset + 8u, 8u) ^ state
             );
+
             offset += 16u;
             remaining = idx(remaining - 16u);
          }
+
          // The last 16 bytes may overlap bytes that were already mixed.
          idx const end = offset + remaining;
          a = wyhash_read(bytes, idx(end - 16u), 8u);
@@ -141,7 +149,7 @@ struct wyhash_impl {
    static constexpr auto
    operator()(T value, uint8 seed = 0u) -> uint8 {
       auto const& secret = detail::wyhash_secret;
-      uint8 a = uint8(make_raw_arithmetic(value)) ^ secret[0u];
+      uint8 a = uint8(value) ^ secret[0u];
       uint8 b = seed ^ secret[1u];
       detail::wyhash_multiply(a, b);
       return detail::wyhash_mix(a ^ secret[0u], b ^ secret[1u]);
@@ -154,18 +162,18 @@ struct wyhash_impl {
       using result_abi = cat::simd_abi::deduce<
          uint8, Simd::abi_type::lanes, typename Simd::abi_type>;
       simd<uint8, result_abi> result{};
+
       for (idx lane = 0u; lane < Simd::abi_type::lanes; ++lane) {
          auto const lane_value = value[lane];
          result.set_lane(lane, wyhash_impl::operator()(lane_value, seed));
       }
+
       return result;
    }
 };
 
 }  // namespace detail
 
-// `cat::wyhash` is a function object, so its type can be a container's
-// `Hash` parameter.
 inline constexpr detail::wyhash_impl wyhash{};
 
 }  // namespace cat
