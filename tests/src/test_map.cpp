@@ -59,7 +59,7 @@ struct modulo_equal {
 };
 
 struct seeded_hash {
-   uint8 seed;
+   uint8 seed = 0u;
 
    constexpr auto
    operator()(int4 key) const -> uint8 {
