@@ -785,20 +785,18 @@ $test(maybe_constexpr) {
       [[maybe_unused]]
       constexpr cat::maybe<int> const_int_default;
 
-      // TODO: Enable these `verify()` calls when they support `constexpr`.
-
       constexpr cat::maybe<maybe_const_non_trivial> const_nontrivial_default;
-      // cat::verify(const_nontrivial_default.is_empty());
+      cat::verify(const_nontrivial_default.is_empty());
 
       [[maybe_unused]]
       constexpr cat::maybe<maybe_const_non_trivial> const_nontrivial =
          maybe_const_non_trivial();
-      // cat::verify(const_nontrivial.has_value());
+      cat::verify(const_nontrivial.has_value());
 
       [[maybe_unused]]
       constexpr cat::maybe<maybe_const_non_trivial> const_nontrivial_in_place =
          {cat::in_place, maybe_const_non_trivial()};
-      // cat::verify(const_nontrivial_in_place.has_value());
+      cat::verify(const_nontrivial_in_place.has_value());
 
       constexpr cat::maybe_ptr<void> const_optptr = nullptr;
       cat::maybe_ptr<void> optptr = nullptr;
