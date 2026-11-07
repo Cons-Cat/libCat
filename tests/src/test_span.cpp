@@ -555,9 +555,11 @@ $test(span_is_memory_overlapping_helper) {
    cat::verify(cat::is_memory_overlapping(aliasing_view, mutable_source));
 
    // Partial overlap.
-   cat::verify(cat::is_memory_overlapping(
-      cat::span<int4>(source.data() + 3, 1u), source_view
-   ));
+   cat::verify(
+      cat::is_memory_overlapping(
+         cat::span<int4>(source.data() + 3, 1u), source_view
+      )
+   );
 }
 
 // The `span` overloads of `copy_memory` accept sources which are `const` or
@@ -567,13 +569,13 @@ concept can_copy_memory =
    requires(Source source, Destination destination) {
       cat::copy_memory(source, destination);
    } && requires(Source source, Destination destination) {
-      cat::copy_memory_backward(source, destination);
-   };
+           cat::copy_memory_backward(source, destination);
+        };
 
 template <typename First, typename Second>
 concept can_check_overlap = requires(First first, Second second) {
-   cat::is_memory_overlapping(first, second);
-};
+                               cat::is_memory_overlapping(first, second);
+                            };
 
 static_assert(can_copy_memory<cat::span<int4>, cat::span<int4>>);
 static_assert(can_copy_memory<cat::span<int4 const>, cat::span<int4>>);

@@ -583,12 +583,12 @@ struct tuple_element<index, ::cat::span<T, fixed_extent> const volatile> {
 // have circular dependencies.
 namespace cat {
 
-template <typename T>
+template <typename T, typename U>
+   requires(is_same_unqual<T, U>)
 [[nodiscard]]
 constexpr auto
-is_pointer_in_range(
-   T const* _Nullable p_pointer, span<T const> const range
-) noexcept -> bool {
+is_pointer_in_range(T const* _Nullable p_pointer, span<U> const range) noexcept
+   -> bool {
    static_assert(
       !is_function<T>, "`is_pointer_in_range` does not accept function types."
    );
@@ -615,39 +615,37 @@ is_pointer_in_range(
    return !is_less(p_pointer, p_begin) && is_less(p_pointer, p_end);
 }
 
-template <typename T>
+template <typename T, typename U>
+   requires(is_same_unqual<T, U>)
 [[nodiscard]]
 constexpr auto
-is_memory_overlapping(
-   span<T const> const first, span<T const> const second
-) noexcept -> bool {
+is_memory_overlapping(span<T> const first, span<U> const second) noexcept
+   -> bool {
    return is_memory_overlapping(
       first.data(), first.size() * sizeof(T), second.data(),
       second.size() * sizeof(T)
    );
 }
 
-template <typename T>
-   requires(is_implicit_lifetime<T>)
+template <typename T, typename U>
+   requires(is_same_unqual<T, U> && !is_const<U> && is_implicit_lifetime<U>)
 constexpr void
-copy_memory(span<T const> const source, span<T> destination) noexcept(
+copy_memory(span<T> const source, span<U> destination) noexcept(
    !__has_feature(cxx_exceptions)
 ) {
-   copy_memory(
-      source.data(), destination.data(),
-      (source.size() * sizeof(T)).to_idx().assert()
-   );
+   assert(source.size() <= destination.size());
+   copy_memory(source.data(), destination.data(), source.size() * sizeof(T));
 }
 
-template <typename T>
-   requires(is_implicit_lifetime<T>)
+template <typename T, typename U>
+   requires(is_same_unqual<T, U> && !is_const<U> && is_implicit_lifetime<U>)
 constexpr void
-copy_memory_backward(span<T const> const source, span<T> destination) noexcept(
+copy_memory_backward(span<T> const source, span<U> destination) noexcept(
    !__has_feature(cxx_exceptions)
 ) {
+   assert(source.size() <= destination.size());
    copy_memory_backward(
-      source.data(), destination.data(),
-      (source.size() * sizeof(T)).to_idx().assert()
+      source.data(), destination.data(), source.size() * sizeof(T)
    );
 }
 

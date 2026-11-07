@@ -20,10 +20,11 @@ template <typename T, idx extent>
 class span;
 
 // This is implemented in `<cat/span>`.
-template <typename T>
+template <typename T, typename U>
+   requires(is_same_unqual<T, U>)
 [[nodiscard]]
 constexpr auto
-is_pointer_in_range(T const* _Nullable p_pointer, span<T const> range) noexcept
+is_pointer_in_range(T const* _Nullable p_pointer, span<U> range) noexcept
    -> bool;
 
 [[nodiscard]]
@@ -34,11 +35,11 @@ is_memory_overlapping(
 ) noexcept -> bool;
 
 // This is implemented in `<cat/span>`.
-template <typename T>
+template <typename T, typename U>
+   requires(is_same_unqual<T, U>)
 [[nodiscard]]
 constexpr auto
-is_memory_overlapping(span<T const> first, span<T const> second) noexcept
-   -> bool;
+is_memory_overlapping(span<T> first, span<U> second) noexcept -> bool;
 
 constexpr void
 copy_memory_scalar(
@@ -75,17 +76,17 @@ find_subspan_memory(
 ) noexcept -> maybe<idx>;
 
 // This is implemented in `<cat/span>`.
-template <typename T>
-   requires(is_implicit_lifetime<T>)
+template <typename T, typename U>
+   requires(is_same_unqual<T, U> && !is_const<U> && is_implicit_lifetime<U>)
 constexpr void
-copy_memory(span<T const> source, span<T> destination) noexcept(
+copy_memory(span<T> source, span<U> destination) noexcept(
    !__has_feature(cxx_exceptions)
 );
 
-template <typename T>
-   requires(is_implicit_lifetime<T>)
+template <typename T, typename U>
+   requires(is_same_unqual<T, U> && !is_const<U> && is_implicit_lifetime<U>)
 constexpr void
-copy_memory_backward(span<T const> source, span<T> destination) noexcept(
+copy_memory_backward(span<T> source, span<U> destination) noexcept(
    !__has_feature(cxx_exceptions)
 );
 
