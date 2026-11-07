@@ -155,3 +155,32 @@ $test(str_vec_character_aliases) {
    cat::verify(zmanaged.data()[zmanaged.size()] == u8'\0');
    cat::verify(cat::u8str_view(zmanaged) == cat::u8str_view(u8"भारत"));
 }
+
+// Like `span`, a string view may add `const` but never remove it, and its
+// owning-string constructors do not match plain spans.
+static_assert(cat::is_constructible<cat::str_view, cat::str_span>);
+static_assert(cat::is_constructible<cat::str_view, cat::str_span&>);
+static_assert(!cat::is_constructible<cat::str_span, cat::str_view>);
+static_assert(!cat::is_constructible<cat::str_span, cat::str_view&>);
+static_assert(cat::is_constructible<cat::str_span, cat::span<char>&>);
+static_assert(cat::is_constructible<cat::str_view, cat::span<char>&>);
+static_assert(cat::is_constructible<cat::str_view, cat::span<char>>);
+static_assert(cat::is_constructible<cat::str_view, cat::span<char const>&>);
+static_assert(!cat::is_constructible<cat::str_span, cat::span<char const>&>);
+static_assert(!cat::is_constructible<cat::str_span, cat::span<char const>>);
+static_assert(!cat::is_constructible<cat::str_span, char const*>);
+static_assert(cat::is_constructible<cat::str_view, char*>);
+
+$test(str_view_from_mutable_span) {
+   char buffer[4] = {'a', 'b', 'c', 'd'};  // NOLINT
+   cat::span<char> mutable_span(buffer, 3u);
+   cat::str_view view = mutable_span;
+   cat::verify(view.data() == buffer);
+   cat::verify(view.size() == 3u);
+   cat::verify(view == "abc");
+
+   cat::str_span string_span = mutable_span;
+   cat::str_view promoted = string_span;
+   cat::verify(promoted.data() == buffer);
+   cat::verify(promoted.size() == 3u);
+}

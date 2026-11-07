@@ -94,7 +94,7 @@ struct vec_capacity_size {
    set(T const* _Nullable p_data, idx size, Extent const& capacity) noexcept(
       !__has_feature(cxx_exceptions)
    ) {
-      cat::assert(size == capacity.get(p_data));
+      assert(size == capacity.get(p_data));
    }
 };
 
@@ -210,7 +210,7 @@ struct vec_storage<T, flags, true>
     : vec_bounds<T, flags.uses_pointer_size_layout, flags.is_fixed_size> {
    using handle_type =
       remove_cvref<decltype(declval<allocator_ref<allocator_dyn>&>()
-                               .template inline_salloc_multi<
+                               .template inline_salloc_multi_uninit<
                                   T, flags.inline_storage_count * sizeof(T)>(1u)
                                .value()
                                .first())>;

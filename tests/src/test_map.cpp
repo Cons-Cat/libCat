@@ -81,14 +81,14 @@ static_assert(!cat::is_nothrow_destructible<
               cat::detail::map_group<int4, throwing_destructor>>);
 static_assert(cat::is_nothrow_destructible<
               cat::detail::map_slot<int4, throwing_destructor>>);
+static_assert(!cat::is_nothrow_destructible<throwing_destructor>);
 static_assert(
-   !cat::is_nothrow_destructible<cat::raii::map_big<int4, throwing_destructor>>
+   cat::is_nothrow_destructible<cat::raii::map_big<int4, throwing_destructor>>
 );
 static_assert(cat::is_nothrow_destructible<cat::raii::map_big<int4, tracked>>);
 
-// Manual maps destroy their entries through `vec`, which must propagate this.
 static_assert(
-   !cat::is_nothrow_destructible<cat::map_big<int4, throwing_destructor>>
+   cat::is_nothrow_destructible<cat::map_big<int4, throwing_destructor>>
 );
 
 struct throwing_move_hash {
@@ -1017,3 +1017,37 @@ $test(raii_map_move_assign) {
    cat::verify(!left.contains(1) && left[2].value() == 2);
    cat::verify(right.insert(3, 3).has_value());
 }
+
+#if __has_feature(cxx_exceptions)
+#include "../injected_failure.hpp"
+
+namespace {
+using allocator_type = __typeof_unqual(g_tests_alloc);
+}  // namespace
+
+// If moving entries throws while a `map` grows, the `map` is cleared and
+// leaks nothing.
+$test(map_throwing_rehash) {
+   for (iword failure = 1; failure <= 64; failure += 3) {
+      fragile::live = 0;
+      cat::map_big<int4, fragile> map;
+      for (int4 i = 0; i < 20; ++i) {
+         cat::verify(
+            map.insert<allocator_type>(g_tests_alloc, i, fragile(i)).has_value()
+         );
+      }
+
+      fragile::arm(failure);
+      throws_injected_failure([&] {
+         for (int4 i = 20; i < 200; ++i) {
+            auto _ = map.insert<allocator_type>(g_tests_alloc, i, fragile(i));
+         }
+      });
+      fragile::disarm();
+      cat::verify(fragile::live == iword(map.size()));
+
+      map.free<allocator_type>(g_tests_alloc);
+      cat::verify(fragile::live == 0);
+   }
+}
+#endif

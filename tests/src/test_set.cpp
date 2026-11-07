@@ -91,8 +91,12 @@ $test(raii_set) {
    static_assert(cat::is_nothrow_move_assignable<cat::set_big<int4>>);
    static_assert(cat::is_nothrow_move_constructible<typeof(set)>);
    static_assert(cat::is_nothrow_move_assignable<typeof(set)>);
+   static_assert(!cat::is_nothrow_destructible<throwing_destructor>);
    static_assert(
-      !cat::is_nothrow_destructible<cat::raii::set_big<throwing_destructor>>
+      cat::is_nothrow_destructible<cat::raii::set_big<throwing_destructor>>
+   );
+   static_assert(
+      cat::is_nothrow_destructible<cat::set_big<throwing_destructor>>
    );
 }
 
