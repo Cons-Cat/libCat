@@ -533,19 +533,89 @@ $test(span_traits) {
    static_assert(cat::is_trivially_copyable<cat::span<int4, 4_idx>>);
 }
 
-// `is_memory_overlapping` for spans takes both sides as `span<T const>` so
-// non-`const` arguments must be implicitly converted.
+// `is_memory_overlapping` accepts spans which are `const` or not.
 $test(span_is_memory_overlapping_helper) {
-   int4 source[4] = {1, 2, 3, 4};
-   int4 dest[4] = {0, 0, 0, 0};
+   cat::array<int4, 4u> source = {1, 2, 3, 4};
+   cat::array<int4, 4u> dest = {0, 0, 0, 0};
 
-   cat::span<int4 const> source_view{source, 4u};
-   cat::span<int4 const> dest_view{dest, 4u};
-
+   cat::span<int4 const> source_view{source.data(), 4u};
+   cat::span<int4 const> dest_view{dest.data(), 4u};
    cat::verify(!cat::is_memory_overlapping(source_view, dest_view));
 
-   cat::span<int4 const> aliasing_view{source, 4u};
+   cat::span<int4 const> aliasing_view{source.data(), 4u};
    cat::verify(cat::is_memory_overlapping(source_view, aliasing_view));
+
+   // Mutable spans, mixed with `const` spans in either order.
+   cat::span<int4> mutable_source = source;
+   cat::span<int4> mutable_dest = dest;
+   cat::verify(!cat::is_memory_overlapping(mutable_source, mutable_dest));
+   cat::verify(!cat::is_memory_overlapping(mutable_source, dest_view));
+   cat::verify(!cat::is_memory_overlapping(dest_view, mutable_source));
+   cat::verify(cat::is_memory_overlapping(mutable_source, aliasing_view));
+   cat::verify(cat::is_memory_overlapping(aliasing_view, mutable_source));
+
+   // Partial overlap.
+   cat::verify(cat::is_memory_overlapping(
+      cat::span<int4>(source.data() + 3, 1u), source_view
+   ));
+}
+
+// The `span` overloads of `copy_memory` accept sources which are `const` or
+// not, but never a `const` destination.
+template <typename Source, typename Destination>
+concept can_copy_memory =
+   requires(Source source, Destination destination) {
+      cat::copy_memory(source, destination);
+   } && requires(Source source, Destination destination) {
+      cat::copy_memory_backward(source, destination);
+   };
+
+template <typename First, typename Second>
+concept can_check_overlap = requires(First first, Second second) {
+   cat::is_memory_overlapping(first, second);
+};
+
+static_assert(can_copy_memory<cat::span<int4>, cat::span<int4>>);
+static_assert(can_copy_memory<cat::span<int4 const>, cat::span<int4>>);
+static_assert(!can_copy_memory<cat::span<int4>, cat::span<int4 const>>);
+static_assert(!can_copy_memory<cat::span<int4>, cat::span<uint4>>);
+static_assert(can_check_overlap<cat::span<int4>, cat::span<int4 const>>);
+static_assert(can_check_overlap<cat::span<int4 const>, cat::span<int4>>);
+static_assert(!can_check_overlap<cat::span<int4>, cat::span<uint4>>);
+
+$test(span_copy_memory_helpers) {
+   cat::array<int4, 4u> source = {1, 2, 3, 4};
+   cat::array<int4, 4u> dest = {};
+   cat::span<int4> dest_view = dest;
+
+   // From a mutable span.
+   cat::copy_memory(cat::span<int4>(source), dest_view);
+   cat::verify(dest == source);
+
+   // From a `const` span into a larger destination.
+   cat::array<int4, 6u> wide = {};
+   cat::span<int4> wide_view = wide;
+   cat::copy_memory(cat::span<int4 const>(source), wide_view);
+   cat::verify(wide[3u] == 4 && wide[4u] == 0 && wide[5u] == 0);
+
+   dest = {};
+   cat::copy_memory_backward(cat::span(source), dest_view);
+   cat::verify(dest == source);
+
+   // Overlapping, shifting right by one.
+   cat::array<int4, 5u> buffer = {1, 2, 3, 4, 5};
+   cat::copy_memory_backward(
+      cat::span<int4>(buffer.data(), 4u), cat::span<int4>(buffer.data() + 1, 4u)
+   );
+   cat::verify(buffer == cat::array<int4, 5u>{1, 1, 2, 3, 4});
+
+   // Overlapping, shifting left by one.
+   buffer = {1, 2, 3, 4, 5};
+   cat::copy_memory_backward(
+      cat::span<int4 const>(buffer.data() + 1, 4u),
+      cat::span<int4>(buffer.data(), 4u)
+   );
+   cat::verify(buffer == cat::array<int4, 5u>{2, 3, 4, 5, 5});
 }
 
 // Member typedefs follow `std::span`. `value_type` is `remove_cv_t<T>`, not
@@ -1039,4 +1109,78 @@ $test(span_dynamic_extent_constant) {
    static_assert(cat::is_same<decltype(cat::dynamic_extent), cat::idx const>);
    static_assert(cat::span<int4>::extent == cat::dynamic_extent);
    static_assert(cat::span<int4, 4_idx>::extent != cat::dynamic_extent);
+}
+
+namespace {
+struct span_base {
+   int4 value;
+};
+
+struct span_derived : span_base {
+   int4 extra;
+};
+
+auto
+sum_span(cat::span<int4 const> values) -> int4 {
+   int4 sum = 0;
+   for (int4 value : values) {
+      sum += value;
+   }
+   return sum;
+}
+}  // namespace
+
+// A `span` implicitly adds `const`, from lvalues and temporaries alike.
+static_assert(cat::is_convertible<cat::span<int4>, cat::span<int4 const>>);
+static_assert(cat::is_convertible<cat::span<int4>&, cat::span<int4 const>>);
+static_assert(
+   cat::is_convertible<cat::span<int4> const&, cat::span<int4 const>>
+);
+static_assert(
+   cat::is_convertible<cat::span<int4, 4u>, cat::span<int4 const, 4u>>
+);
+static_assert(cat::is_convertible<cat::span<int4, 4u>, cat::span<int4 const>>);
+static_assert(cat::is_assignable<cat::span<int4 const>&, cat::span<int4>>);
+static_assert(cat::is_assignable<cat::span<int4 const>&, cat::span<int4>&>);
+
+// It never removes `const`, changes the element type, or changes a fixed
+// extent.
+static_assert(!cat::is_constructible<cat::span<int4>, cat::span<int4 const>>);
+static_assert(!cat::is_constructible<cat::span<int4>, cat::span<int4 const>&>);
+static_assert(
+   !cat::is_constructible<cat::span<span_base>, cat::span<span_derived>>
+);
+static_assert(
+   !cat::is_constructible<cat::span<span_base>, cat::span<span_derived>&>
+);
+static_assert(!cat::is_constructible<cat::span<int4 const>, cat::span<uint4>>);
+static_assert(!cat::is_constructible<cat::span<int4, 3u>, cat::span<int4, 4u>>);
+static_assert(
+   !cat::is_constructible<cat::span<int4, 3u>, cat::span<int4, 4u>&>
+);
+static_assert(!cat::is_assignable<cat::span<int4>&, cat::span<int4 const>>);
+static_assert(!cat::is_assignable<cat::span<int4>&, cat::span<int4 const>&>);
+
+// Temporary containers are still rejected.
+static_assert(
+   !cat::is_constructible<cat::span<int4 const>, cat::array<int4, 4u>>
+);
+
+$test(span_adds_const) {
+   cat::array<int4, 4u> values{1, 2, 3, 4};
+   cat::span<int4> const mutable_span = values;
+   cat::span<int4 const> const_span = mutable_span;
+   cat::verify(const_span.data() == values.data());
+   cat::verify(const_span.size() == 4u);
+
+   cat::verify(sum_span(mutable_span) == 10);
+   cat::verify(sum_span(cat::span<int4>(values.data(), 2u)) == 3);
+
+   const_span = cat::span<int4>(values.data() + 1, 3u);
+   cat::verify(const_span.data() == values.data() + 1);
+   cat::verify(const_span.size() == 3u);
+
+   cat::span<int4, 4u> const fixed = values;
+   cat::span<int4 const, 4u> const fixed_const = fixed;
+   cat::verify(fixed_const.data() == values.data());
 }

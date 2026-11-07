@@ -91,6 +91,10 @@ $test(meta_is_same_either_neither) {
 
    static_assert(is_same<int, int>);
    static_assert(!is_same<int, unsigned int>);
+   static_assert(is_same_unqual<int, int const>);
+   static_assert(is_same_unqual<int const volatile, int>);
+   static_assert(!is_same_unqual<int, unsigned int const>);
+   static_assert(!is_same_unqual<int&, int>);
 
    static_assert(is_either<int, int>);
    static_assert(is_either<int, unsigned int, int>);

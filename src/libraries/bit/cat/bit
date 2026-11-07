@@ -1714,7 +1714,7 @@ popcount(span<Word const, fixed_extent> words) noexcept -> idx {
       }
       return count;
    } else {
-      if constexpr (is_same<remove_cv<Word>, uword>) {
+      if constexpr (is_same_unqual<Word, uword>) {
          if (words.size() < 64u) {
             idx count = 0u;
             for (idx i = 0u; i < words.size(); ++i) {

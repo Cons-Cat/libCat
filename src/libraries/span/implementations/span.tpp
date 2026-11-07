@@ -8,7 +8,7 @@ namespace cat {
 
 template <typename T, idx fixed_extent>
 template <is_random_access R>
-   requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
+   requires(is_same_unqual<typename R::value_type, T>
             && requires(remove_cv<T> const& left, remove_cv<T> const& right) {
                   { left < right } -> is_convertible<bool>;
                   { right < left } -> is_convertible<bool>;
@@ -96,7 +96,7 @@ span<T, fixed_extent>::operator<=>(R const& rhs) const {
 template <typename T, idx fixed_extent>
 template <is_random_access R>
    requires(
-      is_same<remove_cv<typename R::value_type>, remove_cv<T>>
+      is_same_unqual<typename R::value_type, T>
       && is_equality_comparable<remove_cv<T>>
    )
 constexpr auto

@@ -24,7 +24,14 @@ test_constexpr_pointer_in_range() -> bool {
    }
 
    int4 const separate_value = 123;
-   return !cat::is_pointer_in_range(&separate_value, range);
+   if (cat::is_pointer_in_range(&separate_value, range)) {
+      return false;
+   }
+
+   // A mutable range may be queried without first converting it to `const`.
+   cat::span<int4> const mutable_range = values;
+   return cat::is_pointer_in_range(&values[1], mutable_range)
+          && !cat::is_pointer_in_range(&separate_value, mutable_range);
 }
 
 static_assert(test_constexpr_pointer_in_range());
@@ -54,4 +61,17 @@ $test(pointer_in_range) {
    cat::verify(
       !cat::is_pointer_in_range(static_cast<int4 const*>(nullptr), empty)
    );
+
+   cat::span<int4> const mutable_range = values;
+   cat::verify(cat::is_pointer_in_range(values.data(), mutable_range));
+   cat::verify(
+      !cat::is_pointer_in_range(__builtin_addressof(outside), mutable_range)
+   );
+   cat::verify(!cat::is_pointer_in_range(
+      static_cast<int4 const*>(nullptr), cat::span<int4>()
+   ));
+
+   // A mutable pointer into a `const` span.
+   cat::verify(cat::is_pointer_in_range(&values[7], range));
+   cat::verify(!cat::is_pointer_in_range(__builtin_addressof(outside), range));
 }

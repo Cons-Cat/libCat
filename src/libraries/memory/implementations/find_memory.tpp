@@ -27,7 +27,7 @@ find_memory(T const* _Nonnull p_haystack, T const& needle, idx size) noexcept
       return nullopt;
    } else {
       if constexpr (
-         is_trivially_equality_comparable<T> || is_same<remove_cv<T>, byte>
+         is_trivially_equality_comparable<T> || is_same_unqual<T, byte>
       ) {
          if (p_haystack[0] == needle) {
             return 0u;
@@ -81,7 +81,7 @@ find_subspan_memory(
       return nullopt;
    } else {
       if constexpr (
-         is_trivially_equality_comparable<T> || is_same<remove_cv<T>, byte>
+         is_trivially_equality_comparable<T> || is_same_unqual<T, byte>
       ) {
          if (needle_size <= 16u / sizeof(T)) {
             bool matches = true;

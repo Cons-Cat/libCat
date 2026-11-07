@@ -1466,7 +1466,7 @@ class atomic<T&> {
    // be constructed from `atomic<int&>` when the underlying pointer conversion
    // is well-formed (cv-similar types with a valid `U* -> T*` conversion).
    template <typename U>
-      requires(is_same<remove_cv<U>, remove_cv<T>> && is_convertible<U*, T*>)
+      requires(is_same_unqual<U, T> && is_convertible<U*, T*>)
    constexpr atomic(atomic<U&> const& other) noexcept
        : m_p_value(static_cast<T* _Nonnull>(other.m_p_value)) {
    }
@@ -2317,7 +2317,7 @@ class atomic_ref_bound {
    // P3860R1: cv-conversion constructor between bound atomic refs of the same
    // memory ordering and cv-similar `T`.
    template <typename U, overflow_policies other_overflow_policy>
-      requires(is_same<remove_cv<U>, remove_cv<T>> && is_convertible<U*, T*>)
+      requires(is_same_unqual<U, T> && is_convertible<U*, T*>)
    constexpr atomic_ref_bound(
       atomic_ref_bound<U, memory_order_value, other_overflow_policy> const&
          other

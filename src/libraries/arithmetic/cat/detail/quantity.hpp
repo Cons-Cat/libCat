@@ -471,7 +471,7 @@ struct quantity_character_property {
 template <auto first, auto... arguments>
 struct quantity_character_property<first, arguments...> {
    static constexpr quantity_character value = [] {
-      if constexpr (__is_same(__typeof_unqual(first), quantity_character)) {
+      if constexpr (is_same_unqual<typeof(first), quantity_character>) {
          return first;
       } else {
          return quantity_character_property<arguments...>::value;
@@ -1599,7 +1599,7 @@ concept is_quantity_conversion =
 template <typename From, typename To>
 concept is_quantity_direct_conversion =
    is_quantity_conversion<From, To>
-   && (!has_quantity<From> || __is_same(__typeof_unqual(arithmetic_quantity<From>::unit_magnitude), __typeof_unqual(To::unit_magnitude)));
+   && (!has_quantity<From> || is_same_unqual<typeof(arithmetic_quantity<From>::unit_magnitude), typeof(To::unit_magnitude)>);
 
 template <is_quantity From, is_quantity To>
 [[nodiscard]]

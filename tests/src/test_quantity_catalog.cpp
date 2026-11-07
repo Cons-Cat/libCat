@@ -103,10 +103,10 @@ $test(quantity_catalog_si) {
    constexpr auto floating_metres = cat::units::metre * 2.0;
    constexpr auto inverse_seconds = 2 / cat::units::second;
    static_assert(
-      __is_same(__typeof_unqual(integer_metres), cat::units::metre_int4)
+      cat::is_same_unqual<typeof(integer_metres), cat::units::metre_int4>
    );
    static_assert(
-      __is_same(__typeof_unqual(floating_metres), cat::units::metre_float8)
+      cat::is_same_unqual<typeof(floating_metres), cat::units::metre_float8>
    );
    static_assert(__is_same(
       decltype(inverse_seconds)::quantity_type,
