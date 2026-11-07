@@ -2481,7 +2481,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    realloc(T* _Nonnull p_handle) {
-      return realloc_to(*this, p_handle);
+      return realloc_to(this->self(), p_handle);
    }
 
    // Move a pointer handle from this allocator into another.
@@ -2500,7 +2500,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xrealloc(T* _Nonnull p_handle) {
-      return xrealloc_to(*this, p_handle);
+      return xrealloc_to(this->self(), p_handle);
    }
 
    // Try to move a pointer handle from this allocator into another with an
@@ -2522,7 +2522,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_realloc(auto* _Nonnull p_handle, ualign alignment) {
-      return align_realloc_to(*this, p_handle, alignment);
+      return align_realloc_to(this->self(), p_handle, alignment);
    }
 
    // Move a pointer handle from this allocator into another with an alignment
@@ -2544,7 +2544,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    align_xrealloc(auto* _Nonnull p_handle, ualign alignment) {
-      return align_xrealloc_to(*this, p_handle, alignment);
+      return align_xrealloc_to(this->self(), p_handle, alignment);
    }
 
    // Try to move a pointer handle from this allocator into another with no
@@ -2564,7 +2564,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_realloc(auto* _Nonnull p_handle) {
-      return unalign_realloc_to(*this, p_handle);
+      return unalign_realloc_to(this->self(), p_handle);
    }
 
    // Move a pointer handle from this allocator into another with no alignment
@@ -2583,7 +2583,7 @@ class allocator_interface {
    // guarantee.
    auto
    unalign_xrealloc(auto* _Nonnull p_handle) {
-      return unalign_xrealloc_to(*this, p_handle);
+      return unalign_xrealloc_to(this->self(), p_handle);
    }
 
    // Try to move an object into uninitialized storage from another allocator.
@@ -2602,7 +2602,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    realloc_uninit(T* _Nonnull p_handle) {
-      return realloc_uninit_to(*this, p_handle);
+      return realloc_uninit_to(this->self(), p_handle);
    }
 
    // Move an object into uninitialized storage from another allocator.
@@ -2621,7 +2621,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xrealloc_uninit(T* _Nonnull p_handle) {
-      return xrealloc_uninit_to(*this, p_handle);
+      return xrealloc_uninit_to(this->self(), p_handle);
    }
 
    // Try to move an object into aligned uninitialized storage.
@@ -2640,7 +2640,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_realloc_uninit(auto* _Nonnull p_handle, ualign alignment) {
-      return align_realloc_uninit_to(*this, p_handle, alignment);
+      return align_realloc_uninit_to(this->self(), p_handle, alignment);
    }
 
    // Move an object into aligned uninitialized storage.
@@ -2659,7 +2659,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    align_xrealloc_uninit(auto* _Nonnull p_handle, ualign alignment) {
-      return align_xrealloc_uninit_to(*this, p_handle, alignment);
+      return align_xrealloc_uninit_to(this->self(), p_handle, alignment);
    }
 
    // Try to move an object into unaligned uninitialized storage.
@@ -2676,7 +2676,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_realloc_uninit(auto* _Nonnull p_handle) {
-      return unalign_realloc_uninit_to(*this, p_handle);
+      return unalign_realloc_uninit_to(this->self(), p_handle);
    }
 
    // Move an object into unaligned uninitialized storage.
@@ -2693,7 +2693,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    unalign_xrealloc_uninit(auto* _Nonnull p_handle) {
-      return unalign_xrealloc_uninit_to(*this, p_handle);
+      return unalign_xrealloc_uninit_to(this->self(), p_handle);
    }
 
    // Try to move and resize an array pointer handle from this allocator into
@@ -2716,7 +2716,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    realloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return realloc_multi_to(*this, p_handle, old_count, new_count);
+      return realloc_multi_to(this->self(), p_handle, old_count, new_count);
    }
 
    // Move and resize an array pointer handle from this allocator into another.
@@ -2737,7 +2737,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xrealloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return xrealloc_multi_to(*this, p_handle, old_count, new_count);
+      return xrealloc_multi_to(this->self(), p_handle, old_count, new_count);
    }
 
    // Try to move and resize an array pointer handle from this allocator into
@@ -2763,7 +2763,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_realloc_multi_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -2790,7 +2790,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_xrealloc_multi_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -2815,7 +2815,9 @@ class allocator_interface {
    unalign_realloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
-      return unalign_realloc_multi_to(*this, p_handle, old_count, new_count);
+      return unalign_realloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Move and resize an array pointer handle from this allocator into another
@@ -2839,7 +2841,9 @@ class allocator_interface {
    unalign_xrealloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
-      return unalign_xrealloc_multi_to(*this, p_handle, old_count, new_count);
+      return unalign_xrealloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Try to resize an array with an uninitialized expanded range.
@@ -2850,9 +2854,8 @@ class allocator_interface {
       auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
    ) {
       return meta_realloc_multi<
-         &allocator_interface<Derived>::alloc_multi_uninit<T>, true, false>(
-         allocator, p_handle, old_count, new_count
-      );
+         &allocator_interface<Derived>::alloc_multi_uninit<T>, true, false,
+         false, true>(allocator, p_handle, old_count, new_count);
    }
 
    // Try to resize an array with an uninitialized expanded range.
@@ -2873,9 +2876,8 @@ class allocator_interface {
       auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
    ) {
       return meta_realloc_multi<
-         &allocator_interface<Derived>::xalloc_multi_uninit<T>, false, false>(
-         allocator, p_handle, old_count, new_count
-      );
+         &allocator_interface<Derived>::xalloc_multi_uninit<T>, false, false,
+         false, true>(allocator, p_handle, old_count, new_count);
    }
 
    // Resize an array with an uninitialized expanded range.
@@ -2883,7 +2885,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xrealloc_multi_uninit(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return xrealloc_multi_uninit_to(*this, p_handle, old_count, new_count);
+      return xrealloc_multi_uninit_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Try to resize an array into aligned uninitialized storage.
@@ -2896,7 +2900,9 @@ class allocator_interface {
       using T = typeof(this->get(p_handle));
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_alloc_multi_uninit<T>, true,
-         false>(allocator, p_handle, old_count, new_count, alignment);
+         false, false, true>(
+         allocator, p_handle, old_count, new_count, alignment
+      );
    }
 
    // Try to resize an array into aligned uninitialized storage.
@@ -2906,7 +2912,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_realloc_multi_uninit_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -2920,7 +2926,9 @@ class allocator_interface {
       using T = typeof(this->get(p_handle));
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_xalloc_multi_uninit<T>, false,
-         false>(allocator, p_handle, old_count, new_count, alignment);
+         false, false, true>(
+         allocator, p_handle, old_count, new_count, alignment
+      );
    }
 
    // Resize an array into aligned uninitialized storage.
@@ -2930,7 +2938,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_xrealloc_multi_uninit_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -2943,7 +2951,7 @@ class allocator_interface {
       using T = typeof(this->get(p_handle));
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_alloc_multi_uninit<T>, true,
-         false>(allocator, p_handle, old_count, new_count);
+         false, false, true>(allocator, p_handle, old_count, new_count);
    }
 
    // Try to resize an array into unaligned uninitialized storage.
@@ -2953,7 +2961,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
       return unalign_realloc_multi_uninit_to(
-         *this, p_handle, old_count, new_count
+         this->self(), p_handle, old_count, new_count
       );
    }
 
@@ -2966,7 +2974,7 @@ class allocator_interface {
       using T = typeof(this->get(p_handle));
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_xalloc_multi_uninit<T>, false,
-         false>(allocator, p_handle, old_count, new_count);
+         false, false, true>(allocator, p_handle, old_count, new_count);
    }
 
    // Resize an array into unaligned uninitialized storage.
@@ -2976,7 +2984,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
       return unalign_xrealloc_multi_uninit_to(
-         *this, p_handle, old_count, new_count
+         this->self(), p_handle, old_count, new_count
       );
    }
 
@@ -2998,7 +3006,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    recalloc(T* _Nonnull p_handle) {
-      return this->recalloc_to(*this, p_handle);
+      return this->recalloc_to(this->self(), p_handle);
    }
 
    // Move a pointer handle from this allocator into another, and zero-out the
@@ -3019,7 +3027,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xrecalloc(T* _Nonnull p_handle) {
-      return this->xrecalloc_to(*this, p_handle);
+      return this->xrecalloc_to(this->self(), p_handle);
    }
 
    // Try to move a pointer handle from this allocator into another with an
@@ -3041,7 +3049,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_recalloc(auto* _Nonnull p_handle, ualign alignment) {
-      return align_recalloc_to(*this, p_handle, alignment);
+      return align_recalloc_to(this->self(), p_handle, alignment);
    }
 
    // Move a pointer handle from this allocator into another with an alignment
@@ -3063,7 +3071,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    align_xrecalloc(auto* _Nonnull p_handle, ualign alignment) {
-      return align_xrecalloc_to(*this, p_handle, alignment);
+      return align_xrecalloc_to(this->self(), p_handle, alignment);
    }
 
    // Try to move a pointer handle from this allocator into another with no
@@ -3083,7 +3091,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_recalloc(auto* _Nonnull p_handle) {
-      return unalign_recalloc_to(*this, p_handle);
+      return unalign_recalloc_to(this->self(), p_handle);
    }
 
    // Move a pointer handle from this allocator into another with no alignment
@@ -3102,7 +3110,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    unalign_xrecalloc(auto* _Nonnull p_handle) {
-      return unalign_xrecalloc_to(*this, p_handle);
+      return unalign_xrecalloc_to(this->self(), p_handle);
    }
 
    // Try to move and resize an array pointer handle from this allocator into
@@ -3125,7 +3133,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    recalloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return this->recalloc_multi_to(*this, p_handle, old_count, new_count);
+      return this->recalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Move and resize an array pointer handle from this allocator into another,
@@ -3148,7 +3158,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xrecalloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return this->xrecalloc_multi_to(*this, p_handle, old_count, new_count);
+      return this->xrecalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Try to move and resize an array pointer handle from this allocator into
@@ -3173,7 +3185,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_recalloc_multi_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -3199,7 +3211,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_xrecalloc_multi_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -3223,7 +3235,9 @@ class allocator_interface {
    unalign_recalloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
-      return unalign_recalloc_multi_to(*this, p_handle, old_count, new_count);
+      return unalign_recalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Move and resize an array pointer handle from this allocator into another
@@ -3246,7 +3260,9 @@ class allocator_interface {
    unalign_xrecalloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
-      return unalign_xrecalloc_multi_to(*this, p_handle, old_count, new_count);
+      return unalign_xrecalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Try to move a small-size optimized handle from this allocator into
@@ -3265,7 +3281,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_realloc(auto& handle) {
-      return inline_realloc_to(*this, handle);
+      return inline_realloc_to(this->self(), handle);
    }
 
    // Move a small-size optimized handle from this allocator into another.
@@ -3283,7 +3299,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xrealloc(auto& handle) {
-      return inline_xrealloc_to(*this, handle);
+      return inline_xrealloc_to(this->self(), handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into another
@@ -3303,7 +3319,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_realloc(auto& handle, ualign alignment) {
-      return inline_align_realloc_to(*this, handle, alignment);
+      return inline_align_realloc_to(this->self(), handle, alignment);
    }
 
    // Move a small-size optimized handle from this allocator into another with
@@ -3323,7 +3339,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_align_xrealloc(auto& handle, ualign alignment) {
-      return inline_align_xrealloc_to(*this, handle, alignment);
+      return inline_align_xrealloc_to(this->self(), handle, alignment);
    }
 
    // Try to move a small-size optimized handle from this allocator into another
@@ -3343,7 +3359,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_realloc(auto& handle) {
-      return inline_unalign_realloc_to(*this, handle);
+      return inline_unalign_realloc_to(this->self(), handle);
    }
 
    // Move a small-size optimized handle from this allocator into another with
@@ -3364,7 +3380,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xrealloc(auto& handle) {
-      return inline_unalign_xrealloc_to(*this, handle);
+      return inline_unalign_xrealloc_to(this->self(), handle);
    }
 
    // Try to move an inline object into uninitialized storage.
@@ -3382,7 +3398,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_realloc_uninit(auto& handle) {
-      return inline_realloc_uninit_to(*this, handle);
+      return inline_realloc_uninit_to(this->self(), handle);
    }
 
    // Move an inline object into uninitialized storage.
@@ -3400,7 +3416,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xrealloc_uninit(auto& handle) {
-      return inline_xrealloc_uninit_to(*this, handle);
+      return inline_xrealloc_uninit_to(this->self(), handle);
    }
 
    // Try to move an inline object into aligned uninitialized storage.
@@ -3421,7 +3437,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_realloc_uninit(auto& handle, ualign alignment) {
-      return inline_align_realloc_uninit_to(*this, handle, alignment);
+      return inline_align_realloc_uninit_to(this->self(), handle, alignment);
    }
 
    // Move an inline object into aligned uninitialized storage.
@@ -3442,7 +3458,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_align_xrealloc_uninit(auto& handle, ualign alignment) {
-      return inline_align_xrealloc_uninit_to(*this, handle, alignment);
+      return inline_align_xrealloc_uninit_to(this->self(), handle, alignment);
    }
 
    // Try to move an inline object into unaligned uninitialized storage.
@@ -3461,7 +3477,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_realloc_uninit(auto& handle) {
-      return inline_unalign_realloc_uninit_to(*this, handle);
+      return inline_unalign_realloc_uninit_to(this->self(), handle);
    }
 
    // Move an inline object into unaligned uninitialized storage.
@@ -3480,7 +3496,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xrealloc_uninit(auto& handle) {
-      return inline_unalign_xrealloc_uninit_to(*this, handle);
+      return inline_unalign_xrealloc_uninit_to(this->self(), handle);
    }
 
    // Move a small-size optimized array memory handle from this allocator into
@@ -3500,7 +3516,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_realloc_multi(auto& handle, idx new_count) {
-      return inline_realloc_multi_to(*this, handle, new_count);
+      return inline_realloc_multi_to(this->self(), handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3520,7 +3536,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xrealloc_multi(auto& handle, idx new_count) {
-      return inline_xrealloc_multi_to(*this, handle, new_count);
+      return inline_xrealloc_multi_to(this->self(), handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3543,7 +3559,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_realloc_multi(auto& handle, ualign alignment, idx new_count) {
-      return inline_align_realloc_multi_to(*this, handle, alignment, new_count);
+      return inline_align_realloc_multi_to(
+         this->self(), handle, alignment, new_count
+      );
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3567,7 +3585,7 @@ class allocator_interface {
    auto
    inline_align_xrealloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_xrealloc_multi_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -3591,7 +3609,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_realloc_multi(auto& handle, idx new_count) {
-      return inline_unalign_realloc_multi_to(*this, handle, new_count);
+      return inline_unalign_realloc_multi_to(this->self(), handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3614,7 +3632,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xrealloc_multi(auto& handle, idx new_count) {
-      return inline_unalign_xrealloc_multi_to(*this, handle, new_count);
+      return inline_unalign_xrealloc_multi_to(this->self(), handle, new_count);
    }
 
    // Try to resize an inline array with an uninitialized expanded range.
@@ -3635,7 +3653,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_realloc_multi_uninit(auto& handle, idx new_count) {
-      return inline_realloc_multi_uninit_to(*this, handle, new_count);
+      return inline_realloc_multi_uninit_to(this->self(), handle, new_count);
    }
 
    // Resize an inline array with an uninitialized expanded range.
@@ -3656,7 +3674,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xrealloc_multi_uninit(auto& handle, idx new_count) {
-      return inline_xrealloc_multi_uninit_to(*this, handle, new_count);
+      return inline_xrealloc_multi_uninit_to(this->self(), handle, new_count);
    }
 
    // Try to resize an inline array into aligned uninitialized storage.
@@ -3680,7 +3698,7 @@ class allocator_interface {
       auto& handle, ualign alignment, idx new_count
    ) {
       return inline_align_realloc_multi_uninit_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -3705,7 +3723,7 @@ class allocator_interface {
       auto& handle, ualign alignment, idx new_count
    ) {
       return inline_align_xrealloc_multi_uninit_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -3727,7 +3745,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_realloc_multi_uninit(auto& handle, idx new_count) {
-      return inline_unalign_realloc_multi_uninit_to(*this, handle, new_count);
+      return inline_unalign_realloc_multi_uninit_to(
+         this->self(), handle, new_count
+      );
    }
 
    // Resize an inline array into unaligned uninitialized storage.
@@ -3748,7 +3768,9 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xrealloc_multi_uninit(auto& handle, idx new_count) {
-      return inline_unalign_xrealloc_multi_uninit_to(*this, handle, new_count);
+      return inline_unalign_xrealloc_multi_uninit_to(
+         this->self(), handle, new_count
+      );
    }
 
    // Try to move a small-size optimized handle from this allocator into
@@ -3768,7 +3790,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_recalloc(auto& handle) {
-      return inline_recalloc_to(*this, handle);
+      return inline_recalloc_to(this->self(), handle);
    }
 
    // Move a small-size optimized handle from this allocator into another, and
@@ -3788,7 +3810,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xrecalloc(auto& handle) {
-      return inline_xrecalloc_to(*this, handle);
+      return inline_xrecalloc_to(this->self(), handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into another
@@ -3808,7 +3830,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_recalloc(auto& handle, ualign alignment) {
-      return inline_align_recalloc_to(*this, handle, alignment);
+      return inline_align_recalloc_to(this->self(), handle, alignment);
    }
 
    // Move a small-size optimized handle from this allocator into another with
@@ -3828,7 +3850,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_align_xrecalloc(auto& handle, ualign alignment) {
-      return inline_align_xrecalloc_to(*this, handle, alignment);
+      return inline_align_xrecalloc_to(this->self(), handle, alignment);
    }
 
    // Try to move a small-size optimized handle from this allocator into another
@@ -3848,7 +3870,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_recalloc(auto& handle) {
-      return inline_unalign_recalloc_to(*this, handle);
+      return inline_unalign_recalloc_to(this->self(), handle);
    }
 
    // Move a small-size optimized handle from this allocator into another with
@@ -3868,7 +3890,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xrecalloc(auto& handle) {
-      return inline_unalign_xrecalloc_to(*this, handle);
+      return inline_unalign_xrecalloc_to(this->self(), handle);
    }
 
    // Move a small-size optimized array memory handle from this allocator into
@@ -3888,7 +3910,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_recalloc_multi(auto& handle, idx new_count) {
-      return inline_recalloc_multi_to(*this, handle, new_count);
+      return inline_recalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3908,7 +3930,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xrecalloc_multi(auto& handle, idx new_count) {
-      return inline_xrecalloc_multi_to(*this, handle, new_count);
+      return inline_xrecalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -3933,7 +3955,7 @@ class allocator_interface {
    constexpr auto
    inline_align_recalloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_recalloc_multi_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -3960,7 +3982,7 @@ class allocator_interface {
    auto
    inline_align_xrecalloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_xrecalloc_multi_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -3986,7 +4008,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_recalloc_multi(auto& handle, idx new_count) {
-      return inline_unalign_recalloc_multi_to(*this, handle, new_count);
+      return inline_unalign_recalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -4011,7 +4033,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xrecalloc_multi(auto& handle, idx new_count) {
-      return inline_unalign_xrecalloc_multi_to(*this, handle, new_count);
+      return inline_unalign_xrecalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Try to move a pointer handle from this allocator into another, and return
@@ -4032,7 +4054,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    resalloc(T* _Nonnull p_handle) {
-      return this->resalloc_to(*this, p_handle);
+      return this->resalloc_to(this->self(), p_handle);
    }
 
    // Move a pointer handle from this allocator into another, and return the
@@ -4053,7 +4075,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xresalloc(T* _Nonnull p_handle) {
-      return this->xresalloc_to(*this, p_handle);
+      return this->xresalloc_to(this->self(), p_handle);
    }
 
    // Try to move a pointer handle from this allocator into another with an
@@ -4075,7 +4097,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_resalloc(auto* _Nonnull p_handle, ualign alignment) {
-      return align_resalloc_to(*this, p_handle, alignment);
+      return align_resalloc_to(this->self(), p_handle, alignment);
    }
 
    // Move a pointer handle from this allocator into another with an alignment
@@ -4097,7 +4119,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    align_xresalloc(auto* _Nonnull p_handle, ualign alignment) {
-      return align_xresalloc_to(*this, p_handle, alignment);
+      return align_xresalloc_to(this->self(), p_handle, alignment);
    }
 
    // Try to move a pointer handle from this allocator into another with no
@@ -4117,7 +4139,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_resalloc(auto* _Nonnull p_handle) {
-      return unalign_resalloc_to(*this, p_handle);
+      return unalign_resalloc_to(this->self(), p_handle);
    }
 
    // Move a pointer handle from this allocator into another with no alignment
@@ -4137,7 +4159,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    unalign_xresalloc(auto* _Nonnull p_handle) {
-      return unalign_xresalloc_to(*this, p_handle);
+      return unalign_xresalloc_to(this->self(), p_handle);
    }
 
    // Try to move and resize an array pointer handle from this allocator into
@@ -4160,7 +4182,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    resalloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return this->resalloc_multi_to(*this, p_handle, old_count, new_count);
+      return this->resalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Move and resize an array pointer handle from this allocator into another,
@@ -4183,7 +4207,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xresalloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return this->xresalloc_multi_to(*this, p_handle, old_count, new_count);
+      return this->xresalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Try to move and resize an array pointer handle from this allocator into
@@ -4211,7 +4237,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_resalloc_multi_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -4240,7 +4266,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_xresalloc_multi_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -4267,7 +4293,9 @@ class allocator_interface {
    unalign_resalloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
-      return unalign_resalloc_multi_to(*this, p_handle, old_count, new_count);
+      return unalign_resalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Move and resize an array pointer handle from this allocator into another
@@ -4293,7 +4321,9 @@ class allocator_interface {
    unalign_xresalloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
-      return unalign_xresalloc_multi_to(*this, p_handle, old_count, new_count);
+      return unalign_xresalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Try to move an object into uninitialized storage and return its bytes.
@@ -4312,7 +4342,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    resalloc_uninit(T* _Nonnull p_handle) {
-      return resalloc_uninit_to(*this, p_handle);
+      return resalloc_uninit_to(this->self(), p_handle);
    }
 
    // Move an object into uninitialized storage and return its bytes.
@@ -4331,7 +4361,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xresalloc_uninit(T* _Nonnull p_handle) {
-      return xresalloc_uninit_to(*this, p_handle);
+      return xresalloc_uninit_to(this->self(), p_handle);
    }
 
    // Try to move an object into aligned uninitialized storage and return bytes.
@@ -4350,7 +4380,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_resalloc_uninit(auto* _Nonnull p_handle, ualign alignment) {
-      return align_resalloc_uninit_to(*this, p_handle, alignment);
+      return align_resalloc_uninit_to(this->self(), p_handle, alignment);
    }
 
    // Move an object into aligned uninitialized storage and return its bytes.
@@ -4369,7 +4399,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    align_xresalloc_uninit(auto* _Nonnull p_handle, ualign alignment) {
-      return align_xresalloc_uninit_to(*this, p_handle, alignment);
+      return align_xresalloc_uninit_to(this->self(), p_handle, alignment);
    }
 
    // Try to move into unaligned uninitialized storage and return its bytes.
@@ -4386,7 +4416,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_resalloc_uninit(auto* _Nonnull p_handle) {
-      return unalign_resalloc_uninit_to(*this, p_handle);
+      return unalign_resalloc_uninit_to(this->self(), p_handle);
    }
 
    // Move into unaligned uninitialized storage and return its bytes.
@@ -4403,7 +4433,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    unalign_xresalloc_uninit(auto* _Nonnull p_handle) {
-      return unalign_xresalloc_uninit_to(*this, p_handle);
+      return unalign_xresalloc_uninit_to(this->self(), p_handle);
    }
 
    // Try to resize an uninitialized array and return its allocated bytes.
@@ -4414,9 +4444,8 @@ class allocator_interface {
       auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
    ) {
       return meta_realloc_multi<
-         &allocator_interface<Derived>::salloc_multi_uninit<T>, true, true>(
-         allocator, p_handle, old_count, new_count
-      );
+         &allocator_interface<Derived>::salloc_multi_uninit<T>, true, true,
+         false, true>(allocator, p_handle, old_count, new_count);
    }
 
    // Try to resize an uninitialized array and return its allocated bytes.
@@ -4424,7 +4453,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    resalloc_multi_uninit(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return resalloc_multi_uninit_to(*this, p_handle, old_count, new_count);
+      return resalloc_multi_uninit_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Resize an uninitialized array and return its allocated bytes.
@@ -4435,9 +4466,8 @@ class allocator_interface {
       auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
    ) {
       return meta_realloc_multi<
-         &allocator_interface<Derived>::xsalloc_multi_uninit<T>, false, true>(
-         allocator, p_handle, old_count, new_count
-      );
+         &allocator_interface<Derived>::xsalloc_multi_uninit<T>, false, true,
+         false, true>(allocator, p_handle, old_count, new_count);
    }
 
    // Resize an uninitialized array and return its allocated bytes.
@@ -4445,7 +4475,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xresalloc_multi_uninit(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return xresalloc_multi_uninit_to(*this, p_handle, old_count, new_count);
+      return xresalloc_multi_uninit_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Try to resize into aligned uninitialized storage and return its bytes.
@@ -4458,7 +4490,9 @@ class allocator_interface {
       using T = typeof(this->get(p_handle));
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_salloc_multi_uninit<T>, true,
-         true>(allocator, p_handle, old_count, new_count, alignment);
+         true, false, true>(
+         allocator, p_handle, old_count, new_count, alignment
+      );
    }
 
    // Try to resize into aligned uninitialized storage and return its bytes.
@@ -4468,7 +4502,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_resalloc_multi_uninit_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -4482,7 +4516,9 @@ class allocator_interface {
       using T = typeof(this->get(p_handle));
       return meta_realloc_multi<
          &allocator_interface<Derived>::align_xsalloc_multi_uninit<T>, false,
-         true>(allocator, p_handle, old_count, new_count, alignment);
+         true, false, true>(
+         allocator, p_handle, old_count, new_count, alignment
+      );
    }
 
    // Resize into aligned uninitialized storage and return its bytes.
@@ -4492,7 +4528,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_xresalloc_multi_uninit_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -4505,7 +4541,7 @@ class allocator_interface {
       using T = typeof(this->get(p_handle));
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_salloc_multi_uninit<T>, true,
-         true>(allocator, p_handle, old_count, new_count);
+         true, false, true>(allocator, p_handle, old_count, new_count);
    }
 
    // Try to resize into unaligned uninitialized storage and return its bytes.
@@ -4515,7 +4551,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
       return unalign_resalloc_multi_uninit_to(
-         *this, p_handle, old_count, new_count
+         this->self(), p_handle, old_count, new_count
       );
    }
 
@@ -4528,7 +4564,7 @@ class allocator_interface {
       using T = typeof(this->get(p_handle));
       return meta_realloc_multi<
          &allocator_interface<Derived>::unalign_xsalloc_multi_uninit<T>, false,
-         true>(allocator, p_handle, old_count, new_count);
+         true, false, true>(allocator, p_handle, old_count, new_count);
    }
 
    // Resize into unaligned uninitialized storage and return its bytes.
@@ -4538,7 +4574,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
       return unalign_xresalloc_multi_uninit_to(
-         *this, p_handle, old_count, new_count
+         this->self(), p_handle, old_count, new_count
       );
    }
 
@@ -4560,7 +4596,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    rescalloc(T* _Nonnull p_handle) {
-      return this->rescalloc_to(*this, p_handle);
+      return this->rescalloc_to(this->self(), p_handle);
    }
 
    // Move a pointer handle from this allocator into another, zero-out the
@@ -4581,7 +4617,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xrescalloc(T* _Nonnull p_handle) {
-      return this->xrescalloc_to(*this, p_handle);
+      return this->xrescalloc_to(this->self(), p_handle);
    }
 
    // Try to move a pointer handle from this allocator into another with an
@@ -4605,7 +4641,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_rescalloc(auto* _Nonnull p_handle, ualign alignment) {
-      return align_rescalloc_to(*this, p_handle, alignment);
+      return align_rescalloc_to(this->self(), p_handle, alignment);
    }
 
    // Move a pointer handle from this allocator into another with an alignment
@@ -4628,7 +4664,7 @@ class allocator_interface {
    // that were allocated.
    auto
    align_xrescalloc(auto* _Nonnull p_handle, ualign alignment) {
-      return align_xrescalloc_to(*this, p_handle, alignment);
+      return align_xrescalloc_to(this->self(), p_handle, alignment);
    }
 
    // Try to move a pointer handle from this allocator into another with no
@@ -4650,7 +4686,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    unalign_rescalloc(auto* _Nonnull p_handle) {
-      return unalign_rescalloc_to(*this, p_handle);
+      return unalign_rescalloc_to(this->self(), p_handle);
    }
 
    // Move a pointer handle from this allocator into another with no alignment
@@ -4670,7 +4706,7 @@ class allocator_interface {
    // that were allocated.
    auto
    unalign_xrescalloc(auto* _Nonnull p_handle) {
-      return unalign_xrescalloc_to(*this, p_handle);
+      return unalign_xrescalloc_to(this->self(), p_handle);
    }
 
    // Try to move and resize an array pointer handle from this allocator into
@@ -4695,7 +4731,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    rescalloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return this->rescalloc_multi_to(*this, p_handle, old_count, new_count);
+      return this->rescalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Move and resize an array pointer handle from this allocator into another,
@@ -4720,7 +4758,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    xrescalloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
-      return this->xrescalloc_multi_to(*this, p_handle, old_count, new_count);
+      return this->xrescalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Try to move and resize an array pointer handle from this allocator into
@@ -4747,7 +4787,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_rescalloc_multi_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -4775,7 +4815,7 @@ class allocator_interface {
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
    ) {
       return align_xrescalloc_multi_to(
-         *this, p_handle, alignment, old_count, new_count
+         this->self(), p_handle, alignment, old_count, new_count
       );
    }
 
@@ -4801,7 +4841,9 @@ class allocator_interface {
    unalign_rescalloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
-      return unalign_rescalloc_multi_to(*this, p_handle, old_count, new_count);
+      return unalign_rescalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Move and resize an array pointer handle from this allocator into another
@@ -4826,7 +4868,9 @@ class allocator_interface {
    unalign_xrescalloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
    ) {
-      return unalign_xrescalloc_multi_to(*this, p_handle, old_count, new_count);
+      return unalign_xrescalloc_multi_to(
+         this->self(), p_handle, old_count, new_count
+      );
    }
 
    // Try to move a small-size optimized handle from this allocator into
@@ -4846,7 +4890,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_resalloc(auto& handle) {
-      return inline_resalloc_to(*this, handle);
+      return inline_resalloc_to(this->self(), handle);
    }
 
    // Move a small-size optimized handle from this allocator into another, and
@@ -4866,7 +4910,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xresalloc(auto& handle) {
-      return inline_xresalloc_to(*this, handle);
+      return inline_xresalloc_to(this->self(), handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into another
@@ -4888,7 +4932,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_resalloc(auto& handle, ualign alignment) {
-      return inline_align_resalloc_to(*this, handle, alignment);
+      return inline_align_resalloc_to(this->self(), handle, alignment);
    }
 
    // Move a small-size optimized handle from this allocator into another with
@@ -4909,7 +4953,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_align_xresalloc(auto& handle, ualign alignment) {
-      return inline_align_xresalloc_to(*this, handle, alignment);
+      return inline_align_xresalloc_to(this->self(), handle, alignment);
    }
 
    // Try to move a small-size optimized handle from this allocator into another
@@ -4932,7 +4976,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_resalloc(auto& handle) {
-      return inline_unalign_resalloc_to(*this, handle);
+      return inline_unalign_resalloc_to(this->self(), handle);
    }
 
    // Move a small-size optimized handle from this allocator into another with
@@ -4954,7 +4998,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xresalloc(auto& handle) {
-      return inline_unalign_xresalloc_to(*this, handle);
+      return inline_unalign_xresalloc_to(this->self(), handle);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
@@ -4976,7 +5020,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_resalloc_multi(auto& handle, idx new_count) {
-      return inline_resalloc_multi_to(*this, handle, new_count);
+      return inline_resalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -4998,7 +5042,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xresalloc_multi(auto& handle, idx new_count) {
-      return inline_xresalloc_multi_to(*this, handle, new_count);
+      return inline_xresalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
@@ -5024,7 +5068,7 @@ class allocator_interface {
    constexpr auto
    inline_align_resalloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_resalloc_multi_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -5051,7 +5095,7 @@ class allocator_interface {
    auto
    inline_align_xresalloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_xresalloc_multi_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -5077,7 +5121,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_resalloc_multi(auto& handle, idx new_count) {
-      return inline_unalign_resalloc_multi_to(*this, handle, new_count);
+      return inline_unalign_resalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -5102,7 +5146,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xresalloc_multi(auto& handle, idx new_count) {
-      return inline_unalign_xresalloc_multi_to(*this, handle, new_count);
+      return inline_unalign_xresalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Try to move an inline object into uninitialized storage and return bytes.
@@ -5120,7 +5164,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_resalloc_uninit(auto& handle) {
-      return inline_resalloc_uninit_to(*this, handle);
+      return inline_resalloc_uninit_to(this->self(), handle);
    }
 
    // Move an inline object into uninitialized storage and return its bytes.
@@ -5138,7 +5182,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xresalloc_uninit(auto& handle) {
-      return inline_xresalloc_uninit_to(*this, handle);
+      return inline_xresalloc_uninit_to(this->self(), handle);
    }
 
    // Try to move inline data into aligned uninitialized storage with feedback.
@@ -5159,7 +5203,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_resalloc_uninit(auto& handle, ualign alignment) {
-      return inline_align_resalloc_uninit_to(*this, handle, alignment);
+      return inline_align_resalloc_uninit_to(this->self(), handle, alignment);
    }
 
    // Move inline data into aligned uninitialized storage with feedback.
@@ -5180,7 +5224,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_align_xresalloc_uninit(auto& handle, ualign alignment) {
-      return inline_align_xresalloc_uninit_to(*this, handle, alignment);
+      return inline_align_xresalloc_uninit_to(this->self(), handle, alignment);
    }
 
    // Try to move inline data into unaligned storage with feedback.
@@ -5199,7 +5243,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_resalloc_uninit(auto& handle) {
-      return inline_unalign_resalloc_uninit_to(*this, handle);
+      return inline_unalign_resalloc_uninit_to(this->self(), handle);
    }
 
    // Move inline data into unaligned storage with feedback.
@@ -5218,7 +5262,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xresalloc_uninit(auto& handle) {
-      return inline_unalign_xresalloc_uninit_to(*this, handle);
+      return inline_unalign_xresalloc_uninit_to(this->self(), handle);
    }
 
    // Try to resize an inline uninitialized array and return its bytes.
@@ -5239,7 +5283,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_resalloc_multi_uninit(auto& handle, idx new_count) {
-      return inline_resalloc_multi_uninit_to(*this, handle, new_count);
+      return inline_resalloc_multi_uninit_to(this->self(), handle, new_count);
    }
 
    // Resize an inline uninitialized array and return its bytes.
@@ -5260,7 +5304,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xresalloc_multi_uninit(auto& handle, idx new_count) {
-      return inline_xresalloc_multi_uninit_to(*this, handle, new_count);
+      return inline_xresalloc_multi_uninit_to(this->self(), handle, new_count);
    }
 
    // Try to resize aligned inline uninitialized storage and return its bytes.
@@ -5284,7 +5328,7 @@ class allocator_interface {
       auto& handle, ualign alignment, idx new_count
    ) {
       return inline_align_resalloc_multi_uninit_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -5309,7 +5353,7 @@ class allocator_interface {
       auto& handle, ualign alignment, idx new_count
    ) {
       return inline_align_xresalloc_multi_uninit_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -5331,7 +5375,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_resalloc_multi_uninit(auto& handle, idx new_count) {
-      return inline_unalign_resalloc_multi_uninit_to(*this, handle, new_count);
+      return inline_unalign_resalloc_multi_uninit_to(
+         this->self(), handle, new_count
+      );
    }
 
    // Resize unaligned inline uninitialized storage and return its bytes.
@@ -5352,7 +5398,9 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xresalloc_multi_uninit(auto& handle, idx new_count) {
-      return inline_unalign_xresalloc_multi_uninit_to(*this, handle, new_count);
+      return inline_unalign_xresalloc_multi_uninit_to(
+         this->self(), handle, new_count
+      );
    }
 
    // Try to move a small-size optimized handle from this allocator into
@@ -5374,7 +5422,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_rescalloc(auto& handle) {
-      return inline_rescalloc_to(*this, handle);
+      return inline_rescalloc_to(this->self(), handle);
    }
 
    // Move a small-size optimized handle from this allocator into another,
@@ -5396,7 +5444,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xrescalloc(auto& handle) {
-      return inline_xrescalloc_to(*this, handle);
+      return inline_xrescalloc_to(this->self(), handle);
    }
 
    // Try to move a small-size optimized handle from this allocator into another
@@ -5418,7 +5466,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_align_rescalloc(auto& handle, ualign alignment) {
-      return inline_align_rescalloc_to(*this, handle, alignment);
+      return inline_align_rescalloc_to(this->self(), handle, alignment);
    }
 
    // Move a small-size optimized handle from this allocator into another with
@@ -5440,7 +5488,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_align_xrescalloc(auto& handle, ualign alignment) {
-      return inline_align_xrescalloc_to(*this, handle, alignment);
+      return inline_align_xrescalloc_to(this->self(), handle, alignment);
    }
 
    // Try to move a small-size optimized handle from this allocator into another
@@ -5462,7 +5510,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_rescalloc(auto& handle) {
-      return inline_unalign_rescalloc_to(*this, handle);
+      return inline_unalign_rescalloc_to(this->self(), handle);
    }
 
    // Move a small-size optimized handle from this allocator into another with
@@ -5484,7 +5532,7 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xrescalloc(auto& handle) {
-      return inline_unalign_xrescalloc_to(*this, handle);
+      return inline_unalign_xrescalloc_to(this->self(), handle);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
@@ -5507,7 +5555,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_rescalloc_multi(auto& handle, idx new_count) {
-      return inline_rescalloc_multi_to(*this, handle, new_count);
+      return inline_rescalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -5530,7 +5578,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_xrescalloc_multi(auto& handle, idx new_count) {
-      return inline_xrescalloc_multi_to(*this, handle, new_count);
+      return inline_xrescalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Try to move and resize a small-size optimized array memory handle from
@@ -5556,7 +5604,7 @@ class allocator_interface {
    constexpr auto
    inline_align_rescalloc_multi(auto& handle, ualign alignment, idx new_count) {
       return inline_align_rescalloc_multi_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -5585,7 +5633,7 @@ class allocator_interface {
       auto& handle, ualign alignment, idx new_count
    ) {
       return inline_align_xrescalloc_multi_to(
-         *this, handle, alignment, new_count
+         this->self(), handle, alignment, new_count
       );
    }
 
@@ -5611,7 +5659,7 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    inline_unalign_rescalloc_multi(auto& handle, idx new_count) {
-      return inline_unalign_rescalloc_multi_to(*this, handle, new_count);
+      return inline_unalign_rescalloc_multi_to(this->self(), handle, new_count);
    }
 
    // Move and resize a small-size optimized array memory handle from this
@@ -5636,7 +5684,9 @@ class allocator_interface {
    [[nodiscard]]
    auto
    inline_unalign_xrescalloc_multi(auto& handle, idx new_count) {
-      return inline_unalign_xrescalloc_multi_to(*this, handle, new_count);
+      return inline_unalign_xrescalloc_multi_to(
+         this->self(), handle, new_count
+      );
    }
 
    // Invalidate any memory handle, invoking its data's destructor.
@@ -5952,13 +6002,13 @@ class allocator_interface {
       }
    }
 
-   // Copy data from `p_old_handle` into `p_new_handle`.
+   // Relocate `old_count` elements from `p_old_handle` into the uninitialized
+   // `p_new_handle`. The old elements' lifetimes end.
    template <typename T>
    constexpr void
    relocate_ptr_handle(
       T* _Nonnull p_old_handle, T* _Nonnull p_new_handle, idx old_count
    ) noexcept(false) {
-      // TODO: Use a `relocate()` function to streamline this.
       assert(p_new_handle != nullptr);
       if !consteval {
          idx const transfer_bytes = old_count * sizeof(T);
@@ -5967,11 +6017,13 @@ class allocator_interface {
          ));
          if constexpr (is_trivially_relocatable<T>) {
             copy_memory(p_old_handle, p_new_handle, transfer_bytes);
+            return;
          }
-         return;
       }
+
       for (idx i; i < old_count; ++i) {
-         *(p_new_handle + i) = move(*(p_old_handle + i));
+         new (p_new_handle + i) T(move(p_old_handle[i]));
+         p_old_handle[i].~T();
       }
    }
 
@@ -5983,26 +6035,21 @@ class allocator_interface {
    relocate_ptr_handle(
       auto* _Nonnull p_old_handle, span<T> new_handle, idx old_count
    ) noexcept(false) {
-      // TODO: Use a `relocate()` function to streamline this.
       if !consteval {
-         // TODO: Remove the `consteval` requirement here.
          assert(new_handle.data() != nullptr);
-
          idx const transfer_bytes = old_count * sizeof(T);
          assert(!is_memory_overlapping(
             p_old_handle, transfer_bytes, new_handle.data(), transfer_bytes
          ));
 
          unpoison_memory_region(p_old_handle, transfer_bytes);
-
          if constexpr (is_trivially_relocatable<T>) {
             copy_memory(p_old_handle, new_handle.data(), transfer_bytes);
+            return;
          }
-         return;
       }
-      for (idx i; i < old_count; ++i) {
-         new_handle[i] = move(*(p_old_handle + i.raw));
-      }
+
+      relocate_ptr_handle(p_old_handle, new_handle.data(), old_count);
    }
 
    // Reallocate opaque memory handles.
@@ -6043,10 +6090,12 @@ class allocator_interface {
       return new_handle;
    }
 
-   // Reallocate pointer memory handles.
+   // Reallocate pointer memory handles. `is_uninit` says whether
+   // `alloc_function` leaves the new elements uninitialized, rather than
+   // constructing them.
    template <
       auto alloc_function, bool is_fail_safe, bool has_feedback,
-      bool is_zeroed = false, typename... Args>
+      bool is_zeroed = false, bool is_uninit = false, typename... Args>
       requires(sizeof...(Args) <= 1)
    constexpr auto
    meta_realloc_multi(
@@ -6062,8 +6111,12 @@ class allocator_interface {
       // `reallocate` hook, distinct from the address-stable `grow`. It falls
       // back to the manual path when the hook is absent, the requested
       // alignment exceeds the allocator's guarantee, or the hook declines.
+      //
+      // The hook can only resize storage which `allocator` owns, so it is
+      // skipped when moving storage into a different allocator.
       constexpr bool can_reallocate =
-         is_trivially_relocatable<element_type>
+         is_same<remove_cvref<decltype(allocator)>, Derived>
+         && is_trivially_relocatable<element_type>
          && is_implicit_lifetime<element_type>
          && (requires(span<byte> bytes, idx count) {
                 allocator.reallocate(bytes, count);
@@ -6072,16 +6125,18 @@ class allocator_interface {
              });
       if constexpr (can_reallocate) {
          if !consteval {
-            bool alignment_ok = true;
+            bool can_use_hook = __builtin_addressof(allocator)
+                                == __builtin_addressof(this->self());
             if constexpr (sizeof...(Args) == 1) {
                ualign const requested_alignment =
                   (static_cast<uword>(arguments), ...);
-               alignment_ok =
-                  requested_alignment
-                  <= remove_cvref<decltype(allocator)>::min_alignment;
+               can_use_hook =
+                  can_use_hook
+                  && requested_alignment
+                        <= remove_cvref<decltype(allocator)>::min_alignment;
             }
 
-            if (alignment_ok) {
+            if (can_use_hook) {
                span<byte> const old_allocation{
                   reinterpret_cast<byte*>(p_old_handle),
                   old_count * sizeof(element_type)
@@ -6169,33 +6224,45 @@ class allocator_interface {
       auto new_handle =
          (allocator.*alloc_function)($fwd(arguments)..., new_count);
 
+      // Shrinking only transfers the elements which fit.
+      idx const transferred = min(old_count, new_count);
+      auto transfer = [&](span<element_type> destination) {
+         if constexpr (is_uninit) {
+            this->relocate_ptr_handle(p_old_handle, destination, transferred);
+         } else {
+            // `alloc_function` constructed the new elements.
+            for (idx i; i < transferred; ++i) {
+               destination[i] = move(p_old_handle[i]);
+            }
+         }
+      };
+
       if constexpr (is_fail_safe) {
          if (new_handle.is_empty()) {
             return new_handle;
          }
 
          if constexpr (has_feedback) {
-            this->relocate_ptr_handle(
-               p_old_handle, new_handle.value().first(), old_count
-            );
+            transfer(new_handle.value().first());
          } else {
-            this->relocate_ptr_handle(
-               p_old_handle, new_handle.value(), old_count
-            );
+            transfer(new_handle.value());
          }
       } else {
          if constexpr (has_feedback) {
-            this->relocate_ptr_handle(
-               p_old_handle, new_handle.first(), old_count
-            );
+            transfer(new_handle.first());
          } else {
-            this->relocate_ptr_handle(p_old_handle, new_handle, old_count);
+            transfer(new_handle);
          }
       }
 
-      this->free_multi(
-         span<__typeof_unqual(*p_old_handle)>(p_old_handle, old_count)
-      );
+      span<element_type> const old_elements(p_old_handle, old_count);
+      if constexpr (is_uninit) {
+         // The transferred elements were relocated, so nothing is destroyed.
+         this->free_multi_uninit(old_elements);
+      } else {
+         // The old elements were moved from, but are still alive.
+         this->free_multi(old_elements);
+      }
       return new_handle;
    }
 };

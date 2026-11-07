@@ -1165,3 +1165,178 @@ $test(allocator_musl_hardening) {
    verify_child_hardening(corrupt_extended_offset);
    verify_child_hardening(corrupt_size_trailer);
 }
+
+namespace {
+// Records its own address, so that a bitwise relocation is detectable, and
+// counts live objects.
+struct tracked_element {
+   static inline cat::iword live = 0;
+
+   cat::int4 value = 0;
+   tracked_element const* p_self = this;
+
+   tracked_element() {
+      ++live;
+   }
+
+   tracked_element(cat::int4 input) : value(input) {
+      ++live;
+   }
+
+   tracked_element(tracked_element&& other) : value(other.value) {
+      ++live;
+   }
+
+   auto
+   operator=(tracked_element&& other) -> tracked_element& {
+      value = other.value;
+      return *this;
+   }
+
+   ~tracked_element() {
+      --live;
+   }
+};
+
+// A trivially relocatable type which still has a destructor, like a type that
+// owns memory.
+struct relocatable_counted {
+   static inline cat::iword destroyed = 0;
+
+   cat::int4 value = 0;
+
+   ~relocatable_counted() {
+      ++destroyed;
+   }
+};
+}  // namespace
+
+template <>
+inline constexpr bool cat::is_trivially_relocatable<relocatable_counted> = true;
+
+// Reallocating through an allocator's own member functions uses its
+// `reallocate()` hook, which can resize in place within a size class.
+$test(allocator_musl_realloc_multi_uses_reallocate_hook) {
+   cat::allocator_musl allocator;
+   cat::byte* const p_bytes = allocate_bytes(allocator, 64u);
+   for (idx index; index < 64u; ++index) {
+      p_bytes[index.raw] = cat::byte(index.raw);
+   }
+
+   cat::byte* p_grown =
+      allocator.realloc_multi_uninit(p_bytes, 64u, 68u).verify().data();
+   cat::verify(p_grown == p_bytes);
+   p_grown = allocator.align_realloc_multi_uninit(p_grown, 16u, 68u, 70u)
+                .verify()
+                .data();
+   cat::verify(p_grown == p_bytes);
+   p_grown =
+      allocator.unalign_realloc_multi_uninit(p_grown, 70u, 72u).verify().data();
+   cat::verify(p_grown == p_bytes);
+   for (idx index; index < 64u; ++index) {
+      cat::verify(p_grown[index.raw] == cat::byte(index.raw));
+   }
+
+   // Growing past the slot may move, but still preserves the bytes.
+   cat::byte* const p_moved =
+      allocator.unalign_realloc_multi_uninit(p_grown, 72u, 4'096u)
+         .verify()
+         .data();
+   for (idx index; index < 64u; ++index) {
+      cat::verify(p_moved[index.raw] == cat::byte(index.raw));
+   }
+   deallocate_bytes(allocator, p_moved, 4'096u);
+}
+
+// Moving storage into another allocator never asks that allocator to resize
+// memory which it does not own.
+$test(allocator_musl_realloc_multi_to_other_allocator) {
+   cat::allocator_musl source;
+   cat::allocator_musl destination;
+   cat::byte* const p_bytes = allocate_bytes(source, 64u);
+   for (idx index; index < 64u; ++index) {
+      p_bytes[index.raw] = cat::byte(index.raw);
+   }
+
+   cat::byte* const p_moved =
+      source.realloc_multi_uninit_to(destination, p_bytes, 64u, 72u)
+         .verify()
+         .data();
+   cat::verify(source.bytes_used() == 0u);
+   cat::verify(destination.bytes_used() > 0u);
+   for (idx index; index < 64u; ++index) {
+      cat::verify(p_moved[index.raw] == cat::byte(index.raw));
+   }
+   deallocate_bytes(destination, p_moved, 72u);
+}
+
+// Elements which are not trivially relocatable are moved into the new
+// storage, and each old element is destroyed exactly once.
+$test(allocator_musl_realloc_multi_relocates_elements) {
+   cat::allocator_musl allocator;
+   tracked_element::live = 0;
+   {
+      cat::span<tracked_element> elements =
+         allocator.alloc_multi<tracked_element>(4u).verify();
+      for (idx i; i < 4u; ++i) {
+         elements[i].value = cat::int4(i.raw + 1);
+      }
+
+      cat::span<tracked_element> grown =
+         allocator.realloc_multi(elements.data(), 4u, 8u).verify();
+      cat::verify(tracked_element::live == 8);
+      for (idx i; i < 8u; ++i) {
+         cat::verify(grown[i].p_self == &grown[i]);
+         cat::verify(grown[i].value == (i < 4u ? cat::int4(i.raw + 1) : 0));
+      }
+
+      // Shrinking keeps only the elements which fit.
+      cat::span<tracked_element> shrunk =
+         allocator.realloc_multi(grown.data(), 8u, 2u).verify();
+      cat::verify(tracked_element::live == 2);
+      cat::verify(shrunk[0].value == 1 && shrunk[1].value == 2);
+      cat::verify(shrunk[1].p_self == &shrunk[1]);
+      allocator.free_multi(shrunk);
+   }
+   cat::verify(tracked_element::live == 0);
+   cat::verify(allocator.bytes_used() == 0u);
+
+   // Uninitialized storage relocates the old elements into the new storage.
+   cat::span<tracked_element> raw =
+      allocator.alloc_multi_uninit<tracked_element>(3u).verify();
+   for (idx i; i < 3u; ++i) {
+      new (raw.data() + i) tracked_element(cat::int4(i.raw + 10));
+   }
+   cat::span<tracked_element> moved =
+      allocator.realloc_multi_uninit(raw.data(), 3u, 64u).verify();
+   cat::verify(tracked_element::live == 3);
+   for (idx i; i < 3u; ++i) {
+      cat::verify(moved[i].value == cat::int4(i.raw + 10));
+      cat::verify(moved[i].p_self == &moved[i]);
+      moved[i].~tracked_element();
+   }
+   allocator.free_multi_uninit(moved);
+   cat::verify(tracked_element::live == 0);
+}
+
+// Relocating a trivially relocatable type into uninitialized storage copies
+// its bytes, so its old copies are not destroyed.
+$test(allocator_musl_realloc_multi_does_not_destroy_relocated) {
+   cat::allocator_musl allocator;
+   cat::span<relocatable_counted> elements =
+      allocator.alloc_multi_uninit<relocatable_counted>(4u).verify();
+   for (idx i; i < 4u; ++i) {
+      new (elements.data() + i) relocatable_counted{cat::int4(i.raw)};
+   }
+
+   relocatable_counted::destroyed = 0;
+   cat::span<relocatable_counted> grown =
+      allocator.realloc_multi_uninit(elements.data(), 4u, 4'096u).verify();
+   cat::verify(relocatable_counted::destroyed == 0);
+   cat::verify(grown[3].value == 3);
+   for (idx i; i < 4u; ++i) {
+      grown[i].~relocatable_counted();
+   }
+   cat::verify(relocatable_counted::destroyed == 4);
+   allocator.free_multi_uninit(grown);
+}

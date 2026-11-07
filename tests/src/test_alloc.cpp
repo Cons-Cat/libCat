@@ -887,10 +887,10 @@ $test(alloc) {
    // Test `unalign_xrealloc_to`.
    p_alloc = allocator.unalign_xrealloc_to(allocator, p_alloc);
 
-   // Test `realloc_multi`.
-   p_alloc = allocator.alloc<int4>().value();
+   // Test `realloc_multi`. Each reallocation reads the first 5 elements of
+   // the previous one.
+   p_alloc = allocator.alloc_multi<int4>(5u).value().data();
    p_alloc = allocator.realloc_multi(p_alloc, 5, 10u).value().data();
-   allocator.free(p_alloc);
 
    // Test `realloc_multi_to`.
    p_alloc =
@@ -983,6 +983,7 @@ $test(alloc) {
    p_alloc = allocator.unalign_xrecalloc_to(allocator, p_alloc);
 
    // Test `recalloc_multi`.
+   p_alloc = allocator.alloc_multi<int4>(5u).value().data();
    p_alloc = allocator.recalloc_multi(p_alloc, 5, 10u).value().data();
 
    // Test `recalloc_multi_to`.
@@ -1516,6 +1517,7 @@ $test(alloc) {
    p_alloc = allocator.unalign_xresalloc_to(allocator, p_alloc).first();
 
    // Test `resalloc_multi`.
+   p_alloc = allocator.alloc_multi<int4>(5u).value().data();
    p_alloc = allocator.resalloc_multi(p_alloc, 5, 10u).value().first().data();
 
    // Test `resalloc_multi_to`.
@@ -1612,6 +1614,7 @@ $test(alloc) {
    p_alloc = allocator.unalign_xrescalloc_to(allocator, p_alloc).first();
 
    // Test `rescalloc_multi`.
+   p_alloc = allocator.alloc_multi<int4>(5u).value().data();
    p_alloc = allocator.rescalloc_multi(p_alloc, 5, 10u).value().first().data();
 
    // Test `rescalloc_multi_to`.
