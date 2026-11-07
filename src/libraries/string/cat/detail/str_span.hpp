@@ -113,6 +113,14 @@ compare_strings(str_view string_1, str_view string_2) noexcept(
    !__has_feature(cxx_exceptions)
 ) -> bool;
 
+template <typename String>
+concept is_safe_string = requires(String const& string) {
+                            typename remove_cvref<String>::value_type;
+                            string.data();
+                            string.size();
+                            string.is_null_terminated();
+                         };
+
 template <typename CharT, str_flags flags>
 class
    [[clang::preferred_name(str_view), clang::preferred_name(str_span),
@@ -152,7 +160,7 @@ class
    // This weird template deduces lower than the string literal constructor.
    template <is_pointer T>
       requires(
-         is_same<remove_const<CharT>, remove_const<remove_pointer<T>>>
+         is_same_unqual<CharT, remove_pointer<T>>
          && (!is_const<remove_pointer<T>> || is_const<CharT>)
       )
    constexpr basic_str_span(
@@ -165,14 +173,13 @@ class
 
    template <is_pointer T>
       requires(is_string_char<remove_pointer<T>>
-               && !is_same<
-                  remove_const<CharT>, remove_const<remove_pointer<T>>>)
+               && !is_same_unqual<CharT, remove_pointer<T>>)
    constexpr basic_str_span(T) =
       delete ("Cannot construct a `str_span` over a different character "
               "encoding! Copy into an owning string instead.");
 
    template <is_pointer T>
-      requires(is_same<remove_const<CharT>, remove_const<remove_pointer<T>>>
+      requires(is_same_unqual<CharT, remove_pointer<T>>
                && is_const<remove_pointer<T>> && !is_const<CharT>)
    constexpr basic_str_span(T) =
       delete ("Cannot construct a mutable `str_span` over a `const` string!");
@@ -356,9 +363,12 @@ class
    = delete ("Cannot bind a null-terminated `zstr_span` over a "
              "non null-terminated `str_span`!");
 
-   // Promote `span<char>` to `basic_str_span<char>`.
+   // Promote `span<char>` to `basic_str_span<char>`, or `span<char const>`.
+   // Like `span`, this may add `const` but never remove it.
+   template <typename U>
+      requires(is_convertible<U (*_Nonnull)[], CharT (*_Nonnull)[]>)
    constexpr basic_str_span(
-      span<CharT> in_span [[clang::lifetimebound]]
+      span<U> in_span [[clang::lifetimebound]]
    ) noexcept
        : span<CharT>(in_span) {
    }
@@ -366,7 +376,9 @@ class
    template <typename String>
       requires(
          !is_const<CharT>
-         && is_same<CharT, typename remove_cvref<String>::value_type>
+         && is_safe_string<String>
+         // Check what `.data()` points to, because `value_type` drops `const`.
+         && is_same<decltype(declval<String&>().data()), CharT*>
          && !is_same<remove_cvref<String>, basic_str_span<remove_const<CharT>>>
          && !is_same<
             remove_cvref<String>,
@@ -386,9 +398,8 @@ class
 
    template <typename String>
       requires(
-         is_const<CharT>
-         && is_same<
-            remove_const<CharT>, typename remove_cvref<String>::value_type>
+         is_const<CharT> && is_safe_string<String>
+         && is_same_unqual<CharT, typename remove_cvref<String>::value_type>
          && !is_same<remove_cvref<String>, basic_str_span<remove_const<CharT>>>
          && !is_same<
             remove_cvref<String>,
@@ -537,14 +548,6 @@ basic_str_span(basic_str_vec<CharT, flags> const&) noexcept
    -> basic_str_span<CharT const, flags.str>;
 
 template <typename String>
-concept is_safe_string = requires(String const& string) {
-                            typename remove_cvref<String>::value_type;
-                            string.data();
-                            string.size();
-                            string.is_null_terminated();
-                         };
-
-template <typename String>
 concept is_string_utf8_interconvertible =
    is_safe_string<String>
    && is_char_utf8_interconvertible<typename String::value_type>;
@@ -552,9 +555,9 @@ concept is_string_utf8_interconvertible =
 template <is_safe_string Left, is_safe_string Right>
    requires(
       !is_same<remove_cvref<Left>, remove_cvref<Right>>
-      && is_same<
-         remove_const<typename remove_cvref<Left>::value_type>,
-         remove_const<typename remove_cvref<Right>::value_type>>
+      && is_same_unqual<
+         typename remove_cvref<Left>::value_type,
+         typename remove_cvref<Right>::value_type>
    )
 [[nodiscard]]
 constexpr auto
@@ -567,9 +570,7 @@ operator==(Left const& left, Right const& right) noexcept -> bool {
 template <typename String, typename CharT, idx extent>
    requires(
       is_safe_string<String>
-      && is_same<
-         remove_const<typename remove_cvref<String>::value_type>,
-         remove_const<CharT>>
+      && is_same_unqual<typename remove_cvref<String>::value_type, CharT>
    )
 [[nodiscard]]
 constexpr auto

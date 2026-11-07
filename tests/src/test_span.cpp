@@ -1184,3 +1184,78 @@ $test(span_adds_const) {
    cat::span<int4 const, 4u> const fixed_const = fixed;
    cat::verify(fixed_const.data() == values.data());
 }
+
+// A `span` of `const` elements may view a mutable built-in array, but no
+// `span` may view a temporary.
+static_assert(cat::is_convertible<int4 (&)[4], cat::span<int4 const>>);
+static_assert(cat::is_convertible<int4 (&)[4], cat::span<int4 const, 4u>>);
+static_assert(cat::is_convertible<int4 (&)[4], cat::span<int4>>);
+static_assert(!cat::is_constructible<cat::span<int4>, int4 const (&)[4]>);
+static_assert(!cat::is_constructible<cat::span<int4, 3u>, int4 (&)[4]>);
+static_assert(!cat::is_constructible<cat::span<int4 const>, int4 (&&)[4]>);
+static_assert(cat::is_assignable<cat::span<int4 const>&, int4 (&)[4]>);
+static_assert(!cat::is_assignable<cat::span<int4 const>&, int4 (&&)[4]>);
+static_assert(
+   cat::is_assignable<cat::span<int4 const>&, cat::array<int4, 4u>&>
+);
+static_assert(
+   !cat::is_assignable<cat::span<int4 const>&, cat::array<int4, 4u>&&>
+);
+
+$test(span_const_from_mutable_array) {
+   int4 values[4] = {1, 2, 3, 4};  // NOLINT
+   cat::span<int4 const> view = values;
+   cat::verify(view.data() == values);
+   cat::verify(view.size() == 4u);
+
+   cat::span deduced = values;
+   static_assert(cat::is_same<decltype(deduced), cat::span<int4, 4u>>);
+
+   int4 const constant[2] = {5, 6};  // NOLINT
+   cat::span deduced_const = constant;
+   static_assert(
+      cat::is_same<decltype(deduced_const), cat::span<int4 const, 2u>>
+   );
+
+   cat::span<int4 const> assigned;
+   assigned = values;
+   cat::verify(assigned.data() == values);
+   cat::verify(assigned.size() == 4u);
+}
+
+// Containers are viewed according to what `.data()` points to, so a `const`
+// container never makes a mutable `span`.
+static_assert(cat::is_constructible<cat::span<int4>, cat::array<int4, 4u>&>);
+static_assert(
+   cat::is_constructible<cat::span<int4 const>, cat::array<int4, 4u> const&>
+);
+static_assert(
+   !cat::is_constructible<cat::span<int4>, cat::array<int4, 4u> const&>
+);
+static_assert(
+   !cat::is_assignable<cat::span<int4>&, cat::array<int4, 4u> const&>
+);
+
+// Like `std::span`, converting a dynamic extent to a fixed one is explicit,
+// because the size is only checked at runtime. Every other conversion is
+// implicit.
+static_assert(!cat::is_convertible<cat::span<int4>, cat::span<int4, 4u>>);
+static_assert(cat::is_constructible<cat::span<int4, 4u>, cat::span<int4>>);
+static_assert(!cat::is_convertible<cat::span<int4>, cat::span<int4 const, 4u>>);
+static_assert(
+   cat::is_constructible<cat::span<int4 const, 4u>, cat::span<int4>>
+);
+static_assert(!cat::is_assignable<cat::span<int4, 4u>&, cat::span<int4>>);
+static_assert(cat::is_convertible<cat::span<int4, 4u>, cat::span<int4>>);
+static_assert(cat::is_convertible<cat::span<int4, 4u>, cat::span<int4, 4u>>);
+static_assert(
+   cat::is_convertible<cat::span<int4, 4u>, cat::span<int4 const, 4u>>
+);
+
+$test(span_explicit_dynamic_to_fixed) {
+   cat::array<int4, 4u> values{1, 2, 3, 4};
+   cat::span<int4> dynamic = values;
+   cat::span<int4 const, 4u> fixed(dynamic);
+   cat::verify(fixed.data() == values.data());
+   cat::verify(fixed.size() == 4u);
+}

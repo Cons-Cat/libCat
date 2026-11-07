@@ -46,6 +46,14 @@ namespace cat {
 
 inline constexpr idx dynamic_extent = idx::max();
 
+namespace detail {
+template <typename T>
+inline constexpr bool is_span = false;
+
+template <typename T, idx extent>
+inline constexpr bool is_span<span<T, extent>> = true;
+}  // namespace detail
+
 template <typename T, idx fixed_extent>
 class [[clang::trivial_abi, gsl::Pointer(T)]]
 span
@@ -85,10 +93,10 @@ span
    }
 
    // Construct a span from a static `initializer_list`.
-   template <typename InitListValueType>
-      requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
+   template <typename U>
+      requires(is_const<T> && is_same<U, remove_const<T>>)
    constexpr span(
-      initializer_list<InitListValueType> initializers [[clang::lifetimebound]]
+      initializer_list<U> initializers [[clang::lifetimebound]]
    ) noexcept(!__has_feature(cxx_exceptions))
        : m_p_data(initializers.begin()), m_size(initializers.size()) {
       if constexpr (fixed_extent != dynamic_extent) {
@@ -98,8 +106,7 @@ span
 
    template <__SIZE_TYPE__ length>
       requires(fixed_extent == dynamic_extent || length == fixed_extent)
-   constexpr span(identity<T> (&array)[length])
-       : m_p_data(array), m_size(length) {
+   constexpr span(T (&array)[length]) : m_p_data(array), m_size(length) {
    }
 
    // Implicitly convert a contiguous container into a span. `const`-correctness
@@ -108,25 +115,46 @@ span
    constexpr span(U& container [[clang::lifetimebound]]) noexcept(
       !__has_feature(cxx_exceptions)
    )
-      requires(is_convertible<
-                 typename U::value_type (*_Nonnull)[], T (*_Nonnull)[]>)
+      // Check what `.data()` points to, because `value_type` drops `const`.
+      requires(!detail::is_span<remove_cv<U>>
+               && is_convertible<
+                  // NOLINTNEXTLINE
+                  remove_pointer<decltype(declval<U&>().data())> (*_Nonnull)[],
+                  T (*_Nonnull)[]>)
        : m_p_data(container.data()), m_size(container.size()) {
       if constexpr (fixed_extent != dynamic_extent) {
          assert(container.size() == fixed_extent);
       }
    }
 
+   // Implicitly convert a `span<U>` where `U` is `T` with strictly fewer
+   // qualifiers, such as `span<int4>` to `span<int4 const>`. `U(*)[]` only
+   // converts to `T(*)[]` by a safe qualification conversion.
    template <typename U, idx other_extent>
-   constexpr span(span<U, other_extent> const&) =
-      delete ("A `cat::span<T>` cannot be constructed from a `span<U>`. "
-              "Type-punning `U*` as `T*` is not safe even when "
-              "`U(*)[]` converts to `T(*)[]`. Construct a fresh span from "
-              "the source's `data()` and `size()` if the conversion is "
-              "intentional.");
+      requires(
+                 is_convertible<U (*_Nonnull)[], T (*_Nonnull)[]>
+                 && (fixed_extent == dynamic_extent || other_extent == dynamic_extent || other_extent == fixed_extent)
+              )
+   constexpr explicit(
+      fixed_extent != dynamic_extent && other_extent == dynamic_extent
+   ) span(span<U, other_extent> const& other) noexcept(!__has_feature(cxx_exceptions))
+       : m_p_data(other.data()), m_size(other.size()) {
+      if constexpr (fixed_extent != dynamic_extent) {
+         assert(other.size() == fixed_extent);
+      }
+   }
 
+   template <typename U, idx other_extent>
+      requires(!is_convertible<U (*_Nonnull)[], T (*_Nonnull)[]>)
+   constexpr span(span<U, other_extent> const&) =
+      delete ("A `cat::span<T>` cannot be constructed from a `span<U>`!");
+
+   // TODO: Reconsider allowing temporary borrowed ranges, and any temporary
+   // range when `T` is `const`, like `std::span`.
    template <typename U>
+      requires(!is_lvalue_reference<U> && !detail::is_span<remove_cvref<U>>)
    constexpr span(U&& container) =
-      delete ("A `cat::span` cannot alias a temporary, because the span would"
+      delete ("A `cat::span` cannot alias a temporary, because the span would "
               "immediately dangle!");
 
    constexpr auto
@@ -136,7 +164,7 @@ span
 
    template <is_random_access R>
       requires(
-         is_same<remove_cv<typename R::value_type>, remove_cv<T>>
+         is_same_unqual<typename R::value_type, T>
          && is_equality_comparable<remove_cv<T>>
       )
    [[nodiscard]]
@@ -144,7 +172,7 @@ span
    operator==(R const& rhs) const -> bool;
 
    template <is_random_access R>
-      requires(is_same<remove_cv<typename R::value_type>, remove_cv<T>>
+      requires(is_same_unqual<typename R::value_type, T>
                && requires(remove_cv<T> const& left, remove_cv<T> const& right) {
                      { left < right } -> is_convertible<bool>;
                      { right < left } -> is_convertible<bool>;
@@ -154,10 +182,10 @@ span
    operator<=>(R const& rhs) const;
 
    // Construct a span from a static `initializer_list`.
-   template <typename InitListValueType>
-      requires(is_const<T> && is_same<InitListValueType, remove_const<T>>)
+   template <typename U>
+      requires(is_const<T> && is_same<U, remove_const<T>>)
    constexpr auto
-   operator=(initializer_list<InitListValueType> initializers) noexcept(
+   operator=(initializer_list<U> initializers) noexcept(
       !__has_feature(cxx_exceptions)
    ) -> span<T, fixed_extent>& {
       if constexpr (fixed_extent != dynamic_extent) {
@@ -176,7 +204,10 @@ span
              [[clang::lifetimebound]]) noexcept(!__has_feature(cxx_exceptions))
       -> span<T, fixed_extent>&
       requires(
-         is_convertible<typename U::value_type (*_Nonnull)[], T (*_Nonnull)[]>
+         !detail::is_span<remove_cv<U>>
+         && is_convertible<
+            remove_pointer<decltype(declval<U&>().data())> (*_Nonnull)[],
+            T (*_Nonnull)[]>
       )
    {
       if constexpr (fixed_extent != dynamic_extent) {
@@ -187,10 +218,13 @@ span
       return *this;
    }
 
+   // Only reject temporaries. Spans are assigned through the converting
+   // constructor.
    template <typename U>
+      requires(!is_lvalue_reference<U> && !detail::is_span<remove_cvref<U>>)
    auto
    operator=(U&& container) =
-      delete ("A `cat::span` cannot alias a temporary, because the span would"
+      delete ("A `cat::span` cannot alias a temporary, because the span would "
               "immediately dangle.");
 
    constexpr void
