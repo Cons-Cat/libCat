@@ -6968,3 +6968,168 @@ static_assert(promotion_grid(promotion_arithmetic_types{}));
 }  // namespace
 
 #pragma clang diagnostic pop
+
+namespace {
+
+// `+` appends a digit on either side, so it does not commute.
+struct digits : cat::arithmetic_interface<digits> {
+   int value;
+
+   constexpr digits(int initial) : value(initial) {
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, long>)
+   [[nodiscard]]
+   constexpr auto
+   add(T digit) const -> digits {
+      return value * 10 + static_cast<int>(digit);
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int>)
+   [[nodiscard]]
+   constexpr auto
+   add_noncommutative(T digit) const -> digits {
+      return digit * 10 + value;
+   }
+
+   // A `long` may only be appended.
+   friend auto
+   operator+(long, digits const&) -> digits = delete;
+};
+
+// A result that cannot be assigned to an `int`.
+struct opaque {
+   int value;
+
+   constexpr opaque(int initial) : value(initial) {
+   }
+};
+
+// Every reversed compound assignment, `other @= self`, assigns
+// `other @ self` back to `other`.
+template <typename Result>
+struct reverse_operand : cat::arithmetic_interface<reverse_operand<Result>> {
+   int value;
+
+   constexpr reverse_operand(int initial) : value(initial) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   add(int other) const -> Result {
+      return other + value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   multiply(int other) const -> Result {
+      return other * value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bit_and(int other) const -> Result {
+      return other & value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bit_or(int other) const -> Result {
+      return other | value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   bit_xor(int other) const -> Result {
+      return other ^ value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   subtract_from(int other) const -> Result {
+      return other - value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   divide_into(int other) const -> Result {
+      return other / value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   modulo_into(int other) const -> Result {
+      return other % value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   shift_left_into(int other) const -> Result {
+      return other << value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   shift_right_into(int other) const -> Result {
+      return other >> value;
+   }
+};
+
+consteval auto
+reverse_compound_assignments() -> bool {
+   using operand = reverse_operand<int>;
+   int sum = 7;
+   sum += operand(2);
+   int difference = 7;
+   difference -= operand(2);
+   int product = 7;
+   product *= operand(2);
+   int quotient = 7;
+   quotient /= operand(2);
+   int remainder = 7;
+   remainder %= operand(2);
+   int conjunction = 6;
+   conjunction &= operand(3);
+   int disjunction = 6;
+   disjunction |= operand(3);
+   int exclusive = 6;
+   exclusive ^= operand(3);
+   int left = 1;
+   left <<= operand(3);
+   int right = 16;
+   right >>= operand(2);
+   return sum == 9 && difference == 5 && product == 14 && quotient == 3
+          && remainder == 1 && conjunction == 2 && disjunction == 7
+          && exclusive == 5 && left == 8 && right == 4;
+}
+
+}  // namespace
+
+$test(arithmetic_interface_noncommutative) {
+   // `other + self` uses `add_noncommutative()`.
+   static_assert((2 + digits(1)).value == 21);
+   // A deleted hidden friend stops `other + self` from falling back on
+   // `add()`.
+   static_assert(!cat::is_addable<long, digits>);
+}
+
+$test(arithmetic_interface_reverse_compound_assignment) {
+   static_assert(reverse_compound_assignments());
+
+   // Each one exists only when its result can be assigned back.
+   using unassignable = reverse_operand<opaque>;
+   static_assert(!cat::is_add_assignable<int, unassignable>);
+   static_assert(!cat::is_subtract_assignable<int, unassignable>);
+   static_assert(!cat::is_multiply_assignable<int, unassignable>);
+   static_assert(!cat::is_divide_assignable<int, unassignable>);
+   static_assert(!cat::is_modulo_assignable<int, unassignable>);
+   static_assert(!cat::is_bitand_assignable<int, unassignable>);
+   static_assert(!cat::is_bitor_assignable<int, unassignable>);
+   static_assert(!cat::is_bitxor_assignable<int, unassignable>);
+   static_assert(!cat::is_shiftleft_assignable<int, unassignable>);
+   static_assert(!cat::is_shiftright_assignable<int, unassignable>);
+   static_assert(cat::is_add_assignable<int, reverse_operand<int>>);
+   static_assert(cat::is_shiftright_assignable<int, reverse_operand<int>>);
+}
