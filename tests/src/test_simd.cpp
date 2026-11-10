@@ -2527,6 +2527,17 @@ $test(simd_reduce_assoc_and_in_order_fadd) {
    cat::verify(fast.sum() == fast.reduce_assoc_fadd()[0u]);
 }
 
+// Scalar operands convert to `simd` and reach the `simd` overload. The integer
+// path needs no FMA hardware.
+$test(simd_fma_scalar_operands) {
+   int4x4 const value = {1_i4, 2_i4, 3_i4, 4_i4};
+   int4x4 const product = value.fma(2_i4, 1_i4);
+   cat::verify(product[0u] == 3_i4);
+   cat::verify(product[3u] == 9_i4);
+   int4x4 const mixed = value.fma(int4x4(2_i4), 1_i4);
+   cat::verify(mixed[1u] == 5_i4);
+}
+
 $test(simd_precision_reference_accessors) {
    float4x4 value = {1_f4, 2_f4, 3_f4, 4_f4};
    float4x4 const increment(1_f4);

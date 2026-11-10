@@ -989,10 +989,16 @@ class
       }
    }
 
+   // Converts other operands to `simd`. Two `simd` prvalues would bind to this
+   // template more tightly than to `simd const&`, so they are excluded.
    template <typename Factor, typename Addend>
       requires(
          !is_bool<T> && is_constructible<simd, Factor&&>
          && is_constructible<simd, Addend&&>
+         && !(
+            is_same<remove_cvref<Factor>, simd>
+            && is_same<remove_cvref<Addend>, simd>
+         )
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
