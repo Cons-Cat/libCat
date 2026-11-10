@@ -7009,73 +7009,295 @@ struct opaque {
 
 // Every reversed compound assignment, `other @= self`, assigns
 // `other @ self` back to `other`.
-template <typename Result>
-struct reverse_operand : cat::arithmetic_interface<reverse_operand<Result>> {
+template <typename Result, bool is_nothrow = false>
+struct reverse_operand
+    : cat::arithmetic_interface<reverse_operand<Result, is_nothrow>> {
    int value;
 
-   constexpr reverse_operand(int initial) : value(initial) {
+   constexpr reverse_operand(int initial) noexcept : value(initial) {
    }
 
    [[nodiscard]]
    constexpr auto
-   add(int other) const -> Result {
+   add(int other) const noexcept(is_nothrow) -> Result {
       return other + value;
    }
 
    [[nodiscard]]
    constexpr auto
-   multiply(int other) const -> Result {
+   multiply(int other) const noexcept(is_nothrow) -> Result {
       return other * value;
    }
 
    [[nodiscard]]
    constexpr auto
-   bit_and(int other) const -> Result {
+   bit_and(int other) const noexcept(is_nothrow) -> Result {
       return other & value;
    }
 
    [[nodiscard]]
    constexpr auto
-   bit_or(int other) const -> Result {
+   bit_or(int other) const noexcept(is_nothrow) -> Result {
       return other | value;
    }
 
    [[nodiscard]]
    constexpr auto
-   bit_xor(int other) const -> Result {
+   bit_xor(int other) const noexcept(is_nothrow) -> Result {
       return other ^ value;
    }
 
    [[nodiscard]]
    constexpr auto
-   subtract_from(int other) const -> Result {
+   subtract_from(int other) const noexcept(is_nothrow) -> Result {
       return other - value;
    }
 
    [[nodiscard]]
    constexpr auto
-   divide_into(int other) const -> Result {
+   divide_into(int other) const noexcept(is_nothrow) -> Result {
       return other / value;
    }
 
    [[nodiscard]]
    constexpr auto
-   modulo_into(int other) const -> Result {
+   modulo_into(int other) const noexcept(is_nothrow) -> Result {
       return other % value;
    }
 
    [[nodiscard]]
    constexpr auto
-   shift_left_into(int other) const -> Result {
+   shift_left_into(int other) const noexcept(is_nothrow) -> Result {
       return other << value;
    }
 
    [[nodiscard]]
    constexpr auto
-   shift_right_into(int other) const -> Result {
+   shift_right_into(int other) const noexcept(is_nothrow) -> Result {
       return other >> value;
    }
 };
+
+// Every member that `arithmetic_interface` calls, `noexcept` exactly when
+// `is_nothrow` is. The members are never evaluated. The constructor is
+// `noexcept`, because `++` and the operands below construct one.
+template <bool is_nothrow>
+struct nothrow_operand
+    : cat::arithmetic_interface<nothrow_operand<is_nothrow>> {
+   using raw_type = int;
+   int value;
+
+   constexpr nothrow_operand(int initial) noexcept : value(initial) {
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   add(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   subtract_by(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   subtract_from(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   multiply(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   divide_by(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   divide_into(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   modulo_by(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   modulo_into(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   bit_and(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   bit_or(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   bit_xor(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   shift_left_by(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   shift_left_into(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   shift_right_by(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+
+   template <typename T>
+      requires(cat::is_same<T, int> || cat::is_same<T, nothrow_operand>)
+   [[nodiscard]]
+   constexpr auto
+   shift_right_into(T) const noexcept(is_nothrow) -> nothrow_operand {
+      return *this;
+   }
+};
+
+// Each generated operator is `noexcept` exactly when the member it calls is.
+template <bool is_nothrow>
+consteval auto
+operators_match_noexcept() -> bool {
+   using operand = nothrow_operand<is_nothrow>;
+   operand value(1);
+   int scalar = 1;
+   reverse_operand<int, is_nothrow> reversed(1);
+   bool const binary = noexcept(value + value) == is_nothrow
+                       && noexcept(value - value) == is_nothrow
+                       && noexcept(value * value) == is_nothrow
+                       && noexcept(value / value) == is_nothrow
+                       && noexcept(value % value) == is_nothrow
+                       && noexcept(value & value) == is_nothrow
+                       && noexcept(value | value) == is_nothrow
+                       && noexcept(value ^ value) == is_nothrow
+                       && noexcept(value << value) == is_nothrow
+                       && noexcept(value >> value) == is_nothrow
+                       && noexcept(value + operand(1)) == is_nothrow
+                       && noexcept(value - operand(1)) == is_nothrow
+                       && noexcept(value * operand(1)) == is_nothrow
+                       && noexcept(value / operand(1)) == is_nothrow
+                       && noexcept(value % operand(1)) == is_nothrow
+                       && noexcept(value & operand(1)) == is_nothrow
+                       && noexcept(value | operand(1)) == is_nothrow
+                       && noexcept(value ^ operand(1)) == is_nothrow
+                       && noexcept(value << operand(1)) == is_nothrow
+                       && noexcept(value >> operand(1)) == is_nothrow;
+   bool const scalar_right = noexcept(value + scalar) == is_nothrow
+                             && noexcept(value - scalar) == is_nothrow
+                             && noexcept(value * scalar) == is_nothrow
+                             && noexcept(value / scalar) == is_nothrow
+                             && noexcept(value % scalar) == is_nothrow
+                             && noexcept(value & scalar) == is_nothrow
+                             && noexcept(value | scalar) == is_nothrow
+                             && noexcept(value ^ scalar) == is_nothrow
+                             && noexcept(value << scalar) == is_nothrow
+                             && noexcept(value >> scalar) == is_nothrow;
+   bool const scalar_left = noexcept(scalar + value) == is_nothrow
+                            && noexcept(scalar - value) == is_nothrow
+                            && noexcept(scalar * value) == is_nothrow
+                            && noexcept(scalar / value) == is_nothrow
+                            && noexcept(scalar % value) == is_nothrow
+                            && noexcept(scalar & value) == is_nothrow
+                            && noexcept(scalar | value) == is_nothrow
+                            && noexcept(scalar ^ value) == is_nothrow
+                            && noexcept(scalar << value) == is_nothrow
+                            && noexcept(scalar >> value) == is_nothrow;
+   bool const compound = noexcept(value += value) == is_nothrow
+                         && noexcept(value -= value) == is_nothrow
+                         && noexcept(value *= value) == is_nothrow
+                         && noexcept(value /= value) == is_nothrow
+                         && noexcept(value %= value) == is_nothrow
+                         && noexcept(value &= value) == is_nothrow
+                         && noexcept(value |= value) == is_nothrow
+                         && noexcept(value ^= value) == is_nothrow
+                         && noexcept(value <<= value) == is_nothrow
+                         && noexcept(value >>= value) == is_nothrow
+                         && noexcept(value += operand(1)) == is_nothrow
+                         && noexcept(value += scalar) == is_nothrow
+                         && noexcept(value -= scalar) == is_nothrow
+                         && noexcept(value *= scalar) == is_nothrow
+                         && noexcept(value /= scalar) == is_nothrow
+                         && noexcept(value %= scalar) == is_nothrow
+                         && noexcept(value &= scalar) == is_nothrow
+                         && noexcept(value |= scalar) == is_nothrow
+                         && noexcept(value ^= scalar) == is_nothrow
+                         && noexcept(value <<= scalar) == is_nothrow
+                         && noexcept(value >>= scalar) == is_nothrow;
+   bool const reverse_compound =
+      noexcept(scalar += reversed) == is_nothrow
+      && noexcept(scalar -= reversed) == is_nothrow
+      && noexcept(scalar *= reversed) == is_nothrow
+      && noexcept(scalar /= reversed) == is_nothrow
+      && noexcept(scalar %= reversed) == is_nothrow
+      && noexcept(scalar &= reversed) == is_nothrow
+      && noexcept(scalar |= reversed) == is_nothrow
+      && noexcept(scalar ^= reversed) == is_nothrow
+      && noexcept(scalar <<= reversed) == is_nothrow
+      && noexcept(scalar >>= reversed) == is_nothrow
+      && noexcept(scalar += reverse_operand<int, is_nothrow>(1)) == is_nothrow;
+   bool const step =
+      noexcept(++value) == is_nothrow && noexcept(value++) == is_nothrow
+      && noexcept(--value) == is_nothrow && noexcept(value--) == is_nothrow;
+   return binary && scalar_right && scalar_left && compound && reverse_compound
+          && step;
+}
 
 consteval auto
 reverse_compound_assignments() -> bool {
@@ -7113,6 +7335,11 @@ $test(arithmetic_interface_noncommutative) {
    // A deleted hidden friend stops `other + self` from falling back on
    // `add()`.
    static_assert(!cat::is_addable<long, digits>);
+}
+
+$test(arithmetic_interface_noexcept) {
+   static_assert(operators_match_noexcept<true>());
+   static_assert(operators_match_noexcept<false>());
 }
 
 $test(arithmetic_interface_reverse_compound_assignment) {
