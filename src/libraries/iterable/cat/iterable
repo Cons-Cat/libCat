@@ -643,6 +643,7 @@ struct view_interface {
 #include "../implementations/find.tpp"
 #include "../implementations/fold.tpp"
 #include "../implementations/for_each.tpp"
+#include "../implementations/inner_product.tpp"
 #include "../implementations/is_all.tpp"
 #include "../implementations/is_any.tpp"
 #include "../implementations/is_none.tpp"

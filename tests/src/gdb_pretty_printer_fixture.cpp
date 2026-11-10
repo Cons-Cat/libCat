@@ -1,5 +1,7 @@
 #include <cat/arithmetic>
 #include <cat/array>
+#include <cat/complex>
+#include <cat/quantity>
 #include <cat/atomic>
 #include <cat/bit>
 #include <cat/bitset>
@@ -222,6 +224,20 @@ cat::monostate_type cat_gdb_monostate_value = cat::monostate;
 
 [[gnu::used, gnu::retain]]
 cat::int4 cat_gdb_arithmetic_value = 42;
+
+[[gnu::used, gnu::retain]]
+cat::complex_float8 cat_gdb_complex_float_value{1.5, -2.5};
+
+[[gnu::used, gnu::retain]]
+cat::complex_int4 cat_gdb_complex_int_value{3, -4};
+
+[[gnu::used, gnu::retain]]
+cat::wrap_complex_int4 cat_gdb_complex_wrap_value{
+   cat::wrap_int4(3), cat::wrap_int4(4)};
+
+[[gnu::used, gnu::retain]]
+cat::complex<cat::units::metre_float8> cat_gdb_complex_quantity_value{
+   cat::units::metre_float8(3.0), cat::units::metre_float8(4.0)};
 
 [[gnu::used, gnu::retain]]
 wrap_int4 cat_gdb_arithmetic_wrap_value = 250;
@@ -500,6 +516,10 @@ void
 cat_gdb_pretty_printer_breakpoint() {
    asm volatile("" ::"g"(&cat_gdb_monostate_value),
                 "g"(&cat_gdb_arithmetic_value),
+                "g"(&cat_gdb_complex_float_value),
+                "g"(&cat_gdb_complex_int_value),
+                "g"(&cat_gdb_complex_wrap_value),
+                "g"(&cat_gdb_complex_quantity_value),
                 "g"(&cat_gdb_arithmetic_wrap_value),
                 "g"(&cat_gdb_atomic_value),
                 "g"(&cat_gdb_atomic_reference_value),

@@ -94,6 +94,108 @@ class BasicFloatPrinter:
         return str(self.raw)
 
 
+def _overflow_policy(gdb_type, argument):
+    typed_policy = gdb_type.template_argument(argument)
+    stripped_policy = str(typed_policy)[24:]
+    match stripped_policy:
+        case 'undefined':
+            return 'undefined'
+        case 'wrap':
+            return 'wrap'
+        case 'saturate':
+            return 'sat'
+        case _:
+            return 'WTF'
+
+
+def _complex_parts(real, imag):
+    real_text = str(real)
+    imag_text = str(imag)
+    if imag_text.startswith('-'):
+        return real_text + ' - ' + imag_text[1:] + 'i'
+    return real_text + ' + ' + imag_text + 'i'
+
+
+def _named_unit_symbol(gdb_type):
+    # Class-type quantities are optimized out as template arguments, but the
+    # unit's base type still spells the portable symbol, as in `{"m"}`.
+    seen = set()
+
+    def walk(current):
+        key = str(current)
+        if key in seen:
+            return ''
+        seen.add(key)
+        match = re.search(r'\{u8"(?:[^"\\]|\\.)*"\}, \{"((?:[^"\\]|\\.)*)"\}', key)
+        if match:
+            return match.group(1)
+        try:
+            fields = current.fields()
+        except (gdb.error, RuntimeError):
+            return ''
+        for field in fields:
+            if field.is_base_class:
+                found = walk(field.type)
+                if found:
+                    return found
+        return ''
+
+    try:
+        return walk(gdb_type)
+    except (gdb.error, RuntimeError):
+        return ''
+
+
+def _quantity_suffix(part):
+    text = str(part.type.strip_typedefs())
+    if 'scalar_quantity_spec' in text:
+        return ''
+
+    match = re.search(r'(cat::units::[A-Za-z_][A-Za-z0-9_]*)', text)
+    if match is None:
+        return ''
+
+    try:
+        symbol = _named_unit_symbol(gdb.lookup_type(match.group(1)))
+    except (gdb.error, RuntimeError):
+        symbol = ''
+    if symbol:
+        return ' ' + symbol
+    return ' ' + match.group(1).rsplit('::', 1)[-1]
+
+
+@cat_type('basic_complex_int')
+class BasicComplexIntPrinter:
+    "Print a `cat::basic_complex_int`"
+
+    def __init__(self, val: gdb.Value):
+        self.real = val['m_real']['raw']
+        self.imag = val['m_imag']['raw']
+        self.policy = _overflow_policy(val.type, 1)
+        self.quantity = _quantity_suffix(val['m_real'])
+        return
+
+    def to_string(self):
+        text = _complex_parts(self.real, self.imag) + self.quantity
+        if self.policy == 'undefined':
+            return text
+        return text + ' (' + self.policy + ')'
+
+
+@cat_type('basic_complex_float')
+class BasicComplexFloatPrinter:
+    "Print a `cat::basic_complex_float`"
+
+    def __init__(self, val: gdb.Value):
+        self.real = val['m_real']['raw']
+        self.imag = val['m_imag']['raw']
+        self.quantity = _quantity_suffix(val['m_real'])
+        return
+
+    def to_string(self):
+        return _complex_parts(self.real, self.imag) + self.quantity
+
+
 @cat_type('basic_idx')
 class IndexPrinter:
     "Print a `cat::idx`"

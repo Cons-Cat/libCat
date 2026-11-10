@@ -151,6 +151,22 @@ iterable_pipe_dot(Self&& self, Other&& other) {
    return $fwd(self) | dot($fwd(other));
 }
 
+template <typename Self, typename Other, typename Init>
+constexpr auto
+iterable_pipe_inner_product(Self&& self, Other&& other, Init init) {
+   return $fwd(self) | inner_product($fwd(other), move(init));
+}
+
+template <
+   typename Self, typename Other, typename Init, typename Op1, typename Op2>
+constexpr auto
+iterable_pipe_inner_product(
+   Self&& self, Other&& other, Init init, Op1 op1, Op2 op2
+) {
+   return $fwd(self)
+          | inner_product($fwd(other), move(init), move(op1), move(op2));
+}
+
 template <typename Self>
 constexpr auto
 iterable_pipe_count(Self&& self) -> idx {
@@ -363,6 +379,29 @@ template <typename Self, typename Other>
 constexpr auto
 iterable_interface<Tag>::dot(this Self&& self, Other&& other) {
    return detail::iterable_pipe_dot($fwd(self), $fwd(other));
+}
+
+template <typename Tag>
+template <typename Self, typename Other, typename Init>
+constexpr auto
+iterable_interface<Tag>::inner_product(
+   this Self&& self, Other&& other, Init init
+) {
+   return detail::iterable_pipe_inner_product(
+      $fwd(self), $fwd(other), move(init)
+   );
+}
+
+template <typename Tag>
+template <
+   typename Self, typename Other, typename Init, typename Op1, typename Op2>
+constexpr auto
+iterable_interface<Tag>::inner_product(
+   this Self&& self, Other&& other, Init init, Op1 op1, Op2 op2
+) {
+   return detail::iterable_pipe_inner_product(
+      $fwd(self), $fwd(other), move(init), move(op1), move(op2)
+   );
 }
 
 template <typename Tag>

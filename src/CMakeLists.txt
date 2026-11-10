@@ -10,7 +10,7 @@ set(CAT_INCLUDE_SUBDIRS
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
   tuple vec map ring enum iterable dyn random timer chrono mutex quantity
-  stacktrace demangle exception coroutine)
+  stacktrace demangle exception coroutine complex)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -49,6 +49,10 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/__udivmodti4.cpp
   ${CATLIB}/runtime/implementations/__divti3.cpp
   ${CATLIB}/runtime/implementations/__multi3.cpp
+  ${CATLIB}/runtime/implementations/__mulsc3.cpp
+  ${CATLIB}/runtime/implementations/__divsc3.cpp
+  ${CATLIB}/runtime/implementations/__muldc3.cpp
+  ${CATLIB}/runtime/implementations/__divdc3.cpp
   ${CATLIB}/runtime/implementations/__ashlti3.cpp
   ${CATLIB}/runtime/implementations/__clzti2.cpp
   ${CATLIB}/runtime/implementations/__floattisf.cpp
@@ -364,6 +368,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/arithmetic/cat/overflow_reference.hpp
   ${CATLIB}/arithmetic/cat/precision_reference.hpp
   ${CATLIB}/arithmetic/cat/arithmetic_interface
+  ${CATLIB}/complex/cat/complex
+  ${CATLIB}/complex/cat/detail/complex_math.hpp
+  ${CATLIB}/complex/implementations/format_complex.tpp
   ${CATLIB}/quantity/cat/quantity
   ${CATLIB}/quantity/cat/physical_quantities
   ${CATLIB}/quantity/cat/metric_units
@@ -562,6 +569,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/random/cat/detail/xoshiro.hpp
   ${CATLIB}/ring/cat/ring
   ${CATLIB}/runtime/cat/runtime
+  ${CATLIB}/runtime/cat/detail/complex_builtins.hpp
   ${CATLIB}/runtime/cat/detail/thread_local.hpp
   ${CATLIB}/sanitizer/cat/sanitizer
   ${CATLIB}/scaredy/cat/scaredy

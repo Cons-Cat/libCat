@@ -98,6 +98,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_quantity.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_quantity_catalog.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_quantity_format_catalog.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_complex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_runtime.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_exceptions.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_assert_handler.cpp

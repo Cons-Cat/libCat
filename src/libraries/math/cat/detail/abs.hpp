@@ -7,6 +7,7 @@
 namespace cat {
 
 template <is_arithmetic T>
+   requires(!is_complex<T>)
 [[nodiscard]]
 constexpr auto
 abs(T value) noexcept -> T {

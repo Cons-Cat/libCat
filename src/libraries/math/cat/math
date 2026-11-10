@@ -109,6 +109,7 @@ inline constexpr T tau<T> = T(tau<raw_arithmetic_type<T>>);
 #include "detail/clamp.hpp"
 #include "detail/div.hpp"
 #include "detail/dot.hpp"
+#include "detail/inner_product.hpp"
 #include "detail/exp.hpp"
 #include "detail/fma.hpp"
 #include "detail/log.hpp"

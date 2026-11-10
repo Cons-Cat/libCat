@@ -1,0 +1,1296 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/detail/tuple_fwd.hpp>
+
+#include <cat/arithmetic>
+#include <cat/math>
+#include <cat/meta>
+
+// `cat::basic_complex_int` and `cat::basic_complex_float` are functionally
+// equivalent to `std::complex`. They interoperates with C `_Complex` types,
+// support both integer and floating-point representation, and provide the
+// same overflow and precision policies as `basic_int`/`basic_float`.
+
+namespace cat {
+
+namespace detail {
+
+// Unfortunately, in a template, `_Complex T` is ill-formed, so we have to
+// manually spell out every type alternative here.
+
+template <typename T>
+struct complex_raw_trait;
+
+template <>
+struct complex_raw_trait<__INT8_TYPE__> {
+   using type = _Complex __INT8_TYPE__;
+};
+
+template <>
+struct complex_raw_trait<__UINT8_TYPE__> {
+   using type = _Complex __UINT8_TYPE__;
+};
+
+template <>
+struct complex_raw_trait<__INT16_TYPE__> {
+   using type = _Complex __INT16_TYPE__;
+};
+
+template <>
+struct complex_raw_trait<__UINT16_TYPE__> {
+   using type = _Complex __UINT16_TYPE__;
+};
+
+template <>
+struct complex_raw_trait<__INT32_TYPE__> {
+   using type = _Complex __INT32_TYPE__;
+};
+
+template <>
+struct complex_raw_trait<__UINT32_TYPE__> {
+   using type = _Complex __UINT32_TYPE__;
+};
+
+template <>
+struct complex_raw_trait<__INT64_TYPE__> {
+   using type = _Complex __INT64_TYPE__;
+};
+
+template <>
+struct complex_raw_trait<__UINT64_TYPE__> {
+   using type = _Complex __UINT64_TYPE__;
+};
+
+template <>
+struct complex_raw_trait<float> {
+   using type = _Complex float;
+};
+
+template <>
+struct complex_raw_trait<double> {
+   using type = _Complex double;
+};
+
+// `_Complex T` for a supported component type `T`.
+template <typename T>
+using complex_raw = complex_raw_trait<T>::type;
+
+template <typename T>
+concept is_complex_int_component = is_either<
+   T, __INT8_TYPE__, __UINT8_TYPE__, __INT16_TYPE__, __UINT16_TYPE__,
+   __INT32_TYPE__, __UINT32_TYPE__, __INT64_TYPE__, __UINT64_TYPE__>;
+
+template <typename T>
+concept is_complex_float_component = is_either<T, float, double>;
+
+template <typename T>
+concept is_complex_component =
+   is_complex_int_component<T> || is_complex_float_component<T>;
+
+}  // namespace detail
+
+template <
+   typename T, overflow_policies = overflow_policies::undefined,
+   auto quantity = scalar>
+   requires(detail::is_complex_int_component<T>)
+class basic_complex_int;
+
+template <
+   typename T,
+   precision_policies precision_policy = precision_policies::precise,
+   auto quantity = scalar>
+   requires(detail::is_complex_float_component<T>)
+class basic_complex_float;
+
+inline namespace arithmetic {
+// These share `cat::arithmetic` with `cat::int4`, `cat::float8`, and so on.
+using complex_int1 =
+   basic_complex_int<__INT8_TYPE__, overflow_policies::undefined>;
+using complex_uint1 =
+   basic_complex_int<__UINT8_TYPE__, overflow_policies::undefined>;
+
+using complex_int2 =
+   basic_complex_int<__INT16_TYPE__, overflow_policies::undefined>;
+using complex_uint2 =
+   basic_complex_int<__UINT16_TYPE__, overflow_policies::undefined>;
+
+using complex_int4 =
+   basic_complex_int<__INT32_TYPE__, overflow_policies::undefined>;
+using complex_uint4 =
+   basic_complex_int<__UINT32_TYPE__, overflow_policies::undefined>;
+
+using complex_int8 =
+   basic_complex_int<__INT64_TYPE__, overflow_policies::undefined>;
+using complex_uint8 =
+   basic_complex_int<__UINT64_TYPE__, overflow_policies::undefined>;
+
+using complex_float4 = basic_complex_float<float>;
+using complex_float8 = basic_complex_float<double>;
+
+using wrap_complex_int1 =
+   basic_complex_int<__INT8_TYPE__, overflow_policies::wrap>;
+using wrap_complex_uint1 =
+   basic_complex_int<__UINT8_TYPE__, overflow_policies::wrap>;
+
+using wrap_complex_int2 =
+   basic_complex_int<__INT16_TYPE__, overflow_policies::wrap>;
+using wrap_complex_uint2 =
+   basic_complex_int<__UINT16_TYPE__, overflow_policies::wrap>;
+
+using wrap_complex_int4 =
+   basic_complex_int<__INT32_TYPE__, overflow_policies::wrap>;
+using wrap_complex_uint4 =
+   basic_complex_int<__UINT32_TYPE__, overflow_policies::wrap>;
+
+using wrap_complex_int8 =
+   basic_complex_int<__INT64_TYPE__, overflow_policies::wrap>;
+using wrap_complex_uint8 =
+   basic_complex_int<__UINT64_TYPE__, overflow_policies::wrap>;
+
+using sat_complex_int1 =
+   basic_complex_int<__INT8_TYPE__, overflow_policies::saturate>;
+using sat_complex_uint1 =
+   basic_complex_int<__UINT8_TYPE__, overflow_policies::saturate>;
+
+using sat_complex_int2 =
+   basic_complex_int<__INT16_TYPE__, overflow_policies::saturate>;
+using sat_complex_uint2 =
+   basic_complex_int<__UINT16_TYPE__, overflow_policies::saturate>;
+
+using sat_complex_int4 =
+   basic_complex_int<__INT32_TYPE__, overflow_policies::saturate>;
+using sat_complex_uint4 =
+   basic_complex_int<__UINT32_TYPE__, overflow_policies::saturate>;
+
+using sat_complex_int8 =
+   basic_complex_int<__INT64_TYPE__, overflow_policies::saturate>;
+using sat_complex_uint8 =
+   basic_complex_int<__UINT64_TYPE__, overflow_policies::saturate>;
+
+using complex_float4_fast =
+   basic_complex_float<float, precision_policies::fast>;
+using complex_float8_fast =
+   basic_complex_float<double, precision_policies::fast>;
+}  // namespace arithmetic
+
+namespace detail {
+
+template <typename T>
+inline constexpr bool is_basic_complex = false;
+
+template <typename T, overflow_policies policy, auto quantity>
+inline constexpr bool is_basic_complex<basic_complex_int<T, policy, quantity>> =
+   true;
+
+template <typename T, precision_policies precision, auto quantity>
+inline constexpr bool
+   is_basic_complex<basic_complex_float<T, precision, quantity>> = true;
+
+template <typename T, overflow_policies policy, auto quantity>
+inline constexpr bool
+   is_complex_detail<basic_complex_int<T, policy, quantity>> = true;
+
+template <typename T, precision_policies precision, auto quantity>
+inline constexpr bool
+   is_complex_detail<basic_complex_float<T, precision, quantity>> = true;
+
+// Build any `_Complex` from two components, one `__real` and one `__imag`.
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_complex_raw(T real, T imag) noexcept -> complex_raw<T> {
+   if constexpr (is_floating_point<T>) {
+      return __builtin_complex(real, imag);
+   } else {
+      complex_raw<T> result{};
+      __real result = real;
+      __imag result = imag;
+      return result;
+   }
+}
+
+template <typename T>
+struct complex_operand_trait {
+   using type = T;
+};
+
+template <typename T>
+   requires(is_basic_complex<T>)
+struct complex_operand_trait<T> {
+   using type = T::value_type;
+};
+
+// The arithmetic type of one part of a complex operand, or a scalar operand.
+template <typename T>
+using complex_operand_element = complex_operand_trait<T>::type;
+
+template <typename T>
+concept is_complex_scalar_operand =
+   is_arithmetic<T> && !is_bool<T>
+   && is_complex_component<raw_arithmetic_type<T>>;
+
+template <typename T>
+concept is_complex_operand =
+   is_basic_complex<T> || is_complex_scalar_operand<T>;
+
+// An integer left-hand operand with `wrap` or `saturate` overflow never widens.
+template <typename Left>
+concept is_complex_fixed_width =
+   is_integral<complex_operand_element<Left>>
+   && make_overflow_policy<complex_operand_element<Left>>
+         != overflow_policies::undefined;
+
+// At least one operand is complex and the other is complex or a scalar.
+template <typename Left, typename Right>
+concept is_complex_pair =
+   (is_basic_complex<Left> || is_basic_complex<Right>)
+   && is_complex_operand<Left> && is_complex_operand<Right>
+   && is_safe_arithmetic_comparison<
+      complex_operand_element<Left>, complex_operand_element<Right>>;
+
+// Adding, subtracting, and comparing need compatible quantities.
+template <typename Left, typename Right>
+concept is_complex_addable_pair =
+   is_complex_pair<Left, Right>
+   && is_quantity_addable<
+      complex_operand_element<Left>, complex_operand_element<Right>>;
+
+// The quantity that `Left` and `Right` add in.
+template <typename Left, typename Right>
+using complex_sum_quantity =
+   add_quantity<complex_operand_element<Left>, complex_operand_element<Right>>;
+
+// The wider of the two operands' raw component types.
+template <typename Left, typename Right>
+using complex_common_raw = conditional<
+   is_safe_arithmetic_conversion<
+      complex_operand_element<Right>, complex_operand_element<Left>>,
+   raw_arithmetic_type<complex_operand_element<Left>>,
+   raw_arithmetic_type<complex_operand_element<Right>>>;
+
+// The complex type of `Raw` components and `quantity`, with the policy of
+// `Left`.
+template <typename Raw, typename Left, auto quantity>
+struct complex_result_trait {
+   using type = basic_complex_int<
+      Raw, make_overflow_policy<complex_operand_element<Left>>, quantity>;
+};
+
+template <is_floating_point Raw, typename Left, auto quantity>
+struct complex_result_trait<Raw, Left, quantity> {
+   using type = basic_complex_float<
+      Raw, make_precision_policy<complex_operand_element<Left>>, quantity>;
+};
+
+template <typename T, typename QuantityType>
+concept is_complex_quantity_of =
+   requires {
+      T::quantity_reference;
+      requires is_same<typename T::quantity_type, QuantityType>;
+   };
+
+// Spell the result's quantity as an operand's own quantity when they are the
+// same, so that e.g. adding two complex numbers of metres produces that exact
+// type.
+template <typename Left, typename Right, typename QuantityType>
+consteval auto
+complex_result_reference() noexcept {
+   if constexpr (
+      is_complex_quantity_of<complex_operand_element<Left>, QuantityType>
+   ) {
+      return complex_operand_element<Left>::quantity_reference;
+   } else if constexpr (
+      is_complex_quantity_of<complex_operand_element<Right>, QuantityType>
+   ) {
+      return complex_operand_element<Right>::quantity_reference;
+   } else {
+      return QuantityType{};
+   }
+}
+
+template <typename Left, typename Right, typename QuantityType>
+using complex_result = complex_result_trait<
+   complex_common_raw<Left, Right>, Left,
+   complex_result_reference<Left, Right, QuantityType>()>::type;
+
+// Converts an operand into a `_Complex Raw` of the unit magnitude of
+// `QuantityType`.
+template <typename Raw, typename QuantityType, typename Operand>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+complex_in_quantity(Operand const& operand) noexcept -> complex_raw<Raw> {
+   if constexpr (is_basic_complex<Operand>) {
+      return make_complex_raw<Raw>(
+         static_cast<Raw>(quantity_value_in<QuantityType>(operand.real())),
+         static_cast<Raw>(quantity_value_in<QuantityType>(operand.imag()))
+      );
+   } else {
+      return make_complex_raw<Raw>(
+         static_cast<Raw>(quantity_value_in<QuantityType>(operand)), Raw(0)
+      );
+   }
+}
+
+// Converts a complex operand into a `_Complex Raw` without changing its
+// numeric value. Multiplication and division carry quantities in the type, not
+// the value.
+template <typename Raw, typename Operand>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+complex_in_raw(Operand const& operand) noexcept -> complex_raw<Raw> {
+   if constexpr (is_basic_complex<Operand>) {
+      return make_complex_raw<Raw>(
+         make_raw_arithmetic(operand.real()),
+         make_raw_arithmetic(operand.imag())
+      );
+   } else {
+      return make_complex_raw<Raw>(make_raw_arithmetic(operand), Raw(0));
+   }
+}
+
+// Arithmetic on `_Complex` values under an overflow or precision policy.
+template <typename Raw, auto policy>
+struct complex_operations;
+
+template <typename Raw, overflow_policies policy>
+struct complex_operations<Raw, policy> {
+   using raw_type = complex_raw<Raw>;
+   // `wrap` and `saturate` are evaluated per part by `basic_int`, which never
+   // widens for those policies.
+   using part = basic_int<Raw, policy>;
+   static constexpr bool is_builtin = (policy == overflow_policies::undefined);
+
+   // Holds `a * c + b * d` and `a * c - b * d` exactly for any components,
+   // signed or unsigned, so a complex product or quotient is wrapped or
+   // saturated once instead of after each partial product. That takes two
+   // bits more than twice the component width, which a signed integer of four
+   // times the width holds. `int_fixed` stops at 16 bytes, so 64-bit
+   // components use a 130-bit `_BitInt`.
+   using wide = conditional<
+      (sizeof(Raw) < 8u),
+      typename int_fixed<min(sizeof(Raw) * 4u, 16u)>::raw_type, _BitInt(130)>;
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   narrow(wide value) noexcept -> Raw {
+      if constexpr (policy == overflow_policies::saturate) {
+         if (value > wide(limits<Raw>::max())) {
+            return limits<Raw>::max();
+         }
+
+         if (value < wide(limits<Raw>::min())) {
+            return limits<Raw>::min();
+         }
+      }
+
+      // Converting to a narrower integer is modular.
+      return static_cast<Raw>(value);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   make(part real, part imag) noexcept -> raw_type {
+      return make_complex_raw<Raw>(
+         make_raw_arithmetic(real), make_raw_arithmetic(imag)
+      );
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   negate(Raw value) noexcept -> Raw {
+      if constexpr (is_builtin) {
+         return static_cast<Raw>(-value);
+      } else {
+         return make_raw_arithmetic(part(Raw(0)) - part(value));
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   add(raw_type lhs, raw_type rhs) noexcept -> raw_type {
+      if constexpr (is_builtin) {
+         return lhs + rhs;
+      } else {
+         return make(
+            part(__real lhs) + part(__real rhs),
+            part(__imag lhs) + part(__imag rhs)
+         );
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   subtract(raw_type lhs, raw_type rhs) noexcept -> raw_type {
+      if constexpr (is_builtin) {
+         return lhs - rhs;
+      } else {
+         return make(
+            part(__real lhs) - part(__real rhs),
+            part(__imag lhs) - part(__imag rhs)
+         );
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   multiply(raw_type lhs, raw_type rhs) noexcept -> raw_type {
+      if constexpr (is_builtin) {
+         return lhs * rhs;
+      } else {
+         wide const lhs_real = __real lhs;
+         wide const lhs_imag = __imag lhs;
+         wide const rhs_real = __real rhs;
+         wide const rhs_imag = __imag rhs;
+
+         return make_complex_raw<Raw>(
+            narrow(lhs_real * rhs_real - lhs_imag * rhs_imag),
+            narrow(lhs_real * rhs_imag + lhs_imag * rhs_real)
+         );
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   multiply(raw_type lhs, Raw rhs) noexcept -> raw_type {
+      if constexpr (is_builtin) {
+         return lhs * rhs;
+      } else {
+         return make(
+            part(__real lhs) * part(rhs), part(__imag lhs) * part(rhs)
+         );
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   divide(raw_type lhs, raw_type rhs) noexcept -> raw_type {
+      if constexpr (is_builtin) {
+         return lhs / rhs;
+      } else {
+         wide const lhs_real = __real lhs;
+         wide const lhs_imag = __imag lhs;
+         wide const rhs_real = __real rhs;
+         wide const rhs_imag = __imag rhs;
+         wide const denominator = rhs_real * rhs_real + rhs_imag * rhs_imag;
+
+         return make_complex_raw<Raw>(
+            narrow((lhs_real * rhs_real + lhs_imag * rhs_imag) / denominator),
+            narrow((lhs_imag * rhs_real - lhs_real * rhs_imag) / denominator)
+         );
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   divide(raw_type lhs, Raw rhs) noexcept -> raw_type {
+      if constexpr (is_builtin) {
+         return lhs / rhs;
+      } else {
+         return make(
+            part(__real lhs) / part(rhs), part(__imag lhs) / part(rhs)
+         );
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   norm(raw_type value) noexcept -> Raw {
+      if constexpr (is_builtin) {
+         Raw const real = __real value;
+         Raw const imag = __imag value;
+         return static_cast<Raw>(real * real + imag * imag);
+      } else {
+         part const real(__real value);
+         part const imag(__imag value);
+         return make_raw_arithmetic(real * real + imag * imag);
+      }
+   }
+};
+
+// `float_control` must begin a compound statement, so every branch repeats it.
+// Multiplication and division of two complex values call the Annex G helpers.
+// NOLINTBEGIN(bugprone-branch-clone)
+template <typename Raw, precision_policies precision>
+struct complex_operations<Raw, precision> {
+   using raw_type = complex_raw<Raw>;
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   negate(Raw value) noexcept -> Raw {
+      return -value;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   add(raw_type lhs, raw_type rhs) noexcept -> raw_type {
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return lhs + rhs;
+      } else {
+#pragma float_control(precise, off)
+         return lhs + rhs;
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   subtract(raw_type lhs, raw_type rhs) noexcept -> raw_type {
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return lhs - rhs;
+      } else {
+#pragma float_control(precise, off)
+         return lhs - rhs;
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   multiply(raw_type lhs, raw_type rhs) noexcept -> raw_type {
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return lhs * rhs;
+      } else {
+#pragma float_control(precise, off)
+         return lhs * rhs;
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   multiply(raw_type lhs, Raw rhs) noexcept -> raw_type {
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return lhs * rhs;
+      } else {
+#pragma float_control(precise, off)
+         return lhs * rhs;
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   divide(raw_type lhs, raw_type rhs) noexcept -> raw_type {
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return lhs / rhs;
+      } else {
+#pragma float_control(precise, off)
+         return lhs / rhs;
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   divide(raw_type lhs, Raw rhs) noexcept -> raw_type {
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return lhs / rhs;
+      } else {
+#pragma float_control(precise, off)
+         return lhs / rhs;
+      }
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   static constexpr auto
+   norm(raw_type value) noexcept -> Raw {
+      Raw const real = __real value;
+      Raw const imag = __imag value;
+
+      // An infinite part makes the norm infinite, even when the other part is
+      // a NaN.
+      if (__builtin_isinf(real) || __builtin_isinf(imag)) {
+         return __builtin_inf();
+      }
+
+      if constexpr (precision == precision_policies::precise) {
+#pragma float_control(precise, on)
+         return real * real + imag * imag;
+      } else {
+#pragma float_control(precise, off)
+         return real * real + imag * imag;
+      }
+   }
+};
+
+// NOLINTEND(bugprone-branch-clone)
+
+template <typename Complex>
+using complex_operations_for =
+   complex_operations<typename Complex::component_type, Complex::policy>;
+
+// One part of a floating quotient whose divisor is zero. A non-zero part
+// becomes `cat::infinity` with the sign that scalar float division would have
+// produced.
+template <typename Value, typename Raw>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+complex_part_over_zero(Raw part, Raw divisor) noexcept -> Raw {
+   if (part == Raw(0) || __builtin_isnan(part)) {
+      return limits<Raw>::quiet_NaN();
+   }
+   bool const negative =
+      (__builtin_signbit(part) != 0) != (__builtin_signbit(divisor) != 0);
+   return negative ? make_raw_arithmetic(Value(-infinity))
+                   : make_raw_arithmetic(Value(infinity));
+}
+
+template <typename Result, typename Raw>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+complex_over_zero(complex_raw<Raw> dividend, Raw divisor) noexcept -> Result {
+   using value = Result::value_type;
+   return Result(
+      make_complex_raw<Raw>(
+         complex_part_over_zero<value>(__real dividend, divisor),
+         complex_part_over_zero<value>(__imag dividend, divisor)
+      )
+   );
+}
+
+// `complex_parts` forwards the arithmetic interfaces' hooks to these.
+// `Left` is the left-hand operand, which determines the result's policy.
+template <typename Left, typename Right>
+   requires(is_complex_addable_pair<Left, Right>)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+complex_add(Left lhs, Right rhs) noexcept {
+   using result_quantity = complex_sum_quantity<Left, Right>;
+   using raw = complex_common_raw<Left, Right>;
+   using result_type = complex_result<Left, Right, result_quantity>;
+   return result_type(
+      complex_operations_for<result_type>::add(
+         complex_in_quantity<raw, result_quantity>(lhs),
+         complex_in_quantity<raw, result_quantity>(rhs)
+      )
+   );
+}
+
+template <typename Left, typename Right>
+   requires(is_complex_addable_pair<Left, Right>)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+complex_subtract(Left lhs, Right rhs) noexcept {
+   using result_quantity = complex_sum_quantity<Left, Right>;
+   using raw = complex_common_raw<Left, Right>;
+   using result_type = complex_result<Left, Right, result_quantity>;
+   return result_type(
+      complex_operations_for<result_type>::subtract(
+         complex_in_quantity<raw, result_quantity>(lhs),
+         complex_in_quantity<raw, result_quantity>(rhs)
+      )
+   );
+}
+
+template <typename Left, typename Right>
+   requires(is_complex_pair<Left, Right>)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+complex_multiply(Left lhs, Right rhs) noexcept {
+   using result_quantity = multiply_quantity<
+      complex_operand_element<Left>, complex_operand_element<Right>>;
+   using raw = complex_common_raw<Left, Right>;
+   using result_type = complex_result<Left, Right, result_quantity>;
+   using operations = complex_operations_for<result_type>;
+   // Scaling by a real number does not mix in the imaginary part.
+   if constexpr (!is_basic_complex<Right>) {
+      return result_type(
+         operations::multiply(
+            complex_in_raw<raw>(lhs), make_raw_arithmetic(rhs)
+         )
+      );
+   } else if constexpr (!is_basic_complex<Left>) {
+      return result_type(
+         operations::multiply(
+            complex_in_raw<raw>(rhs), make_raw_arithmetic(lhs)
+         )
+      );
+   } else {
+      return result_type(
+         operations::multiply(
+            complex_in_raw<raw>(lhs), complex_in_raw<raw>(rhs)
+         )
+      );
+   }
+}
+
+template <typename Left, typename Right>
+   requires(is_complex_pair<Left, Right>)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+complex_divide(Left lhs, Right rhs) noexcept {
+   using result_quantity = divide_quantity<
+      complex_operand_element<Left>, complex_operand_element<Right>>;
+   using raw = complex_common_raw<Left, Right>;
+   using result_type = complex_result<Left, Right, result_quantity>;
+   using operations = complex_operations_for<result_type>;
+   if constexpr (is_floating_point<raw>) {
+      if constexpr (!is_basic_complex<Right>) {
+         raw const divisor = make_raw_arithmetic(rhs);
+
+         if (divisor == raw(0)) {
+            return complex_over_zero<result_type>(
+               complex_in_raw<raw>(lhs), divisor
+            );
+         }
+      } else {
+         auto const divisor = complex_in_raw<raw>(rhs);
+
+         // The sign of the real part picks the infinities' signs, as in
+         // `__divdc3`.
+         if (__real divisor == raw(0) && __imag divisor == raw(0)) {
+            return complex_over_zero<result_type>(
+               complex_in_raw<raw>(lhs), __real divisor
+            );
+         }
+      }
+   }
+
+   if constexpr (!is_basic_complex<Right>) {
+      return result_type(
+         operations::divide(complex_in_raw<raw>(lhs), make_raw_arithmetic(rhs))
+      );
+   } else {
+      return result_type(
+         operations::divide(complex_in_raw<raw>(lhs), complex_in_raw<raw>(rhs))
+      );
+   }
+}
+
+// A `wrap` or `saturate` left-hand operand never widens.
+template <typename Left, typename Value>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+complex_keep_width(Value value) noexcept {
+   if constexpr (!is_complex_fixed_width<Left>) {
+      return value;
+   } else {
+      using left_raw = raw_arithmetic_type<complex_operand_element<Left>>;
+      using value_raw = Value::component_type;
+      using result =
+         basic_complex_int<left_raw, Value::policy, Value::quantity_reference>;
+
+      // A floating result has no overflow to wrap or saturate.
+      if constexpr (
+         is_same<left_raw, value_raw> || is_floating_point<value_raw>
+      ) {
+         return value;
+      } else {
+         auto const narrow = [](value_raw part) -> left_raw {
+            if constexpr (Value::policy == overflow_policies::saturate) {
+               if (part > static_cast<value_raw>(limits<left_raw>::max())) {
+                  return limits<left_raw>::max();
+               }
+
+               if (part < static_cast<value_raw>(limits<left_raw>::min())) {
+                  return limits<left_raw>::min();
+               }
+            }
+
+            // Converting to a narrower integer is modular.
+            return static_cast<left_raw>(part);
+         };
+
+         return result(
+            make_complex_raw<left_raw>(
+               narrow(make_raw_arithmetic(value.real())),
+               narrow(make_raw_arithmetic(value.imag()))
+            )
+         );
+      }
+   }
+}
+
+// The parts and members that `basic_complex_int` and `basic_complex_float`
+// share.
+template <typename Derived, typename Value>
+class complex_parts {
+   using component = raw_arithmetic_type<Value>;
+
+ public:
+   constexpr complex_parts() = default;
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr complex_parts(Value real, Value imag) noexcept
+       : m_real(real), m_imag(imag) {
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   real() const noexcept -> Value {
+      return m_real;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   imag() const noexcept -> Value {
+      return m_imag;
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   real(Value value) noexcept -> void {
+      m_real = value;
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   imag(Value value) noexcept -> void {
+      m_imag = value;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   conjugate() const noexcept -> Derived {
+      return Derived(
+         make_complex_raw<component>(
+            make_raw_arithmetic(m_real),
+            complex_operations_for<Derived>::negate(make_raw_arithmetic(m_imag))
+         )
+      );
+   }
+
+   // The squared magnitude. Its quantity is the square of this complex number's
+   // quantity.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   norm() const noexcept {
+      using result =
+         rebind_quantity_type<Value, multiply_quantity<Value, Value>{}>;
+      return result(complex_operations_for<Derived>::norm(load()));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator+() const noexcept -> Derived {
+      return self();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator-() const noexcept -> Derived {
+      using operations = complex_operations_for<Derived>;
+      return Derived(
+         make_complex_raw<component>(
+            operations::negate(make_raw_arithmetic(m_real)),
+            operations::negate(make_raw_arithmetic(m_imag))
+         )
+      );
+   }
+
+   // The arithmetic interfaces generate `+`, `-`, `*`, and `/` from these,
+   // and their compound assignments where the result keeps this complex
+   // number's own type. The `_noncommutative`, `_from`, and `_into` hooks are
+   // for a left-hand operand that is not `Derived`, which determines the
+   // result's policy.
+   template <typename U>
+      requires(is_complex_addable_pair<Derived, U>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   add(U operand) const noexcept {
+      return complex_keep_width<Derived>(complex_add(self(), operand));
+   }
+
+   template <typename U>
+      requires(is_complex_addable_pair<U, Derived>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   add_noncommutative(U operand) const noexcept {
+      return complex_keep_width<U>(complex_add(operand, self()));
+   }
+
+   template <typename U>
+      requires(is_complex_addable_pair<Derived, U>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   subtract_by(U operand) const noexcept {
+      return complex_keep_width<Derived>(complex_subtract(self(), operand));
+   }
+
+   template <typename U>
+      requires(is_complex_addable_pair<U, Derived>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   subtract_from(U operand) const noexcept {
+      return complex_keep_width<U>(complex_subtract(operand, self()));
+   }
+
+   template <typename U>
+      requires(is_complex_pair<Derived, U>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   multiply(U operand) const noexcept {
+      return complex_keep_width<Derived>(complex_multiply(self(), operand));
+   }
+
+   template <typename U>
+      requires(is_complex_pair<U, Derived>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   multiply_noncommutative(U operand) const noexcept {
+      return complex_keep_width<U>(complex_multiply(operand, self()));
+   }
+
+   template <typename U>
+      requires(is_complex_pair<Derived, U>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   divide_by(U operand) const noexcept {
+      return complex_keep_width<Derived>(complex_divide(self(), operand));
+   }
+
+   template <typename U>
+      requires(is_complex_pair<U, Derived>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   divide_into(U operand) const noexcept {
+      return complex_keep_width<U>(complex_divide(operand, self()));
+   }
+
+   template <idx index, typename Self>
+      requires(index.raw < 2u)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   get(this Self&& self) noexcept -> auto&& {
+      if constexpr (index.raw == 0u) {
+         return $fwd(self).m_real;
+      } else {
+         return $fwd(self).m_imag;
+      }
+   }
+
+ protected:
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   load() const noexcept -> complex_raw<component> {
+      return make_complex_raw<component>(
+         make_raw_arithmetic(m_real), make_raw_arithmetic(m_imag)
+      );
+   }
+
+ private:
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   self() const noexcept -> Derived const& {
+      return static_cast<Derived const&>(*this);
+   }
+
+   Value m_real;
+   Value m_imag;
+};
+
+}  // namespace detail
+
+template <typename T, overflow_policies overflow_policy, auto quantity>
+   requires(detail::is_complex_int_component<T>)
+class
+   [[clang::preferred_name(complex_int1), clang::preferred_name(complex_uint1),
+     clang::preferred_name(complex_int2), clang::preferred_name(complex_uint2),
+     clang::preferred_name(complex_int4), clang::preferred_name(complex_uint4),
+     clang::preferred_name(complex_int8), clang::preferred_name(complex_uint8)]]
+   basic_complex_int
+    : public detail::complex_parts<
+         basic_complex_int<T, overflow_policy, quantity>,
+         basic_int<T, overflow_policy, quantity>>,
+      public plus_interface<basic_complex_int<T, overflow_policy, quantity>>,
+      public minus_interface<basic_complex_int<T, overflow_policy, quantity>>,
+      public multiply_interface<
+         basic_complex_int<T, overflow_policy, quantity>>,
+      public divide_interface<basic_complex_int<T, overflow_policy, quantity>> {
+   static_assert(is_quantity_specifier<decltype(quantity)>);
+
+   using parts = detail::complex_parts<
+      basic_complex_int, basic_int<T, overflow_policy, quantity>>;
+
+ public:
+   using value_type = basic_int<T, overflow_policy, quantity>;
+   using component_type = T;
+   using raw_type = detail::complex_raw<T>;
+   using quantity_type = value_type::quantity_type;
+   static constexpr auto quantity_reference = quantity;
+   static constexpr overflow_policies policy = overflow_policy;
+
+   constexpr basic_complex_int() = default;
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr basic_complex_int(value_type real, value_type imag) noexcept
+       : parts(real, imag) {
+   }
+
+   // A real number, with an imaginary part of zero. This is implicit only if
+   // the part converts implicitly. The argument is constrained so a raw
+   // `_Complex` is not tested as a `basic_int`: that conversion is not a
+   // substitution failure.
+   template <typename U>
+      requires(!is_same<U, raw_type> && is_constructible<value_type, U>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit(!is_convertible<U, value_type>) basic_complex_int(
+      U real
+   ) noexcept
+       : parts(value_type(real), value_type(T(0))) {
+   }
+
+   // A raw `_Complex` of this component type. The parts are read with
+   // `__real` and `__imag`. Like a raw number, it becomes a quantity with a
+   // dimension only explicitly.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit(
+      !is_dimensionless_quantity<quantity_type>
+   ) basic_complex_int(raw_type value) noexcept
+       : parts(value_type(__real value), value_type(__imag value)) {
+   }
+
+   // Convert from another complex number when the parts convert. This is
+   // implicit if the parts convert implicitly, which applies the same quantity,
+   // policy, and widening rules as `basic_int`.
+   template <typename U>
+      requires(
+         detail::is_basic_complex<U> && !is_same<U, basic_complex_int>
+         && is_constructible<value_type, typename U::value_type>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit(
+      !is_convertible<typename U::value_type, value_type>
+   ) basic_complex_int(U other) noexcept
+       : parts(value_type(other.real()), value_type(other.imag())) {
+   }
+};
+
+template <typename T, overflow_policies policy, auto quantity>
+basic_complex_int(
+   basic_int<T, policy, quantity>, basic_int<T, policy, quantity>
+) -> basic_complex_int<T, policy, quantity>;
+
+template <typename T, precision_policies precision, auto quantity>
+   requires(detail::is_complex_float_component<T>)
+class
+   [[clang::preferred_name(complex_float4),
+     clang::preferred_name(complex_float8)]]
+   basic_complex_float
+    : public detail::complex_parts<
+         basic_complex_float<T, precision, quantity>,
+         basic_float<T, precision, quantity>>,
+      public plus_interface<basic_complex_float<T, precision, quantity>>,
+      public minus_interface<basic_complex_float<T, precision, quantity>>,
+      public multiply_interface<basic_complex_float<T, precision, quantity>>,
+      public divide_interface<basic_complex_float<T, precision, quantity>> {
+   static_assert(is_quantity_specifier<decltype(quantity)>);
+
+   using parts = detail::complex_parts<
+      basic_complex_float, basic_float<T, precision, quantity>>;
+
+ public:
+   using value_type = basic_float<T, precision, quantity>;
+   using component_type = T;
+   using raw_type = detail::complex_raw<T>;
+   using quantity_type = value_type::quantity_type;
+   static constexpr auto quantity_reference = quantity;
+   static constexpr precision_policies precision_policy = precision;
+   static constexpr precision_policies policy = precision;
+
+   constexpr basic_complex_float() = default;
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr basic_complex_float(value_type real, value_type imag) noexcept
+       : parts(real, imag) {
+   }
+
+   // A real number, with an imaginary part of zero. This is implicit only if
+   // the part converts implicitly. A raw `_Complex` uses the constructor below
+   // instead of being read as a real `basic_float`.
+   template <typename U>
+      requires(
+         !is_same<U, raw_type> && !is_same<U, detail::infinity_type>
+         && is_constructible<value_type, U>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit(!is_convertible<U, value_type>) basic_complex_float(
+      U real
+   ) noexcept
+       : parts(value_type(real), value_type(T(0))) {
+   }
+
+   // A raw `_Complex` of this component type. The parts are read with
+   // `__real` and `__imag`. Like a raw number, it becomes a quantity with a
+   // dimension only explicitly.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit(
+      !is_dimensionless_quantity<quantity_type>
+   ) basic_complex_float(raw_type value) noexcept
+       : parts(value_type(__real value), value_type(__imag value)) {
+   }
+
+   // `cat::infinity` converts to a `basic_float`. Accept it as a real value so
+   // `complex_float8(infinity)` has the same meaning as `float8(infinity)`.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr basic_complex_float(detail::infinity_type value) noexcept
+       : basic_complex_float(value_type(value)) {
+   }
+
+   // Convert from another complex number when the parts convert. This is
+   // implicit if the parts convert implicitly, which applies the same quantity,
+   // policy, and widening rules as `basic_float`.
+   template <typename U>
+      requires(
+         detail::is_basic_complex<U> && !is_same<U, basic_complex_float>
+         && is_constructible<value_type, typename U::value_type>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit(
+      !is_convertible<typename U::value_type, value_type>
+   ) basic_complex_float(U other) noexcept
+       : parts(value_type(other.real()), value_type(other.imag())) {
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   precise() const noexcept
+      -> basic_complex_float<T, precision_policies::precise, quantity> {
+      return basic_complex_float<T, precision_policies::precise, quantity>(
+         this->load()
+      );
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   fast() const noexcept
+      -> basic_complex_float<T, precision_policies::fast, quantity> {
+      return basic_complex_float<T, precision_policies::fast, quantity>(
+         this->load()
+      );
+   }
+};
+
+template <typename T, precision_policies precision, auto quantity>
+basic_complex_float(
+   basic_float<T, precision, quantity>, basic_float<T, precision, quantity>
+) -> basic_complex_float<T, precision, quantity>;
+
+// Conjugate. The result has the same type as `value`, so the overflow or
+// precision policy and the quantity are unchanged. The imaginary part is
+// negated with that policy.
+template <typename T>
+   requires(detail::is_basic_complex<T>)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+conj(T value) noexcept -> T {
+   return value.conjugate();
+}
+
+template <typename Left, typename Right>
+   requires(detail::is_complex_addable_pair<Left, Right>)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+operator==(Left lhs, Right rhs) noexcept -> bool {
+   using result_quantity = detail::complex_sum_quantity<Left, Right>;
+   using raw = detail::complex_common_raw<Left, Right>;
+   return detail::complex_in_quantity<raw, result_quantity>(lhs)
+          == detail::complex_in_quantity<raw, result_quantity>(rhs);
+}
+
+namespace detail {
+
+// Default policy for `cat::complex<T>`: the overflow policy `T` already
+// carries, or `undefined` for a raw integer; the precision policy `T` already
+// carries, or `precise` for a raw float. These are `make_overflow_policy` and
+// `make_precision_policy`.
+template <typename T>
+inline constexpr auto default_complex_policy = [] {
+   if constexpr (is_integral<T>) {
+      return make_overflow_policy<T>;
+   } else {
+      return make_precision_policy<T>;
+   }
+}();
+
+// Quantity embedded in a `basic_int` or `basic_float`, otherwise `scalar`.
+template <typename T>
+consteval auto
+complex_quantity_of() noexcept {
+   if constexpr (requires { T::quantity_reference; }) {
+      return T::quantity_reference;
+   } else {
+      return scalar;
+   }
+}
+
+template <typename T, auto policy>
+struct complex_alias {};
+
+template <typename T, auto policy>
+   requires(is_integral<T> && is_complex_int_component<raw_arithmetic_type<T>>)
+struct complex_alias<T, policy> {
+   using type = basic_complex_int<
+      raw_arithmetic_type<T>, policy, complex_quantity_of<T>()>;
+};
+
+template <typename T, auto policy>
+   requires(
+      is_floating_point<T> && is_complex_float_component<raw_arithmetic_type<T>>
+   )
+struct complex_alias<T, policy> {
+   using type = basic_complex_float<
+      raw_arithmetic_type<T>, policy, complex_quantity_of<T>()>;
+};
+
+}  // namespace detail
+
+inline namespace arithmetic {
+// `cat::complex<T>` is the integer or floating complex of `T`. `T` may be a
+// raw component or a `basic_int` / `basic_float`, including one that carries a
+// quantity. The policy defaults to that type's overflow or precision policy
+// and can be overridden.
+template <
+   typename T, auto policy = detail::default_complex_policy<remove_cvref<T>>>
+using complex = detail::complex_alias<remove_cvref<T>, policy>::type;
+}  // namespace arithmetic
+
+// Structured bindings find this `get` by ADL. The reference category follows
+// the argument: lvalue, const lvalue, rvalue, and const rvalue.
+template <idx index, typename Complex>
+   requires(detail::is_basic_complex<remove_cvref<Complex>> && index.raw < 2u)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+get(Complex&& object [[clang::lifetimebound]]) noexcept -> decltype(auto) {
+   return $fwd(object).template get<index>();
+}
+
+// Implementing these here is a circular dependency. The implementations can be
+// found in <cat/complex/implementations/format_complex.tpp>.
+template <typename T, typename CharT>
+struct formatter;
+
+template <typename T, overflow_policies policy, auto quantity, typename CharT>
+struct formatter<basic_complex_int<T, policy, quantity>, CharT>;
+
+template <
+   typename T, precision_policies precision, auto quantity, typename CharT>
+struct formatter<basic_complex_float<T, precision, quantity>, CharT>;
+
+}  // namespace cat
+
+// Tuple protocol:
+// `std::tuple_size`/`tuple_element` for generic code, index access via
+// `cat::get()`. Index 0 is the real part and 1 is the imaginary part.
+namespace std {
+
+template <typename T>
+   requires(::cat::detail::is_basic_complex<__typeof_unqual(T)>)
+// NOLINTNEXTLINE
+struct tuple_size<T> : ::cat::constant<2uz> {};
+
+template <__SIZE_TYPE__ index, typename T>
+   requires(::cat::detail::is_basic_complex<__typeof_unqual(T)>)
+// NOLINTNEXTLINE
+struct tuple_element<index, T> {
+   static_assert(index < 2u, "Index in a libCat complex is out of bounds!");
+   using type =
+      ::cat::copy_cv_from<T, typename ::cat::remove_cv<T>::value_type>;
+};
+
+}  // namespace std
+
+#include <cat/detail/complex_math.hpp>

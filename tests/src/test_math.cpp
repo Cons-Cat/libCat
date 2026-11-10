@@ -67,6 +67,18 @@ $test(math_sum_product_dot) {
 
    cat::verify(cat::dot(2, 3) == 6);
    cat::verify(cat::dot(2, 3, 4, 5) == 26);
+
+   // `1*4 + 2*5 + 3*6`.
+   cat::verify(cat::inner_product(0, 1, 4, 2, 5, 3, 6) == 32);
+   cat::verify(cat::inner_product(10, 1, 4, 2, 5, 3, 6) == 42);
+
+   constexpr auto add = [](auto left, auto right) {
+      return left + right;
+   };
+   constexpr auto multiply = [](auto left, auto right) {
+      return left * right;
+   };
+   static_assert(cat::inner_product(10, 2, 3, add, multiply) == 16);
 }
 
 $test(math_abs) {
@@ -792,4 +804,15 @@ $test(math_sincos) {
    sincosf(single_angle, &single_sine, &single_cosine);
    cat::verify(__builtin_fabsf(single_sine - 0.47942554f) < 1e-6f);
    cat::verify(__builtin_fabsf(single_cosine - 0.87758256f) < 1e-6f);
+}
+
+$test(math_sine_of_signed_zero) {
+   // `sin` and `tan` are odd, so they keep the sign of a zero.
+   static_assert(__builtin_signbit(cat::detail::raw_sin(-0.0)));
+   static_assert(__builtin_signbit(cat::detail::raw_tan(-0.f)));
+   double volatile negative_zero = -0.0;
+   double const zero = negative_zero;
+   cat::verify(__builtin_signbit(cat::detail::raw_sin(zero)));
+   cat::verify(__builtin_signbit(cat::detail::raw_tan(zero)));
+   cat::verify(!__builtin_signbit(cat::detail::raw_sin(-zero)));
 }

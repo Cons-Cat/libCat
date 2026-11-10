@@ -420,6 +420,23 @@ template <typename T>
 concept is_floating_point = detail::is_floating_point_detail<remove_cv<T>>;
 
 namespace detail {
+// A Clang `_Complex` value is arithmetic, but `__real` of it is the component
+// type rather than the complex type itself.
+template <typename T>
+concept is_raw_complex =
+   __is_arithmetic(T) && !is_same<__typeof_unqual(__real declval<T&>()), T>;
+
+// `<cat/complex>` specializes this for `cat::basic_complex_int` and
+// `cat::basic_complex_float`.
+template <typename T>
+inline constexpr bool is_complex_detail = is_raw_complex<T>;
+}  // namespace detail
+
+// A Clang `_Complex` or a libCat complex number.
+template <typename T>
+concept is_complex = detail::is_complex_detail<__typeof_unqual(T)>;
+
+namespace detail {
 template <typename T>
 inline constexpr bool is_integral_detail = is_either<
    T, char, signed char, unsigned char, bool, signed short, unsigned short,

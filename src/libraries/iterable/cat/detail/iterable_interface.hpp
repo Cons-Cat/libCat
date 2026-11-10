@@ -162,6 +162,15 @@ struct iterable_interface {
    constexpr auto
    dot(this Self&& self, Other&& other);
 
+   template <typename Self, typename Other, typename Init>
+   constexpr auto
+   inner_product(this Self&& self, Other&& other, Init init);
+
+   template <
+      typename Self, typename Other, typename Init, typename Op1, typename Op2>
+   constexpr auto
+   inner_product(this Self&& self, Other&& other, Init init, Op1 op1, Op2 op2);
+
    template <typename Self>
    constexpr auto
    count(this Self&& self) -> idx;

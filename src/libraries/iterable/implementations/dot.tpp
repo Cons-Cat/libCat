@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/iterable>
+#include <cat/math>
 
 namespace cat {
 namespace detail {
@@ -14,7 +15,7 @@ struct dot_impl {
    friend constexpr auto
    operator|(Iterable&& incoming, dot_impl self) {
       using result_type = remove_cvref<
-         decltype(declval<iterable_element_type<Iterable>>() * declval<iterable_element_type<Other>>())>;
+         decltype(hermitian_conjugate(declval<iterable_element_type<Iterable>>()) * declval<iterable_element_type<Other>>())>;
 
       result_type total{};
       auto left_context = iterate(incoming);
@@ -26,7 +27,10 @@ struct dot_impl {
             if (maybe_right_element.is_empty()) {
                return false;
             }
-            total = total + ($fwd(left_element) * maybe_right_element.value());
+            // Hermitian on complex elements: conjugate the left range.
+            total = total
+                    + (hermitian_conjugate($fwd(left_element))
+                       * maybe_right_element.value());
             return true;
          }
       );
@@ -36,8 +40,9 @@ struct dot_impl {
 };
 }  // namespace detail
 
-// Reduce the lockstep elementwise product of two iterables with +. Stops when
-// either input is exhausted. This is a terminal algorithm.
+// Reduce the lockstep elementwise product of two iterables with +. A complex
+// left element is conjugated first. Stops when either input is exhausted.
+// This is a terminal algorithm.
 template <typename Other>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto

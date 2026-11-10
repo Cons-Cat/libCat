@@ -112,7 +112,8 @@ pow(T base, U exponent) noexcept -> T;
 
 template <int numerator, int denominator = 1, is_arithmetic T>
    requires(
-      denominator != 0 && (is_floating_point<T> || denominator == 1)
+      !is_complex<T> && denominator != 0
+      && (is_floating_point<T> || denominator == 1)
       && (arithmetic_quantity<T>::scale * numerator) % denominator == 0
    )
 [[nodiscard]]

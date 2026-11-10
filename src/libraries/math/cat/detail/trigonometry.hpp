@@ -31,6 +31,11 @@ emulated_sin(Float argument) noexcept -> Float {
    if (!is_finite(argument)) {
       return is_nan(argument) ? argument : limits<Float>::quiet_NaN();
    }
+
+   // Reducing the angle loses the sign of a zero.
+   if (argument == 0) {
+      return argument;
+   }
    Float const reduced = emulated_reduce_angle(argument);
    Float const squared = reduced * reduced;
    Float term = reduced;

@@ -217,6 +217,16 @@ $test(quantity_math_dimension_algebra) {
          decltype(dot)::quantity_type, cat::reference_quantity<metre_second>>
    );
 
+   constexpr auto folded = cat::inner_product(
+      metre_second_int(10), meter_int(2), second_int(3), meter_int(4),
+      second_int(5)
+   );
+   static_assert(folded.raw == 36);
+   static_assert(
+      cat::is_same<
+         decltype(folded)::quantity_type, decltype(dot)::quantity_type>
+   );
+
    constexpr square_metre_float area_value(9.0);
    constexpr auto side = cat::sqrt(area_value);
    static_assert(side.raw == 3.0);
