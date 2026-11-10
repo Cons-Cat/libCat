@@ -38,54 +38,58 @@ simd_broadcast_really_convertible_to() noexcept -> bool {
       return false;
    }
 
+   // Instantiating the raw round-trip checks for a quantity would need a raw
+   // number to convert into it.
    if constexpr (has_quantity<unqualified> || has_quantity<ToLane>) {
       return is_convertible<unqualified, ToLane>;
-   }
-
-   using to_raw = simd_broadcast_lane_raw<ToLane>;
-   if constexpr (!is_arithmetic<to_raw>) {
-      return false;
-   }
-
-   // For boolean types, both truth values must round-trip through the lane raw
-   // type. When `From` is `bool` and `ToLane` is `bool2` or `bool4`, that
-   // matches implicit `bool` to `ToLane` conversion (e.g. `bool4(true)`), so
-   // `simd<bool4> == bool` forms a temporary via the non-explicit broadcast
-   // constructor `simd(bool)` rather than relying on some other conversion.
-   if constexpr (is_bool<unqualified>) {
-      auto ok = [](From x) -> bool {
-         to_raw const y = static_cast<to_raw>(x);
-         return static_cast<unqualified>(y) == static_cast<unqualified>(x);
-      };
-      return ok(static_cast<From>(false)) && ok(static_cast<From>(true));
-   }
-
-   if constexpr (is_same<unqualified, to_raw>) {
-      return true;
-   }
-
-   auto roundtrip_ok = [](From x) -> bool {
-      to_raw y = static_cast<to_raw>(x);
-      return static_cast<From>(y) == x;
-   };
-
-   if constexpr (is_integral<unqualified>) {
-      if constexpr (is_floating_point<to_raw>) {
-         auto endpoint_ok = [](From x) -> bool {
-            long double const lx = static_cast<long double>(x);
-            to_raw const y = static_cast<to_raw>(lx);
-            return lx == static_cast<long double>(y);
-         };
-         return endpoint_ok(limits<unqualified>::max())
-                && endpoint_ok(limits<unqualified>::min());
+   } else {
+      using to_raw = simd_broadcast_lane_raw<ToLane>;
+      if constexpr (!is_arithmetic<to_raw>) {
+         return false;
       }
-      return roundtrip_ok(limits<unqualified>::max())
-             && roundtrip_ok(limits<unqualified>::min());
+
+      // For boolean types, both truth values must round-trip through the lane
+      // raw type. When `From` is `bool` and `ToLane` is `bool2` or `bool4`,
+      // that matches implicit `bool` to `ToLane` conversion (e.g.
+      // `bool4(true)`), so `simd<bool4> == bool` forms a temporary via the
+      // non-explicit broadcast constructor `simd(bool)` rather than relying on
+      // some other conversion.
+      if constexpr (is_bool<unqualified>) {
+         auto ok = [](From x) -> bool {
+            to_raw const y = static_cast<to_raw>(x);
+            return static_cast<unqualified>(y) == static_cast<unqualified>(x);
+         };
+         return ok(static_cast<From>(false)) && ok(static_cast<From>(true));
+      }
+
+      if constexpr (is_same<unqualified, to_raw>) {
+         return true;
+      }
+
+      auto roundtrip_ok = [](From x) -> bool {
+         to_raw y = static_cast<to_raw>(x);
+         return static_cast<From>(y) == x;
+      };
+
+      if constexpr (is_integral<unqualified>) {
+         if constexpr (is_floating_point<to_raw>) {
+            auto endpoint_ok = [](From x) -> bool {
+               long double const lx = static_cast<long double>(x);
+               to_raw const y = static_cast<to_raw>(lx);
+               return lx == static_cast<long double>(y);
+            };
+            return endpoint_ok(limits<unqualified>::max())
+                   && endpoint_ok(limits<unqualified>::min());
+         }
+         return roundtrip_ok(limits<unqualified>::max())
+                && roundtrip_ok(limits<unqualified>::min());
+      }
+      if constexpr (is_floating_point<unqualified>) {
+         return roundtrip_ok(limits<unqualified>::max())
+                && roundtrip_ok(limits<unqualified>::min());
+      }
    }
-   if constexpr (is_floating_point<unqualified>) {
-      return roundtrip_ok(limits<unqualified>::max())
-             && roundtrip_ok(limits<unqualified>::min());
-   }
+
    return false;
 }
 

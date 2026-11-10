@@ -543,8 +543,12 @@ class
 
    // `raw_type` is taken by reference so that no vector crosses this call by
    // value, which would differ across `[[gnu::target(...)]]` boundaries.
+   // A raw vector, like a raw number, becomes lanes of a quantity with a
+   // dimension only explicitly.
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr simd(raw_type const& values) noexcept
+   constexpr explicit(has_quantity<T> && !is_dimensionless_arithmetic<T>) simd(
+      raw_type const& values
+   ) noexcept
        : storage_type(values) {
    }
 
@@ -1125,8 +1129,11 @@ class
 
    template <typename U>
       requires(
-         !is_bool<T> && is_constructible<T, remove_cvref<U>>
-         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+         !is_bool<T>
+         && ((is_constructible<T, remove_cvref<U>>
+              && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+             // Scaling a quantity by a number is lane-wise.
+             || (has_quantity<T> && is_raw_arithmetic<remove_cvref<U>>))
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
@@ -1149,8 +1156,11 @@ class
 
    template <typename U>
       requires(
-         !is_bool<T> && is_constructible<T, remove_cvref<U>>
-         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+         !is_bool<T>
+         && ((is_constructible<T, remove_cvref<U>>
+              && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+             // Scaling a quantity by a number is lane-wise.
+             || (has_quantity<T> && is_raw_arithmetic<remove_cvref<U>>))
       )
    [[gnu::always_inline]]
    constexpr auto
@@ -1161,8 +1171,11 @@ class
 
    template <typename U>
       requires(
-         !is_bool<T> && is_constructible<T, remove_cvref<U>>
-         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+         !is_bool<T>
+         && ((is_constructible<T, remove_cvref<U>>
+              && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+             // Scaling a quantity by a number is lane-wise.
+             || (has_quantity<T> && is_raw_arithmetic<remove_cvref<U>>))
       )
    [[nodiscard, gnu::always_inline]]
    constexpr auto
@@ -1185,8 +1198,11 @@ class
 
    template <typename U>
       requires(
-         !is_bool<T> && is_constructible<T, remove_cvref<U>>
-         && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>()
+         !is_bool<T>
+         && ((is_constructible<T, remove_cvref<U>>
+              && detail::simd_broadcast_really_convertible_to<remove_cvref<U>, T>())
+             // Scaling a quantity by a number is lane-wise.
+             || (has_quantity<T> && is_raw_arithmetic<remove_cvref<U>>))
       )
    [[gnu::always_inline]]
    constexpr auto
@@ -1456,9 +1472,9 @@ class
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       if constexpr (is_floating_point<T>) {
-         return detail::simd_reduce_policy_fadd<T>(this->raw);
+         return T(detail::simd_reduce_policy_fadd<T>(this->raw));
       } else {
-         return __builtin_reduce_add(this->raw);
+         return T(__builtin_reduce_add(this->raw));
       }
    }
 

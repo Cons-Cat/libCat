@@ -1306,6 +1306,15 @@ class
        : raw(make_raw_arithmetic(other)) {
    }
 
+   // A number becomes a quantity with a dimension, or the reverse, only
+   // explicitly.
+   template <is_arithmetic U>
+      requires(detail::is_quantity_dimension_crossing<U, quantity_type>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit basic_float(U other) noexcept
+       : raw(static_cast<T>(make_raw_arithmetic(other))) {
+   }
+
    // Implcitly convert `arithmetic` values of compatible quantities.
    template <is_arithmetic U>
       requires(
@@ -1811,6 +1820,17 @@ class
    [[gnu::always_inline, gnu::nodebug]]
    constexpr basic_int(U other) noexcept
        : raw(make_raw_arithmetic(other)) {
+   }
+
+   // A number becomes a quantity with a dimension, or the reverse, only
+   // explicitly.
+   template <is_arithmetic U>
+      requires(detail::is_quantity_dimension_crossing<U, quantity_type>)
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit basic_int(U other) noexcept
+       : raw(
+            detail::policy_cast<T, overflow_policy>(make_raw_arithmetic(other))
+         ) {
    }
 
    // Runtime catch-all for `undefined` overflow policy. Unsafe operands must
@@ -2695,13 +2715,17 @@ class
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
    min() noexcept -> basic_int<raw_type, overflow_policy, quantity> {
-      return limits<raw_type>::min();
+      return basic_int<raw_type, overflow_policy, quantity>(
+         limits<raw_type>::min()
+      );
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    static constexpr auto
    max() noexcept -> basic_int<raw_type, overflow_policy, quantity> {
-      return limits<raw_type>::max();
+      return basic_int<raw_type, overflow_policy, quantity>(
+         limits<raw_type>::max()
+      );
    }
 
    // `iword` and `uword` are aliases for these `basic_int` parameterizations.

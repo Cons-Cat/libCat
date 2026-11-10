@@ -202,33 +202,60 @@ struct leap_second_info {
 };
 
 inline constexpr leap_second leap_seconds[] = {
-   {.date = unix_time_point(78'796'800),    .value = 1},
-   {.date = unix_time_point(94'694'400),    .value = 1},
-   {.date = unix_time_point(126'230'400),   .value = 1},
-   {.date = unix_time_point(157'766'400),   .value = 1},
-   {.date = unix_time_point(189'302'400),   .value = 1},
-   {.date = unix_time_point(220'924'800),   .value = 1},
-   {.date = unix_time_point(252'460'800),   .value = 1},
-   {.date = unix_time_point(283'996'800),   .value = 1},
-   {.date = unix_time_point(315'532'800),   .value = 1},
-   {.date = unix_time_point(362'793'600),   .value = 1},
-   {.date = unix_time_point(394'329'600),   .value = 1},
-   {.date = unix_time_point(425'865'600),   .value = 1},
-   {.date = unix_time_point(489'024'000),   .value = 1},
-   {.date = unix_time_point(567'993'600),   .value = 1},
-   {.date = unix_time_point(631'152'000),   .value = 1},
-   {.date = unix_time_point(662'688'000),   .value = 1},
-   {.date = unix_time_point(709'948'800),   .value = 1},
-   {.date = unix_time_point(741'484'800),   .value = 1},
-   {.date = unix_time_point(773'020'800),   .value = 1},
-   {.date = unix_time_point(820'454'400),   .value = 1},
-   {.date = unix_time_point(867'715'200),   .value = 1},
-   {.date = unix_time_point(915'148'800),   .value = 1},
-   {.date = unix_time_point(1'136'073'600), .value = 1},
-   {.date = unix_time_point(1'230'768'000), .value = 1},
-   {.date = unix_time_point(1'341'100'800), .value = 1},
-   {.date = unix_time_point(1'435'708'800), .value = 1},
-   {.date = unix_time_point(1'483'228'800), .value = 1},
+   {.date = unix_time_point(units::second_int8(78'796'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(94'694'400)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(126'230'400)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(157'766'400)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(189'302'400)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(220'924'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(252'460'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(283'996'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(315'532'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(362'793'600)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(394'329'600)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(425'865'600)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(489'024'000)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(567'993'600)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(631'152'000)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(662'688'000)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(709'948'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(741'484'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(773'020'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(820'454'400)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(867'715'200)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(915'148'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(1'136'073'600)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(1'230'768'000)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(1'341'100'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(1'435'708'800)),
+    .value = units::second_int8(1)},
+   {.date = unix_time_point(units::second_int8(1'483'228'800)),
+    .value = units::second_int8(1)},
 };
 
 namespace detail {
@@ -239,7 +266,7 @@ inline constexpr idx leap_second_count =
 [[nodiscard]]
 constexpr auto
 leap_second_transition(idx index) noexcept -> int8 {
-   return leap_seconds[index].date.time_since_epoch();
+   return int8(leap_seconds[index].date.time_since_epoch());
 }
 
 [[nodiscard]]
@@ -411,7 +438,7 @@ constexpr auto
 utc_from_date_time(utc_date_time value) noexcept -> utc_conversion {
    if (!is_valid_utc(value)) {
       return {
-         .value = utc_time_point(0),
+         .value = utc_time_point(units::second_int8(0)),
          .valid = false,
       };
    }
@@ -420,14 +447,14 @@ utc_from_date_time(utc_date_time value) noexcept -> utc_conversion {
       int8 const transition = detail::posix_seconds_from_civil(value) + 1;
       int8 const leap_index = detail::leap_index_for_transition(transition);
       return {
-         .value = utc_time_point(transition + leap_index),
+         .value = utc_time_point(units::second_int8(transition + leap_index)),
          .valid = true,
       };
    }
    int8 const posix = detail::posix_seconds_from_civil(value);
    int8 const atomic = posix + detail::completed_leaps_for_posix(posix);
    return {
-      .value = utc_time_point(atomic),
+      .value = utc_time_point(units::second_int8(atomic)),
       .valid = true,
    };
 }
@@ -435,7 +462,7 @@ utc_from_date_time(utc_date_time value) noexcept -> utc_conversion {
 [[nodiscard]]
 constexpr auto
 date_time_from_utc(utc_time_point point) noexcept -> utc_date_time {
-   int8 const atomic = point.time_since_epoch();
+   int8 const atomic = int8(point.time_since_epoch());
    int8 const leap_index = detail::leap_index_for_atomic(atomic);
    if (leap_index >= 0) {
       int8 const transition = detail::leap_second_transition(idx(leap_index));
@@ -494,9 +521,9 @@ to_tai(gps_time_point point) noexcept -> tai_time_point {
 [[nodiscard]]
 constexpr auto
 to_utc(unix_time_point point) noexcept -> utc_time_point {
-   int8 const posix = point.time_since_epoch();
+   int8 const posix = int8(point.time_since_epoch());
    int8 const atomic = posix + detail::completed_leaps_for_posix(posix);
-   return utc_time_point(atomic);
+   return utc_time_point(units::second_int8(atomic));
 }
 
 [[nodiscard]]
@@ -509,17 +536,17 @@ to_tai(unix_time_point point) noexcept -> tai_time_point {
 constexpr auto
 to_unix(utc_time_point point, unix_leap_second_mapping leap_mapping) noexcept
    -> unix_time_point {
-   int8 const atomic = point.time_since_epoch();
+   int8 const atomic = int8(point.time_since_epoch());
    int8 const leap_index = detail::leap_index_for_atomic(atomic);
    if (leap_index >= 0) {
       int8 const transition = detail::leap_second_transition(idx(leap_index));
       if (leap_mapping == unix_leap_second_mapping::previous_second) {
-         return unix_time_point(transition - 1);
+         return unix_time_point(units::second_int8(transition - 1));
       }
-      return unix_time_point(transition);
+      return unix_time_point(units::second_int8(transition));
    }
    int8 const posix = atomic - detail::completed_leaps_for_atomic(atomic);
-   return unix_time_point(posix);
+   return unix_time_point(units::second_int8(posix));
 }
 
 [[nodiscard]]
@@ -532,17 +559,17 @@ to_unix(tai_time_point point, unix_leap_second_mapping leap_mapping) noexcept
 [[nodiscard]]
 constexpr auto
 get_leap_second_info(utc_time_point point) noexcept -> leap_second_info {
-   int8 const atomic = point.time_since_epoch();
+   int8 const atomic = int8(point.time_since_epoch());
    int8 const leap_index = detail::leap_index_for_atomic(atomic);
    if (leap_index >= 0) {
       return {
          .is_leap_second = true,
-         .elapsed = leap_index + 1,
+         .elapsed = units::second_int8(leap_index + 1),
       };
    }
    return {
       .is_leap_second = false,
-      .elapsed = detail::completed_leaps_for_atomic(atomic),
+      .elapsed = units::second_int8(detail::completed_leaps_for_atomic(atomic)),
    };
 }
 

@@ -437,28 +437,28 @@ $test(chrono_epochs) {
    // GPS time began at 1980-01-06, 315'964'809 atomic seconds after the UTC
    // epoch of 1970-01-01.
    static_assert(
-      cat::to_gps(cat::utc_time_point(315'964'809)).time_since_epoch()
+      cat::to_gps(cat::utc_time_point(seconds(315'964'809))).time_since_epoch()
       == seconds(0)
    );
    static_assert(
-      cat::to_utc(cat::gps_time_point(0)).time_since_epoch()
+      cat::to_utc(cat::gps_time_point(seconds(0))).time_since_epoch()
       == seconds(315'964'809)
    );
    static_assert(
-      cat::to_tai(cat::gps_time_point(0)).time_since_epoch()
+      cat::to_tai(cat::gps_time_point(seconds(0))).time_since_epoch()
       == seconds(694'656'019)
    );
    static_assert(
-      cat::to_gps(cat::tai_time_point(694'656'019)).time_since_epoch()
+      cat::to_gps(cat::tai_time_point(seconds(694'656'019))).time_since_epoch()
       == seconds(0)
    );
    static_assert(
-      cat::to_gps(cat::to_tai(cat::gps_time_point(1'000)))
-      == cat::gps_time_point(1'000)
+      cat::to_gps(cat::to_tai(cat::gps_time_point(seconds(1'000))))
+      == cat::gps_time_point(seconds(1'000))
    );
    static_assert(
-      cat::to_utc(cat::to_gps(cat::utc_time_point(1'000'000'000)))
-      == cat::utc_time_point(1'000'000'000)
+      cat::to_utc(cat::to_gps(cat::utc_time_point(seconds(1'000'000'000))))
+      == cat::utc_time_point(seconds(1'000'000'000))
    );
 
    cat::clock_tai::time_point const tai = cat::clock_tai::now().verify();

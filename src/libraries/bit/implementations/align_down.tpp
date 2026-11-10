@@ -24,7 +24,7 @@ template <is_arithmetic T>
 [[nodiscard]]
 constexpr auto
 align_down(T value, ualign alignment) noexcept -> T {
-   return __builtin_align_down(make_raw_arithmetic(value), alignment.raw);
+   return T(__builtin_align_down(make_raw_arithmetic(value), alignment.raw));
 }
 
 }  // namespace cat

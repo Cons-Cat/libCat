@@ -251,7 +251,7 @@ x64::clock_tsc::now() -> cat::maybe<time_point> {
       return cat::nullopt;
    }
 
-   return time_point(converted.value());
+   return time_point(time_point::duration(converted.value()));
 }
 
 void

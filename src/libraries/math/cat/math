@@ -89,7 +89,7 @@ inline constexpr T pi<T> = 3;
 
 template <is_floating_point T>
    requires(!is_same<T, raw_arithmetic_type<T>>)
-inline constexpr T pi<T> = pi<raw_arithmetic_type<T>>;
+inline constexpr T pi<T> = T(pi<raw_arithmetic_type<T>>);
 
 template <is_arithmetic T = float8>
 inline constexpr T tau = detail::pi_value * 2;
@@ -100,7 +100,7 @@ inline constexpr T tau<T> = 6;
 // Unwrap `cat::basic_float<T>`s to access the constant.
 template <is_floating_point T>
    requires(!is_same<T, raw_arithmetic_type<T>>)
-inline constexpr T tau<T> = tau<raw_arithmetic_type<T>>;
+inline constexpr T tau<T> = T(tau<raw_arithmetic_type<T>>);
 
 }  // namespace cat
 

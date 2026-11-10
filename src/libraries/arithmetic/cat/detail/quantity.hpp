@@ -1590,11 +1590,20 @@ concept is_dimensionless_arithmetic =
 
 namespace detail {
 
+// A number and a quantity cannot implicitly convert into each other. Only
+// `is_quantity_dimension_crossing` explicit constructors convert them.
 template <typename From, typename To>
 concept is_quantity_conversion =
-   is_dimensionless_quantity<arithmetic_quantity<From>>
-   || is_dimensionless_quantity<To>
+   (is_dimensionless_quantity<arithmetic_quantity<From>>
+    && is_dimensionless_quantity<To>)
    || is_compatible_quantity<arithmetic_quantity<From>, To>;
+
+// Exactly one of `From` and `To` is dimensionless. The number is the value in
+// the other's unit.
+template <typename From, typename To>
+concept is_quantity_dimension_crossing =
+   is_dimensionless_quantity<arithmetic_quantity<From>>
+   != is_dimensionless_quantity<To>;
 
 template <typename From, typename To>
 concept is_quantity_direct_conversion =
