@@ -73,6 +73,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/math/implementations/log.cpp
   ${CATLIB}/math/implementations/pow.cpp
   ${CATLIB}/math/implementations/sin.cpp
+  ${CATLIB}/math/implementations/sincos.cpp
   ${CATLIB}/math/implementations/sinh.cpp
   ${CATLIB}/math/implementations/sqrt.cpp
   ${CATLIB}/math/implementations/tan.cpp

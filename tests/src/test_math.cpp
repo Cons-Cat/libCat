@@ -718,3 +718,28 @@ $test(math_circle_constants) {
    cat::verify(cat::pi<cat::int4> == 3);
    cat::verify(cat::tau<cat::int4> == 6);
 }
+
+extern "C" auto
+sincos(double argument, double* _Nonnull p_sine, double* _Nonnull p_cosine)
+   -> void;
+
+extern "C" auto
+sincosf(float argument, float* _Nonnull p_sine, float* _Nonnull p_cosine)
+   -> void;
+
+$test(math_sincos) {
+   // Under ASan, these calls reach its interceptors, which forward to the
+   // system's libM, so compare with a tolerance rather than bit for bit.
+   double volatile angle = 0.5;
+   double sine = 0.;
+   double cosine = 0.;
+   sincos(angle, &sine, &cosine);
+   cat::verify(__builtin_fabs(sine - 0.479425538604203) < 1e-15);
+   cat::verify(__builtin_fabs(cosine - 0.8775825618903728) < 1e-15);
+   float volatile single_angle = 0.5f;
+   float single_sine = 0.f;
+   float single_cosine = 0.f;
+   sincosf(single_angle, &single_sine, &single_cosine);
+   cat::verify(__builtin_fabsf(single_sine - 0.47942554f) < 1e-6f);
+   cat::verify(__builtin_fabsf(single_cosine - 0.87758256f) < 1e-6f);
+}
