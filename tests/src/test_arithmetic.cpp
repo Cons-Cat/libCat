@@ -6563,9 +6563,8 @@ $test(arithmetic_semantics_idx_subtract_constexpr_preserves_idx) {
    constexpr __SIZE_TYPE__ subscript = idx{5} - 3u;
    static_assert(subscript == 2u);
 
-   // Same-type `idx - idx` is unaffected: the non-template member from
-   // `minus_interface` wins overload resolution against the templated friend,
-   // so the result type is still `iword`.
+   // Same-type `idx - idx` is unaffected: the `constexpr` fast path excludes
+   // `idx` operands, so the result type is still `iword`.
    static_assert(cat::is_same<decltype(idx{5} - idx{3}), iword>);
 }
 

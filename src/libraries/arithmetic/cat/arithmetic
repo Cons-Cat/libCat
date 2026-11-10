@@ -3827,6 +3827,7 @@ basic_idx :
    // we can keep the `basic_idx` shape. This is necessary to use certain
    // expressions in subscripting, such as `array[10_idx - 1]`.
    template <is_integral T>
+      requires(!is_same<T, basic_idx>)
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr basic_idx
    operator-(basic_idx self, T other) noexcept __attribute__((enable_if(
