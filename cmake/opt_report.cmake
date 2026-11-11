@@ -41,7 +41,8 @@ block()
 endblock()
 
 # Prefer any `opt-viewer.py` already on PATH so an upgraded script can be
-# substituted without touching CMake. Otherwise fall back to the script shipped
+# substituted without touching CMake. Otherwise fall back to the script in the
+# configured toolchain's `share/opt-viewer/`, or to the one shipped
 # under `/usr/lib/llvm-<major>/share/opt-viewer/` that matches the configured
 # compiler version. Debian / Ubuntu's `llvm-<N>-tools` installs the script
 # without the executable bit, so prefix `python3` when the resolved path ends
@@ -53,7 +54,7 @@ block()
   find_program(CAT_OPT_VIEWER_PATH
     NAMES opt-viewer.py opt-viewer
     HINTS
-      "${_toolchain_root}/usr/lib/llvm-${_clang_major}/share/opt-viewer"
+      "${_toolchain_root}/share/opt-viewer"
       "/usr/lib/llvm-${_clang_major}/share/opt-viewer"
       "/usr/share/llvm-${_clang_major}/opt-viewer"
       "/usr/local/lib/llvm-${_clang_major}/share/opt-viewer"

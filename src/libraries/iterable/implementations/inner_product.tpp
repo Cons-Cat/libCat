@@ -10,8 +10,10 @@ namespace detail {
 
 template <typename T>
 concept has_iterable_extent = requires(remove_cvref<T>& value) {
-   { value.size() } -> is_implicitly_convertible<idx>;
-};
+                                 {
+                                    value.size()
+                                 } -> is_implicitly_convertible<idx>;
+                              };
 
 // Left fold `init = op1(init, op2(left, right))` across `incoming`, stepping
 // the second iterable in lockstep. The first iterable decides how many steps
@@ -59,10 +61,9 @@ struct inner_product_impl {
 template <typename Other, typename Init>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-inner_product(Other&& other, Init init)
-   -> detail::inner_product_impl<
-      remove_cvref<Other>, Init, detail::inner_product_add,
-      detail::inner_product_multiply> {
+inner_product(Other&& other, Init init) -> detail::inner_product_impl<
+   remove_cvref<Other>, Init, detail::inner_product_add,
+   detail::inner_product_multiply> {
    return {
       $fwd(other),
       move(init),

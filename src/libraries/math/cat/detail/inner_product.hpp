@@ -32,8 +32,7 @@ struct inner_product_add {
 // A scalar that `*` and `+` can fold. Real arithmetic, a raw `_Complex`, and a
 // libCat complex all qualify. Nothing here conjugates: that is `dot`.
 template <typename T>
-concept is_inner_product_value =
-   is_arithmetic<T> || is_complex<T>;
+concept is_inner_product_value = is_arithmetic<T> || is_complex<T>;
 
 // Ordered left fold of pairs into `init`: `init = init + (value * other)`,
 // then the same for each remaining pair. `init` decides the accumulator type.

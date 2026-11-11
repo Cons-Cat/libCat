@@ -8,7 +8,9 @@ It has no pthreads nor global =malloc()=, and exceptions are fundamentally optio
 It has type-safe arithmetic, SIMD, fast syscalls, CRTP interfaces,
 
 * Building
-libCat requires a recent development version of Clang 23 from the =trunk= branch.
+libCat requires a recent development version of Clang from the =main= branch. This is hosted
+in [[https://github.com/Cons-Cat/llvm-project][my LLVM fork]] and updated periodically.
+
 =mise= can be used to fetch an appropriate version. This also installs =just=, recent
 versions of build tools, and sets =CMAKE_GENERATOR=Ninja Multi-Config= by default, but setting
 =CMAKE_GENERATOR= is supported (e.g. =CMAKE_GENERATOR=Ninja=) for all tools and in all
@@ -383,7 +385,7 @@ For an example configuration:
   # ASan: OFF, UBSan: OFF (cached)
   # sccache: ON (/home/conscat/.local/share/mise/installs/sccache/0.17.0/sccache-v0.17.0-x86_64-unknown-linux-musl/sccache)
   # CMAKE_CXX_COMPILER: ./.cache/cat-llvm/bin/clang++
-  # Clang nightly: July 7, 2026 at 11:16:25
+  # Clang 24.0.0git: November 11, 2026 at 09:19:51
   # CMAKE_LINKER_TYPE: LLD
   # ISA: default (x86_64-pc-linux-gnu)
   # Language: gnu++26 nostdlib nostdlib++

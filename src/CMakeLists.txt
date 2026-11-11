@@ -446,6 +446,7 @@ set(CAT_HEADER_FILES
    ${CATLIB}/iterable/implementations/fill.tpp
    ${CATLIB}/iterable/implementations/fold.tpp
   ${CATLIB}/iterable/implementations/for_each.tpp
+  ${CATLIB}/iterable/implementations/inner_product.tpp
   ${CATLIB}/iterable/implementations/is_all.tpp
   ${CATLIB}/iterable/implementations/is_any.tpp
   ${CATLIB}/iterable/implementations/is_none.tpp
@@ -489,6 +490,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/math/cat/detail/emulated_fwd.hpp
   ${CATLIB}/math/cat/detail/exp.hpp
   ${CATLIB}/math/cat/detail/fma.hpp
+  ${CATLIB}/math/cat/detail/inner_product.hpp
   ${CATLIB}/math/cat/detail/ldexp.hpp
   ${CATLIB}/math/cat/detail/lgamma.hpp
   ${CATLIB}/math/cat/detail/log.hpp

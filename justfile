@@ -618,14 +618,8 @@ status_cxx mode=last_mode verbose="":
       printf '\033[1mCMAKE_CXX_COMPILER: \033[0m%s\n' "$value"; \
       case "$(readlink -f "$compiler" 2>/dev/null)" in \
         "$PWD"/.cache/cat-llvm/*) \
-          timestamp="$("$compiler" --version \
-            | sed -n 's/.*++\([0-9]\{14\}\).*/\1/p')"; \
-          if [ -n "$timestamp" ]; then \
-            date_input="$(printf '%s\n' "$timestamp" \
-              | sed 's/\(....\)\(..\)\(..\)\(..\)\(..\)\(..\)/\1-\2-\3 \4:\5:\6/')"; \
-            timestamp="$(date -d "$date_input" '+%B %-d, %Y at %H:%M:%S')"; \
-            printf '\033[1mClang nightly: \033[0m%s\n' "$timestamp"; \
-          fi ;; \
+          printf '\033[1mClang %s: \033[0m%s\n' "$("$compiler" -dumpversion)" \
+            "$(date -r "$(readlink -f "$compiler")" '+%B %-d, %Y at %H:%M:%S')" ;; \
       esac
 
 status_linker mode=last_mode:

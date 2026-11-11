@@ -9,7 +9,8 @@ sccache = "0.18.0"
 experimental = true
 
 [env]
-CAT_LLVM_VERSION = "unstable"
+CAT_LLVM_VERSION = "lilian-d4c6c69e0d00"
+CAT_LLVM_SHA256 = "24fd86e8736255cece7558a0a12277de8ac95afde8aaf626cfc30a293eed42ee"
 CC = "clang"
 CXX = "clang++"
 CMAKE_CXX_FLAGS = "-fdiagnostics-color=always"
@@ -25,8 +26,8 @@ postinstall = [
 ]
 
 [tasks.install-clang-nightly]
-description = "Download and extract the pinned Clang 24 nightly toolchain."
-run = "python3 scripts/install_mise_llvm_debs.py"
+description = "Download and extract the pinned Clang toolchain release."
+run = "python3 scripts/install_mise_llvm.py"
 
 [tasks.install-elfkickers]
 description = "Download, build, and stage the pinned ELFkickers utilities."

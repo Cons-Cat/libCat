@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
 # Download, build, and stage the pinned ELFkickers utilities (`sstrip` and
-# `elfls`) so they're on PATH the same way the bundled Clang nightly is. The
+# `elfls`) so they're on PATH the same way the bundled Clang is. The
 # upstream `make all` still builds the full set; we only copy the two we use.
 #
-# Modeled after `install_mise_llvm_debs.py`. ELFkickers ships only as a tiny
+# Modeled after `install_mise_llvm.py`. ELFkickers ships only as a tiny
 # source tarball, so the script downloads it, verifies size + sha256, builds
 # every program with the system C compiler (`cc`), and copies the binaries
 # into `.cache/cat-elfkickers/bin/`. A `VERSION` stamp guards re-runs.
@@ -100,11 +100,8 @@ def download_archive(downloads: pathlib.Path) -> pathlib.Path:
 
 
 def find_compiler() -> str:
-    # ELFkickers' Makefiles default to `cc`. The bundled Clang at
-    # `.cache/cat-llvm/bin/clang` won't work here because the staged toolchain
-    # ships the compiler-rt-only resource directory (no `stddef.h`); freestanding
-    # C builds against the host headers need a host C compiler. Use whatever
-    # `cc` (or `gcc`) is on PATH.
+    # ELFkickers' Makefiles default to `cc`. Use whatever `cc` (or `gcc`) is
+    # on PATH.
     for candidate in ("cc", "gcc"):
         found = shutil.which(candidate)
         if found is not None:
