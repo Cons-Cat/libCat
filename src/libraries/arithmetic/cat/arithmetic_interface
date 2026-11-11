@@ -84,7 +84,7 @@ concept has_subtract_by_interface =
    requires(T lhs, U rhs) { lhs.subtract_by(rhs); };
 
 template <typename T>
-concept has_negate_interface = requires(T lhs) { lhs.negate(lhs); };
+concept has_negate_interface = requires(T lhs) { lhs.negate(); };
 
 // Unary `-` calls `.negate()`, or subtracts from zero.
 template <typename D>

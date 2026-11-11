@@ -37,12 +37,37 @@ class simd_overflow_reference
    friend constexpr void
    operator&(simd_overflow_reference const volatile&&) = delete;
 
+   constexpr simd_overflow_reference(simd_overflow_reference const&) = default;
+
+   // Assigning another reference of this type writes its value through, as
+   // assigning a built-in reference does. `rebind()` changes the address.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator=(simd_overflow_reference const& other) noexcept
+      -> simd_overflow_reference& {
+      *m_wrapped = *other.m_wrapped;
+      return *this;
+   }
+
    // Assign through to the referenced vector.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator=(wrapper_type const& value) noexcept -> simd_overflow_reference& {
       *m_wrapped = value;
       return *this;
+   }
+
+   // A reference converts implicitly into its own value with this policy.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr
+   operator auto() const noexcept {
+      return view();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator-() const noexcept {
+      return -view();
    }
 
    // Rebind this reference wrapper to a different address.
@@ -277,6 +302,20 @@ class simd_overflow_reference
       return simd_integral_add_policy<T, Abi, semantics>(
          simd_integral_mul_policy<T, Abi, semantics>(*m_wrapped, multiplier),
          addend
+      );
+   }
+
+ private:
+   // The referenced vector, copied bit for bit into lanes with this policy.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   view() const noexcept {
+      using value = cat::simd<
+         typename rebind_overflow_policy<T, semantics>::type,
+         typename Abi::template make_abi_type<
+            typename rebind_overflow_policy<T, semantics>::type>>;
+      return value(
+         __builtin_bit_cast(typename value::raw_type, m_wrapped->raw)
       );
    }
 };

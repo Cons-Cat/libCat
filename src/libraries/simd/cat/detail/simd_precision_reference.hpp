@@ -79,6 +79,34 @@ class simd_precision_reference
    friend constexpr void
    operator&(simd_precision_reference const volatile&&) = delete;
 
+   constexpr simd_precision_reference(simd_precision_reference const&) =
+      default;
+
+   // Assigning another reference of this type writes its value through, as
+   // assigning a built-in reference does. `rebind()` changes the address.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator=(simd_precision_reference const& other) noexcept
+      -> simd_precision_reference&
+      requires(!is_const<Simd>)
+   {
+      *m_wrapped = *other.m_wrapped;
+      return *this;
+   }
+
+   // A reference converts implicitly into its own value with this policy.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr
+   operator auto() const noexcept {
+      return view();
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator-() const noexcept {
+      return -view();
+   }
+
    constexpr void
    rebind(Simd& w [[clang::lifetime_capture_by_this]]) noexcept {
       m_wrapped = addressof(w);
@@ -572,6 +600,17 @@ class simd_precision_reference
    operator/=(U&& operand) -> simd_precision_reference& {
       assign_result(*this / $fwd(operand));
       return *this;
+   }
+
+ private:
+   // The referenced vector, copied bit for bit into lanes with this policy.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   view() const noexcept {
+      using value = result_type;
+      return value(
+         __builtin_bit_cast(typename value::raw_type, m_wrapped->raw)
+      );
    }
 };
 

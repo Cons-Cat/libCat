@@ -314,10 +314,10 @@ $test(arithmetic_precision_reference_accessors) {
    static_assert(cat::is_same<decltype(fast_sum), float4_fast>);
    cat::verify(fast_sum == 3_f4);
 
+   // The left operand's policy wins, as it does between any two libCat
+   // arithmetic types.
    auto precise_plus_fast_reference = value + value.fast();
-   static_assert(
-      cat::is_same<decltype(precise_plus_fast_reference), float4_fast>
-   );
+   static_assert(cat::is_same<decltype(precise_plus_fast_reference), float4>);
    cat::verify(precise_plus_fast_reference == 2_f4);
 
    auto fast_plus_precise_reference = value.fast() + value.precise();
@@ -375,6 +375,221 @@ $test(arithmetic_overflow_reference_rebind) {
    ref += 5_i4;
    cat::verify(first == 3_i4);
    cat::verify(second == 15_i4);
+}
+
+// Assigning a reference of the same type writes through it, as assigning a
+// built-in reference does. `rebind()` is what changes the address. A
+// reference to `const` cannot be assigned.
+$test(arithmetic_reference_assignment) {
+   int4 first = 1_i4;
+   int4 second = 10_i4;
+   auto first_ref = first.sat();
+   first_ref = second.sat();
+   cat::verify(first == 10_i4);
+   second = 20_i4;
+   first_ref = second.sat();
+   cat::verify(first == 20_i4);
+   second = 30_i4;
+   first.wrap() = second.wrap();
+   cat::verify(first == 30_i4);
+
+   float4 single = 1_f4;
+   float4 other_single = 2_f4;
+   single.fast() = other_single.fast();
+   cat::verify(single == 2_f4);
+
+   idx index = 1_idx;
+   idx other_index = 2_idx;
+   index.wrap() = other_index.wrap();
+   cat::verify(index == 2_idx);
+
+   uintptr<void> address = 1u;
+   uintptr<void> other_address = 2u;
+   address.sat() = other_address.sat();
+   cat::verify(address == other_address);
+
+   int4 const constant = 1_i4;
+   idx const constant_index = 1_idx;
+   uintptr<void> const constant_address = 1u;
+   float4 const constant_single = 1_f4;
+   static_assert(
+      !cat::is_assignable<
+         decltype(constant_index.wrap())&, decltype(constant_index.wrap())>
+   );
+   static_assert(
+      !cat::is_assignable<
+         decltype(constant_address.wrap())&, decltype(constant_address.wrap())>
+   );
+   static_assert(
+      cat::is_assignable<decltype(first.sat())&, decltype(first.sat())>
+   );
+   static_assert(
+      !cat::is_assignable<decltype(constant.sat())&, decltype(constant.sat())>
+   );
+   static_assert(
+      !cat::is_assignable<
+         decltype(constant_single.fast())&, decltype(constant_single.fast())>
+   );
+}
+
+// A proxy reference is an integer or floating-point number of the type it
+// refers to, so between a reference and another number, the left operand's
+// policy wins.
+$test(arithmetic_reference_left_operand_policy) {
+   int4 value = cat::limits<int4>::max();
+   int4 const one = 1_i4;
+   static_assert(cat::is_integral<decltype(value.wrap())>);
+   static_assert(cat::is_signed<decltype(value.wrap())>);
+   static_assert(
+      cat::is_floating_point<decltype(cat::declval<float4&>().fast())>
+   );
+   static_assert(cat::is_same<decltype(one + value.wrap()), int4>);
+   static_assert(
+      cat::is_same<decltype(value.sat() + one.wrap()), cat::sat_int4>
+   );
+   cat::verify(value.wrap() + one == cat::limits<int4>::min());
+   cat::verify(value.sat() + one.wrap() == cat::limits<int4>::max());
+   static_assert(
+      cat::is_same<cat::raw_arithmetic_type<decltype(value.sat())>, int>
+   );
+   cat::verify(make_raw_arithmetic(value.sat()) == cat::limits<int>::max());
+   float4 single = 1_f4;
+   cat::verify(-single.fast() == -1_f4);
+   static_assert(cat::is_same<decltype(-value.sat()), cat::sat_int4>);
+   cat::verify(-value.sat() == -cat::limits<int4>::max());
+   int4 most_negative = cat::limits<int4>::min();
+   cat::verify(-most_negative.sat() == cat::limits<int4>::max());
+   cat::verify(-most_negative.wrap() == cat::limits<int4>::min());
+}
+
+namespace {
+template <typename L, typename R>
+concept can_bit_and = requires(L lhs, R rhs) { lhs & rhs; };
+
+template <typename L, typename R>
+concept can_bit_or = requires(L lhs, R rhs) { lhs | rhs; };
+
+template <typename L, typename R>
+concept can_bit_xor = requires(L lhs, R rhs) { lhs ^ rhs; };
+
+template <typename L, typename R>
+concept can_bit_and_member = requires(L lhs, R rhs) { lhs.bit_and(rhs); };
+}  // namespace
+
+// A bitwise operation rejects a proxy reference parameter. A plain operand
+// still works through a reference, from either side.
+$test(arithmetic_reference_bitwise_rejected) {
+   using wrap_reference =
+      cat::overflow_reference<uint4, cat::overflow_policies::wrap>;
+   using sat_reference =
+      cat::overflow_reference<uint4, cat::overflow_policies::saturate>;
+   static_assert(!can_bit_and_member<uint4, wrap_reference>);
+   static_assert(!can_bit_and_member<wrap_reference, sat_reference>);
+   static_assert(!can_bit_and<wrap_reference, wrap_reference>);
+   static_assert(!can_bit_or<sat_reference, wrap_reference>);
+   static_assert(!can_bit_xor<wrap_reference, sat_reference>);
+   static_assert(can_bit_and<uint4, uint4>);
+
+   uint4 value = 0b1100_u4;
+   uint4 other = 0b1010_u4;
+   static_assert(cat::is_same<decltype(value & other.wrap()), cat::wrap_uint4>);
+   cat::verify((value & other.wrap()) == 0b1000_u4);
+   cat::verify((value.wrap() & other) == 0b1000_u4);
+   cat::verify((value.wrap() | other) == 0b1110_u4);
+   cat::verify((other ^ value.sat()) == 0b0110_u4);
+}
+
+// A proxy reference rebinds as the type it refers to, so rebinding gives a
+// value with the new policy. A precision reference keeps its own precision,
+// since precision is a `basic_float`'s policy axis.
+$test(arithmetic_reference_rebind_overflow_policy) {
+   using enum cat::overflow_policies;
+   using cat::detail::rebind_overflow_policy;
+   static_assert(cat::is_same<
+                 rebind_overflow_policy<
+                    cat::overflow_reference<int4, saturate>, wrap>::type,
+                 cat::wrap_int4>);
+   static_assert(cat::is_same<
+                 rebind_overflow_policy<
+                    cat::overflow_reference<int4 const, wrap>, saturate>::type,
+                 cat::sat_int4>);
+   static_assert(cat::is_same<
+                 rebind_overflow_policy<
+                    cat::overflow_reference<idx, wrap>, saturate>::type,
+                 cat::basic_idx<saturate>>);
+   static_assert(
+      cat::is_same<
+         rebind_overflow_policy<
+            cat::overflow_reference<uintptr<void>, wrap>, undefined>::type,
+         uintptr<void>>
+   );
+   static_assert(
+      cat::is_same<
+         rebind_overflow_policy<
+            cat::precision_reference<float4, cat::precision_policies::fast>,
+            wrap>::type,
+         float4_fast>
+   );
+   static_assert(cat::is_same<
+                 rebind_overflow_policy<
+                    cat::precision_reference<
+                       float8 const, cat::precision_policies::precise>,
+                    saturate>::type,
+                 float8>);
+}
+
+namespace {
+// A reference converts implicitly or explicitly into `Target` exactly when the
+// value it refers to, with the reference's policy, does.
+template <typename Reference, typename Target>
+concept converts_as_its_value =
+   (cat::is_convertible<Reference, Target>
+    == cat::is_convertible<
+       typename cat::detail::rebind_overflow_policy<
+          Reference, cat::make_overflow_policy<Reference>>::type,
+       Target>)
+   && (cat::is_constructible<Target, Reference> == cat::is_constructible<Target, typename cat::detail::rebind_overflow_policy<Reference, cat::make_overflow_policy<Reference>>::type>);
+
+template <typename Reference>
+concept converts_as_its_value_to_each =
+   converts_as_its_value<Reference, int1>
+   && converts_as_its_value<Reference, int4>
+   && converts_as_its_value<Reference, cat::sat_int4>
+   && converts_as_its_value<Reference, uint4>
+   && converts_as_its_value<Reference, iword>
+   && converts_as_its_value<Reference, uword>
+   && converts_as_its_value<Reference, idx>
+   && converts_as_its_value<Reference, uintptr<void>>
+   && converts_as_its_value<Reference, float4>
+   && converts_as_its_value<Reference, float8>;
+}  // namespace
+
+// Every integer and floating-point reference converts into its own value
+// implicitly, and into any other type as that value does.
+$test(arithmetic_reference_conversion) {
+   int4 value = 5_i4;
+   int1 narrow = 5_i1;
+   idx index = 5_idx;
+   uintptr<void> address = 5u;
+   float4 single = 1.5_f4;
+   cat::sat_int4 const saturated = value.sat();
+   cat::basic_idx<cat::overflow_policies::wrap> const wrapped_index =
+      index.wrap();
+   cat::basic_intptr<
+      void, __UINTPTR_TYPE__, cat::overflow_policies::saturate> const
+      saturated_address = address.sat();
+   float4_fast const fast = single.fast();
+   cat::verify(saturated == 5);
+   cat::verify(wrapped_index == 5u);
+   cat::verify(saturated_address == address);
+   cat::verify(fast == 1.5f);
+
+   static_assert(converts_as_its_value_to_each<decltype(value.sat())>);
+   static_assert(converts_as_its_value_to_each<decltype(value.wrap())>);
+   static_assert(converts_as_its_value_to_each<decltype(narrow.wrap())>);
+   static_assert(converts_as_its_value_to_each<decltype(index.sat())>);
+   static_assert(converts_as_its_value_to_each<decltype(address.sat())>);
+   static_assert(converts_as_its_value_to_each<decltype(single.fast())>);
 }
 
 $test(arithmetic_overflow_reference_compound_assignment) {
@@ -815,6 +1030,28 @@ $test(arithmetic_traits_rvalue) {
 
    static_assert(cat::is_forwarding_move<decltype(constant_uptr.sat())>);
    static_assert(cat::is_forwarding_move<decltype(uintptr<void>{0}.sat())>);
+
+   // A `const` r-value also gets a copy with the accessor's policy, not a
+   // reference to it.
+   static_assert(
+      cat::is_same<decltype(cat::move(constant_int4).wrap()), cat::wrap_int4>
+   );
+   static_assert(cat::is_same<
+                 decltype(cat::move(constant_idx).sat()),
+                 cat::basic_idx<cat::overflow_policies::saturate>>);
+   static_assert(cat::is_same<
+                 decltype(cat::move(constant_uptr).sat()),
+                 cat::basic_intptr<
+                    void, __UINTPTR_TYPE__, cat::overflow_policies::saturate>>);
+   static_assert(
+      cat::is_same<
+         decltype(cat::move(constant_int4.sat()).wrap()), cat::wrap_int4>
+   );
+   float4 const constant_float4 = 0_f4;
+   static_assert(cat::is_same<decltype(float4{}.fast()), float4_fast>);
+   static_assert(
+      cat::is_same<decltype(cat::move(constant_float4).fast()), float4_fast>
+   );
 }
 
 $test(arithmetic_constants_constexpr_helpers) {

@@ -765,6 +765,17 @@ class
       return this->raw <= operand.raw;
    }
 
+ private:
+   static consteval auto
+   lane_quantity_reference() noexcept {
+      if constexpr (has_quantity<T>) {
+         return T::quantity_reference;
+      } else {
+         return scalar;
+      }
+   }
+
+ public:
    // Overflow accessors mirror `cat::basic_int`. `undef` selects raw vector
    // ops with no overflow checking, `wrap` forces wrapping forms, `sat`
    // forces saturating forms. Integer lanes whose lane type carries a
@@ -782,6 +793,42 @@ class
       -> detail::simd_overflow_reference<T, Abi, overflow_policies::saturate>
       requires(is_integral<T> && !is_bool<T>);
 
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   undef() const&& noexcept
+      requires(is_integral<T> && !is_bool<T>)
+   {
+      using lane =
+         detail::rebind_overflow_policy<T, overflow_policies::undefined>::type;
+      using result =
+         simd<lane, typename abi_type::template make_abi_type<lane>>;
+      return result(__builtin_bit_cast(typename result::raw_type, this->raw));
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   wrap() const&& noexcept
+      requires(is_integral<T> && !is_bool<T>)
+   {
+      using lane =
+         detail::rebind_overflow_policy<T, overflow_policies::wrap>::type;
+      using result =
+         simd<lane, typename abi_type::template make_abi_type<lane>>;
+      return result(__builtin_bit_cast(typename result::raw_type, this->raw));
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   sat() const&& noexcept
+      requires(is_integral<T> && !is_bool<T>)
+   {
+      using lane =
+         detail::rebind_overflow_policy<T, overflow_policies::saturate>::type;
+      using result =
+         simd<lane, typename abi_type::template make_abi_type<lane>>;
+      return result(__builtin_bit_cast(typename result::raw_type, this->raw));
+   }
+
    constexpr auto
    precise() & noexcept
       -> detail::simd_precision_reference<simd, precision_policies::precise>
@@ -792,6 +839,20 @@ class
       simd const, precision_policies::precise>
       requires(is_floating_point<T>);
 
+   // An r-value is copied bit for bit into lanes with this precision policy.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   precise() const&& noexcept
+      requires(is_floating_point<T>)
+   {
+      using lane = basic_float<
+         raw_arithmetic_type<T>, precision_policies::precise,
+         lane_quantity_reference()>;
+      using result =
+         simd<lane, typename abi_type::template make_abi_type<lane>>;
+      return result(__builtin_bit_cast(typename result::raw_type, this->raw));
+   }
+
    constexpr auto
    fast() & noexcept
       -> detail::simd_precision_reference<simd, precision_policies::fast>
@@ -801,6 +862,20 @@ class
    fast() const& noexcept
       -> detail::simd_precision_reference<simd const, precision_policies::fast>
       requires(is_floating_point<T>);
+
+   // An r-value is copied bit for bit into lanes with this precision policy.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   fast() const&& noexcept
+      requires(is_floating_point<T>)
+   {
+      using lane = basic_float<
+         raw_arithmetic_type<T>, precision_policies::fast,
+         lane_quantity_reference()>;
+      using result =
+         simd<lane, typename abi_type::template make_abi_type<lane>>;
+      return result(__builtin_bit_cast(typename result::raw_type, this->raw));
+   }
 
    // TODO: These should be `friend`.
 

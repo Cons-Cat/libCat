@@ -23,8 +23,12 @@ inline constexpr precision_policies
 template <typename T, typename CharT>
 struct formatter;
 
+// The arithmetic interface generates this reference's operators from the hooks
+// below. Like every libCat arithmetic type, when both operands could provide an
+// operator, the left-hand operand's is selected.
 template <is_floating_point Float, precision_policies precision>
-class precision_reference {
+class precision_reference
+    : public arithmetic_interface<precision_reference<Float, precision>> {
  private:
    template <is_floating_point OtherFloat, precision_policies other_precision>
    friend class precision_reference;
@@ -43,6 +47,19 @@ class precision_reference {
 
    friend constexpr void
    operator&(precision_reference const volatile&&) = delete;
+
+   constexpr precision_reference(precision_reference const&) = default;
+
+   // Assigning another reference of this type writes its value through, as
+   // assigning a built-in reference does. `rebind()` changes the address.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator=(precision_reference const& other) noexcept -> precision_reference&
+      requires(!is_const<Float>)
+   {
+      *m_wrapped = *other.m_wrapped;
+      return *this;
+   }
 
    using float_type = __typeof_unqual(Float);
    using raw_type = __typeof_unqual(declval<Float>().raw);
@@ -88,7 +105,7 @@ class precision_reference {
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   precise() && noexcept -> basic_float<
+   precise() const&& noexcept -> basic_float<
       raw_type, precision_policies::precise, quantity_reference> {
       return basic_float<
          raw_type, precision_policies::precise, quantity_reference>(
@@ -111,7 +128,7 @@ class precision_reference {
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fast() && noexcept
+   fast() const&& noexcept
       -> basic_float<raw_type, precision_policies::fast, quantity_reference> {
       return basic_float<
          raw_type, precision_policies::fast, quantity_reference>(
@@ -119,7 +136,18 @@ class precision_reference {
       );
    }
 
+   // A reference converts implicitly into its own value with this policy, and
+   // explicitly into anything else.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr
+   operator auto() const noexcept {
+      return view();
+   }
+
    template <typename U>
+      requires(
+         !is_same<U, basic_float<raw_type, precision, quantity_reference>>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
    operator U() const noexcept {
@@ -161,13 +189,25 @@ class precision_reference {
       return lhs.view() == rhs.view();
    }
 
+   // Narrowing assignment is rejected, so compound assignments that promote
+   // are too.
    template <is_arithmetic U>
-      requires(is_safe_arithmetic_comparison<raw_type, U> && !is_const<Float>)
+      requires(
+         is_safe_arithmetic_comparison<raw_type, U>
+         && is_safe_arithmetic_conversion<raw_arithmetic_type<U>, raw_type>
+         && !is_const<Float>
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator=(U operand) noexcept -> precision_reference& {
       *m_wrapped = operand;
       return *this;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   negate() const noexcept {
+      return -view();
    }
 
    template <is_floating_point U>
@@ -259,147 +299,31 @@ class precision_reference {
    fma(U multiplier, V addend) const noexcept {
       return view().fma(multiplier, addend);
    }
-
-   template <typename U>
-      requires(requires(precision_reference lhs, U&& rhs) {
-                  lhs.add(static_cast<U&&>(rhs));
-               })
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator+(precision_reference lhs, U&& rhs) noexcept
-      -> decltype(lhs.add(static_cast<U&&>(rhs))) {
-      return lhs.add(static_cast<U&&>(rhs));
-   }
-
-   template <is_floating_point U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator+(U lhs, precision_reference rhs) noexcept
-      -> decltype(rhs.add(lhs)) {
-      return rhs.add(lhs);
-   }
-
-   template <typename U>
-      requires(requires(precision_reference lhs, U&& rhs) {
-                  lhs.subtract_by(static_cast<U&&>(rhs));
-               })
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator-(precision_reference lhs, U&& rhs) noexcept
-      -> decltype(lhs.subtract_by(static_cast<U&&>(rhs))) {
-      return lhs.subtract_by(static_cast<U&&>(rhs));
-   }
-
-   template <is_floating_point U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator-(U lhs, precision_reference rhs) noexcept
-      -> decltype(rhs.subtract_from(lhs)) {
-      return rhs.subtract_from(lhs);
-   }
-
-   template <typename U>
-      requires(requires(precision_reference lhs, U&& rhs) {
-                  lhs.multiply(static_cast<U&&>(rhs));
-               })
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator*(precision_reference lhs, U&& rhs) noexcept
-      -> decltype(lhs.multiply(static_cast<U&&>(rhs))) {
-      return lhs.multiply(static_cast<U&&>(rhs));
-   }
-
-   template <is_floating_point U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator*(U lhs, precision_reference rhs) noexcept
-      -> decltype(rhs.multiply(lhs)) {
-      return rhs.multiply(lhs);
-   }
-
-   template <typename U>
-      requires(requires(precision_reference lhs, U&& rhs) {
-                  lhs.divide_by(static_cast<U&&>(rhs));
-               })
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator/(precision_reference lhs, U&& rhs) noexcept
-      -> decltype(lhs.divide_by(static_cast<U&&>(rhs))) {
-      return lhs.divide_by(static_cast<U&&>(rhs));
-   }
-
-   template <is_floating_point U>
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   friend constexpr auto
-   operator/(U lhs, precision_reference rhs) noexcept
-      -> decltype(rhs.divide_into(lhs)) {
-      return rhs.divide_into(lhs);
-   }
-
-   template <is_arithmetic U>
-      requires(
-         !is_const<Float>
-         && is_same<
-            remove_cvref<
-               decltype(declval<precision_reference&>().add(declval<U>()))>,
-            basic_float<raw_type, precision, quantity_reference>>
-      )
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   operator+=(U operand) noexcept -> precision_reference& {
-      *this = add(operand);
-      return *this;
-   }
-
-   template <is_arithmetic U>
-      requires(
-         !is_const<Float>
-         && is_same<
-            remove_cvref<decltype(declval<precision_reference&>()
-                                     .subtract_by(declval<U>()))>,
-            basic_float<raw_type, precision, quantity_reference>>
-      )
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   operator-=(U operand) noexcept -> precision_reference& {
-      *this = subtract_by(operand);
-      return *this;
-   }
-
-   template <is_arithmetic U>
-      requires(
-         !is_const<Float>
-         && is_same<
-            remove_cvref<decltype(declval<precision_reference&>()
-                                     .multiply(declval<U>()))>,
-            basic_float<raw_type, precision, quantity_reference>>
-      )
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   operator*=(U operand) noexcept -> precision_reference& {
-      *this = multiply(operand);
-      return *this;
-   }
-
-   template <is_arithmetic U>
-      requires(
-         !is_const<Float>
-         && is_same<
-            remove_cvref<decltype(declval<precision_reference&>()
-                                     .divide_by(declval<U>()))>,
-            basic_float<raw_type, precision, quantity_reference>>
-      )
-   [[gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   operator/=(U operand) noexcept -> precision_reference& {
-      *this = divide_by(operand);
-      return *this;
-   }
 };
 
 // Implementing this here is a circular dependency. The implementation can be
 // found in <cat/arithmetic/implementations/format_precision_reference.tpp>.
 template <is_floating_point Float, precision_policies policy, typename CharT>
 struct formatter<precision_reference<Float, policy>, CharT>;
+
+// A reference is a floating-point number of the type it refers to, with its
+// own policy.
+namespace detail {
+template <is_floating_point Float, precision_policies policy>
+inline constexpr bool
+   is_arithmetic_reference<precision_reference<Float, policy>> = true;
+
+template <is_floating_point Float, precision_policies policy>
+inline constexpr bool
+   is_floating_point_detail<precision_reference<Float, policy>> = true;
+
+template <is_floating_point Float, precision_policies policy>
+inline constexpr bool is_signed_detail<precision_reference<Float, policy>> =
+   true;
+}  // namespace detail
+
+template <is_floating_point Float, precision_policies policy>
+inline constexpr precision_policies
+   make_precision_policy<precision_reference<Float, policy>> = policy;
 
 }  // namespace cat

@@ -2651,6 +2651,61 @@ $test(simd_precision_reference_rebind) {
    cat::verify(second[0u] == 11_f4);
 }
 
+// Assigning a reference of the same type writes through it. A policy accessor
+// on an r-value returns a copy whose lanes carry that policy.
+$test(simd_reference_assignment) {
+   int4x4 first = {1_i4, 2_i4, 3_i4, 4_i4};
+   int4x4 second = {10_i4, 20_i4, 30_i4, 40_i4};
+   first.sat() = second.sat();
+   cat::verify(first[0u] == 10_i4 && first[3u] == 40_i4);
+
+   float4x4 single = {1_f4, 2_f4, 3_f4, 4_f4};
+   float4x4 other_single = {5_f4, 6_f4, 7_f4, 8_f4};
+   single.fast() = other_single.fast();
+   cat::verify(single[0u] == 5_f4 && single[3u] == 8_f4);
+   float4x4 const constant_single = other_single;
+   static_assert(
+      !cat::is_assignable<
+         decltype(constant_single.fast())&, decltype(constant_single.fast())>
+   );
+
+   static_assert(
+      cat::is_same<__typeof_unqual(int4x4{}.sat()[0u]), cat::sat_int4>
+   );
+   static_assert(
+      cat::is_same<__typeof_unqual(int4x4{}.wrap()[0u]), cat::wrap_int4>
+   );
+   static_assert(
+      cat::is_same<__typeof_unqual(float4x4{}.fast()[0u]), float4_fast>
+   );
+   static_assert(
+      cat::is_same<
+         __typeof_unqual(cat::move(constant_single).precise()[0u]), float4>
+   );
+   int4x4 const maximum(cat::limits<int4>::max());
+   auto const saturated = int4x4(maximum).sat() + cat::sat_int4(1);
+   cat::verify(saturated[0u] == cat::limits<int4>::max());
+   auto const wrapped = int4x4(maximum).wrap() + cat::wrap_int4(1);
+   cat::verify(wrapped[0u] == cat::limits<int4>::min());
+
+   // A reference converts implicitly into its own value, and negates as it.
+   int4x4 most_negative(cat::limits<int4>::min());
+   using saturated_vector = __typeof_unqual(int4x4(most_negative).sat());
+   static_assert(cat::is_same<saturated_vector::value_type, cat::sat_int4>);
+   saturated_vector const saturated_copy = most_negative.sat();
+   cat::verify(saturated_copy[0u] == cat::limits<int4>::min());
+   static_assert(
+      cat::is_same<decltype(-most_negative.sat()), saturated_vector>
+   );
+   cat::verify((-most_negative.wrap())[0u] == cat::limits<int4>::min());
+   float4x4 halves(0.5_f4);
+   using fast_vector = __typeof_unqual(float4x4(halves).fast());
+   static_assert(cat::is_same<fast_vector::value_type, float4_fast>);
+   fast_vector const fast_copy = halves.fast();
+   cat::verify(fast_copy[0u] == 0.5_f4);
+   cat::verify((-halves.fast())[0u] == -0.5_f4);
+}
+
 $test(simd_overflow_reference_rebind) {
    int4x4 first = {1_i4, 2_i4, 3_i4, 4_i4};
    int4x4 second = {10_i4, 20_i4, 30_i4, 40_i4};

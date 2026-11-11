@@ -42,6 +42,18 @@ class overflow_reference
    friend constexpr void
    operator&(overflow_reference const volatile&&) = delete;
 
+   constexpr overflow_reference(overflow_reference const&) = default;
+
+   // Assign-through reference semantics.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   operator=(overflow_reference const& other) noexcept -> overflow_reference&
+      requires(!is_const<Int>)
+   {
+      *m_wrapped = *other.m_wrapped;
+      return *this;
+   }
+
    // Rebind this reference wrapper to a different address.
    constexpr void
    rebind(Int& w [[clang::lifetime_capture_by_this]]) noexcept {
@@ -80,24 +92,6 @@ class overflow_reference
          return basic_idx<overflow_policy>(m_wrapped->raw);
       } else {
          return basic_int<raw_type, overflow_policy, quantity_reference>(
-            m_wrapped->raw
-         );
-      }
-   }
-
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   view_undef_cmp() const noexcept {
-      if constexpr (detail::is_basic_intptr<wrapper_type>) {
-         using pointee = remove_pointer<typename wrapper_type::ptr>;
-         return basic_intptr<pointee, raw_type, overflow_policies::undefined>(
-            m_wrapped->raw
-         );
-      } else if constexpr (is_idx<wrapper_type>) {
-         return basic_idx<overflow_policies::undefined>(m_wrapped->raw);
-      } else {
-         return basic_int<
-            raw_type, overflow_policies::undefined, quantity_reference>(
             m_wrapped->raw
          );
       }
@@ -143,7 +137,7 @@ class overflow_reference
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && noexcept {
+   undef() const&& noexcept {
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::undefined>(
@@ -161,7 +155,7 @@ class overflow_reference
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && noexcept {
+   wrap() const&& noexcept {
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::wrap>(
@@ -179,7 +173,7 @@ class overflow_reference
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && noexcept {
+   sat() const&& noexcept {
       if constexpr (detail::is_basic_intptr<wrapper_type>) {
          using pointee = remove_pointer<typename wrapper_type::ptr>;
          return basic_intptr<pointee, raw_type, overflow_policies::saturate>(
@@ -344,8 +338,31 @@ class overflow_reference
       return view().bit_expand(view_type(mask));
    }
 
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   negate() const noexcept
+      requires(requires { -view(); })
+   {
+      return -view();
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr
+   operator auto() const noexcept {
+      return view();
+   }
+
    template <typename U>
-      requires(!detail::is_basic_intptr<wrapper_type> && !is_idx<wrapper_type>)
+      requires(
+         !is_same<
+            U, __typeof_unqual(declval<overflow_reference const&>().view())>
+         && !(
+            is_idx<wrapper_type>
+            && (is_same<U, __SIZE_TYPE__> || (is_integral<U> && is_signed<raw_arithmetic_type<U>>))
+         )
+         && !(detail::is_basic_intptr<wrapper_type> && is_integral<U>)
+         && requires(wrapper_type value) { static_cast<U>(value); }
+      )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
    operator U() const noexcept {
@@ -360,6 +377,19 @@ class overflow_reference
       } else {
          return static_cast<U>(*m_wrapped);
       }
+   }
+
+   // An integer reference to `basic_intptr` converts as `basic_intptr` does.
+   template <is_integral U>
+      requires(
+         detail::is_basic_intptr<wrapper_type>
+         && !is_same<
+            U, __typeof_unqual(declval<overflow_reference const&>().view())>
+      )
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr explicit(!is_safe_arithmetic_conversion<raw_type, U>)
+   operator U() const noexcept {
+      return static_cast<U>(view());
    }
 
    template <is_integral U>
@@ -383,7 +413,7 @@ class overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator<=>(U rhs) const noexcept {
-      return view_undef_cmp() <=> rhs;
+      return view() <=> rhs;
    }
 
    template <typename U>
@@ -456,7 +486,7 @@ class overflow_reference
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    operator<=>(U rhs) const noexcept {
-      return view_undef_cmp() <=> rhs;
+      return view() <=> rhs;
    }
 
    template <is_arithmetic U>
@@ -995,6 +1025,10 @@ class overflow_reference
       return view().bit_and(operand);
    }
 
+   template <typename OtherInt, overflow_policies other_policy>
+   auto bit_and(overflow_reference<OtherInt, other_policy>) const =
+      delete ("operator& cannot be given `cat::overflow_reference`!");
+
    template <typename U>
       requires(
          detail::is_basic_intptr<wrapper_type> && is_unsigned_integral<raw_type>
@@ -1026,6 +1060,10 @@ class overflow_reference
       return view().bit_or(operand);
    }
 
+   template <typename OtherInt, overflow_policies other_policy>
+   auto bit_or(overflow_reference<OtherInt, other_policy>) const =
+      delete ("operator| cannot be given `cat::overflow_reference`!");
+
    template <typename Self, typename U>
       requires(
          detail::is_basic_intptr<wrapper_type> && is_unsigned_integral<raw_type>
@@ -1056,6 +1094,10 @@ class overflow_reference
       -> basic_int<raw_type, overflow_policy, quantity_reference> {
       return view().bit_xor(operand);
    }
+
+   template <typename OtherInt, overflow_policies other_policy>
+   auto bit_xor(overflow_reference<OtherInt, other_policy>) const =
+      delete ("operator^ cannot be given `cat::overflow_reference`!");
 
    // `shift_left_by` forwarders. `basic_int` allows any integral storage
    // (signed << is the C++ arithmetic shift). `idx` always supports shifts via
@@ -1189,5 +1231,24 @@ class overflow_reference
 // found in <cat/arithmetic/implementations/format_overflow_reference.tpp>.
 template <typename Int, overflow_policies policy, typename CharT>
 struct formatter<overflow_reference<Int, policy>, CharT>;
+
+// A reference is an integer of the type it refers to, with its own policy.
+namespace detail {
+template <typename Int, overflow_policies policy>
+inline constexpr bool is_arithmetic_reference<overflow_reference<Int, policy>> =
+   true;
+
+template <typename Int, overflow_policies policy>
+inline constexpr bool is_integral_detail<overflow_reference<Int, policy>> =
+   is_integral_detail<remove_cv<Int>>;
+
+template <typename Int, overflow_policies policy>
+inline constexpr bool is_signed_detail<overflow_reference<Int, policy>> =
+   is_signed_detail<remove_cv<Int>>;
+}  // namespace detail
+
+template <typename Int, overflow_policies policy>
+inline constexpr overflow_policies
+   make_overflow_policy<overflow_reference<Int, policy>> = policy;
 
 }  // namespace cat

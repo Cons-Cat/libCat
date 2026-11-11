@@ -30,12 +30,18 @@ template <typename T>
 struct raw_arithmetic_type_trait<T> {
    using type = __UINTPTR_TYPE__;
 };
+
+// If `T` is `overflow_reference` or `precision_reference`.
+template <typename T>
+inline constexpr bool is_arithmetic_reference = false;
+
 }  // namespace detail
 
 // Unwraps libCat arithmetic wrappers, `cat::bool2`, and `cat::bool4` into their
 // `raw` values. The return type is explicit so that `raw_arithmetic_type` does
 // not instantiate this body, which cannot copy some types.
 template <typename T>
+   requires(!detail::is_arithmetic_reference<T>)
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_raw_arithmetic(T value) noexcept
@@ -52,7 +58,7 @@ make_raw_arithmetic(T value) noexcept
 // Unwraps libCat arithmetic wrappers, `cat::bool2`, and `cat::bool4` into their
 // `raw` types.
 template <typename T>
-using raw_arithmetic_type = decltype(make_raw_arithmetic(T{}));
+using raw_arithmetic_type = detail::raw_arithmetic_type_trait<T>::type;
 
 template <typename T>
 concept is_raw_arithmetic = is_same<T, raw_arithmetic_type<T>>;
@@ -448,8 +454,13 @@ namespace detail {
 // arithmetic wrapper specializations.
 template <typename T>
 struct integer_promotion_hierarchy {
-   static constexpr unsigned long order = sizeof(T);
+   static constexpr unsigned long order = sizeof(raw_arithmetic_type<T>);
 };
+
+// `overflow_reference` unwraps to participate in the same way as its `Int`.
+template <typename Int, overflow_policies policy>
+struct integer_promotion_hierarchy<overflow_reference<Int, policy>>
+    : integer_promotion_hierarchy<remove_cv<Int>> {};
 
 template <overflow_policies policy>
 struct integer_promotion_hierarchy<basic_idx<policy>> {
@@ -503,6 +514,27 @@ struct rebind_overflow_policy<
    using type = basic_intptr<T, Storage, new_policy>;
 };
 
+template <
+   typename Int, overflow_policies old_policy, overflow_policies new_policy>
+struct rebind_overflow_policy<overflow_reference<Int, old_policy>, new_policy>
+    : rebind_overflow_policy<remove_cv<Int>, new_policy> {};
+
+template <
+   typename Float, precision_policies precision, overflow_policies new_policy>
+struct rebind_overflow_policy<
+   precision_reference<Float, precision>, new_policy> {
+   using type = basic_float<
+      typename remove_cv<Float>::raw_type, precision,
+      remove_cv<Float>::quantity_reference>;
+};
+
+template <typename T>
+   requires(is_arithmetic_reference<T>)
+struct raw_arithmetic_type_trait<T> {
+   using type = raw_arithmetic_type_trait<
+      typename rebind_overflow_policy<T, make_overflow_policy<T>>::type>::type;
+};
+
 // `promoted_arithmetic` picks the result shape for a binary op. For `undefined`
 // LHS this is the wider of the two operands tagged with `left`'s policy, which
 // is what + and * need so the result has room for the worst case. For
@@ -544,6 +576,16 @@ using promoted_type =
 
 }  // namespace detail
 
+template <typename T>
+   requires(detail::is_arithmetic_reference<T>)
+[[gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_raw_arithmetic(T value) noexcept
+   -> detail::raw_arithmetic_type_trait<T>::type {
+   // Unwrap proxy references when passed into `make_raw_arithmetic()`.
+   return make_raw_arithmetic(value.operator auto());
+}
+
 // One-directional widening safety: every value of `From` can be exactly
 // represented in `To`. `raw_arithmetic_type` is needed here to prevent a
 // recursive constraint in evaluating the < operator inside `is_signed`.
@@ -562,13 +604,15 @@ concept is_safe_arithmetic_conversion =
            // every `From` value fits in `To`'s positive range.
            || (is_unsigned<raw_arithmetic_type<From>>
                && is_signed<raw_arithmetic_type<To>>
-               && (sizeof(From) < sizeof(To)))))
+               && (sizeof(raw_arithmetic_type<From>)
+                   < sizeof(raw_arithmetic_type<To>)))))
        // If only `To` is a float, it must be larger so that every value of the
        // integer type is exactly representable in the float's mantissa. This
        // mirrors the signed-strictly-larger-than-unsigned rule above. Float to
        // int is never considered a safe conversion.
        || (is_integral<From> && is_floating_point<To>
-           && (sizeof(From) < sizeof(To)))))
+           && (sizeof(raw_arithmetic_type<From>)
+               < sizeof(raw_arithmetic_type<To>)))))
    // A special-case exception must be made for `basic_idx` -> `iword`. This
    // doesn't work by default because they have different signed-ness. This is
    // only used for `undefined` overflow.
@@ -611,13 +655,13 @@ raw_source_fits_implicit_storage(U const& other) noexcept -> bool {
    using raw_value = __typeof_unqual(raw);
    if constexpr (is_floating_point<Dest>) {
       if constexpr (is_integral<raw_value>) {
-         // Integral to `float`. `implicit_raw_compare_wide` does not support
-         // `float` `Dest`.
-         Dest const fd = static_cast<Dest>(raw);
-         if (!is_finite(fd)) {
+         // Integral to `float`. `implicit_raw_compare_wide` does not support a
+         // `float` type `Dest`.
+         Dest const to = static_cast<Dest>(raw);
+         if (!is_finite(to)) {
             return false;
          }
-         return static_cast<U>(fd) == other;
+         return static_cast<raw_value>(to) == raw;
       }
       // Floating to floating in floating storage only, avoiding
       // `implicit_raw_compare_wide`.
@@ -1461,7 +1505,7 @@ class
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   precise() && noexcept
+   precise() const&& noexcept
       -> basic_float<raw_type, precision_policies::precise, quantity> {
       return basic_float<raw_type, precision_policies::precise, quantity>(raw);
    }
@@ -1476,7 +1520,7 @@ class
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fast() && noexcept
+   fast() const&& noexcept
       -> basic_float<raw_type, precision_policies::fast, quantity> {
       return basic_float<raw_type, precision_policies::fast, quantity>(raw);
    }
@@ -2462,6 +2506,10 @@ class
       return basic_int(raw & static_cast<T>(make_raw_arithmetic(operand)));
    }
 
+   template <typename OtherInt, overflow_policies other_policy>
+   auto bit_and(overflow_reference<OtherInt, other_policy>) const =
+      delete ("operator& cannot be given `cat::overflow_reference`!");
+
    template <typename U>
       requires(is_unsigned_integral<T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -2479,6 +2527,10 @@ class
       return basic_int(raw | static_cast<T>(make_raw_arithmetic(operand)));
    }
 
+   template <typename OtherInt, overflow_policies other_policy>
+   auto bit_or(overflow_reference<OtherInt, other_policy>) const =
+      delete ("operator| cannot be given `cat::overflow_reference`!");
+
    // Generate `operator^`. Wider-or-equal LHS unsigned only. See `bit_and`.
    template <is_unsigned_integral U>
       requires(is_unsigned_integral<T> && sizeof(T) >= sizeof(U))
@@ -2487,6 +2539,10 @@ class
    bit_xor(U operand) const noexcept -> basic_int {
       return basic_int(raw ^ static_cast<T>(make_raw_arithmetic(operand)));
    }
+
+   template <typename OtherInt, overflow_policies other_policy>
+   auto bit_xor(overflow_reference<OtherInt, other_policy>) const =
+      delete ("operator^ cannot be given `cat::overflow_reference`!");
 
    // Count zero bits from the most significant bit.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -2679,7 +2735,8 @@ class
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && noexcept -> basic_int<T, overflow_policies::undefined, quantity> {
+   undef() const&& noexcept
+      -> basic_int<T, overflow_policies::undefined, quantity> {
       return basic_int<T, overflow_policies::undefined, quantity>(raw);
    }
 
@@ -2693,7 +2750,7 @@ class
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && noexcept -> basic_int<T, overflow_policies::wrap, quantity> {
+   wrap() const&& noexcept -> basic_int<T, overflow_policies::wrap, quantity> {
       return basic_int<T, overflow_policies::wrap, quantity>(raw);
    }
 
@@ -2708,7 +2765,8 @@ class
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && noexcept -> basic_int<T, overflow_policies::saturate, quantity> {
+   sat() const&& noexcept
+      -> basic_int<T, overflow_policies::saturate, quantity> {
       return basic_int<T, overflow_policies::saturate, quantity>(raw);
    }
 
@@ -3492,7 +3550,7 @@ basic_intptr :
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && noexcept
+   undef() const&& noexcept
       -> basic_intptr<T, Storage, overflow_policies::undefined> {
       return basic_intptr<T, Storage, overflow_policies::undefined>(raw);
    }
@@ -3507,7 +3565,8 @@ basic_intptr :
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && noexcept -> basic_intptr<T, Storage, overflow_policies::wrap> {
+   wrap() const&& noexcept
+      -> basic_intptr<T, Storage, overflow_policies::wrap> {
       return basic_intptr<T, Storage, overflow_policies::wrap>(raw);
    }
 
@@ -3522,7 +3581,8 @@ basic_intptr :
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && noexcept -> basic_intptr<T, Storage, overflow_policies::saturate> {
+   sat() const&& noexcept
+      -> basic_intptr<T, Storage, overflow_policies::saturate> {
       return basic_intptr<T, Storage, overflow_policies::saturate>(raw);
    }
 
@@ -4093,7 +4153,7 @@ basic_idx :
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   undef() && noexcept -> basic_idx<overflow_policies::undefined> {
+   undef() const&& noexcept -> basic_idx<overflow_policies::undefined> {
       return basic_idx<overflow_policies::undefined>(raw);
    }
 
@@ -4107,7 +4167,7 @@ basic_idx :
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   wrap() && noexcept -> basic_idx<overflow_policies::wrap> {
+   wrap() const&& noexcept -> basic_idx<overflow_policies::wrap> {
       return basic_idx<overflow_policies::wrap>(raw);
    }
 
@@ -4121,7 +4181,7 @@ basic_idx :
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   sat() && noexcept -> basic_idx<overflow_policies::saturate> {
+   sat() const&& noexcept -> basic_idx<overflow_policies::saturate> {
       return basic_idx<overflow_policies::saturate>(raw);
    }
 
