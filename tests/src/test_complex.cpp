@@ -673,7 +673,13 @@ $test(complex_precision_policies) {
    static_assert(cat::conj(a).real() == 1.0);
    static_assert(cat::conj(a).imag() == -2.0);
    static_assert(cat::is_same<decltype(cat::conj(a)), complex_float8_fast>);
-   static_assert(cat::is_same<decltype(a.precise()), complex_float8>);
+   static_assert(
+      cat::is_same<
+         decltype(a.precise()),
+         cat::complex_precision_reference<
+            complex_float8_fast const, cat::precision_policies::precise>>
+   );
+   static_assert(cat::is_same<decltype(a.precise() + a), complex_float8>);
    static_assert(
       cat::is_same<
          decltype(complex_float8{1.0 + 2.0i}.fast()), complex_float8_fast>
@@ -2223,4 +2229,157 @@ $test(complex_math_pow_edges) {
          );
       }
    }
+}
+
+// The policy accessors of an l-value return proxy references to it, as they do
+// for `basic_int` and `basic_float`. An r-value returns a copy instead.
+$test(complex_policy_references) {
+   using cat::int1;
+   complex_int1 value(int1(100), int1(-100));
+   complex_int1 const constant = value;
+   static_assert(cat::is_same<
+                 decltype(value.sat()),
+                 cat::complex_overflow_reference<
+                    complex_int1, cat::overflow_policies::saturate>>);
+   static_assert(cat::is_same<
+                 decltype(constant.wrap()),
+                 cat::complex_overflow_reference<
+                    complex_int1 const, cat::overflow_policies::wrap>>);
+   static_assert(
+      cat::is_same<decltype(complex_int1{}.sat()), sat_complex_int1>
+   );
+   static_assert(
+      cat::is_same<decltype(cat::move(value.wrap()).sat()), sat_complex_int1>
+   );
+
+   // Arithmetic reads the wrapped value with the reference's policy, and the
+   // left operand's policy is kept.
+   static_assert(cat::is_same<decltype(value.sat() + value), sat_complex_int1>);
+   static_assert(cat::is_same<decltype(value + value.sat()), complex_int1>);
+   static_assert(
+      cat::is_same<decltype(value.sat() * value.wrap()), sat_complex_int1>
+   );
+   cat::verify(value.sat() + value == sat_complex_int1(int1(127), int1(-128)));
+   cat::verify(value.wrap() + value == wrap_complex_int1(int1(-56), int1(56)));
+   cat::verify(-value.sat() == sat_complex_int1(int1(-100), int1(100)));
+   cat::verify(value.sat() == value && value == value.wrap());
+   cat::verify(value.sat().real() == cat::sat_int1(100));
+
+   // Compound assignment writes through the reference.
+   value.sat() += value;
+   cat::verify(value == complex_int1(int1(127), int1(-128)));
+   value.wrap() -= complex_int1(int1(1), int1(1));
+   cat::verify(value == complex_int1(int1(126), int1(127)));
+   value.sat() *= 2;
+   cat::verify(value == complex_int1(int1(127), int1(127)));
+   // A reference's own accessors rebind it to another policy.
+   auto saturating = value.wrap();
+   saturating.sat() /= complex_int1(int1(0), int1(1));
+   cat::verify(value == complex_int1(int1(127), int1(-127)));
+   static_assert(
+      !cat::is_add_assignable<decltype(constant.sat()), complex_int1>
+   );
+
+   complex_float8 number{1.0 + 2.0i};
+   static_assert(cat::is_same<
+                 decltype(number.fast()),
+                 cat::complex_precision_reference<
+                    complex_float8, cat::precision_policies::fast>>);
+   static_assert(
+      cat::is_same<decltype(number.fast() * 2.0), complex_float8_fast>
+   );
+   static_assert(
+      cat::is_same<decltype(number.fast().precise() + 1.0), complex_float8>
+   );
+   number.fast() *= 2.0;
+   cat::verify(number == complex_float8{2.0 + 4.0i});
+   number.fast() += number.precise();
+   cat::verify(number == complex_float8{4.0 + 8.0i});
+}
+
+// Assigning a reference of the same type writes through it. A reference to
+// `const` cannot be assigned, and an r-value, `const` or not, gives a copy.
+$test(complex_reference_assignment) {
+   using cat::int1;
+   complex_int1 first(int1(1), int1(2));
+   complex_int1 second(int1(3), int1(4));
+   auto first_ref = first.sat();
+   first_ref = second.sat();
+   cat::verify(first == second);
+   first.wrap() = complex_int1(int1(5), int1(6)).wrap();
+   cat::verify(first == complex_int1(int1(5), int1(6)));
+   complex_float8 number{1.0 + 2.0i};
+   complex_float8 const other_number{3.0 + 4.0i};
+   number.fast() = other_number.fast();
+   cat::verify(number == other_number);
+
+   complex_int1 const constant = first;
+   static_assert(
+      cat::is_assignable<decltype(first.sat())&, decltype(first.sat())>
+   );
+   static_assert(
+      !cat::is_assignable<decltype(constant.sat())&, decltype(constant.sat())>
+   );
+   static_assert(
+      !cat::is_assignable<
+         decltype(other_number.fast())&, decltype(other_number.fast())>
+   );
+
+   static_assert(
+      cat::is_same<decltype(cat::move(constant).sat()), sat_complex_int1>
+   );
+   static_assert(
+      cat::is_same<
+         decltype(cat::move(other_number).fast()), complex_float8_fast>
+   );
+   // An r-value copy keeps the parts bit for bit.
+   constexpr complex_int1 most_negative(int1(-128), int1(127));
+   static_assert(
+      complex_int1(most_negative).sat()
+      == sat_complex_int1(cat::sat_int1(-128), cat::sat_int1(127))
+   );
+}
+
+// A reference converts implicitly into its own value with its policy and
+// explicitly into anything that value converts into. The `<cat/math>`
+// functions, `cat::conj()`, structured bindings, and `cat::fmt()` accept it as
+// a complex number with its policy.
+$test(complex_reference_as_value) {
+   using cat::int1;
+   complex_int1 value(int1(1), int1(-2));
+   complex_float8 number{0.0 + 0.0i};
+   sat_complex_int1 const saturated = value.sat();
+   complex_float8_fast const fast = number.fast();
+   cat::verify(saturated == value && fast == number);
+   static_assert(!cat::is_convertible<decltype(value.sat()), complex_int1>);
+   static_assert(cat::is_constructible<complex_int1, decltype(value.sat())>);
+   static_assert(cat::is_complex<decltype(number.fast())>);
+
+   static_assert(
+      cat::is_same<decltype(cat::conj(value.sat())), sat_complex_int1>
+   );
+   cat::verify(
+      cat::conj(value.sat())
+      == sat_complex_int1(cat::sat_int1(1), cat::sat_int1(2))
+   );
+   static_assert(
+      cat::is_same<decltype(cat::exp(number.fast())), complex_float8_fast>
+   );
+   cat::verify(cat::exp(number.fast()) == complex_float8{1.0 + 0.0i});
+   cat::verify(cat::abs(number.fast()) == 0.0);
+
+   auto [real, imag] = value.sat();
+   static_assert(cat::is_same<decltype(real), cat::sat_int1>);
+   cat::verify(real == 1 && imag == -2);
+
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
+   $defer {
+      g_tests_alloc.free(page);
+   };
+   auto allocator = cat::make_allocator_linear(page);
+   complex_float8 printed{1.5 + 2.5i};
+   cat::verify(
+      cat::fmt(allocator, "{} {}", value.sat(), printed.fast()).verify()
+      == "1 - 2i 1.5E0 + 2.5E0i"
+   );
 }

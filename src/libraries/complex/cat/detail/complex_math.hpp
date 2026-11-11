@@ -37,6 +37,13 @@ struct complex_class_trait<T> {
    using type = complex<__typeof_unqual(__real declval<T&>())>;
 };
 
+// A complex proxy reference is its value with the reference's policy.
+template <typename T>
+   requires(is_complex_reference<T>)
+struct complex_class_trait<T> {
+   using type = complex_reference_view<T>;
+};
+
 template <typename T>
 using complex_class = complex_class_trait<__typeof_unqual(T)>::type;
 

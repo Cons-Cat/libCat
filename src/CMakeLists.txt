@@ -370,6 +370,9 @@ set(CAT_HEADER_FILES
   ${CATLIB}/arithmetic/cat/arithmetic_interface
   ${CATLIB}/complex/cat/complex
   ${CATLIB}/complex/cat/detail/complex_math.hpp
+  ${CATLIB}/complex/cat/detail/complex_overflow_reference.hpp
+  ${CATLIB}/complex/cat/detail/complex_precision_reference.hpp
+  ${CATLIB}/complex/cat/detail/complex_reference.hpp
   ${CATLIB}/complex/implementations/format_complex.tpp
   ${CATLIB}/quantity/cat/quantity
   ${CATLIB}/quantity/cat/physical_quantities

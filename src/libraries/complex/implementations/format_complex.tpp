@@ -108,4 +108,33 @@ struct formatter<basic_complex_float<T, precision, quantity>, CharT>
    }
 };
 
+// A proxy reference formats as its value.
+template <typename Complex, precision_policies precision, typename CharT>
+struct formatter<complex_precision_reference<Complex, precision>, CharT>
+    : formatter_base<CharT> {
+   auto
+   format(
+      complex_precision_reference<Complex, precision> const& value,
+      format_context& context
+   ) const -> scaredy_format<void> {
+      using view = detail::complex_reference_view<__typeof_unqual(value)>;
+      view const temporary = value;
+      return detail::format_complex<view, CharT>(temporary, context);
+   }
+};
+
+template <typename Complex, overflow_policies overflow_policy, typename CharT>
+struct formatter<complex_overflow_reference<Complex, overflow_policy>, CharT>
+    : formatter_base<CharT> {
+   auto
+   format(
+      complex_overflow_reference<Complex, overflow_policy> const& value,
+      format_context& context
+   ) const -> scaredy_format<void> {
+      using view = detail::complex_reference_view<__typeof_unqual(value)>;
+      view const temporary = value;
+      return detail::format_complex<view, CharT>(temporary, context);
+   }
+};
+
 }  // namespace cat

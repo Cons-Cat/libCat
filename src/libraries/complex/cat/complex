@@ -104,6 +104,40 @@ template <
    requires(detail::is_complex_float_component<T>)
 class basic_complex_float;
 
+// Proxy references returned by the policy accessors of `basic_complex_float`
+// and `basic_complex_int`, defined in
+// <cat/detail/complex_precision_reference.hpp> and
+// <cat/detail/complex_overflow_reference.hpp>.
+template <typename Complex, precision_policies precision>
+class complex_precision_reference;
+
+template <typename Complex, overflow_policies overflow_policy>
+class complex_overflow_reference;
+
+namespace detail {
+template <typename T>
+inline constexpr bool is_complex_reference = false;
+
+// The value a complex proxy reference refers to, with the reference's policy.
+// Each reference specializes this.
+template <typename T>
+struct complex_reference_view_trait;
+
+template <typename T>
+using complex_reference_view = complex_reference_view_trait<T>::type;
+
+// Complex proxy references are complex numbers to `cat::is_complex` and the
+// `<cat/math>` functions.
+template <typename Complex, precision_policies precision>
+inline constexpr bool
+   is_complex_detail<complex_precision_reference<Complex, precision>> = true;
+
+template <typename Complex, overflow_policies overflow_policy>
+inline constexpr bool
+   is_complex_detail<complex_overflow_reference<Complex, overflow_policy>> =
+      true;
+}  // namespace detail
+
 inline namespace arithmetic {
 // These share `cat::arithmetic` with `cat::int4`, `cat::float8`, and so on.
 using complex_int1 =
@@ -860,7 +894,11 @@ class complex_parts {
    norm() const noexcept {
       using result =
          rebind_quantity_type<Value, multiply_quantity<Value, Value>{}>;
-      return result(complex_operations_for<Derived>::norm(load()));
+      return result(
+         complex_operations_for<Derived>::norm(
+            complex_in_raw<component>(self())
+         )
+      );
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -962,15 +1000,6 @@ class complex_parts {
       }
    }
 
- protected:
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   load() const noexcept -> complex_raw<component> {
-      return make_complex_raw<component>(
-         make_raw_arithmetic(m_real), make_raw_arithmetic(m_imag)
-      );
-   }
-
  private:
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -1056,6 +1085,77 @@ class
       !is_convertible<typename U::value_type, value_type>
    ) basic_complex_int(U other) noexcept
        : parts(value_type(other.real()), value_type(other.imag())) {
+   }
+
+   constexpr auto
+   undef() & noexcept [[clang::lifetimebound]] -> complex_overflow_reference<
+      basic_complex_int, overflow_policies::undefined> {
+      return complex_overflow_reference<
+         basic_complex_int, overflow_policies::undefined>(*this);
+   }
+
+   constexpr auto
+   undef() const& noexcept [[clang::lifetimebound]]
+   -> complex_overflow_reference<
+      basic_complex_int const, overflow_policies::undefined> {
+      return complex_overflow_reference<
+         basic_complex_int const, overflow_policies::undefined>(*this);
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   undef() const&& noexcept
+      -> basic_complex_int<T, overflow_policies::undefined, quantity> {
+      return basic_complex_int<T, overflow_policies::undefined, quantity>(
+         detail::complex_in_raw<T>(*this)
+      );
+   }
+
+   constexpr auto
+   wrap() & noexcept [[clang::lifetimebound]]
+   -> complex_overflow_reference<basic_complex_int, overflow_policies::wrap> {
+      return complex_overflow_reference<
+         basic_complex_int, overflow_policies::wrap>(*this);
+   }
+
+   constexpr auto
+   wrap() const& noexcept [[clang::lifetimebound]]
+   -> complex_overflow_reference<
+      basic_complex_int const, overflow_policies::wrap> {
+      return complex_overflow_reference<
+         basic_complex_int const, overflow_policies::wrap>(*this);
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   wrap() const&& noexcept
+      -> basic_complex_int<T, overflow_policies::wrap, quantity> {
+      return basic_complex_int<T, overflow_policies::wrap, quantity>(
+         detail::complex_in_raw<T>(*this)
+      );
+   }
+
+   constexpr auto
+   sat() & noexcept [[clang::lifetimebound]] -> complex_overflow_reference<
+      basic_complex_int, overflow_policies::saturate> {
+      return complex_overflow_reference<
+         basic_complex_int, overflow_policies::saturate>(*this);
+   }
+
+   constexpr auto
+   sat() const& noexcept [[clang::lifetimebound]] -> complex_overflow_reference<
+      basic_complex_int const, overflow_policies::saturate> {
+      return complex_overflow_reference<
+         basic_complex_int const, overflow_policies::saturate>(*this);
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   sat() const&& noexcept
+      -> basic_complex_int<T, overflow_policies::saturate, quantity> {
+      return basic_complex_int<T, overflow_policies::saturate, quantity>(
+         detail::complex_in_raw<T>(*this)
+      );
    }
 };
 
@@ -1145,21 +1245,51 @@ class
        : parts(value_type(other.real()), value_type(other.imag())) {
    }
 
-   [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   precise() const noexcept
-      -> basic_complex_float<T, precision_policies::precise, quantity> {
-      return basic_complex_float<T, precision_policies::precise, quantity>(
-         this->load()
-      );
+   precise() & noexcept [[clang::lifetimebound]] -> complex_precision_reference<
+      basic_complex_float, precision_policies::precise> {
+      return complex_precision_reference<
+         basic_complex_float, precision_policies::precise>(*this);
+   }
+
+   constexpr auto
+   precise() const& noexcept [[clang::lifetimebound]]
+   -> complex_precision_reference<
+      basic_complex_float const, precision_policies::precise> {
+      return complex_precision_reference<
+         basic_complex_float const, precision_policies::precise>(*this);
    }
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   fast() const noexcept
+   precise() const&& noexcept
+      -> basic_complex_float<T, precision_policies::precise, quantity> {
+      return basic_complex_float<T, precision_policies::precise, quantity>(
+         detail::complex_in_raw<T>(*this)
+      );
+   }
+
+   constexpr auto
+   fast() & noexcept [[clang::lifetimebound]] -> complex_precision_reference<
+      basic_complex_float, precision_policies::fast> {
+      return complex_precision_reference<
+         basic_complex_float, precision_policies::fast>(*this);
+   }
+
+   constexpr auto
+   fast() const& noexcept [[clang::lifetimebound]]
+   -> complex_precision_reference<
+      basic_complex_float const, precision_policies::fast> {
+      return complex_precision_reference<
+         basic_complex_float const, precision_policies::fast>(*this);
+   }
+
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   fast() const&& noexcept
       -> basic_complex_float<T, precision_policies::fast, quantity> {
       return basic_complex_float<T, precision_policies::fast, quantity>(
-         this->load()
+         detail::complex_in_raw<T>(*this)
       );
    }
 };
@@ -1173,10 +1303,10 @@ basic_complex_float(
 // precision policy and the quantity are unchanged. The imaginary part is
 // negated with that policy.
 template <typename T>
-   requires(detail::is_basic_complex<T>)
+   requires(detail::is_basic_complex<T> || detail::is_complex_reference<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-conj(T value) noexcept -> T {
+conj(T const& value) noexcept {
    return value.conjugate();
 }
 
@@ -1251,7 +1381,11 @@ using complex = detail::complex_alias<remove_cvref<T>, policy>::type;
 // Structured bindings find this `get` by ADL. The reference category follows
 // the argument: lvalue, const lvalue, rvalue, and const rvalue.
 template <idx index, typename Complex>
-   requires(detail::is_basic_complex<remove_cvref<Complex>> && index.raw < 2u)
+   requires(
+      (detail::is_basic_complex<remove_cvref<Complex>>
+       || detail::is_complex_reference<remove_cvref<Complex>>)
+      && index.raw < 2u
+   )
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 get(Complex&& object [[clang::lifetimebound]]) noexcept -> decltype(auto) {
@@ -1270,20 +1404,34 @@ template <
    typename T, precision_policies precision, auto quantity, typename CharT>
 struct formatter<basic_complex_float<T, precision, quantity>, CharT>;
 
+template <typename Complex, precision_policies precision, typename CharT>
+struct formatter<complex_precision_reference<Complex, precision>, CharT>;
+
+template <typename Complex, overflow_policies overflow_policy, typename CharT>
+struct formatter<complex_overflow_reference<Complex, overflow_policy>, CharT>;
+
 }  // namespace cat
 
 // Tuple protocol:
 // `std::tuple_size`/`tuple_element` for generic code, index access via
 // `cat::get()`. Index 0 is the real part and 1 is the imaginary part.
+namespace cat::detail {
+// A complex proxy reference's elements are its parts' values with the
+// reference's policy.
+template <typename T>
+concept is_complex_tuple = is_basic_complex<__typeof_unqual(T)>
+                           || is_complex_reference<__typeof_unqual(T)>;
+}  // namespace cat::detail
+
 namespace std {
 
 template <typename T>
-   requires(::cat::detail::is_basic_complex<__typeof_unqual(T)>)
+   requires(::cat::detail::is_complex_tuple<T>)
 // NOLINTNEXTLINE
 struct tuple_size<T> : ::cat::constant<2uz> {};
 
 template <__SIZE_TYPE__ index, typename T>
-   requires(::cat::detail::is_basic_complex<__typeof_unqual(T)>)
+   requires(::cat::detail::is_complex_tuple<T>)
 // NOLINTNEXTLINE
 struct tuple_element<index, T> {
    static_assert(index < 2u, "Index in a libCat complex is out of bounds!");
@@ -1294,3 +1442,5 @@ struct tuple_element<index, T> {
 }  // namespace std
 
 #include <cat/detail/complex_math.hpp>
+#include <cat/detail/complex_overflow_reference.hpp>
+#include <cat/detail/complex_precision_reference.hpp>
