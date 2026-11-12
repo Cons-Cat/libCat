@@ -9,7 +9,7 @@ It has type-safe arithmetic, SIMD, fast syscalls, CRTP interfaces,
 
 * Building
 libCat requires a recent development version of Clang from the =main= branch. This is hosted
-in [[https://github.com/Cons-Cat/llvm-project][my LLVM fork]] and updated periodically.
+in [[https://github.com/Cons-Cat/llvm-project/tree/lilian][my LLVM fork]] and updated periodically.
 
 =mise= can be used to fetch an appropriate version. This also installs =just=, recent
 versions of build tools, and sets =CMAKE_GENERATOR=Ninja Multi-Config= by default, but setting
