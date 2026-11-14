@@ -116,3 +116,20 @@ $test(allocator_linear) {
    // TODO: Test multi allocations.
    // TODO: Test inline multi allocations.
 }
+
+$test(allocator_linear_align_floor) {
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(64u).verify();
+   $defer {
+      g_tests_alloc.free(page);
+   };
+   cat::is_allocator auto allocator = cat::make_allocator_linear(page);
+
+   // Misalign the bump pointer, then request less than `alignof(int8)`.
+   auto _ = allocator.alloc<cat::byte>().verify();
+   cat::span<int8> values = allocator.align_alloc_multi<int8>(1u, 2u).verify();
+   cat::verify(cat::is_aligned(values.data(), alignof(int8)));
+   int8* p_value = allocator.align_alloc<int8>(1u).verify();
+   cat::verify(cat::is_aligned(p_value, alignof(int8)));
+   int8* p_uninit = allocator.align_salloc_uninit<int8>(1u).verify().first();
+   cat::verify(cat::is_aligned(p_uninit, alignof(int8)));
+}

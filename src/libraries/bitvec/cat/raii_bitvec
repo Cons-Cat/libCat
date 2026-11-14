@@ -713,20 +713,22 @@ class [[gsl::Owner]] basic_bitvec
 };
 
 template <is_allocator Allocator = allocator_dyn, vec_flags flags = {}>
-using bitvec = basic_bitvec<Allocator, vec_flags::inline_storage(1u) | flags>;
+using bitvec =
+   basic_bitvec<Allocator, container_flags::inline_storage(1u) | flags>;
 
 template <is_allocator Allocator = allocator_dyn, vec_flags flags = {}>
 using bitvec_fixed = basic_bitvec<
-   Allocator, vec_flags::inline_storage(1u) | vec_flags::fixed_size | flags>;
+   Allocator,
+   container_flags::inline_storage(1u) | vec_flags::fixed_size | flags>;
 
 template <is_allocator Allocator, idx inline_count, vec_flags flags = {}>
 using bitvec_small = basic_bitvec<
    Allocator,
-   vec_flags::inline_storage(div_ceil(inline_count, word_bits)) | flags>;
+   container_flags::inline_storage(div_ceil(inline_count, word_bits)) | flags>;
 
 template <is_allocator Allocator, idx inline_count, vec_flags flags = {}>
 using bitvec_small_fixed = basic_bitvec<
-   Allocator, vec_flags::inline_storage(div_ceil(inline_count, word_bits))
+   Allocator, container_flags::inline_storage(div_ceil(inline_count, word_bits))
                  | vec_flags::fixed_size
                  | flags>;
 
@@ -767,8 +769,9 @@ template <idx inline_count, is_allocator Allocator, vec_flags flags = {}>
    allocator_ref<Allocator> allocator, idx count, bit_value value
 ) -> maybe<bitvec_small<Allocator, inline_count, flags>> {
    return raii::make_bitvec_filled<
-      Allocator, vec_flags::inline_storage(div_ceil(inline_count, word_bits))
-                    | flags>(allocator, count, value);
+      Allocator,
+      container_flags::inline_storage(div_ceil(inline_count, word_bits))
+         | flags>(allocator, count, value);
 }
 
 template <idx inline_count, vec_flags flags = {}>
@@ -928,8 +931,9 @@ template <
 ) -> maybe<bitvec_small<Allocator, inline_count, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_filled_random<
-      Allocator, vec_flags::inline_storage(div_ceil(inline_count, word_bits))
-                    | flags>(allocator, count, $fwd(generator));
+      Allocator,
+      container_flags::inline_storage(div_ceil(inline_count, word_bits))
+         | flags>(allocator, count, $fwd(generator));
 }
 
 template <
@@ -945,9 +949,8 @@ template <
    );
    return raii::make_bitvec_small_filled_random<
       inline_count, Allocator,
-      vec_flags::inline_storage(div_ceil(inline_count, word_bits)) | flags>(
-      allocator, count, $fwd(generator), $fwd(distribution)
-   );
+      container_flags::inline_storage(div_ceil(inline_count, word_bits))
+         | flags>(allocator, count, $fwd(generator), $fwd(distribution));
 }
 
 template <idx inline_count, vec_flags flags = {}, typename Generator>

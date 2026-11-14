@@ -95,23 +95,23 @@ $test(str_vec_character_aliases) {
    static_assert(
       cat::is_same<
          cat::u8str_vec, cat::basic_str_vec<
-                            char8_t, cat::vec_flags::inline_storage(22u)
+                            char8_t, cat::container_flags::inline_storage(22u)
                                         | cat::vec_flags::pointer_size_layout>>
    );
    static_assert(cat::is_same<
                  cat::zu16str_vec,
                  cat::basic_str_vec<
                     char16_t, cat::str_flags::null_terminated
-                                 | cat::vec_flags::inline_storage(22u)
+                                 | cat::container_flags::inline_storage(22u)
                                  | cat::vec_flags::pointer_size_layout>>);
    static_assert(
       cat::is_same<
          cat::raii::u32str_vec<
-            cat::allocator_dyn, cat::vec_flags::inline_storage(8u)
+            cat::allocator_dyn, cat::container_flags::inline_storage(8u)
                                    | cat::vec_flags::pointer_size_layout>,
          cat::raii::basic_str_vec<
             char32_t,
-            cat::vec_flags::inline_storage(8u)
+            cat::container_flags::inline_storage(8u)
                | cat::vec_flags::pointer_size_layout,
             cat::allocator_dyn>>
    );
@@ -119,7 +119,7 @@ $test(str_vec_character_aliases) {
       cat::is_same<
          cat::raii::u8str_vec<>, cat::raii::basic_str_vec<
                                     char8_t,
-                                    cat::vec_flags::inline_storage(22u)
+                                    cat::container_flags::inline_storage(22u)
                                        | cat::vec_flags::pointer_size_layout,
                                     cat::allocator_dyn>>
    );
@@ -129,7 +129,7 @@ $test(str_vec_character_aliases) {
                     char32_t,
                     cat::str_flags::null_terminated
                        | cat::vec_flags::fixed_size
-                       | cat::vec_flags::inline_storage(22u)
+                       | cat::container_flags::inline_storage(22u)
                        | cat::vec_flags::pointer_size_layout,
                     cat::allocator_dyn>>);
 

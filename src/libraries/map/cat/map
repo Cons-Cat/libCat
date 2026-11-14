@@ -75,6 +75,28 @@
 
 namespace cat::detail {
 
+// A map's `container_flags` apply to its group storage. Only `basic_vec` can be
+// rebound with them, so other `Container`s must not request an alignment.
+template <typename Container, map_flags flags>
+struct map_storage_trait {
+   static_assert(
+      flags.container.minimum_alignment == 1u,
+      "`map_flags` alignment requires a `basic_vec` `Container`!"
+   );
+   using type = Container;
+};
+
+template <typename Group, vec_flags vector_flags, map_flags flags>
+struct map_storage_trait<basic_vec<Group, vector_flags>, flags> {
+   using type = basic_vec<
+      Group,
+      vector_flags
+         | container_flags::alignment(flags.container.minimum_alignment)>;
+};
+
+template <typename Container, map_flags flags>
+using map_storage = map_storage_trait<Container, flags>::type;
+
 // Storage for one entry that is not constructed until it is inserted.
 // A `union` lets us skip initializing preemptively.
 // TODO: Remove the constructor and destructors once Clang implements P3074.
@@ -252,14 +274,15 @@ template <
    map_flags flags = {}>
 using map = basic_map<
    // TODO: Select a smarter inline storage size.
-   Key, T, Hash, KeyEqual, Container, map_flags::inline_storage(4u) | flags>;
+   Key, T, Hash, KeyEqual, Container,
+   container_flags::inline_storage(4u) | flags>;
 
 template <typename Key, typename T, idx inline_count, map_flags flags = {}>
 using map_small = basic_map<
    Key, T, __typeof_unqual(hash),
    detail::binary_comparator<detail::equal_to_op>,
    vec_big<detail::map_group<Key, T>>,
-   map_flags::inline_storage(inline_count) | flags>;
+   container_flags::inline_storage(inline_count) | flags>;
 
 template <
    typename Key, typename T, typename Hash = __typeof_unqual(hash),
@@ -566,7 +589,9 @@ class [[gsl::Owner]] map_base {
    // Moving a map only moves its groups' pointer, which cannot throw unless
    // `Container` stores groups inline.
    static constexpr bool moves_groups_by_pointer =
-      requires { requires Container::flags.inline_storage_count == 0u; };
+      requires {
+         requires Container::flags.container.inline_storage_count == 0u;
+      };
 
    // `Hash` and `KeyEqual` move first, so that if either throws, `other` is
    // left intact. A moved-from map is empty, so it may be inserted into again.
@@ -884,16 +909,19 @@ class
         map_big<Key, T, Hash, KeyEqual, Container, configuration>
      ),
      gsl::Owner]]
-   basic_map : public detail::map_base<Key, T, Hash, KeyEqual, Container> {
+   basic_map : public detail::map_base<
+                  Key, T, Hash, KeyEqual,
+                  detail::map_storage<Container, configuration>> {
+   using base = detail::map_base<
+      Key, T, Hash, KeyEqual, detail::map_storage<Container, configuration>>;
+
  public:
    static constexpr map_flags flags = configuration;
 
    constexpr basic_map() = default;
 
    constexpr explicit basic_map(Hash hash, KeyEqual key_equal = {})
-       : detail::map_base<Key, T, Hash, KeyEqual, Container>(
-            move(hash), move(key_equal)
-         ) {
+       : base(move(hash), move(key_equal)) {
    }
 };
 

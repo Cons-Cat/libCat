@@ -77,11 +77,14 @@ using vec_fixed =
    basic_vec<T, detail::vec_alias_flags<T, vec_flags::fixed_size | flags>()>;
 
 template <typename T, idx inline_count, vec_flags flags = {}>
-using vec_small = basic_vec<T, vec_flags::inline_storage(inline_count) | flags>;
+using vec_small =
+   basic_vec<T, container_flags::inline_storage(inline_count) | flags>;
 
 template <typename T, idx inline_count, vec_flags flags = {}>
 using vec_small_fixed = basic_vec<
-   T, vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+   T, container_flags::inline_storage(inline_count)
+         | vec_flags::fixed_size
+         | flags>;
 
 template <typename T, vec_flags flags = {}>
 using vec_big = basic_vec<T, vec_flags::initial_growth(4u) | flags>;
@@ -119,7 +122,8 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       is_same<remove_cvref<T>, T>, "`T` must not be cvref-qualified!"
    );
    static_assert(
-      flags.inline_storage_count == 0u || flags.initial_growth_count == 0u,
+      flags.container.inline_storage_count == 0u
+         || flags.initial_growth_count == 0u,
       "`inline_storage()` and `initial_growth()` cannot be combined!"
    );
 
@@ -180,7 +184,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       if consteval {
          if (data() != nullptr) {
             std::allocator<T> allocator;
-            allocator.deallocate(data(), capacity().raw);
+            allocator.deallocate(data(), capacity());
          }
       } else {
          m_storage.disarm_inline();
@@ -665,10 +669,11 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    internal_allocate(allocator_ref<Allocator> allocator, idx minimum_capacity)
       -> maybe<tuple<span<T>, idx>> {
       if constexpr (detail::vec_storage<T, flags>::is_inline) {
-         auto [handle, allocation_bytes] = $prop(
-            (allocator.template inline_salloc_multi_uninit<
-               T, flags.inline_storage_count * sizeof(T)>(minimum_capacity))
-         );
+         auto [handle, allocation_bytes] =
+            $prop((allocator.template inline_align_salloc_multi_uninit<
+                   T, flags.container.inline_storage_count * sizeof(T)>(
+               flags.container.minimum_alignment, minimum_capacity
+            )));
 
          m_storage.m_handle = move(handle);
          m_storage.m_has_handle = true;
@@ -678,7 +683,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
             allocation_bytes,
          };
       } else {
-         return allocator.template salloc_multi_uninit<T>(minimum_capacity);
+         return allocator.template align_salloc_multi_uninit<T>(
+            flags.container.minimum_alignment, minimum_capacity
+         );
       }
    }
 
@@ -714,7 +721,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       constexpr idx configured_initial_capacity =
          flags.initial_growth_count == 0u ? 4u : flags.initial_growth_count;
       constexpr idx initial_capacity = detail::vec_storage<T, flags>::is_inline
-                                          ? flags.inline_storage_count
+                                          ? flags.container.inline_storage_count
                                           : configured_initial_capacity;
 
       return max(max(capacity() * 2u, initial_capacity), minimum_capacity);
@@ -779,10 +786,11 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       idx const new_size = size() + gap_count;
       // Allocate manually because unused capacity must remain uninitialized.
       if constexpr (detail::vec_storage<T, flags>::is_inline) {
-         auto [new_handle, allocation_bytes] = $prop(
-            (allocator.template inline_salloc_multi_uninit<
-               T, flags.inline_storage_count * sizeof(T)>(minimum_capacity))
-         );
+         auto [new_handle, allocation_bytes] =
+            $prop((allocator.template inline_align_salloc_multi_uninit<
+                   T, flags.container.inline_storage_count * sizeof(T)>(
+               flags.container.minimum_alignment, minimum_capacity
+            )));
 
          if (new_handle.is_inline()) {
             // Moving a handle copies its inline bytes, so inline elements are
@@ -819,7 +827,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
          );
       } else {
          auto [alloc_span, alloc_bytes] =
-            $prop(allocator.template salloc_multi_uninit<T>(minimum_capacity));
+            $prop(allocator.template align_salloc_multi_uninit<T>(
+               flags.container.minimum_alignment, minimum_capacity
+            ));
 
          relocate_around_gap(
             alloc_span.data(), gap_position, gap_count, fill_gap, [&] {
@@ -2028,7 +2038,7 @@ template <
    allocator_ref<Allocator> allocator, idx count, T const& value
 ) -> maybe<vec_small<T, inline_count, flags>> {
    return make_vec_filled<
-      T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
+      T, Allocator, container_flags::inline_storage(inline_count) | flags>(
       allocator, count, value
    );
 }
@@ -2204,7 +2214,7 @@ template <
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
    return make_vec_filled_random<
-      T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
+      T, Allocator, container_flags::inline_storage(inline_count) | flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -2222,7 +2232,7 @@ template <
          T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    return make_vec_filled_random<
-      T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
+      T, Allocator, container_flags::inline_storage(inline_count) | flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }

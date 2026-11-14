@@ -70,15 +70,15 @@ namespace detail {
 inline constexpr str_vec_flags path_default_flags =
    str_flags::null_terminated
    | vec_flags::pointer_size_layout
-   | vec_flags::inline_storage(256u);
+   | container_flags::inline_storage(256u);
 
 // Path storage always reserves one character for its null terminator.
 [[nodiscard]]
 constexpr auto
 path_initial_capacity(str_vec_flags flags) noexcept -> idx {
    vec_flags const vector = (path_default_flags | flags).vec;
-   return vector.inline_storage_count != 0u
-             ? idx(vector.inline_storage_count - 1u)
+   return vector.container.inline_storage_count != 0u
+             ? idx(vector.container.inline_storage_count - 1u)
              : vector.initial_growth_count;
 }
 
@@ -466,10 +466,11 @@ class [[clang::preferred_name(file_path), gsl::Owner]]
 basic_file_path : public container_interface<basic_file_path<flags>, char>,
                   public random_access_stepanov_iterable_interface<char> {
  private:
-   static constexpr str_vec_flags m_flags = str_flags::null_terminated
-                                            | vec_flags::pointer_size_layout
-                                            | vec_flags::inline_storage(256u)
-                                            | flags;
+   static constexpr str_vec_flags m_flags =
+      str_flags::null_terminated
+      | vec_flags::pointer_size_layout
+      | container_flags::inline_storage(256u)
+      | flags;
 
    static_assert(m_flags.str.is_null_terminated);
    static_assert(m_flags.vec.uses_pointer_size_layout);

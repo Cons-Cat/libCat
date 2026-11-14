@@ -73,74 +73,77 @@ template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec =
-   basic_str_vec<char, vec_flags::inline_storage(22u) | flags, Allocator>;
+   basic_str_vec<char, container_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec = basic_str_vec<
-   char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+   char,
+   str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using u8str_vec =
-   basic_str_vec<char8_t, vec_flags::inline_storage(22u) | flags, Allocator>;
+using u8str_vec = basic_str_vec<
+   char8_t, container_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu8str_vec = basic_str_vec<
-   char8_t, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+   char8_t,
+   str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using u16str_vec =
-   basic_str_vec<char16_t, vec_flags::inline_storage(22u) | flags, Allocator>;
+using u16str_vec = basic_str_vec<
+   char16_t, container_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu16str_vec = basic_str_vec<
    char16_t,
-   str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+   str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using u32str_vec =
-   basic_str_vec<char32_t, vec_flags::inline_storage(22u) | flags, Allocator>;
+using u32str_vec = basic_str_vec<
+   char32_t, container_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu32str_vec = basic_str_vec<
    char32_t,
-   str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+   str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
-using wstr_vec =
-   basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags, Allocator>;
+using wstr_vec = basic_str_vec<
+   wchar_t, container_flags::inline_storage(22u) | flags, Allocator>;
 
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wzstr_vec = basic_str_vec<
-   wchar_t, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+   wchar_t,
+   str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec_fixed = basic_str_vec<
-   char, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
+   char, vec_flags::fixed_size | container_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
@@ -150,7 +153,7 @@ using zstr_vec_fixed = basic_str_vec<
    char,
    str_flags::null_terminated
       | vec_flags::fixed_size
-      | vec_flags::inline_storage(22u)
+      | container_flags::inline_storage(22u)
       | flags,
    Allocator>;
 
@@ -158,7 +161,8 @@ template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u8str_vec_fixed = basic_str_vec<
-   char8_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
+   char8_t,
+   vec_flags::fixed_size | container_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
@@ -168,7 +172,7 @@ using zu8str_vec_fixed = basic_str_vec<
    char8_t,
    str_flags::null_terminated
       | vec_flags::fixed_size
-      | vec_flags::inline_storage(22u)
+      | container_flags::inline_storage(22u)
       | flags,
    Allocator>;
 
@@ -176,7 +180,8 @@ template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u16str_vec_fixed = basic_str_vec<
-   char16_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
+   char16_t,
+   vec_flags::fixed_size | container_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
@@ -186,7 +191,7 @@ using zu16str_vec_fixed = basic_str_vec<
    char16_t,
    str_flags::null_terminated
       | vec_flags::fixed_size
-      | vec_flags::inline_storage(22u)
+      | container_flags::inline_storage(22u)
       | flags,
    Allocator>;
 
@@ -194,7 +199,8 @@ template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u32str_vec_fixed = basic_str_vec<
-   char32_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
+   char32_t,
+   vec_flags::fixed_size | container_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
@@ -204,7 +210,7 @@ using zu32str_vec_fixed = basic_str_vec<
    char32_t,
    str_flags::null_terminated
       | vec_flags::fixed_size
-      | vec_flags::inline_storage(22u)
+      | container_flags::inline_storage(22u)
       | flags,
    Allocator>;
 
@@ -212,7 +218,8 @@ template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec_fixed = basic_str_vec<
-   wchar_t, vec_flags::fixed_size | vec_flags::inline_storage(22u) | flags,
+   wchar_t,
+   vec_flags::fixed_size | container_flags::inline_storage(22u) | flags,
    Allocator>;
 
 template <
@@ -222,7 +229,7 @@ using wzstr_vec_fixed = basic_str_vec<
    wchar_t,
    str_flags::null_terminated
       | vec_flags::fixed_size
-      | vec_flags::inline_storage(22u)
+      | container_flags::inline_storage(22u)
       | flags,
    Allocator>;
 
@@ -230,70 +237,80 @@ template <
    is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec_small = basic_str_vec<
-   char, vec_flags::inline_storage(inline_count) | flags, Allocator>;
+   char, container_flags::inline_storage(inline_count) | flags, Allocator>;
 
 template <
    is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec_small = basic_str_vec<
    char,
-   str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
+   str_flags::null_terminated
+      | container_flags::inline_storage(inline_count)
+      | flags,
    Allocator>;
 
 template <
    is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u8str_vec_small = basic_str_vec<
-   char8_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
+   char8_t, container_flags::inline_storage(inline_count) | flags, Allocator>;
 
 template <
    is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu8str_vec_small = basic_str_vec<
    char8_t,
-   str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
+   str_flags::null_terminated
+      | container_flags::inline_storage(inline_count)
+      | flags,
    Allocator>;
 
 template <
    is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u16str_vec_small = basic_str_vec<
-   char16_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
+   char16_t, container_flags::inline_storage(inline_count) | flags, Allocator>;
 
 template <
    is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu16str_vec_small = basic_str_vec<
    char16_t,
-   str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
+   str_flags::null_terminated
+      | container_flags::inline_storage(inline_count)
+      | flags,
    Allocator>;
 
 template <
    is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u32str_vec_small = basic_str_vec<
-   char32_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
+   char32_t, container_flags::inline_storage(inline_count) | flags, Allocator>;
 
 template <
    is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu32str_vec_small = basic_str_vec<
    char32_t,
-   str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
+   str_flags::null_terminated
+      | container_flags::inline_storage(inline_count)
+      | flags,
    Allocator>;
 
 template <
    is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec_small = basic_str_vec<
-   wchar_t, vec_flags::inline_storage(inline_count) | flags, Allocator>;
+   wchar_t, container_flags::inline_storage(inline_count) | flags, Allocator>;
 
 template <
    is_allocator Allocator, idx inline_count,
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wzstr_vec_small = basic_str_vec<
    wchar_t,
-   str_flags::null_terminated | vec_flags::inline_storage(inline_count) | flags,
+   str_flags::null_terminated
+      | container_flags::inline_storage(inline_count)
+      | flags,
    Allocator>;
 
 template <
@@ -301,7 +318,9 @@ template <
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec_small_fixed = basic_str_vec<
    char,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
+   container_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags,
    Allocator>;
 
 template <
@@ -310,8 +329,8 @@ template <
 using zstr_vec_small_fixed = basic_str_vec<
    char,
    str_flags::null_terminated
-      | vec_flags::inline_storage(inline_count)
-      | vec_flags::inline_storage(inline_count)
+      | container_flags::inline_storage(inline_count)
+      | container_flags::inline_storage(inline_count)
       | vec_flags::fixed_size
       | flags,
    Allocator>;
@@ -321,7 +340,9 @@ template <
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u8str_vec_small_fixed = basic_str_vec<
    char8_t,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
+   container_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags,
    Allocator>;
 
 template <
@@ -330,8 +351,8 @@ template <
 using zu8str_vec_small_fixed = basic_str_vec<
    char8_t,
    str_flags::null_terminated
-      | vec_flags::inline_storage(inline_count)
-      | vec_flags::inline_storage(inline_count)
+      | container_flags::inline_storage(inline_count)
+      | container_flags::inline_storage(inline_count)
       | vec_flags::fixed_size
       | flags,
    Allocator>;
@@ -341,7 +362,9 @@ template <
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u16str_vec_small_fixed = basic_str_vec<
    char16_t,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
+   container_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags,
    Allocator>;
 
 template <
@@ -350,8 +373,8 @@ template <
 using zu16str_vec_small_fixed = basic_str_vec<
    char16_t,
    str_flags::null_terminated
-      | vec_flags::inline_storage(inline_count)
-      | vec_flags::inline_storage(inline_count)
+      | container_flags::inline_storage(inline_count)
+      | container_flags::inline_storage(inline_count)
       | vec_flags::fixed_size
       | flags,
    Allocator>;
@@ -361,7 +384,9 @@ template <
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using u32str_vec_small_fixed = basic_str_vec<
    char32_t,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
+   container_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags,
    Allocator>;
 
 template <
@@ -370,8 +395,8 @@ template <
 using zu32str_vec_small_fixed = basic_str_vec<
    char32_t,
    str_flags::null_terminated
-      | vec_flags::inline_storage(inline_count)
-      | vec_flags::inline_storage(inline_count)
+      | container_flags::inline_storage(inline_count)
+      | container_flags::inline_storage(inline_count)
       | vec_flags::fixed_size
       | flags,
    Allocator>;
@@ -381,7 +406,9 @@ template <
    str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec_small_fixed = basic_str_vec<
    wchar_t,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags,
+   container_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags,
    Allocator>;
 
 template <
@@ -390,8 +417,8 @@ template <
 using wzstr_vec_small_fixed = basic_str_vec<
    wchar_t,
    str_flags::null_terminated
-      | vec_flags::inline_storage(inline_count)
-      | vec_flags::inline_storage(inline_count)
+      | container_flags::inline_storage(inline_count)
+      | container_flags::inline_storage(inline_count)
       | vec_flags::fixed_size
       | flags,
    Allocator>;
@@ -1200,7 +1227,7 @@ make_str_vec(
    Strings const&... strings
 ) noexcept -> maybe<raii::str_vec<Allocator, flags>> {
    return detail::make_raii_str_vec<
-      char, vec_flags::inline_storage(22u) | flags, Allocator>(
+      char, container_flags::inline_storage(22u) | flags, Allocator>(
       allocator, first, second, strings...
    );
 }
@@ -1229,7 +1256,8 @@ make_zstr_vec(
    Strings const&... strings
 ) noexcept -> maybe<raii::zstr_vec<Allocator, flags>> {
    return detail::make_raii_str_vec<
-      char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+      char,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
       Allocator>(allocator, first, second, strings...);
 }
 
@@ -1257,7 +1285,7 @@ make_wstr_vec(
    Strings const&... strings
 ) noexcept -> maybe<raii::wstr_vec<Allocator, flags>> {
    return detail::make_raii_str_vec<
-      wchar_t, vec_flags::inline_storage(22u) | flags, Allocator>(
+      wchar_t, container_flags::inline_storage(22u) | flags, Allocator>(
       allocator, first, second, strings...
    );
 }
@@ -1287,7 +1315,7 @@ make_wzstr_vec(
 ) noexcept -> maybe<raii::wzstr_vec<Allocator, flags>> {
    return detail::make_raii_str_vec<
       wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
       Allocator>(allocator, first, second, strings...);
 }
 

@@ -55,13 +55,13 @@ template <
    typename Container = vec_big<detail::map_group<Key, monostate_type>>,
    map_flags flags = {}>
 using set = basic_set<
-   Key, Hash, KeyEqual, Container, map_flags::inline_storage(4u) | flags>;
+   Key, Hash, KeyEqual, Container, container_flags::inline_storage(4u) | flags>;
 
 template <typename Key, idx inline_count, map_flags flags = {}>
 using set_small = basic_set<
    Key, __typeof_unqual(hash), detail::binary_comparator<detail::equal_to_op>,
    vec_big<detail::map_group<Key, monostate_type>>,
-   map_flags::inline_storage(inline_count) | flags>;
+   container_flags::inline_storage(inline_count) | flags>;
 
 template <
    typename Key, typename Hash = __typeof_unqual(hash),
@@ -150,16 +150,19 @@ class
         set_big<Key, Hash, KeyEqual, Container, configuration>
      ),
      gsl::Owner]]
-   basic_set : public detail::set_base<Key, Hash, KeyEqual, Container> {
+   basic_set
+    : public detail::set_base<
+         Key, Hash, KeyEqual, detail::map_storage<Container, configuration>> {
+   using base = detail::set_base<
+      Key, Hash, KeyEqual, detail::map_storage<Container, configuration>>;
+
  public:
    static constexpr map_flags flags = configuration;
 
    constexpr basic_set() = default;
 
    constexpr explicit basic_set(Hash hash, KeyEqual key_equal = {})
-       : detail::set_base<Key, Hash, KeyEqual, Container>(
-            move(hash), move(key_equal)
-         ) {
+       : base(move(hash), move(key_equal)) {
    }
 };
 

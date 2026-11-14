@@ -1024,7 +1024,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_nalloc(ualign alignment) -> maybe_non_zero<idx> {
-      return this->self().allocation_bytes(alignment, sizeof(T));
+      return this->self().allocation_bytes(
+         max(alignment, ualign(alignof(T))), sizeof(T)
+      );
    }
 
    // Get the number of bytes that allocating a `T` with an alignment guarantee
@@ -1033,7 +1035,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_xnalloc(ualign alignment) -> idx {
-      return this->self().allocation_bytes(alignment, sizeof(T)).value();
+      return this->self()
+         .allocation_bytes(max(alignment, ualign(alignof(T))), sizeof(T))
+         .value();
    }
 
    // Try to get the number of bytes that allocating a `T` with no alignment
@@ -1060,7 +1064,9 @@ class allocator_interface {
    [[nodiscard]]
    constexpr auto
    align_nalloc_multi(ualign alignment, idx count) -> maybe_non_zero<idx> {
-      return this->self().allocation_bytes(alignment, count * sizeof(T));
+      return this->self().allocation_bytes(
+         max(alignment, ualign(alignof(T))), count * sizeof(T)
+      );
    }
 
    // Get the number of bytes that allocating an array of `T` with an alignment
@@ -1070,7 +1076,9 @@ class allocator_interface {
    constexpr auto
    align_xnalloc_multi(ualign alignment, idx count) -> idx {
       return this->self()
-         .allocation_bytes(alignment, count * sizeof(T))
+         .allocation_bytes(
+            max(alignment, ualign(alignof(T))), count * sizeof(T)
+         )
          .value();
    }
 
@@ -1135,7 +1143,9 @@ class allocator_interface {
    constexpr auto
    inline_align_nalloc(ualign alignment) -> maybe_non_zero<idx> {
       if constexpr (sizeof(T) > inline_size) {
-         return this->self().allocation_bytes(alignment, sizeof(T));
+         return this->self().allocation_bytes(
+            max(alignment, ualign(alignof(T))), sizeof(T)
+         );
       } else {
          return inline_size;
       }
@@ -1176,7 +1186,9 @@ class allocator_interface {
    inline_align_nalloc_multi(ualign alignment, idx count)
       -> maybe_non_zero<idx> {
       if (count * sizeof(T) > inline_size) {
-         return this->self().allocation_bytes(alignment, count * sizeof(T));
+         return this->self().allocation_bytes(
+            max(alignment, ualign(alignof(T))), count * sizeof(T)
+         );
       }
       return inline_size;
    }

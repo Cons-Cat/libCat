@@ -2,30 +2,23 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/arithmetic>
+#include <cat/detail/container_flags.hpp>
 
 namespace cat {
 
 struct map_flags {
-   idx const inline_storage_count = 0u;
+   container_flags const container = {};
 
-   [[nodiscard]]
-   static constexpr auto
-   inline_storage(idx count) -> map_flags {
-      return map_flags{
-         .inline_storage_count = count,
-      };
+   constexpr map_flags() = default;
+
+   constexpr map_flags(container_flags flags) noexcept
+       : container(move(flags)) {
    }
 
    [[nodiscard]]
    friend constexpr auto
-   operator|(map_flags left, map_flags right) -> map_flags {
-      // Favor the right side.
-      return map_flags{
-         .inline_storage_count = right.inline_storage_count != 0u
-                                    ? right.inline_storage_count
-                                    : left.inline_storage_count,
-      };
+   operator|(map_flags left, map_flags right) noexcept -> map_flags {
+      return map_flags{left.container | right.container};
    }
 };
 

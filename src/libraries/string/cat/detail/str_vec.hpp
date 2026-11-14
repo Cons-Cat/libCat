@@ -78,223 +78,236 @@ template <typename CharT, str_vec_flags flags = vec_flags::pointer_size_layout>
 class basic_str_vec;
 
 using str_vec = basic_str_vec<
-   char, vec_flags::inline_storage(22u) | vec_flags::pointer_size_layout>;
+   char, container_flags::inline_storage(22u) | vec_flags::pointer_size_layout>;
 using zstr_vec = basic_str_vec<
    char, str_flags::null_terminated
-            | vec_flags::inline_storage(22u)
+            | container_flags::inline_storage(22u)
             | vec_flags::pointer_size_layout>;
 using u8str_vec = basic_str_vec<
-   char8_t, vec_flags::inline_storage(22u) | vec_flags::pointer_size_layout>;
+   char8_t,
+   container_flags::inline_storage(22u) | vec_flags::pointer_size_layout>;
 using zu8str_vec = basic_str_vec<
    char8_t, str_flags::null_terminated
-               | vec_flags::inline_storage(22u)
+               | container_flags::inline_storage(22u)
                | vec_flags::pointer_size_layout>;
 using u16str_vec = basic_str_vec<
-   char16_t, vec_flags::inline_storage(22u) | vec_flags::pointer_size_layout>;
+   char16_t,
+   container_flags::inline_storage(22u) | vec_flags::pointer_size_layout>;
 using zu16str_vec = basic_str_vec<
    char16_t, str_flags::null_terminated
-                | vec_flags::inline_storage(22u)
+                | container_flags::inline_storage(22u)
                 | vec_flags::pointer_size_layout>;
 using u32str_vec = basic_str_vec<
-   char32_t, vec_flags::inline_storage(22u) | vec_flags::pointer_size_layout>;
+   char32_t,
+   container_flags::inline_storage(22u) | vec_flags::pointer_size_layout>;
 using zu32str_vec = basic_str_vec<
    char32_t, str_flags::null_terminated
-                | vec_flags::inline_storage(22u)
+                | container_flags::inline_storage(22u)
                 | vec_flags::pointer_size_layout>;
 using wstr_vec = basic_str_vec<
-   wchar_t, vec_flags::inline_storage(22u) | vec_flags::pointer_size_layout>;
+   wchar_t,
+   container_flags::inline_storage(22u) | vec_flags::pointer_size_layout>;
 using wzstr_vec = basic_str_vec<
    wchar_t, str_flags::null_terminated
-               | vec_flags::inline_storage(22u)
+               | container_flags::inline_storage(22u)
                | vec_flags::pointer_size_layout>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec_fixed = basic_str_vec<
-   char, vec_flags::inline_storage(22u) | vec_flags::fixed_size | flags>;
+   char, container_flags::inline_storage(22u) | vec_flags::fixed_size | flags>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec_fixed = basic_str_vec<
    char, str_flags::null_terminated
-            | vec_flags::inline_storage(22u)
+            | container_flags::inline_storage(22u)
             | vec_flags::fixed_size
             | flags>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using u8str_vec_fixed = basic_str_vec<
-   char8_t, vec_flags::inline_storage(22u) | vec_flags::fixed_size | flags>;
+   char8_t,
+   container_flags::inline_storage(22u) | vec_flags::fixed_size | flags>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu8str_vec_fixed = basic_str_vec<
    char8_t, str_flags::null_terminated
-               | vec_flags::inline_storage(22u)
+               | container_flags::inline_storage(22u)
                | vec_flags::fixed_size
                | flags>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using u16str_vec_fixed = basic_str_vec<
-   char16_t, vec_flags::inline_storage(22u) | vec_flags::fixed_size | flags>;
+   char16_t,
+   container_flags::inline_storage(22u) | vec_flags::fixed_size | flags>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu16str_vec_fixed = basic_str_vec<
    char16_t, str_flags::null_terminated
-                | vec_flags::inline_storage(22u)
+                | container_flags::inline_storage(22u)
                 | vec_flags::fixed_size
                 | flags>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using u32str_vec_fixed = basic_str_vec<
-   char32_t, vec_flags::inline_storage(22u) | vec_flags::fixed_size | flags>;
+   char32_t,
+   container_flags::inline_storage(22u) | vec_flags::fixed_size | flags>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu32str_vec_fixed = basic_str_vec<
    char32_t, str_flags::null_terminated
-                | vec_flags::inline_storage(22u)
+                | container_flags::inline_storage(22u)
                 | vec_flags::fixed_size
                 | flags>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec_fixed = basic_str_vec<
-   wchar_t, vec_flags::inline_storage(22u) | vec_flags::fixed_size | flags>;
+   wchar_t,
+   container_flags::inline_storage(22u) | vec_flags::fixed_size | flags>;
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 using wzstr_vec_fixed = basic_str_vec<
    wchar_t, str_flags::null_terminated
-               | vec_flags::inline_storage(22u)
+               | container_flags::inline_storage(22u)
                | vec_flags::fixed_size
                | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec_small =
-   basic_str_vec<char, vec_flags::inline_storage(inline_count) | flags>;
+   basic_str_vec<char, container_flags::inline_storage(inline_count) | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec_small = basic_str_vec<
    char, str_flags::null_terminated
-            | vec_flags::inline_storage(inline_count)
+            | container_flags::inline_storage(inline_count)
             | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
-using u8str_vec_small =
-   basic_str_vec<char8_t, vec_flags::inline_storage(inline_count) | flags>;
+using u8str_vec_small = basic_str_vec<
+   char8_t, container_flags::inline_storage(inline_count) | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu8str_vec_small = basic_str_vec<
    char8_t, str_flags::null_terminated
-               | vec_flags::inline_storage(inline_count)
+               | container_flags::inline_storage(inline_count)
                | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
-using u16str_vec_small =
-   basic_str_vec<char16_t, vec_flags::inline_storage(inline_count) | flags>;
+using u16str_vec_small = basic_str_vec<
+   char16_t, container_flags::inline_storage(inline_count) | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu16str_vec_small = basic_str_vec<
    char16_t, str_flags::null_terminated
-                | vec_flags::inline_storage(inline_count)
+                | container_flags::inline_storage(inline_count)
                 | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
-using u32str_vec_small =
-   basic_str_vec<char32_t, vec_flags::inline_storage(inline_count) | flags>;
+using u32str_vec_small = basic_str_vec<
+   char32_t, container_flags::inline_storage(inline_count) | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu32str_vec_small = basic_str_vec<
    char32_t, str_flags::null_terminated
-                | vec_flags::inline_storage(inline_count)
+                | container_flags::inline_storage(inline_count)
                 | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
-using wstr_vec_small =
-   basic_str_vec<wchar_t, vec_flags::inline_storage(inline_count) | flags>;
+using wstr_vec_small = basic_str_vec<
+   wchar_t, container_flags::inline_storage(inline_count) | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using wzstr_vec_small = basic_str_vec<
    wchar_t, str_flags::null_terminated
-               | vec_flags::inline_storage(inline_count)
+               | container_flags::inline_storage(inline_count)
                | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using str_vec_small_fixed = basic_str_vec<
-   char,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+   char, container_flags::inline_storage(inline_count)
+            | vec_flags::fixed_size
+            | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using zstr_vec_small_fixed = basic_str_vec<
    char, str_flags::null_terminated
-            | vec_flags::inline_storage(inline_count)
-            | vec_flags::inline_storage(inline_count)
+            | container_flags::inline_storage(inline_count)
+            | container_flags::inline_storage(inline_count)
             | vec_flags::fixed_size
             | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using u8str_vec_small_fixed = basic_str_vec<
-   char8_t,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+   char8_t, container_flags::inline_storage(inline_count)
+               | vec_flags::fixed_size
+               | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu8str_vec_small_fixed = basic_str_vec<
    char8_t, str_flags::null_terminated
-               | vec_flags::inline_storage(inline_count)
-               | vec_flags::inline_storage(inline_count)
+               | container_flags::inline_storage(inline_count)
+               | container_flags::inline_storage(inline_count)
                | vec_flags::fixed_size
                | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using u16str_vec_small_fixed = basic_str_vec<
-   char16_t,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+   char16_t, container_flags::inline_storage(inline_count)
+                | vec_flags::fixed_size
+                | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu16str_vec_small_fixed = basic_str_vec<
    char16_t, str_flags::null_terminated
-                | vec_flags::inline_storage(inline_count)
-                | vec_flags::inline_storage(inline_count)
+                | container_flags::inline_storage(inline_count)
+                | container_flags::inline_storage(inline_count)
                 | vec_flags::fixed_size
                 | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using u32str_vec_small_fixed = basic_str_vec<
-   char32_t,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+   char32_t, container_flags::inline_storage(inline_count)
+                | vec_flags::fixed_size
+                | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using zu32str_vec_small_fixed = basic_str_vec<
    char32_t, str_flags::null_terminated
-                | vec_flags::inline_storage(inline_count)
-                | vec_flags::inline_storage(inline_count)
+                | container_flags::inline_storage(inline_count)
+                | container_flags::inline_storage(inline_count)
                 | vec_flags::fixed_size
                 | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using wstr_vec_small_fixed = basic_str_vec<
-   wchar_t,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+   wchar_t, container_flags::inline_storage(inline_count)
+               | vec_flags::fixed_size
+               | flags>;
 
 template <
    idx inline_count, str_vec_flags flags = vec_flags::pointer_size_layout>
 using wzstr_vec_small_fixed = basic_str_vec<
    wchar_t, str_flags::null_terminated
-               | vec_flags::inline_storage(inline_count)
-               | vec_flags::inline_storage(inline_count)
+               | container_flags::inline_storage(inline_count)
+               | container_flags::inline_storage(inline_count)
                | vec_flags::fixed_size
                | flags>;
 
@@ -1080,8 +1093,8 @@ template <
 constexpr auto
 make_str_vec(allocator_ref<Allocator> allocator, str_view string) noexcept(
    !__has_feature(cxx_exceptions)
-) -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
-   basic_str_vec<char, vec_flags::inline_storage(22u) | flags> new_string;
+) -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
+   basic_str_vec<char, container_flags::inline_storage(22u) | flags> new_string;
    $prop(new_string.reserve(
       allocator, max(string.size(), new_string.flags.vec.initial_growth_count)
    ));
@@ -1093,7 +1106,7 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec(allocator_dyn allocator, str_view string) noexcept
-   -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
+   -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
    return make_str_vec<allocator_dyn, flags>(allocator, string);
 }
 
@@ -1105,10 +1118,12 @@ make_zstr_vec(allocator_ref<Allocator> allocator, str_view string) noexcept(
    !__has_feature(cxx_exceptions)
 )
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    basic_str_vec<
-      char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      char,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string;
    $prop(new_string.reserve(
       allocator, max(string.size(), new_string.flags.vec.initial_growth_count)
@@ -1122,8 +1137,9 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 constexpr auto
 make_zstr_vec(allocator_dyn allocator, str_view string) noexcept
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    return make_zstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
@@ -1133,8 +1149,11 @@ template <
 constexpr auto
 make_wstr_vec(allocator_ref<Allocator> allocator, wstr_view string) noexcept(
    !__has_feature(cxx_exceptions)
-) -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
-   basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags> new_string;
+)
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
+   basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>
+      new_string;
    $prop(new_string.reserve(
       allocator, max(string.size(), new_string.flags.vec.initial_growth_count)
    ));
@@ -1145,8 +1164,8 @@ make_wstr_vec(allocator_ref<Allocator> allocator, wstr_view string) noexcept(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec(allocator_dyn allocator, wstr_view string) noexcept
-   -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
+make_wstr_vec(allocator_dyn allocator, wstr_view string) noexcept -> maybe<
+   basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
    return make_wstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
@@ -1158,11 +1177,12 @@ make_wzstr_vec(allocator_ref<Allocator> allocator, wstr_view string) noexcept(
    !__has_feature(cxx_exceptions)
 )
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    basic_str_vec<
       wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string;
    $prop(new_string.reserve(
       allocator, max(string.size(), new_string.flags.vec.initial_growth_count)
@@ -1176,8 +1196,9 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 constexpr auto
 make_wzstr_vec(allocator_dyn allocator, wstr_view string) noexcept
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    return make_wzstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
@@ -1190,9 +1211,9 @@ make_str_vec(
    allocator_ref<Allocator> allocator, First const& first, Second const& second,
    Strings const&... strings
 ) noexcept
-   -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
+   -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
    return detail::make_basic_str_vec<
-      char, vec_flags::inline_storage(22u) | flags, Allocator>(
+      char, container_flags::inline_storage(22u) | flags, Allocator>(
       allocator, first, second, strings...
    );
 }
@@ -1206,9 +1227,9 @@ make_str_vec(
    allocator_dyn allocator, First const& first, Second const& second,
    Strings const&... strings
 ) noexcept
-   -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
+   -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
    return detail::make_basic_str_vec<
-      char, vec_flags::inline_storage(22u) | flags, allocator_dyn>(
+      char, container_flags::inline_storage(22u) | flags, allocator_dyn>(
       allocator, first, second, strings...
    );
 }
@@ -1223,10 +1244,12 @@ make_zstr_vec(
    Strings const&... strings
 ) noexcept
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    return detail::make_basic_str_vec<
-      char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+      char,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
       Allocator>(allocator, first, second, strings...);
 }
 
@@ -1240,10 +1263,12 @@ make_zstr_vec(
    Strings const&... strings
 ) noexcept
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    return detail::make_basic_str_vec<
-      char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+      char,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
       allocator_dyn>(allocator, first, second, strings...);
 }
 
@@ -1256,9 +1281,10 @@ make_wstr_vec(
    allocator_ref<Allocator> allocator, First const& first, Second const& second,
    Strings const&... strings
 ) noexcept
-   -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
    return detail::make_basic_str_vec<
-      wchar_t, vec_flags::inline_storage(22u) | flags, Allocator>(
+      wchar_t, container_flags::inline_storage(22u) | flags, Allocator>(
       allocator, first, second, strings...
    );
 }
@@ -1272,9 +1298,10 @@ make_wstr_vec(
    allocator_dyn allocator, First const& first, Second const& second,
    Strings const&... strings
 ) noexcept
-   -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
    return detail::make_basic_str_vec<
-      wchar_t, vec_flags::inline_storage(22u) | flags, allocator_dyn>(
+      wchar_t, container_flags::inline_storage(22u) | flags, allocator_dyn>(
       allocator, first, second, strings...
    );
 }
@@ -1289,11 +1316,12 @@ make_wzstr_vec(
    Strings const&... strings
 ) noexcept
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    return detail::make_basic_str_vec<
       wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
       Allocator>(allocator, first, second, strings...);
 }
 
@@ -1307,11 +1335,12 @@ make_wzstr_vec(
    Strings const&... strings
 ) noexcept
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    return detail::make_basic_str_vec<
       wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags,
       allocator_dyn>(allocator, first, second, strings...);
 }
 
@@ -1322,8 +1351,8 @@ constexpr auto
 make_str_vec(
    allocator_ref<Allocator> allocator, initializer_list<char> values
 ) noexcept
-   -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
-   basic_str_vec<char, vec_flags::inline_storage(22u) | flags> new_string;
+   -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
+   basic_str_vec<char, container_flags::inline_storage(22u) | flags> new_string;
    $prop(new_string.reserve(
       allocator, max(values.size(), new_string.flags.vec.initial_growth_count)
    ));
@@ -1335,7 +1364,7 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec(allocator_dyn allocator, initializer_list<char> values) noexcept
-   -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
+   -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
    return make_str_vec<allocator_dyn, flags>(allocator, values);
 }
 
@@ -1347,10 +1376,12 @@ make_zstr_vec(
    allocator_ref<Allocator> allocator, initializer_list<char> values
 ) noexcept
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    basic_str_vec<
-      char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      char,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string;
    $prop(new_string.reserve(
       allocator, max(values.size(), new_string.flags.vec.initial_growth_count)
@@ -1364,8 +1395,9 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 constexpr auto
 make_zstr_vec(allocator_dyn allocator, initializer_list<char> values) noexcept
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    return make_zstr_vec<allocator_dyn, flags>(allocator, values);
 }
 
@@ -1376,8 +1408,10 @@ constexpr auto
 make_wstr_vec(
    allocator_ref<Allocator> allocator, initializer_list<wchar_t> values
 ) noexcept
-   -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
-   basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags> new_string;
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
+   basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>
+      new_string;
    $prop(new_string.reserve(
       allocator, max(values.size(), new_string.flags.vec.initial_growth_count)
    ));
@@ -1391,7 +1425,8 @@ constexpr auto
 make_wstr_vec(
    allocator_dyn allocator, initializer_list<wchar_t> values
 ) noexcept
-   -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
    return make_wstr_vec<allocator_dyn, flags>(allocator, values);
 }
 
@@ -1403,11 +1438,12 @@ make_wzstr_vec(
    allocator_ref<Allocator> allocator, initializer_list<wchar_t> values
 ) noexcept
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    basic_str_vec<
       wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string;
    $prop(new_string.reserve(
       allocator, max(values.size(), new_string.flags.vec.initial_growth_count)
@@ -1423,8 +1459,9 @@ make_wzstr_vec(
    allocator_dyn allocator, initializer_list<wchar_t> values
 ) noexcept
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    return make_wzstr_vec<allocator_dyn, flags>(allocator, values);
 }
 
@@ -1435,8 +1472,8 @@ constexpr auto
 make_str_vec_reserved(
    allocator_ref<Allocator> allocator, idx capacity
 ) noexcept(!__has_feature(cxx_exceptions))
-   -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
-   basic_str_vec<char, vec_flags::inline_storage(22u) | flags> new_string;
+   -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
+   basic_str_vec<char, container_flags::inline_storage(22u) | flags> new_string;
    $prop(new_string.reserve(
       allocator, max(capacity, new_string.flags.vec.initial_growth_count)
    ));
@@ -1447,7 +1484,7 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec_reserved(allocator_dyn allocator, idx capacity) noexcept
-   -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
+   -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
    return make_str_vec_reserved<allocator_dyn, flags>(allocator, capacity);
 }
 
@@ -1459,10 +1496,12 @@ make_zstr_vec_reserved(
    allocator_ref<Allocator> allocator, idx capacity
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    basic_str_vec<
-      char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      char,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string;
    $prop(new_string.reserve(
       allocator, max(capacity, new_string.flags.vec.initial_growth_count)
@@ -1476,8 +1515,9 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 constexpr auto
 make_zstr_vec_reserved(allocator_dyn allocator, idx capacity) noexcept
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    return make_zstr_vec_reserved<allocator_dyn, flags>(allocator, capacity);
 }
 
@@ -1488,8 +1528,10 @@ constexpr auto
 make_wstr_vec_reserved(
    allocator_ref<Allocator> allocator, idx capacity
 ) noexcept(!__has_feature(cxx_exceptions))
-   -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
-   basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags> new_string;
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
+   basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>
+      new_string;
    $prop(new_string.reserve(
       allocator, max(capacity, new_string.flags.vec.initial_growth_count)
    ));
@@ -1499,8 +1541,8 @@ make_wstr_vec_reserved(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec_reserved(allocator_dyn allocator, idx capacity) noexcept
-   -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
+make_wstr_vec_reserved(allocator_dyn allocator, idx capacity) noexcept -> maybe<
+   basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
    return make_wstr_vec_reserved<allocator_dyn, flags>(allocator, capacity);
 }
 
@@ -1512,11 +1554,12 @@ make_wzstr_vec_reserved(
    allocator_ref<Allocator> allocator, idx capacity
 ) noexcept
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    basic_str_vec<
       wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string;
    $prop(new_string.reserve(
       allocator, max(capacity, new_string.flags.vec.initial_growth_count)
@@ -1530,8 +1573,9 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 constexpr auto
 make_wzstr_vec_reserved(allocator_dyn allocator, idx capacity) noexcept
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    return make_wzstr_vec_reserved<allocator_dyn, flags>(allocator, capacity);
 }
 
@@ -1542,9 +1586,10 @@ constexpr auto
 make_str_vec_filled(
    allocator_ref<Allocator> allocator, idx count, char value
 ) noexcept(!__has_feature(cxx_exceptions))
-   -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
-   basic_str_vec<char, vec_flags::inline_storage(22u) | flags> new_string =
-      $prop((make_str_vec_reserved<Allocator, flags>(allocator, count)));
+   -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
+   basic_str_vec<char, container_flags::inline_storage(22u) | flags>
+      new_string =
+         $prop((make_str_vec_reserved<Allocator, flags>(allocator, count)));
    for (idx i = 0u; i < count; ++i) {
       $prop(new_string.push_back(allocator, value));
    }
@@ -1555,7 +1600,7 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec_filled(allocator_dyn allocator, idx count, char value) noexcept
-   -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
+   -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
    return make_str_vec_filled<allocator_dyn, flags>(allocator, count, value);
 }
 
@@ -1567,10 +1612,12 @@ make_zstr_vec_filled(
    allocator_ref<Allocator> allocator, idx count, char value
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    basic_str_vec<
-      char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      char,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string =
          $prop((make_zstr_vec_reserved<Allocator, flags>(allocator, count)));
    $prop(new_string.resize(allocator, count, value));
@@ -1582,8 +1629,9 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 constexpr auto
 make_zstr_vec_filled(allocator_dyn allocator, idx count, char value) noexcept
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    return make_zstr_vec_filled<allocator_dyn, flags>(allocator, count, value);
 }
 
@@ -1594,9 +1642,11 @@ constexpr auto
 make_wstr_vec_filled(
    allocator_ref<Allocator> allocator, idx count, wchar_t value
 ) noexcept(!__has_feature(cxx_exceptions))
-   -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
-   basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags> new_string =
-      $prop((make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
+   basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>
+      new_string =
+         $prop((make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
    for (idx i = 0u; i < count; ++i) {
       $prop(new_string.push_back(allocator, value));
    }
@@ -1607,7 +1657,8 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec_filled(allocator_dyn allocator, idx count, wchar_t value) noexcept
-   -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
    return make_wstr_vec_filled<allocator_dyn, flags>(allocator, count, value);
 }
 
@@ -1619,11 +1670,12 @@ make_wzstr_vec_filled(
    allocator_ref<Allocator> allocator, idx count, wchar_t value
 ) noexcept
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    basic_str_vec<
       wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string =
          $prop((make_wzstr_vec_reserved<Allocator, flags>(allocator, count)));
    $prop(new_string.resize(allocator, count, value));
@@ -1637,8 +1689,9 @@ make_wzstr_vec_filled(
    allocator_dyn allocator, idx count, wchar_t value
 ) noexcept
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    return make_wzstr_vec_filled<allocator_dyn, flags>(allocator, count, value);
 }
 
@@ -1649,11 +1702,12 @@ template <
 constexpr auto
 make_str_vec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
-) -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
+) -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
-   basic_str_vec<char, vec_flags::inline_storage(22u) | flags> new_string =
-      $prop((make_str_vec_reserved<Allocator, flags>(allocator, count)));
+   basic_str_vec<char, container_flags::inline_storage(22u) | flags>
+      new_string =
+         $prop((make_str_vec_reserved<Allocator, flags>(allocator, count)));
    $prop(new_string.resize(allocator, count));
    new_string.fill_random($fwd(generator));
    return new_string;
@@ -1665,7 +1719,7 @@ template <
 constexpr auto
 make_str_vec_filled_random(
    allocator_dyn allocator, idx count, Generator&& generator
-) -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
+) -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
    return make_str_vec_filled_random<allocator_dyn, flags>(
@@ -1681,14 +1735,15 @@ constexpr auto
 make_str_vec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
+) -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
          char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   basic_str_vec<char, vec_flags::inline_storage(22u) | flags> new_string =
-      $prop((make_str_vec_reserved<Allocator, flags>(allocator, count)));
+   basic_str_vec<char, container_flags::inline_storage(22u) | flags>
+      new_string =
+         $prop((make_str_vec_reserved<Allocator, flags>(allocator, count)));
    $prop(new_string.resize(allocator, count));
    new_string.fill_random($fwd(generator), $fwd(distribution));
    return new_string;
@@ -1702,7 +1757,7 @@ constexpr auto
 make_str_vec_filled_random(
    allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<basic_str_vec<char, vec_flags::inline_storage(22u) | flags>> {
+) -> maybe<basic_str_vec<char, container_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
@@ -1722,12 +1777,14 @@ make_zstr_vec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 )
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
    basic_str_vec<
-      char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      char,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string =
          $prop((make_zstr_vec_reserved<Allocator, flags>(allocator, count)));
    $prop(new_string.resize(allocator, count));
@@ -1743,8 +1800,9 @@ make_zstr_vec_filled_random(
    allocator_dyn allocator, idx count, Generator&& generator
 )
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
    return make_zstr_vec_filled_random<allocator_dyn, flags>(
@@ -1762,15 +1820,17 @@ make_zstr_vec_filled_random(
    Distribution&& distribution
 )
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
          char&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
    basic_str_vec<
-      char, str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      char,
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string =
          $prop((make_zstr_vec_reserved<Allocator, flags>(allocator, count)));
    $prop(new_string.resize(allocator, count));
@@ -1788,8 +1848,9 @@ make_zstr_vec_filled_random(
    Distribution&& distribution
 )
    -> maybe<basic_str_vec<
-      char,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      char, str_flags::null_terminated
+               | container_flags::inline_storage(22u)
+               | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
@@ -1807,11 +1868,14 @@ template <
 constexpr auto
 make_wstr_vec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
-) -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
+)
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
-   basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags> new_string =
-      $prop((make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
+   basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>
+      new_string =
+         $prop((make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
    $prop(new_string.resize(allocator, count));
    new_string.fill_random($fwd(generator));
    return new_string;
@@ -1823,7 +1887,9 @@ template <
 constexpr auto
 make_wstr_vec_filled_random(
    allocator_dyn allocator, idx count, Generator&& generator
-) -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
+)
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
    return make_wstr_vec_filled_random<allocator_dyn, flags>(
@@ -1839,14 +1905,17 @@ constexpr auto
 make_wstr_vec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
+)
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
          wchar_t&, decltype(declval<Distribution&>()(declval<Generator&>()))>
    );
-   basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags> new_string =
-      $prop((make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
+   basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>
+      new_string =
+         $prop((make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
    $prop(new_string.resize(allocator, count));
    new_string.fill_random($fwd(generator), $fwd(distribution));
    return new_string;
@@ -1860,7 +1929,9 @@ constexpr auto
 make_wstr_vec_filled_random(
    allocator_dyn allocator, idx count, Generator&& generator,
    Distribution&& distribution
-) -> maybe<basic_str_vec<wchar_t, vec_flags::inline_storage(22u) | flags>> {
+)
+   -> maybe<
+      basic_str_vec<wchar_t, container_flags::inline_storage(22u) | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
@@ -1880,13 +1951,14 @@ make_wzstr_vec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 )
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
    basic_str_vec<
       wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string =
          $prop((make_wzstr_vec_reserved<Allocator, flags>(allocator, count)));
    $prop(new_string.resize(allocator, count));
@@ -1902,8 +1974,9 @@ make_wzstr_vec_filled_random(
    allocator_dyn allocator, idx count, Generator&& generator
 )
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
    return make_wzstr_vec_filled_random<allocator_dyn, flags>(
@@ -1921,8 +1994,9 @@ make_wzstr_vec_filled_random(
    Distribution&& distribution
 )
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<
@@ -1930,7 +2004,7 @@ make_wzstr_vec_filled_random(
    );
    basic_str_vec<
       wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>
+      str_flags::null_terminated | container_flags::inline_storage(22u) | flags>
       new_string =
          $prop((make_wzstr_vec_reserved<Allocator, flags>(allocator, count)));
    $prop(new_string.resize(allocator, count));
@@ -1948,8 +2022,9 @@ make_wzstr_vec_filled_random(
    Distribution&& distribution
 )
    -> maybe<basic_str_vec<
-      wchar_t,
-      str_flags::null_terminated | vec_flags::inline_storage(22u) | flags>> {
+      wchar_t, str_flags::null_terminated
+                  | container_flags::inline_storage(22u)
+                  | flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
       is_assignable<

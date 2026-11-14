@@ -176,7 +176,7 @@ struct vec_bounds {
 
 template <
    typename T, vec_flags flags,
-   bool has_inline_storage = (flags.inline_storage_count != 0u)>
+   bool has_inline_storage = (flags.container.inline_storage_count != 0u)>
 struct vec_storage : vec_bounds<T, flags> {
    static constexpr bool is_inline = false;
 
@@ -200,16 +200,20 @@ struct vec_storage : vec_bounds<T, flags> {
 
 template <typename T, vec_flags flags>
 struct vec_storage<T, flags, true> : vec_bounds<T, flags> {
-   using handle_type =
-      remove_cvref<decltype(declval<allocator_ref<allocator_dyn>&>()
-                               .template inline_salloc_multi_uninit<
-                                  T, flags.inline_storage_count * sizeof(T)>(1u)
-                               .value()
-                               .first())>;
+   using handle_type = remove_cvref<
+      decltype(declval<allocator_ref<allocator_dyn>&>()
+                  .template inline_align_salloc_multi_uninit<
+                     T, flags.container.inline_storage_count
+                           * sizeof(T)>(flags.container.minimum_alignment, 1u)
+                  .value()
+                  .first())>;
 
    static constexpr bool is_inline = true;
 
-   handle_type m_handle{};
+   // The inline buffer sits at the start of the handle.
+   alignas(handle_type) alignas(
+      flags.container.minimum_alignment.raw
+   ) handle_type m_handle{};
    bool m_has_handle = false;
 
    constexpr vec_storage() = default;

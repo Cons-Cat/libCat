@@ -370,6 +370,8 @@ constexpr auto
 allocator_interface<Derived>::meta_uninit_alloc(
    ualign allocation_alignment, idx allocation_count
 ) {
+   // `align_*` allocations are never weaker than `T` requires.
+   allocation_alignment = max(allocation_alignment, ualign(alignof(T)));
    constexpr bool is_inline = inline_size != 0u;
    using alias_types = meta_alloc_alias_types<
       T, is_fail_safe, is_multiple, has_feedback, inline_size>;
@@ -518,6 +520,8 @@ constexpr auto
 allocator_interface<Derived>::meta_alloc(
    ualign allocation_alignment, idx allocation_count, Args&&... arguments
 ) noexcept(false) {
+   // `align_*` allocations are never weaker than `T` requires.
+   allocation_alignment = max(allocation_alignment, ualign(alignof(T)));
    constexpr bool is_inline = (inline_size != 0);
 
    if constexpr (has_max_allocation_bytes) {

@@ -717,9 +717,12 @@ $test(map_view_from_dyn_map) {
 $test(dyn_map_configurations) {
    // `inline_storage` is not implemented yet, so these only differ by type.
    // `dyn_map` must still treat all of them alike.
-   static_assert(cat::map<int4, int4>::flags.inline_storage_count == 4u);
    static_assert(
-      cat::map_small<int4, int4, 64u>::flags.inline_storage_count == 64u
+      cat::map<int4, int4>::flags.container.inline_storage_count == 4u
+   );
+   static_assert(
+      cat::map_small<int4, int4, 64u>::flags.container.inline_storage_count
+      == 64u
    );
    static_assert(!cat::is_same<cat::map<int4, int4>, cat::map_big<int4, int4>>);
 
@@ -1167,4 +1170,28 @@ $test(map_clear) {
    // Assign through `.value()`, or call `.update()`.
    static_assert(!can_assign_through_lookup<cat::map_big<int4, int4>>);
    static_assert(!can_assign_through_lookup<cat::raii::map_big<int4, int4>>);
+}
+
+$test(map_alignment) {
+   using group = cat::detail::map_group<int4, int4>;
+   using aligned_map = cat::map<
+      int4, int4, __typeof_unqual(cat::hash),
+      cat::detail::binary_comparator<cat::detail::equal_to_op>,
+      cat::vec_big<group>, cat::container_flags::alignment(64u)>;
+   // A map's alignment reaches the `basic_vec` that stores its groups.
+   static_assert(cat::is_base_of<
+                 cat::detail::map_base<
+                    int4, int4, __typeof_unqual(cat::hash),
+                    cat::detail::binary_comparator<cat::detail::equal_to_op>,
+                    cat::vec_big<group, cat::container_flags::alignment(64u)>>,
+                 aligned_map>);
+   static_assert(
+      cat::is_same<
+         cat::detail::map_storage<cat::vec_big<group>, {}>, cat::vec_big<group>>
+   );
+
+   aligned_map map;
+   cat::verify(map.insert<cat::allocator_page>(pager, 1, 2).has_value());
+   cat::verify(map[1].value() == 2);
+   map.free<cat::allocator_page>(pager);
 }

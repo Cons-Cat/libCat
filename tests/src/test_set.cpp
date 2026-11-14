@@ -216,3 +216,23 @@ $test(set_clear) {
    raii_set.free();
    cat::verify(raii_set.is_empty() && raii_set.capacity() == 0u);
 }
+
+$test(set_alignment) {
+   using group = cat::detail::map_group<int4, cat::monostate_type>;
+   using aligned_set = cat::set<
+      int4, __typeof_unqual(cat::hash),
+      cat::detail::binary_comparator<cat::detail::equal_to_op>,
+      cat::vec_big<group>, cat::container_flags::alignment(64u)>;
+   // A set's alignment reaches the `basic_vec` that stores its groups.
+   static_assert(cat::is_base_of<
+                 cat::detail::set_base<
+                    int4, __typeof_unqual(cat::hash),
+                    cat::detail::binary_comparator<cat::detail::equal_to_op>,
+                    cat::vec_big<group, cat::container_flags::alignment(64u)>>,
+                 aligned_set>);
+
+   aligned_set set;
+   cat::verify(set.insert<cat::allocator_page>(pager, 1).has_value());
+   cat::verify(set.contains(1));
+   set.free<cat::allocator_page>(pager);
+}

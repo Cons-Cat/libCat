@@ -10,14 +10,17 @@ namespace cat {
 
 struct str_vec_flags {
    str_flags const str;
-   vec_flags const vec = {};
+   vec_flags const vec;
 
    constexpr str_vec_flags() = default;
 
    constexpr str_vec_flags(str_flags flags) noexcept : str(flags) {
    }
 
-   constexpr str_vec_flags(vec_flags flags) noexcept : vec(flags) {
+   constexpr str_vec_flags(vec_flags flags) noexcept : vec(move(flags)) {
+   }
+
+   constexpr str_vec_flags(container_flags flags) noexcept : vec(flags) {
    }
 
    [[nodiscard]]
@@ -43,6 +46,10 @@ struct str_vec_flags {
    operator|(str_flags string_flags, vec_flags vector_flags) noexcept
       -> str_vec_flags;
 
+   friend constexpr auto
+   operator|(str_flags string_flags, container_flags flags) noexcept
+      -> str_vec_flags;
+
  private:
    constexpr str_vec_flags(
       str_flags string_flags, vec_flags vector_flags
@@ -56,6 +63,13 @@ constexpr auto
 operator|(str_flags string_flags, vec_flags vector_flags) noexcept
    -> str_vec_flags {
    return str_vec_flags{string_flags, vector_flags};
+}
+
+[[nodiscard]]
+constexpr auto
+operator|(str_flags string_flags, container_flags flags) noexcept
+   -> str_vec_flags {
+   return str_vec_flags{string_flags, vec_flags(flags)};
 }
 
 namespace detail {

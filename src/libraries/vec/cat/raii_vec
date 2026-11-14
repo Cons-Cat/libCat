@@ -71,14 +71,16 @@ using vec_fixed = basic_vec<
 
 template <
    typename T, is_allocator Allocator, idx inline_count, vec_flags flags = {}>
-using vec_small =
-   basic_vec<T, Allocator, vec_flags::inline_storage(inline_count) | flags>;
+using vec_small = basic_vec<
+   T, Allocator, container_flags::inline_storage(inline_count) | flags>;
 
 template <
    typename T, is_allocator Allocator, idx inline_count, vec_flags flags = {}>
 using vec_small_fixed = basic_vec<
    T, Allocator,
-   vec_flags::inline_storage(inline_count) | vec_flags::fixed_size | flags>;
+   container_flags::inline_storage(inline_count)
+      | vec_flags::fixed_size
+      | flags>;
 
 template <
    typename T, is_allocator Allocator = allocator_dyn, vec_flags flags = {}>
@@ -614,7 +616,7 @@ template <
    allocator_ref<Allocator> allocator, idx count, T const& value
 ) -> maybe<vec_small<T, Allocator, inline_count, flags>> {
    return raii::make_vec_filled<
-      T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
+      T, Allocator, container_flags::inline_storage(inline_count) | flags>(
       allocator, count, value
    );
 }
@@ -779,7 +781,7 @@ template <
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
    return raii::make_vec_filled_random<
-      T, Allocator, vec_flags::inline_storage(inline_count) | flags>(
+      T, Allocator, container_flags::inline_storage(inline_count) | flags>(
       allocator, count, $fwd(generator)
    );
 }
@@ -798,7 +800,7 @@ template <
    );
    return raii::make_vec_small_filled_random<
       T, inline_count, Allocator,
-      vec_flags::inline_storage(inline_count) | flags>(
+      container_flags::inline_storage(inline_count) | flags>(
       allocator, count, $fwd(generator), $fwd(distribution)
    );
 }

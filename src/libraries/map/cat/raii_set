@@ -35,14 +35,14 @@ template <
    is_allocator Allocator = allocator_dyn, map_flags flags = {}>
 using set = basic_set<
    Key, Hash, KeyEqual, Container, Allocator,
-   map_flags::inline_storage(4u) | flags>;
+   container_flags::inline_storage(4u) | flags>;
 
 template <
    typename Key, is_allocator Allocator, idx inline_count, map_flags flags = {}>
 using set_small = basic_set<
    Key, __typeof_unqual(hash), detail::binary_comparator<detail::equal_to_op>,
    manual::vec_big<detail::map_group<Key, monostate_type>>, Allocator,
-   map_flags::inline_storage(inline_count) | flags>;
+   container_flags::inline_storage(inline_count) | flags>;
 
 template <
    typename Key, typename Hash = __typeof_unqual(hash),

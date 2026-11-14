@@ -41,7 +41,7 @@ $test(bitvec_flags_and_niches) {
       cat::basic_bitvec<cat::vec_flags::pointer_size_layout>>();
    verify_bitvec_niche<cat::bitvec_big<>>();
    verify_bitvec_niche<cat::basic_bitvec<
-      cat::vec_flags::inline_storage(1u)
+      cat::container_flags::inline_storage(1u)
       | cat::vec_flags::pointer_size_layout>>();
 
    verify_bitvec_niche<cat::raii::bitvec<>>();
@@ -229,17 +229,18 @@ $test(bitvec_equality) {
 $test(bitvec_manual_core) {
    static_assert(cat::is_same<
                  cat::bitvec_small<65u>,
-                 cat::basic_bitvec<cat::vec_flags::inline_storage(2u)>>);
+                 cat::basic_bitvec<cat::container_flags::inline_storage(2u)>>);
+   static_assert(cat::is_same<
+                 cat::bitvec_small_fixed<65u>,
+                 cat::basic_bitvec<
+                    cat::container_flags::inline_storage(2u)
+                    | cat::vec_flags::fixed_size>>);
    static_assert(
       cat::is_same<
-         cat::bitvec_small_fixed<65u>,
-         cat::basic_bitvec<
-            cat::vec_flags::inline_storage(2u) | cat::vec_flags::fixed_size>>
+         cat::raii::bitvec_small<cat::allocator_dyn, 65u>,
+         cat::raii::basic_bitvec<
+            cat::allocator_dyn, cat::container_flags::inline_storage(2u)>>
    );
-   static_assert(cat::is_same<
-                 cat::raii::bitvec_small<cat::allocator_dyn, 65u>,
-                 cat::raii::basic_bitvec<
-                    cat::allocator_dyn, cat::vec_flags::inline_storage(2u)>>);
    static_assert(cat::is_same<cat::bitvec::storage_type, cat::uword>);
    static_assert(cat::is_same<cat::bitvec::value_type, cat::bit_value>);
    static_assert(
@@ -523,7 +524,7 @@ $test(bitvec_append_range) {
    operator()<cat::basic_bitvec<cat::vec_flags::pointer_size_layout>>();
    verify_manual.template operator()<cat::bitvec_big<>>();
    verify_manual.template operator()<cat::basic_bitvec<
-      cat::vec_flags::inline_storage(1u)
+      cat::container_flags::inline_storage(1u)
       | cat::vec_flags::pointer_size_layout>>();
 
    auto verify_raii = [&]<typename Vector> {

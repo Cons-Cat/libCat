@@ -413,6 +413,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/bitvec/cat/bitvec
   ${CATLIB}/bitvec/cat/raii_bitvec
   ${CATLIB}/container/cat/container
+  ${CATLIB}/container/cat/detail/container_flags.hpp
   ${CATLIB}/container/cat/detail/exception_defer.hpp
   ${CATLIB}/container/cat/detail/initializer_list.hpp
   ${CATLIB}/container/cat/detail/vec_flags.hpp
