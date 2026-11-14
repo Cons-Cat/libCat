@@ -350,8 +350,9 @@ enum class [[clang::enum_extensibility(open)]] error_code : unsigned char {
 };
 
 // This is the exact 32-byte error packet an X server sends.
-struct error_packet {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] error_packet {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    error_code code;
    cat::uint2 sequence;
 
@@ -370,7 +371,8 @@ struct error_packet {
 
    // A `transport` error for `linux_error`.
    explicit constexpr error_packet(nix::linux_error error) noexcept
-       : response_type(0u),
+       : response_type(event_code::error),
+         is_sent(false),
          code(error_code::transport),
          sequence(0u),
          linux_error(error),
@@ -384,14 +386,21 @@ struct error_packet {
    is_transport() const noexcept -> bool {
       return code == error_code::transport;
    }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(error_code other) const noexcept -> bool {
+      return code == other;
+   }
 };
 
 static_assert(sizeof(error_packet) == 32);
 
 // The value of a successful `scaredy_x11<void>`. Like every reply, its first
 // byte is non-zero, which distinguishes it from an `x11::error_packet`.
-struct no_reply {
-   cat::uint1 response_type = 1u;
+struct [[gnu::gcc_struct]] no_reply {
+   event_code response_type : 7 = event_code::reply;
+   bool is_sent             : 1 = false;
 
    constexpr no_reply() = default;
 
@@ -400,16 +409,17 @@ struct no_reply {
 };
 
 namespace detail {
-// Every reply and every error begins with a `response_type` byte, which is 0
-// for errors and 1 for replies. Reading it through either member of a union is
-// valid, because it is their common initial sequence.
+// Every reply and every error begins with a `response_type`, which is
+// `event_code::error` for errors and `event_code::reply` for replies. Reading
+// it through either member of a union is valid, because it is their common
+// initial sequence.
 template <typename T>
 concept is_response = requires(T response) { response.response_type; };
 
 template <typename Reply>
 constexpr auto
 holds_reply(Reply const& reply) noexcept -> bool {
-   return reply.response_type != 0u;
+   return reply.response_type != event_code::error;
 }
 
 template <typename T>
@@ -455,8 +465,9 @@ struct cookie {
 
 // Replies.
 
-struct intern_atom_reply {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] intern_atom_reply {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 _ = 0u;
    cat::uint2 sequence;
    cat::uint4 length;
@@ -464,8 +475,9 @@ struct intern_atom_reply {
    cat::uint1 _[20]{};  // NOLINT
 };
 
-struct geometry_reply {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] geometry_reply {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 depth;
    cat::uint2 sequence;
    cat::uint4 length;
@@ -475,8 +487,9 @@ struct geometry_reply {
    cat::uint1 _[10];  // NOLINT
 };
 
-struct input_focus_reply {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] input_focus_reply {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 revert_to;
    cat::uint2 sequence;
    cat::uint4 length;
@@ -484,8 +497,9 @@ struct input_focus_reply {
    cat::uint1 _[20];  // NOLINT
 };
 
-struct query_extension_reply {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] query_extension_reply {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 _;
    cat::uint2 sequence;
    cat::uint4 length;
@@ -498,8 +512,9 @@ struct query_extension_reply {
 
 // `value_length` items of `format` bits follow this reply. Receive them with
 // the overload of `connection::wait()` that takes a span.
-struct property_reply {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] property_reply {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 format;
    cat::uint2 sequence;
    cat::uint4 length;
@@ -510,8 +525,9 @@ struct property_reply {
 };
 
 // Where the pointer is, relative to the root and to the queried window.
-struct pointer_reply {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] pointer_reply {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    bool same_screen;
    cat::uint2 sequence;
    cat::uint4 length;
@@ -531,8 +547,9 @@ static_assert(sizeof(property_reply) == 32);
 // Events.
 
 // Key, button, and motion events share this layout.
-struct input_event {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] input_event {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 detail;
    cat::uint2 sequence;
    cat::uint4 time;
@@ -543,8 +560,9 @@ struct input_event {
    cat::uint1 _;
 };
 
-struct focus_event {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] focus_event {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 detail;
    cat::uint2 sequence;
    x11::window event;
@@ -552,8 +570,9 @@ struct focus_event {
    cat::uint1 _[23];  // NOLINT
 };
 
-struct expose_event {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] expose_event {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 _;
    cat::uint2 sequence;
    x11::window window;
@@ -562,8 +581,9 @@ struct expose_event {
    cat::uint1 _[14];  // NOLINT
 };
 
-struct destroy_notify_event {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] destroy_notify_event {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 _;
    cat::uint2 sequence;
    x11::window event, window;
@@ -571,8 +591,9 @@ struct destroy_notify_event {
 };
 
 // `map_notify` and `unmap_notify` share this layout.
-struct map_event {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] map_event {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 _;
    cat::uint2 sequence;
    x11::window event, window;
@@ -582,8 +603,9 @@ struct map_event {
    cat::uint1 _[19];  // NOLINT
 };
 
-struct configure_notify_event {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] configure_notify_event {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 _;
    cat::uint2 sequence;
    x11::window event, window, above_sibling;
@@ -593,8 +615,9 @@ struct configure_notify_event {
    cat::uint1 _[5];  // NOLINT
 };
 
-struct property_notify_event {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] property_notify_event {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 _;
    cat::uint2 sequence;
    x11::window window;
@@ -604,8 +627,9 @@ struct property_notify_event {
    cat::uint1 _[15];  // NOLINT
 };
 
-struct client_message_event {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] client_message_event {
+   event_code response_type : 7 = event_code::client_message;
+   bool is_sent             : 1 = false;
    cat::uint1 format;
    cat::uint2 sequence;
    x11::window window;
@@ -619,8 +643,9 @@ struct client_message_event {
 };
 
 // `4 * length` bytes of extension data follow this header.
-struct generic_event {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] generic_event {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 extension;
    cat::uint2 sequence;
    cat::uint4 length;
@@ -641,29 +666,23 @@ static_assert(sizeof(generic_event) == 32);
 // An event or an asynchronous `x11::error_packet` as received. This is a view
 // into a `connection`'s buffers, valid until the next call on that
 // `connection`.
-struct event {
-   cat::uint1 response_type;
+struct [[gnu::gcc_struct]] event {
+   event_code response_type : 7;
+   bool is_sent             : 1;
    cat::uint1 detail;
    cat::uint2 sequence;
    cat::uint1 _[28];  // NOLINT
 
-   // The event's code, without the bit which marks events from `send_event()`.
    [[nodiscard]]
    constexpr auto
    code() const noexcept -> event_code {
-      return static_cast<event_code>(response_type & 0x7fu);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   is_sent() const noexcept -> bool {
-      return (response_type & 0x80u) != 0u;
+      return response_type;
    }
 
    [[nodiscard]]
    constexpr auto
    is_error() const noexcept -> bool {
-      return response_type == 0u;
+      return response_type == event_code::error;
    }
 
    // The error this packet holds, when `.is_error()`.

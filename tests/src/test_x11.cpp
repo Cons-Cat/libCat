@@ -12,7 +12,8 @@ static_assert(sizeof(x11::scaredy_x11<void>) == 32);
 
 $test(x11_scaredy) {
    x11::scaredy_x11<x11::intern_atom_reply> reply = x11::intern_atom_reply{
-      .response_type = 1u,
+      .response_type = x11::event_code::reply,
+      .is_sent = false,
       .sequence = 0u,
       .length = 0u,
       .atom = x11::atom(42u),
@@ -25,7 +26,7 @@ $test(x11_scaredy) {
    bad_atom.bad_value = 7u;
    reply = bad_atom;
    cat::verify(!reply.has_value());
-   cat::verify(reply.error().code == x11::error_code::atom);
+   cat::verify(reply.error() == x11::error_code::atom);
    cat::verify(reply.error().bad_value == 7u);
 
    x11::scaredy_x11<void> transport =
@@ -34,6 +35,20 @@ $test(x11_scaredy) {
    cat::verify(transport.error().linux_error == nix::linux_error::connreset);
    x11::scaredy_x11<void> const success = cat::monostate;
    cat::verify(success.has_value());
+}
+
+// The code takes the low 7 bits of an event's first byte, and the bit which
+// marks events from `send_event()` takes the high bit.
+$test(x11_event_bit_fields) {
+   x11::client_message_event message{};
+   message.is_sent = true;
+   cat::uint1 first_byte;
+   __builtin_memcpy_inline(&first_byte, &message, 1u);
+   cat::verify(first_byte == 0xa1u);
+
+   x11::event const event = __builtin_bit_cast(x11::event, message);
+   cat::verify(event.code() == x11::event_code::client_message);
+   cat::verify(event.is_sent);
 }
 
 $test(x11_display_name) {
