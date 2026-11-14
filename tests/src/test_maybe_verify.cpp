@@ -330,3 +330,38 @@ static_assert(cat::maybe<int4 const*>(&g_constant).get_ptr() == &g_constant);
 static_assert(cat::maybe_ptr<int4 const>(&g_constant).value() == &g_constant);
 
 static_assert(cat::maybe_ptr<int4 const>(&g_constant).get_ptr() == &g_constant);
+
+// A `maybe` of a reference never binds to an r-value, because it could not
+// extend the r-value's lifetime.
+void
+maybe_reference_rejects_rvalues() {
+   int4 value = 1;
+   int raw = 1;
+
+   // expected-error@+1 {{}}
+   cat::maybe<int4&> from_prvalue(int4{1});
+   // expected-error@+1 {{}}
+   cat::maybe<int4&> from_xvalue(cat::move(value));
+   // An `int4&` cannot bind to an `int`, although an `int4` is assignable from
+   // one.
+   // expected-error@+1 {{}}
+   cat::maybe<int4&> from_other_type(raw);
+   // expected-error@+1 {{}}
+   cat::maybe<int4 const&> from_const_prvalue(int4{1});
+   // Binding `int4 const&` to an `int` would create a temporary `int4`.
+   // expected-error@+1 {{}}
+   cat::maybe<int4 const&> from_conversion(raw);
+
+   cat::maybe<int4&> reference = value;
+   cat::maybe<int4 const&> const_reference = value;
+   // expected-error@+1 {{}}
+   reference = raw;
+   // expected-error@+1 {{}}
+   const_reference = int4{2};
+   // expected-error@+1 {{}}
+   const_reference = raw;
+
+   // Assigning to a temporary would only rebind the temporary.
+   // expected-error@+1 {{immediately dangles}}
+   (cat::maybe<int4&>(value)) = value;
+}

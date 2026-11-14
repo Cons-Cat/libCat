@@ -396,7 +396,10 @@ struct maybe_reference_storage {
    }
 
    template <typename U>
-      requires(is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
+      requires(
+         __is_constructible(value_type, U&)
+         && !__reference_constructs_from_temporary(value_type, U&)
+      )
    constexpr maybe_reference_storage(
       U& in_value [[clang::lifetimebound]]
    ) noexcept
@@ -432,7 +435,10 @@ struct maybe_reference_storage {
    // References cannot be constructed in place (no place to put a temporary).
    // Bind the held pointer to `referent` instead.
    template <typename U>
-      requires(is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
+      requires(
+         __is_constructible(value_type, U&)
+         && !__reference_constructs_from_temporary(value_type, U&)
+      )
    constexpr void
    construct(U& referent) {
       this->p_storage = addressof(static_cast<value_type>(referent));
@@ -865,8 +871,7 @@ class maybe_base
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
    template <typename U>
       requires(
-         is_reference<value_type>
-         && is_implicitly_convertible<add_lvalue_reference<U>, value_type>
+         is_reference<value_type> && __is_constructible(value_type, U&)
          && !__reference_constructs_from_temporary(value_type, U&)
       )
    constexpr explicit(!__is_convertible(U&, value_type)) maybe_base(
@@ -970,12 +975,12 @@ class maybe_base
    // Rebinding converting reference assignment operator.
    template <typename U>
       requires(
-         (is_implicitly_convertible<add_lvalue_reference<U>, value_type>)
-         && is_reference<value_type>
+         is_reference<value_type> && __is_constructible(value_type, U&)
+         && !__reference_constructs_from_temporary(value_type, U&)
       )
    [[clang::reinitializes]]
    constexpr auto
-   operator=(U& value) -> maybe<T>& {
+   operator=(U& value) & -> maybe<T>& {
       m_storage = static_cast<value_type&>(value);
       return static_cast<maybe<T>&>(*this);
    }
@@ -1762,6 +1767,24 @@ class
  public:
    using detail::maybe_base<T&>::maybe_base;
    using detail::maybe_base<T&>::operator=;
+
+   constexpr maybe() = default;
+   constexpr maybe(maybe const&) = default;
+   constexpr maybe(maybe&&) = default;
+
+   // Rebinding assignment operators require l-values.
+   constexpr auto
+   operator=(maybe const&) & -> maybe& = default;
+   constexpr auto
+   operator=(maybe&&) & -> maybe& = default;
+
+   // `maybe<T&>` is often used as a return type that may be assigned to at its
+   // call-site. That's a footgun in cases like `map[key] = 1`.
+   template <typename U>
+   auto
+   operator=(U&&) && -> maybe& =
+      delete ("Rebinding a `maybe<T&>` to an r-value immediately dangles! Give "
+              "the operand storage instead.");
 
    // Get the referent. Asserts engagement.
    [[nodiscard]]

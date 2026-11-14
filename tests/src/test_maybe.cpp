@@ -2189,3 +2189,27 @@ $test(maybe_noexcept_and_assign_types) {
    );
    static_assert(noexcept(sentinel_ptr.get_ptr()));
 }
+
+template <typename T, typename U>
+concept is_assignable_to_temporary =
+   requires(T&& target, U&& source) { cat::move(target) = $fwd(source); };
+
+$test(maybe_reference_temporary_assignment) {
+   int4 value = 1;
+   int4 other = 2;
+
+   // Rebinding an lvalue `maybe<T&>` still works.
+   cat::maybe<int4&> reference = value;
+   reference = other;
+   cat::verify(&reference.verify() == &other);
+
+   // Assigning to a temporary would only rebind the temporary, so it is
+   // ill-formed. `.value()` assigns through it.
+   static_assert(!is_assignable_to_temporary<cat::maybe<int4&>, int4&>);
+   static_assert(
+      !is_assignable_to_temporary<cat::maybe<int4&>, cat::maybe<int4&>>
+   );
+   static_assert(is_assignable_to_temporary<cat::maybe<int4>, int4>);
+   cat::maybe<int4&>(value).value() = 3;
+   cat::verify(value == 3);
+}

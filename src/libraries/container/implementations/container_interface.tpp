@@ -21,7 +21,7 @@ container_interface<Derived, T>::subspan(
    requires(container_interface<Derived, T>::is_array_like)
 {
    Derived& self = static_cast<Derived&>(*this);
-   if (start_index > end_index || end_index > self.capacity()) {
+   if (start_index > end_index || end_index > self.size()) {
       return maybe_span<T>(nullopt);
    }
    return maybe_span<T>(
@@ -37,7 +37,7 @@ container_interface<Derived, T>::subspan(
    requires(container_interface<Derived, T>::is_array_like)
 {
    Derived const& self = static_cast<Derived const&>(*this);
-   if (start_index > end_index || end_index > self.capacity()) {
+   if (start_index > end_index || end_index > self.size()) {
       return maybe_span<T const>(nullopt);
    }
    return maybe_span<T const>(

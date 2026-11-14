@@ -616,7 +616,8 @@ class container_interface : public contiguous_collection_interface<Derived> {
       static_assert(false, "Index is out of bounds!");
    }
 
-   // Member-access syntax algorithms.
+   // Member-access syntax algorithms. These assign over the first `.size()`
+   // elements of `destination`, which must already hold at least that many.
 
    template <is_stepanov_container Other>
    auto
@@ -624,7 +625,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       !__has_feature(cxx_exceptions)
    ) {
       Derived const& self = static_cast<Derived const&>(*this);
-      assert(destination.capacity() >= self.capacity());
+      assert(destination.size() >= self.size());
       return cat::copy(self.begin(), self.end(), destination.begin());
    }
 
@@ -632,7 +633,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
    auto
    move_to(Other& destination [[clang::lifetimebound]]) const noexcept(false) {
       Derived const& self = static_cast<Derived const&>(*this);
-      assert(destination.capacity() >= self.capacity());
+      assert(destination.size() >= self.size());
       return move(self.begin(), self.end(), destination.begin());
    }
 
@@ -642,7 +643,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       !__has_feature(cxx_exceptions)
    ) {
       Derived const& self = static_cast<Derived const&>(*this);
-      assert(destination.capacity() >= self.capacity());
+      assert(destination.size() >= self.size());
       return cat::relocate(self.begin(), self.end(), destination.begin());
    }
 };
