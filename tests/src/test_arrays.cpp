@@ -7,6 +7,7 @@
 #include <cat/span>
 #include <cat/string>
 #include <cat/utility>
+#include <cat/vec>
 #include <cat/vec_inplace>
 
 #include "../unit_tests.hpp"
@@ -393,4 +394,43 @@ $test(array_reverse_iteration) {
    cat::verify(empty.rbegin() == empty.rend());
    cat::span<int4> empty_span;
    cat::verify(empty_span.rbegin() == empty_span.rend());
+}
+
+$test(array_slices_are_bounded_by_size) {
+   cat::vec_inplace<int4, 8u> values;
+   auto _ = values.push_back(1).verify();
+   auto _ = values.push_back(2).verify();
+
+   // Slots past `.size()` are not constructed, so they cannot be sliced.
+   cat::verify(values.first(5u).is_empty());
+   cat::verify(values.subspan(1u, 3u).is_empty());
+   cat::verify(cat::as_const(values).subspan(0u, 3u).is_empty());
+   cat::verify(values.first(2u).verify().size() == 2u);
+   cat::verify(values.subspan(1u, 2u).verify()[0u] == 2);
+   cat::verify(values.last(2u).verify()[1u] == 2);
+   cat::verify(values.last(3u).is_empty());
+}
+
+$test(array_copy_to_respects_size) {
+   cat::vec_big<int4> source;
+   $defer {
+      source.free(pager);
+   };
+   // A large capacity beyond the size does not matter.
+   source.reserve(pager, 64u).verify();
+   source.push_back(pager, 1).verify();
+   source.push_back(pager, 2).verify();
+   source.push_back(pager, 3).verify();
+
+   cat::array<int4, 4u> destination{};
+   source.copy_to(destination);
+   cat::verify(destination[2u] == 3 && destination[3u] == 0);
+
+   destination = {};
+   source.move_to(destination);
+   cat::verify(destination[0u] == 1);
+
+   destination = {};
+   source.relocate_to(destination);
+   cat::verify(destination[1u] == 2);
 }

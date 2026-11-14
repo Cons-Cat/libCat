@@ -149,6 +149,8 @@ class precision_reference
    template <typename U>
       requires(
          !is_same<U, basic_float<raw_type, precision, quantity_reference>>
+         // A reference would refer into a temporary `view()`.
+         && !is_reference<U>
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit

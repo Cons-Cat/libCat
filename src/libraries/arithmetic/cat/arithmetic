@@ -1387,8 +1387,10 @@ class
       requires(
          (!is_arithmetic<U> || is_raw_arithmetic<U>
           || is_same<quantity_type, arithmetic_quantity<U>>)
+         // A reference would refer into `*this`, which may be a temporary.
+         && !is_reference<U>
          // If we don't constrain this, it gets selected erroneously.
-         && requires(T value) { static_cast<U>(value); }
+         && requires(T const& value) { static_cast<U>(value); }
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit
@@ -1966,8 +1968,10 @@ class
       requires(
          (!is_arithmetic<U> || is_raw_arithmetic<U>
           || is_same<quantity_type, arithmetic_quantity<U>>)
+         // A reference would refer into `*this`, which may be a temporary.
+         && !is_reference<U>
          // If we don't constrain this, it gets selected erroneously.
-         && requires(T value) { static_cast<U>(value); }
+         && requires(T const& value) { static_cast<U>(value); }
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr explicit

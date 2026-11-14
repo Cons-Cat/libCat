@@ -473,3 +473,35 @@ compound_proxy() {
    // expected-error@+1 {{no viable overloaded '^='}}
    b.undef() ^= cat::deconst(uint2{1u});
 }
+
+void
+conversions_never_yield_references() {
+   int4 integer = 1;
+   float4 floating = 1.f;
+
+   // A reference would refer into `*this`, which may be a temporary.
+   // expected-error@+1 {{}}
+   static_cast<int&>(integer);
+   // expected-error@+1 {{}}
+   static_cast<long&>(integer);
+   // expected-error@+1 {{}}
+   integer.operator int const&();
+   // expected-error@+1 {{}}
+   integer.operator long const&();
+   // expected-error@+1 {{}}
+   static_cast<float&>(floating);
+   // expected-error@+1 {{}}
+   floating.operator double const&();
+
+   // Neither can their overflow proxies.
+   // expected-error@+1 {{}}
+   static_cast<int&>(integer.wrap());
+   // expected-error@+1 {{}}
+   integer.wrap().operator long const&();
+
+   // Converting to a value still works, including to bind a `const&` for the
+   // rest of the full-expression.
+   static_cast<long>(integer);
+   static_cast<double>(floating);
+   static_cast<long const&>(integer);
+}

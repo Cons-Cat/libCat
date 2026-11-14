@@ -361,6 +361,8 @@ class overflow_reference
             && (is_same<U, __SIZE_TYPE__> || (is_integral<U> && is_signed<raw_arithmetic_type<U>>))
          )
          && !(detail::is_basic_intptr<wrapper_type> && is_integral<U>)
+         // A reference would refer into a temporary.
+         && !is_reference<U>
          && requires(wrapper_type value) { static_cast<U>(value); }
       )
    [[gnu::always_inline, gnu::nodebug]]
