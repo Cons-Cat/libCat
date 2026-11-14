@@ -317,8 +317,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
       return self.size();
    }
 
-   // This evaluates true if there are one or more elements currently in this
-   // container.
+   // This evaluates true if there are no elements currently in this container.
    [[nodiscard]]
    constexpr auto
    is_empty(this Derived const& self) noexcept -> bool
@@ -327,8 +326,8 @@ class container_interface : public contiguous_collection_interface<Derived> {
       return self.size() == 0;
    }
 
-   // This evaluates true if there are one or more elements currently in this
-   // container.
+   // This evaluates true if no more elements fit in this container's current
+   // storage.
    [[nodiscard]]
    constexpr auto
    is_full(this Derived const& self) -> bool
@@ -353,12 +352,14 @@ class container_interface : public contiguous_collection_interface<Derived> {
    // Index into this container with bounds-checking.
    [[nodiscard]]
    constexpr auto
-   at(idx index) const& [[clang::lifetimebound]] -> maybe<T&>
+   at(idx index) const& [[clang::lifetimebound]] -> maybe<T const&>
       requires(is_array_like)
    {
       Derived const& self = static_cast<Derived const&>(*this);
-      // `unconst()` allows `.at()` to be safely called in a `const` context.
-      return unconst(self).at(index);
+      if (index < self.size()) {
+         return self.data()[index];
+      }
+      return nullopt;
    }
 
    // R-value overloads return a prvalue (by value) to avoid dangling
@@ -616,12 +617,11 @@ class container_interface : public contiguous_collection_interface<Derived> {
       static_assert(false, "Index is out of bounds!");
    }
 
-   // Member-access syntax algorithms. These assign over the first `.size()`
-   // elements of `destination`, which must already hold at least that many.
+   // Member-access syntax algorithms.
 
    template <is_stepanov_container Other>
    auto
-   copy_to(Other& destination [[clang::lifetimebound]]) const noexcept(
+   copy_to(Other& destination [[clang::lifetimebound]]) const& noexcept(
       !__has_feature(cxx_exceptions)
    ) {
       Derived const& self = static_cast<Derived const&>(*this);
@@ -631,18 +631,20 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    template <is_stepanov_container Other>
    auto
-   move_to(Other& destination [[clang::lifetimebound]]) const noexcept(false) {
-      Derived const& self = static_cast<Derived const&>(*this);
+   move_to(Other& destination [[clang::lifetimebound]]) & noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
+      Derived& self = static_cast<Derived&>(*this);
       assert(destination.size() >= self.size());
-      return move(self.begin(), self.end(), destination.begin());
+      return cat::move(self.begin(), self.end(), destination.begin());
    }
 
    template <is_stepanov_container Other>
    auto
-   relocate_to(Other& destination [[clang::lifetimebound]]) const noexcept(
+   relocate_to(Other& destination [[clang::lifetimebound]]) & noexcept(
       !__has_feature(cxx_exceptions)
    ) {
-      Derived const& self = static_cast<Derived const&>(*this);
+      Derived& self = static_cast<Derived&>(*this);
       assert(destination.size() >= self.size());
       return cat::relocate(self.begin(), self.end(), destination.begin());
    }

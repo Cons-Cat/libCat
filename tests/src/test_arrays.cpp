@@ -411,6 +411,17 @@ $test(array_slices_are_bounded_by_size) {
    cat::verify(values.last(3u).is_empty());
 }
 
+$test(array_at_preserves_const) {
+   cat::array<int4, 3u> values = {1, 2, 3};
+   cat::array<int4, 3u> const& constant = values;
+   static_assert(cat::is_same<decltype(values.at(0u)), cat::maybe<int4&>>);
+   static_assert(
+      cat::is_same<decltype(constant.at(0u)), cat::maybe<int4 const&>>
+   );
+   cat::verify(constant.at(2u).verify() == 3);
+   cat::verify(constant.at(3u).is_empty());
+}
+
 $test(array_copy_to_respects_size) {
    cat::vec_big<int4> source;
    $defer {
@@ -433,4 +444,14 @@ $test(array_copy_to_respects_size) {
    destination = {};
    source.relocate_to(destination);
    cat::verify(destination[1u] == 2);
+
+   // Moving or relocating from a `const` container would silently copy.
+   constexpr auto can_move_from = []<typename Source>(Source& from) {
+      return requires(cat::array<int4, 4u>& to) {
+                from.move_to(to);
+                from.relocate_to(to);
+             };
+   };
+   static_assert(can_move_from(source));
+   static_assert(!can_move_from(cat::as_const(source)));
 }
