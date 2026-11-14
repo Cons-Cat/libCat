@@ -87,7 +87,8 @@ template <bool is_shared>
 struct meta;
 
 template <bool is_shared>
-struct group {
+struct [[gnu::gcc_struct]]
+group {
    meta<is_shared>* _Nullable p_meta;
    unsigned char active_idx : 5;
    array<byte, musl_quanta.raw - sizeof(meta<is_shared>*) - 1u> padding;
@@ -95,7 +96,8 @@ struct group {
 };
 
 template <bool is_shared>
-struct meta {
+struct [[gnu::gcc_struct]]
+meta {
    meta* _Nullable p_previous;
    meta* _Nullable p_next;
    group<is_shared>* _Nullable p_memory;

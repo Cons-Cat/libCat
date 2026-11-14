@@ -464,10 +464,12 @@ struct format_type_constant {
 };
 
 // An index into the packed `format_arg_storage`.
-struct format_argument_compact_index {
+struct [[gnu::gcc_struct]] format_argument_compact_index {
    iword::raw_type m_byte_index               : 60;
    detail::format_discriminant m_discriminant : 4;
 };
+
+static_assert(sizeof(format_argument_compact_index) == 8);
 
 // This only exists to be passed into the constructor of `format_args`.
 template <typename... Types>
