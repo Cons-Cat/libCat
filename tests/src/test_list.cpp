@@ -94,11 +94,6 @@ $test(manual_list_modifiers) {
    cat::verify(list.front() == 5);
    cat::verify(list.back() == 1);
 
-   auto second = ++list.begin();
-   list.erase(allocator_ref, second);
-   cat::verify(list.size() == 3);
-   cat::verify(*(++list.begin()) == 2);
-
    list.resize(allocator_ref, 5u, 9).verify();
    cat::verify(list.size() == 5);
    cat::verify(list.back() == 9);
@@ -119,20 +114,10 @@ $test(manual_forward_list_modifiers) {
    auto allocator_ref = cat::allocator_ref<cat::allocator_linear>(allocator);
 
    cat::forward_list<int> list =
-      cat::make_forward_list<int>(allocator_ref, 2, 4).verify();
-   cat::verify(list.size() == 2);
+      cat::make_forward_list<int>(allocator_ref, 2, 3, 4).verify();
+   cat::verify(list.size() == 3);
    cat::verify(list.front() == 2);
 
-   auto second = ++list.begin();
-   list.insert(allocator_ref, second, 3).verify();
-   cat::verify(list.size() == 3);
-   cat::verify(*(++list.begin()) == 3);
-
-   list.erase_after(allocator_ref, list.begin());
-   cat::verify(list.size() == 2);
-   cat::verify(*(++list.begin()) == 4);
-
-   list.emplace(allocator_ref, ++list.begin(), 3).verify();
    cat::forward_list<int> clone = list.clone(allocator_ref).verify();
    cat::verify(clone.size() == 3);
    cat::verify(clone.front() == 2);
@@ -240,30 +225,19 @@ $test(list_iterable_range_modifiers) {
    cat::array<int, 2u> source{2, 3};
    cat::raii::list list = cat::raii::make_list<int>(arena.alloc, 1, 4).verify();
 
-   list.insert_range(++list.begin(), source).verify();
+   list.prepend_range(source).verify();
    cat::verify(list.size() == 4u);
-   cat::verify(*(list.begin() + 1u) == 2);
-   cat::verify(*(list.begin() + 2u) == 3);
-
-   auto greater_than_two = cat::ref(source).filter([](int value) -> bool {
-      return value > 2;
-   });
-   auto first = list.begin() + 1u;
-   auto last = first + 2u;
-   list.replace_with_range(first, last, greater_than_two).verify();
-   cat::verify(list.size() == 3u);
+   cat::verify(*list.begin() == 2);
    cat::verify(*(list.begin() + 1u) == 3);
+   cat::verify(*(list.begin() + 2u) == 1);
 
    auto forward = cat::raii::make_forward_list<int>(arena.alloc, 1, 4).verify();
-   forward.insert_range(++forward.begin(), source).verify();
-   cat::verify(forward.size() == 4u);
-   cat::verify(*(forward.begin() + 1u) == 2);
    auto threes = cat::ref(source).filter([](int value) -> bool {
       return value == 3;
    });
    forward.append_range(threes).verify();
-   cat::verify(forward.size() == 5u);
-   cat::verify(*(forward.begin() + 4u) == 3);
+   cat::verify(forward.size() == 3u);
+   cat::verify(*(forward.begin() + 2u) == 3);
 }
 
 $test(list_factories) {
@@ -318,9 +292,9 @@ $test(list) {
    auto dynamic_ref = cat::allocator_ref<cat::allocator_dyn>(dynamic_allocator);
 
    cat::raii::list list_1 = cat::raii::make_list<int4>(allocator).verify();
-   auto _ = list_1.insert(list_1.begin(), 3).verify();
-   auto _ = list_1.insert(list_1.begin(), 2).verify();
-   auto _ = list_1.insert(list_1.begin(), 1).verify();
+   auto _ = list_1.push_front(3).verify();
+   auto _ = list_1.push_front(2).verify();
+   auto _ = list_1.push_front(1).verify();
    cat::verify(list_1.front() == 1);
    cat::verify(list_1.back() == 3);
 
@@ -340,9 +314,6 @@ $test(list) {
    auto _ = list_2.push_back(4).verify();
    cat::verify(list_2.front() == 0);
    cat::verify(list_2.back() == 4);
-   auto _ = list_2.insert(++list_2.begin(), 1).verify();
-   cat::verify(list_2.front() == 0);
-   cat::verify(*++list_2.begin() == 1);
 
    for (auto&& node : list_2) {
       auto _ = node;
@@ -354,17 +325,16 @@ $test(list) {
    auto _ = list_3.emplace_front(1).verify();
    auto _ = list_3.emplace_front(2).verify();
    auto _ = list_3.emplace_back(3).verify();
-   auto _ = list_3.emplace(++list_3.begin(), 4);
    cat::verify(list_3.front() == 2);
    cat::verify(list_3.back() == 3);
-   cat::verify((*(++list_3.begin())) == 4);
+   cat::verify((*(++list_3.begin())) == 1);
 
    for (auto&& node : list_3) {
       auto _ = node;
       asm volatile("nop");
    }
 
-   auto _ = list_1.emplace(list_1.begin()++, 0);
+   auto _ = list_1.emplace_front(0).verify();
    auto _ = list_1.cbegin();
    auto _ = list_1.cend();
    auto _ = list_1.rbegin();
@@ -375,7 +345,7 @@ $test(list) {
    ++iter;
    cat::verify(*iter == 0);
 
-   list_1.erase(list_1.begin());
+   list_1.pop_front();
    for (int i = 0; i < 10; ++i) {
       list_1.pop_front();
    }
@@ -457,10 +427,8 @@ $test(list) {
    cat::allocator_null null_alloc = cat::make_allocator_null();
    cat::raii::list null_list = cat::raii::make_list<int>(null_alloc).value();
    cat::verify(null_list.size() == 0);
-   cat::verify(null_list.insert(null_list.begin(), 1).is_empty());
    cat::verify(null_list.push_back(1).is_empty());
    cat::verify(null_list.push_front(1).is_empty());
-   cat::verify(null_list.emplace(null_list.begin(), 1).is_empty());
    cat::verify(null_list.emplace_back(1).is_empty());
    cat::verify(null_list.emplace_front(1).is_empty());
 
@@ -596,7 +564,7 @@ $test(list_element_lifetimes) {
          list.emplace_back<allocator_type>(g_tests_alloc, i).has_value()
       );
    }
-   list.erase<allocator_type>(g_tests_alloc, list.begin());
+   list.pop_back<allocator_type>(g_tests_alloc);
    list.pop_front<allocator_type>(g_tests_alloc);
    cat::verify(fragile::live == 2);
    list.free<allocator_type>(g_tests_alloc);
@@ -669,10 +637,6 @@ $test(list_iterator_range_is_complete) {
    }
    cat::verify(count == 3u && sum == 6);
    cat::verify(*--list.end() == 3);
-
-   // Inserting before `end()` appends.
-   list.insert(allocator, list.end(), 4).verify();
-   cat::verify(list.back() == 4 && list.size() == 4u);
 
    cat::forward_list<int> forward =
       cat::make_forward_list<int>(allocator, 1, 2, 3).verify();

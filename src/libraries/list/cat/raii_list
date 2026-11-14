@@ -230,59 +230,6 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
       return new_list;
    }
 
-   // Insert a value before iterator using the stored allocator.
-   template <typename U>
-      requires(is_implicitly_convertible<U, T>)
-   [[nodiscard]]
-   constexpr auto
-   insert(iterator where, U&& value) -> maybe<iterator> {
-      return m_core.insert(m_allocator, where, $fwd(value));
-   }
-
-   // Insert every element of `range` before `where`.
-   template <is_iterable Iterable>
-   [[nodiscard]]
-   constexpr auto
-   insert_range(iterator where, Iterable&& range) -> maybe<iterator> {
-      return m_core.insert_range(m_allocator, where, $fwd(range));
-   }
-
-   // Emplace an element before iterator using the stored allocator.
-   template <typename... Args>
-   [[nodiscard]]
-   constexpr auto
-   emplace(iterator where, Args&&... arguments) -> maybe<iterator> {
-      return m_core.emplace(m_allocator, where, $fwd(arguments)...);
-   }
-
-   // Erase element at iterator and return iterator following it.
-   constexpr auto
-   erase(iterator where) -> iterator {
-      return m_core.erase(m_allocator, where);
-   }
-
-   // Erase the element after iterator.
-   constexpr void
-   erase_after(iterator where) {
-      m_core.erase_after(m_allocator, where);
-   }
-
-   // Erase a range of elements and return iterator to last.
-   [[nodiscard]]
-   constexpr auto
-   erase(iterator first, iterator last) -> iterator {
-      return m_core.erase(m_allocator, first, last);
-   }
-
-   // Replace `[first, last)` with every element of `range`.
-   template <is_iterable Iterable>
-   [[nodiscard]]
-   constexpr auto
-   replace_with_range(iterator first, iterator last, Iterable&& range)
-      -> maybe<iterator> {
-      return m_core.replace_with_range(m_allocator, first, last, $fwd(range));
-   }
-
    // Assign count copies of value to the `cat::raii::basic_list`.
    [[nodiscard]]
    constexpr auto

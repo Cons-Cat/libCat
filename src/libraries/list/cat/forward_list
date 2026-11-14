@@ -276,23 +276,6 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       m_size = 1u;
    }
 
-   // Insert a node before the iterator position.
-   constexpr void
-   place_node(iterator where, node_type& node) {
-      if (where == this->begin()) {
-         node.p_next_node = m_storage.m_p_head;
-         m_storage.m_p_head = &node;
-      } else {
-         node_type* p_previous = m_storage.m_p_head;
-         while (p_previous->p_next_node != where.m_p_node) {
-            p_previous = p_previous->p_next_node;
-         }
-         node.p_next_node = where.m_p_node;
-         p_previous->p_next_node = &node;
-      }
-      ++m_size;
-   }
-
    // Insert node at the front of the `cat::basic_forward_list`.
    constexpr void
    place_node_front(node_type& node) {
@@ -387,55 +370,6 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       return clone<allocator_dyn>(allocator);
    }
 
-   // Insert a new element before iterator and return its iterator.
-   template <is_allocator Allocator, typename U>
-      requires(is_implicitly_convertible<U, T>)
-   [[nodiscard]]
-   constexpr auto
-   insert(allocator_ref<Allocator> allocator, iterator where, U&& value)
-      -> maybe<iterator> {
-      node_type* p_node = $prop(this->make_node(allocator, $fwd(value)));
-      node_type& node = *p_node;
-
-      if (m_size == 0) [[unlikely]] {
-         this->place_initial_node(node);
-      } else {
-         this->place_node(where, node);
-      }
-      return iterator(p_node);
-   }
-
-   // Insert every element of `range` before `where`.
-   template <is_allocator Allocator, is_iterable Iterable>
-   [[nodiscard]]
-   constexpr auto
-   insert_range(
-      allocator_ref<Allocator> allocator, iterator where, Iterable&& range
-   ) -> maybe<iterator> {
-      iterator first = where;
-      bool inserted = false;
-      maybe<void> result = monostate;
-
-      // Insert each element.
-      range | cat::for_each([&](auto&& value) {
-         if (result.has_value()) {
-            maybe<iterator> inserted_iterator =
-               this->insert(allocator, where, $fwd(value));
-            if (inserted_iterator.is_empty()) {
-               result = nullopt;
-            } else if (!inserted) {
-               first = inserted_iterator.value();
-               inserted = true;
-            }
-         }
-      });
-
-      if (result.is_empty()) {
-         return nullopt;
-      }
-      return first;
-   }
-
    // Append every element of `range`.
    template <is_allocator Allocator, is_iterable Iterable>
    [[nodiscard]]
@@ -463,38 +397,6 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       });
 
       return result;
-   }
-
-   // Construct element in place before iterator and return its iterator.
-   template <is_allocator Allocator, typename... Args>
-   [[nodiscard]]
-   constexpr auto
-   emplace(
-      allocator_ref<Allocator> allocator, iterator where, Args&&... arguments
-   ) -> maybe<iterator> {
-      auto* _Nonnull p_node =
-         $prop(this->make_node(allocator, $fwd(arguments)...));
-      node_type& node = *p_node;
-
-      if (m_size == 0) [[unlikely]] {
-         this->place_initial_node(node);
-      } else {
-         this->place_node(where, node);
-      }
-      return iterator(p_node);
-   }
-
-   // Erase the node following the provided iterator.
-   template <is_allocator Allocator>
-   constexpr void
-   erase_after(allocator_ref<Allocator> allocator, iterator where) {
-      node_type& node = *where.m_p_node;
-      node_type* p_remove = node.p_next_node;
-      node.p_next_node = p_remove->p_next_node;
-
-      m_size = idx(m_size - 1u);
-      p_remove->storage.~T();
-      allocator.free(p_remove);
    }
 
    // Insert a copy of value at front and return its iterator.
