@@ -114,7 +114,8 @@ static_assert(sizeof(group<true>) == musl_quanta);
 
 // Three pointers, two masks, and every bitfield packed into one `uword`.
 static_assert(
-   sizeof(meta<false>) == 3u * sizeof(void*) + 2u * sizeof(uint4) + sizeof(uword)
+   sizeof(meta<false>)
+   == 3u * sizeof(void*) + 2u * sizeof(uint4) + sizeof(uword)
 );
 static_assert(
    sizeof(meta<true>) == 3u * sizeof(void*) + 2u * sizeof(uint4) + sizeof(uword)

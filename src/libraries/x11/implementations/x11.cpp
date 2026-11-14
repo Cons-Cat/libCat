@@ -1595,7 +1595,10 @@ x11::manual::connection::check(
       error_packet failure;
       __builtin_memcpy_inline(&failure, m_p_events + offset, sizeof(failure));
 
-      if (failure.response_type == event_code::error && failure.sequence == low_sequence) {
+      if (
+         failure.response_type == event_code::error
+         && failure.sequence == low_sequence
+      ) {
          __builtin_memmove(
             m_p_events + offset, m_p_events + offset + 32u,
             cat::idx(m_event_tail - offset - 32u)
