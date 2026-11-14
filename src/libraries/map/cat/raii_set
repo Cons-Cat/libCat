@@ -102,3 +102,83 @@ class
 };
 
 }  // namespace cat::raii
+
+namespace cat::detail {
+
+// `raii::set` with its default hash, key equality, and storage.
+template <typename Key, is_allocator Allocator>
+using raii_default_set = raii::set<
+   Key, __typeof_unqual(hash), binary_comparator<equal_to_op>,
+   manual::vec_big<map_group<Key, monostate_type>>, Allocator>;
+
+}  // namespace cat::detail
+
+namespace cat::raii {
+
+// Create an empty `cat::raii::set` bound to `allocator`.
+template <typename Key, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_set(allocator_ref<Allocator> allocator [[clang::lifetimebound]])
+   -> maybe<detail::raii_default_set<Key, Allocator>> {
+   return detail::raii_default_set<Key, Allocator>(allocator);
+}
+
+template <typename Key>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_set(allocator_dyn allocator [[clang::lifetimebound]])
+   -> maybe<detail::raii_default_set<Key, allocator_dyn>> {
+   return raii::make_set<Key, allocator_dyn>(allocator);
+}
+
+// Create a `cat::raii::set` that holds `keys`. Duplicate keys are inserted
+// once.
+template <typename Key, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_set(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   initializer_list<Key> keys
+) -> maybe<detail::raii_default_set<Key, Allocator>> {
+   detail::raii_default_set<Key, Allocator> new_set(allocator);
+   $prop(new_set.reserve(keys.size()));
+   for (Key const& key : keys) {
+      // This cannot fail to allocate after reserving, so it is only empty for
+      // a duplicate key.
+      auto _ = new_set.insert(key);
+   }
+
+   return new_set;
+}
+
+template <typename Key>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_set(
+   allocator_dyn allocator [[clang::lifetimebound]], initializer_list<Key> keys
+) -> maybe<detail::raii_default_set<Key, allocator_dyn>> {
+   return raii::make_set<Key, allocator_dyn>(allocator, keys);
+}
+
+// Create a `cat::raii::set` that holds at least `count` keys without growing.
+template <typename Key, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_set_reserved(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count
+) -> maybe<detail::raii_default_set<Key, Allocator>> {
+   detail::raii_default_set<Key, Allocator> new_set(allocator);
+   $prop(new_set.reserve(count));
+   return new_set;
+}
+
+template <typename Key>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_set_reserved(allocator_dyn allocator [[clang::lifetimebound]], idx count)
+   -> maybe<detail::raii_default_set<Key, allocator_dyn>> {
+   return raii::make_set_reserved<Key, allocator_dyn>(allocator, count);
+}
+
+}  // namespace cat::raii

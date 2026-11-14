@@ -177,6 +177,30 @@ $test(dyn_set_and_view) {
    big.free(pager);
 }
 
+$test(make_set) {
+   cat::set<int4> empty = cat::make_set<int4>();
+   cat::verify(empty.size() == 0u && empty.capacity() == 0u);
+
+   cat::set<int4> set = cat::make_set<int4>(pager, {1, 2, 1}).verify();
+   cat::verify(set.size() == 2u && set.contains(1) && set.contains(2));
+   set.free(pager);
+
+   cat::set<int4> reserved = cat::make_set_reserved<int4>(pager, 100u).verify();
+   cat::verify(reserved.capacity() >= 100u);
+   reserved.free(pager);
+
+   cat::allocator_dyn allocator(pager);
+   auto raii_empty = cat::raii::make_set<int4>(allocator).verify();
+   cat::verify(raii_empty.insert(1).has_value());
+
+   auto raii_set = cat::raii::make_set<int4>(allocator, {3, 3, 4}).verify();
+   cat::verify(raii_set.size() == 2u && raii_set.contains(4));
+
+   auto raii_reserved =
+      cat::raii::make_set_reserved<int4>(allocator, 100u).verify();
+   cat::verify(raii_reserved.capacity() >= 100u);
+}
+
 $test(set_clear) {
    cat::set_big<int4> set;
    cat::verify(set.insert(pager, 1).has_value());

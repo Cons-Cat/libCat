@@ -418,4 +418,60 @@ class [[gsl::Pointer]] set_view {
    }
 };
 
+// Create an empty `cat::set`.
+template <typename Key>
+[[nodiscard]]
+constexpr auto
+make_set() -> set<Key> {
+   return {};
+}
+
+// Create a `cat::set` that holds `keys`. Duplicate keys are inserted once.
+template <typename Key, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_set(allocator_ref<Allocator> allocator, initializer_list<Key> keys)
+   -> maybe<set<Key>> {
+   set<Key> new_set;
+   $prop(new_set.reserve(allocator, keys.size()));
+   detail::exception_defer guard([&] {
+      new_set.free(allocator);
+   });
+
+   for (Key const& key : keys) {
+      // This cannot fail to allocate after reserving, so it is only empty for
+      // a duplicate key.
+      auto _ = new_set.insert(allocator, key);
+   }
+
+   guard.commit();
+   return new_set;
+}
+
+template <typename Key>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_set(allocator_dyn allocator, initializer_list<Key> keys)
+   -> maybe<set<Key>> {
+   return make_set<Key, allocator_dyn>(allocator, keys);
+}
+
+// Create a `cat::set` that holds at least `count` keys without growing.
+template <typename Key, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_set_reserved(allocator_ref<Allocator> allocator, idx count)
+   -> maybe<set<Key>> {
+   set<Key> new_set;
+   $prop(new_set.reserve(allocator, count));
+   return new_set;
+}
+
+template <typename Key>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_set_reserved(allocator_dyn allocator, idx count) -> maybe<set<Key>> {
+   return make_set_reserved<Key, allocator_dyn>(allocator, count);
+}
+
 }  // namespace cat::inline manual

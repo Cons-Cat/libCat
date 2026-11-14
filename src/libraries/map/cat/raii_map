@@ -92,6 +92,18 @@ raii_map_base {
       m_core.clear();
    }
 
+   [[nodiscard]]
+   constexpr auto
+   rehash(idx slots) -> maybe<void> {
+      return m_core.rehash(m_allocator, slots);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   reserve(idx count) -> maybe<void> {
+      return m_core.reserve(m_allocator, count);
+   }
+
    // Deallocate this container's storage through its owned allocator.
    [[clang::reinitializes]]
    constexpr void
@@ -247,5 +259,87 @@ class
       return this->m_core.update(this->m_allocator, move(key), $fwd(value));
    }
 };
+
+}  // namespace cat::raii
+
+namespace cat::detail {
+
+// `raii::map` with its default hash, key equality, and storage.
+template <typename Key, typename T, is_allocator Allocator>
+using raii_default_map = raii::map<
+   Key, T, __typeof_unqual(hash), binary_comparator<equal_to_op>,
+   manual::vec_big<map_group<Key, T>>, Allocator>;
+
+}  // namespace cat::detail
+
+namespace cat::raii {
+
+// Create an empty `cat::raii::map` bound to `allocator`.
+template <typename Key, typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_map(allocator_ref<Allocator> allocator [[clang::lifetimebound]])
+   -> maybe<detail::raii_default_map<Key, T, Allocator>> {
+   return detail::raii_default_map<Key, T, Allocator>(allocator);
+}
+
+template <typename Key, typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_map(allocator_dyn allocator [[clang::lifetimebound]])
+   -> maybe<detail::raii_default_map<Key, T, allocator_dyn>> {
+   return raii::make_map<Key, T, allocator_dyn>(allocator);
+}
+
+// Create a `cat::raii::map` that holds `entries`. A duplicate key keeps its
+// first value.
+template <typename Key, typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_map(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   initializer_list<tuple<Key, T>> entries
+) -> maybe<detail::raii_default_map<Key, T, Allocator>> {
+   detail::raii_default_map<Key, T, Allocator> new_map(allocator);
+   $prop(new_map.reserve(entries.size()));
+   for (tuple<Key, T> const& entry : entries) {
+      // This cannot fail to allocate after reserving, so it is only empty for
+      // a duplicate key.
+      auto _ = new_map.insert(entry.first(), entry.second());
+   }
+
+   return new_map;
+}
+
+template <typename Key, typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_map(
+   allocator_dyn allocator [[clang::lifetimebound]],
+   initializer_list<tuple<Key, T>> entries
+) -> maybe<detail::raii_default_map<Key, T, allocator_dyn>> {
+   return raii::make_map<Key, T, allocator_dyn>(allocator, entries);
+}
+
+// Create a `cat::raii::map` that holds at least `count` entries without
+// growing.
+template <typename Key, typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_map_reserved(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count
+) -> maybe<detail::raii_default_map<Key, T, Allocator>> {
+   detail::raii_default_map<Key, T, Allocator> new_map(allocator);
+   $prop(new_map.reserve(count));
+   return new_map;
+}
+
+template <typename Key, typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_map_reserved(allocator_dyn allocator [[clang::lifetimebound]], idx count)
+   -> maybe<detail::raii_default_map<Key, T, allocator_dyn>> {
+   return raii::make_map_reserved<Key, T, allocator_dyn>(allocator, count);
+}
 
 }  // namespace cat::raii

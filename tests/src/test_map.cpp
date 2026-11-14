@@ -1072,6 +1072,54 @@ $test(map_throwing_rehash) {
 }
 #endif
 
+$test(make_map) {
+   cat::map<int4, int4> empty = cat::make_map<int4, int4>();
+   cat::verify(empty.size() == 0u && empty.capacity() == 0u);
+
+   // A duplicate key keeps its first value.
+   cat::map<int4, int4> map = cat::make_map<int4, int4>(
+                                 pager,
+                                 {
+                                    {1, 10},
+                                    {2, 20},
+                                    {1, 30}
+   }
+   )
+                                 .verify();
+   cat::verify(map.size() == 2u);
+   cat::verify(map[1].verify() == 10 && map[2].verify() == 20);
+   map.free(pager);
+
+   cat::map<int4, int4> reserved =
+      cat::make_map_reserved<int4, int4>(pager, 100u).verify();
+   idx const capacity = reserved.capacity();
+   for (int4 i = 0; i < 100; ++i) {
+      cat::verify(reserved.insert(pager, i, i).has_value());
+   }
+   cat::verify(reserved.capacity() == capacity);
+   reserved.free(pager);
+
+   cat::allocator_dyn allocator(pager);
+   auto raii_empty = cat::raii::make_map<int4, int4>(allocator).verify();
+   cat::verify(raii_empty.insert(1, 2).has_value());
+
+   auto raii_map = cat::raii::make_map<int4, int4>(
+                      allocator,
+                      {
+                         {1, 10},
+                         {1, 30}
+   }
+   )
+                      .verify();
+   cat::verify(raii_map.size() == 1u && raii_map[1].verify() == 10);
+
+   auto raii_reserved =
+      cat::raii::make_map_reserved<int4, int4>(allocator, 100u).verify();
+   cat::verify(raii_reserved.capacity() >= 100u);
+   cat::verify(raii_reserved.reserve(1'000u).has_value());
+   cat::verify(raii_reserved.capacity() >= 1'000u);
+}
+
 template <typename Map>
 concept can_assign_through_lookup =
    requires(Map& map, int4& value) { map[1] = value; };
