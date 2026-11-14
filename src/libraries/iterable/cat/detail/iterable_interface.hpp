@@ -2,6 +2,8 @@
 // vim: set ft=cpp:
 #pragma once
 
+#include <cat/detail/random_generator.hpp>
+
 #include <cat/arithmetic>
 #include <cat/meta>
 
@@ -241,12 +243,13 @@ struct iterable_interface {
    fill(this Self&& self [[clang::lifetimebound]], Value value)
       -> decltype(auto);
 
-   template <typename Self, typename Generator>
+   template <typename Self, is_random_generator Generator>
    constexpr auto
    fill_random(this Self&& self [[clang::lifetimebound]], Generator&& generator)
       -> decltype(auto);
 
-   template <typename Self, typename Generator, typename Distribution>
+   template <
+      typename Self, is_random_generator Generator, typename Distribution>
    constexpr auto
    fill_random(
       this Self&& self [[clang::lifetimebound]], Generator&& generator,

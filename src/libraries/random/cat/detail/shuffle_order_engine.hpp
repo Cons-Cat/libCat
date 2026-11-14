@@ -6,7 +6,7 @@
 
 namespace cat {
 
-template <is_uniform_random_bit_generator Engine, idx table_size>
+template <is_random_generator Engine, idx table_size>
    requires(table_size > 0u)
 class shuffle_order_engine {
  public:

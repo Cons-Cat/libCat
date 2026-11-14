@@ -43,13 +43,13 @@ class basic_allocator_musl
    friend auto
    make_allocator_musl_shared() noexcept -> basic_allocator_musl<true>;
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    friend auto
    make_allocator_musl(Generator& generator) noexcept(
       !__has_feature(cxx_exceptions)
    ) -> basic_allocator_musl<false>;
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    friend auto
    make_allocator_musl_shared(Generator& generator) noexcept(
       !__has_feature(cxx_exceptions)
@@ -216,7 +216,7 @@ class basic_allocator_musl
 using allocator_musl = basic_allocator_musl<false>;
 using allocator_musl_shared = basic_allocator_musl<true>;
 
-template <is_uniform_random_bit_generator Generator>
+template <is_random_generator Generator>
 [[nodiscard]]
 inline auto
 make_allocator_musl(Generator& generator) noexcept(
@@ -230,7 +230,7 @@ make_allocator_musl(Generator& generator) noexcept(
    }
 }
 
-template <is_uniform_random_bit_generator Generator>
+template <is_random_generator Generator>
 [[nodiscard]]
 inline auto
 make_allocator_musl_shared(Generator& generator) noexcept(

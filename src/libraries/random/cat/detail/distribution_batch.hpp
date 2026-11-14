@@ -11,8 +11,7 @@ namespace cat::detail {
 template <template <typename> typename Distribution, typename Scalar>
 struct unary_distribution_batch_traits {
    template <
-      typename Abi, is_uniform_random_bit_generator Generator,
-      typename... Parameters>
+      typename Abi, is_random_generator Generator, typename... Parameters>
    [[nodiscard]]
    static constexpr auto
    generate_with(Generator& generator, Parameters... parameters) noexcept {
@@ -25,7 +24,7 @@ struct unary_distribution_batch_traits {
 
 template <typename Float>
 struct distribution_batch_traits<bernoulli_distribution<Float>> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -41,7 +40,7 @@ struct distribution_batch_traits<bernoulli_distribution<Float>> {
 
 template <typename Int, typename Float>
 struct distribution_batch_traits<binomial_distribution<Int, Float>> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -62,7 +61,7 @@ struct distribution_batch_traits<binomial_distribution<Int, Float>> {
 template <typename Float>
 struct distribution_batch_traits<cauchy_distribution<Float>>
     : unary_distribution_batch_traits<cauchy_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -77,7 +76,7 @@ struct distribution_batch_traits<cauchy_distribution<Float>>
 template <typename Float>
 struct distribution_batch_traits<chi_squared_distribution<Float>>
     : unary_distribution_batch_traits<chi_squared_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -91,7 +90,7 @@ struct distribution_batch_traits<chi_squared_distribution<Float>>
 
 template <typename Int>
 struct distribution_batch_traits<discrete_distribution<Int>> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -111,7 +110,7 @@ struct distribution_batch_traits<discrete_distribution<Int>> {
 template <typename Float>
 struct distribution_batch_traits<exponential_distribution<Float>>
     : unary_distribution_batch_traits<exponential_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -126,7 +125,7 @@ struct distribution_batch_traits<exponential_distribution<Float>>
 template <typename Float>
 struct distribution_batch_traits<extreme_value_distribution<Float>>
     : unary_distribution_batch_traits<extreme_value_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -141,7 +140,7 @@ struct distribution_batch_traits<extreme_value_distribution<Float>>
 template <typename Float>
 struct distribution_batch_traits<fisher_f_distribution<Float>>
     : unary_distribution_batch_traits<fisher_f_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -156,7 +155,7 @@ struct distribution_batch_traits<fisher_f_distribution<Float>>
 template <typename Float>
 struct distribution_batch_traits<gamma_distribution<Float>>
     : unary_distribution_batch_traits<gamma_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -170,7 +169,7 @@ struct distribution_batch_traits<gamma_distribution<Float>>
 
 template <typename Int, typename Float>
 struct distribution_batch_traits<geometric_distribution<Int, Float>> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -190,7 +189,7 @@ struct distribution_batch_traits<geometric_distribution<Int, Float>> {
 template <typename Float>
 struct distribution_batch_traits<lognormal_distribution<Float>>
     : unary_distribution_batch_traits<lognormal_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -204,7 +203,7 @@ struct distribution_batch_traits<lognormal_distribution<Float>>
 
 template <typename Int, typename Float>
 struct distribution_batch_traits<negative_binomial_distribution<Int, Float>> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -226,7 +225,7 @@ struct distribution_batch_traits<negative_binomial_distribution<Int, Float>> {
 template <typename Float>
 struct distribution_batch_traits<normal_distribution<Float>>
     : unary_distribution_batch_traits<normal_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -240,7 +239,7 @@ struct distribution_batch_traits<normal_distribution<Float>>
 
 template <typename Float>
 struct distribution_batch_traits<piecewise_constant_distribution<Float>> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -257,7 +256,7 @@ struct distribution_batch_traits<piecewise_constant_distribution<Float>> {
 
 template <typename Float>
 struct distribution_batch_traits<piecewise_linear_distribution<Float>> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -274,7 +273,7 @@ struct distribution_batch_traits<piecewise_linear_distribution<Float>> {
 
 template <typename Int, typename Float>
 struct distribution_batch_traits<poisson_distribution<Int, Float>> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -294,7 +293,7 @@ struct distribution_batch_traits<poisson_distribution<Int, Float>> {
 template <typename Float>
 struct distribution_batch_traits<student_t_distribution<Float>>
     : unary_distribution_batch_traits<student_t_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -309,7 +308,7 @@ struct distribution_batch_traits<student_t_distribution<Float>>
 template <typename Float>
 struct distribution_batch_traits<uniform_float_distribution<Float>>
     : unary_distribution_batch_traits<uniform_float_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -323,7 +322,7 @@ struct distribution_batch_traits<uniform_float_distribution<Float>>
 
 template <typename Int>
 struct distribution_batch_traits<uniform_int_distribution<Int>> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(
@@ -344,7 +343,7 @@ struct distribution_batch_traits<uniform_int_distribution<Int>> {
 template <typename Float>
 struct distribution_batch_traits<weibull_distribution<Float>>
     : unary_distribution_batch_traits<weibull_distribution, Float> {
-   template <typename Abi, is_uniform_random_bit_generator Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    generate(

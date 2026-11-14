@@ -115,13 +115,13 @@ class normal_distribution {
       return limits<Float>::infinity();
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    constexpr auto
    operator()(Generator& generator) -> result_type {
       return (*this)(generator, m_parameter);
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    constexpr auto
    operator()(Generator& generator, param_type const& parameter)
       -> result_type {

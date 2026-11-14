@@ -109,16 +109,13 @@ class bernoulli_distribution {
       m_parameters = parameters;
    }
 
-   // TODO: Consider using `detail::convenience_engine` by default to
-   // distributions' call operators to simplify use.
-
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    constexpr auto
    operator()(Generator& generator) const -> result_type {
       return (*this)(generator, m_parameters);
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    constexpr auto
    operator()(Generator& generator, param_type const& parameters) const
       -> result_type {

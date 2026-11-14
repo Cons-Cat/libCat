@@ -6,8 +6,7 @@
 
 namespace cat {
 
-template <
-   is_uniform_random_bit_generator Engine, idx block_size, idx used_block>
+template <is_random_generator Engine, idx block_size, idx used_block>
    requires(used_block > 0u && used_block <= block_size)
 class discard_block_engine {
  public:

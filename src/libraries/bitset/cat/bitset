@@ -781,7 +781,7 @@ make_bitset_filled(bit_value value) noexcept {
    return new_bitset;
 }
 
-template <idx bits_count, typename T = void, typename Generator>
+template <idx bits_count, typename T = void, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_bitset_filled_random(Generator&& generator) -> bitset<bits_count, T> {
@@ -792,7 +792,8 @@ make_bitset_filled_random(Generator&& generator) -> bitset<bits_count, T> {
 }
 
 template <
-   idx bits_count, typename T = void, typename Generator, typename Distribution>
+   idx bits_count, typename T = void, is_random_generator Generator,
+   typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_bitset_filled_random(Generator&& generator, Distribution&& distribution)

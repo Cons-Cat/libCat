@@ -183,10 +183,8 @@ static_assert(sizeof(reference_word) == 8u);
 static_assert(
    cat::is_same<cat::splitmix64_engine, cat::splitmix_engine<cat::uint8>>
 );
-static_assert(cat::is_uniform_random_bit_generator<cat::splitmix64_engine>);
-static_assert(
-   cat::is_uniform_random_bit_generator<cat::splitmix_engine<cat::uint8x4>>
-);
+static_assert(cat::is_random_generator<cat::splitmix64_engine>);
+static_assert(cat::is_random_generator<cat::splitmix_engine<cat::uint8x4>>);
 static_assert(matches_reference(0u, seed_zero_reference));
 static_assert(matches_reference(1u, seed_one_reference));
 static_assert(verify_constexpr_navigation());

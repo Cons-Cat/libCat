@@ -17,9 +17,7 @@ namespace cat::detail {
 template <typename Distribution>
 struct distribution_batch_traits;
 
-template <
-   typename Abi, typename Distribution,
-   is_uniform_random_bit_generator Generator>
+template <typename Abi, typename Distribution, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 generate_random_distribution_batch(
@@ -48,7 +46,7 @@ template <typename T>
 using random_scalar = random_scalar_type<T>::type;
 
 template <
-   typename Generator, typename Abi,
+   is_random_generator Generator, typename Abi,
    typename Result = random_scalar<typename Generator::result_type>>
 class distribution_batch_engine {
  public:
@@ -190,7 +188,7 @@ distribution_pow(Float base, Float exponent) noexcept -> Float {
    }
 }
 
-template <is_uniform_random_bit_generator Generator>
+template <is_random_generator Generator>
 constexpr auto
 distribution_engine_word(Generator& generator) noexcept(
    !__has_feature(cxx_exceptions)
@@ -201,8 +199,7 @@ distribution_engine_word(Generator& generator) noexcept(
    return unsigned_type(generator()) - minimum;
 }
 
-template <
-   is_simd_unsigned_integral T, is_uniform_random_bit_generator Generator>
+template <is_simd_unsigned_integral T, is_random_generator Generator>
 constexpr auto
 distribution_random_word(Generator& generator) noexcept -> T {
    using engine_type = __typeof_unqual(generator);
@@ -240,7 +237,7 @@ distribution_random_word(Generator& generator) noexcept -> T {
    return result;
 }
 
-template <is_uniform_random_bit_generator Generator>
+template <is_random_generator Generator>
 constexpr auto
 distribution_random_bit(Generator& generator) noexcept -> bool {
    using engine_type = __typeof_unqual(generator);
@@ -261,7 +258,7 @@ distribution_random_bit(Generator& generator) noexcept -> bool {
    }
 }
 
-template <is_uniform_random_bit_generator Generator, is_unsigned_integral T>
+template <is_random_generator Generator, is_unsigned_integral T>
 constexpr auto
 distribution_random_bounded(Generator& generator, T bound) noexcept -> T {
    using engine_type = __typeof_unqual(generator);
@@ -364,7 +361,7 @@ distribution_next_toward(Float value, Float toward) noexcept -> Float {
    }
 }
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 distribution_generate_canonical(Generator& generator) noexcept -> Float {
@@ -439,7 +436,7 @@ distribution_generate_canonical(Generator& generator) noexcept -> Float {
    );
 }
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 random_positive_canonical(Generator& generator) noexcept -> Float {
@@ -459,7 +456,7 @@ random_positive_canonical(Generator& generator) noexcept -> Float {
    return value;
 }
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 random_standard_normal(Generator& generator) noexcept -> Float {
@@ -471,7 +468,7 @@ random_standard_normal(Generator& generator) noexcept -> Float {
    return radius * raw_cos(angle);
 }
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 random_gamma(Generator& generator, Float alpha, Float beta) noexcept -> Float {

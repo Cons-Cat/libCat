@@ -1877,14 +1877,14 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
    template <
       typename U, is_allocator Allocator, vec_flags other_flags,
-      typename Generator>
+      is_random_generator Generator>
    friend constexpr auto
    make_vec_filled_random(allocator_ref<Allocator>, idx, Generator&&)
       -> maybe<vec<U, other_flags>>;
 
    template <
       typename U, is_allocator Allocator, vec_flags other_flags,
-      typename Generator, typename Distribution>
+      is_random_generator Generator, typename Distribution>
    friend constexpr auto
    make_vec_filled_random(
       allocator_ref<Allocator>, idx, Generator&&, Distribution&&
@@ -2106,7 +2106,8 @@ template <typename T, vec_flags flags = {}>
 }
 
 template <
-   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator>
+   typename T, is_allocator Allocator, vec_flags flags = {},
+   is_random_generator Generator>
 [[nodiscard]] constexpr auto make_vec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<vec<T, flags>> {
@@ -2129,8 +2130,8 @@ template <
 }
 
 template <
-   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator,
-   typename Distribution>
+   typename T, is_allocator Allocator, vec_flags flags = {},
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]] constexpr auto make_vec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
@@ -2156,7 +2157,7 @@ template <
    return new_vector;
 }
 
-template <typename T, vec_flags flags = {}, typename Generator>
+template <typename T, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -2169,7 +2170,8 @@ template <typename T, vec_flags flags = {}, typename Generator>
 }
 
 template <
-   typename T, vec_flags flags = {}, typename Generator, typename Distribution>
+   typename T, vec_flags flags = {}, is_random_generator Generator,
+   typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator,
@@ -2187,7 +2189,7 @@ template <
 
 template <
    typename T, idx inline_count, is_allocator Allocator, vec_flags flags = {},
-   typename Generator>
+   is_random_generator Generator>
 [[nodiscard]] constexpr auto make_vec_small_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<vec_small<T, inline_count, flags>> {
@@ -2201,7 +2203,7 @@ template <
 
 template <
    typename T, idx inline_count, is_allocator Allocator, vec_flags flags = {},
-   typename Generator, typename Distribution>
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]] constexpr auto make_vec_small_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
@@ -2218,7 +2220,8 @@ template <
 }
 
 template <
-   typename T, idx inline_count, vec_flags flags = {}, typename Generator>
+   typename T, idx inline_count, vec_flags flags = {},
+   is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_small_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -2231,8 +2234,8 @@ template <
 }
 
 template <
-   typename T, idx inline_count, vec_flags flags = {}, typename Generator,
-   typename Distribution>
+   typename T, idx inline_count, vec_flags flags = {},
+   is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_small_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator,
@@ -2249,7 +2252,8 @@ template <
 }
 
 template <
-   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator>
+   typename T, is_allocator Allocator, vec_flags flags = {},
+   is_random_generator Generator>
 [[nodiscard]] constexpr auto make_vec_big_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<vec_big<T, flags>> {
@@ -2262,8 +2266,8 @@ template <
 }
 
 template <
-   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator,
-   typename Distribution>
+   typename T, is_allocator Allocator, vec_flags flags = {},
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]] constexpr auto make_vec_big_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
@@ -2279,7 +2283,7 @@ template <
    );
 }
 
-template <typename T, vec_flags flags = {}, typename Generator>
+template <typename T, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_big_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -2292,7 +2296,8 @@ template <typename T, vec_flags flags = {}, typename Generator>
 }
 
 template <
-   typename T, vec_flags flags = {}, typename Generator, typename Distribution>
+   typename T, vec_flags flags = {}, is_random_generator Generator,
+   typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_big_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator,
@@ -2309,7 +2314,8 @@ template <
 }
 
 template <
-   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator>
+   typename T, is_allocator Allocator, vec_flags flags = {},
+   is_random_generator Generator>
 [[nodiscard]] constexpr auto make_vec_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<vec_fixed<T, flags>> {
@@ -2321,8 +2327,8 @@ template <
 }
 
 template <
-   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator,
-   typename Distribution>
+   typename T, is_allocator Allocator, vec_flags flags = {},
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]] constexpr auto make_vec_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
@@ -2337,7 +2343,7 @@ template <
    );
 }
 
-template <typename T, vec_flags flags = {}, typename Generator>
+template <typename T, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -2350,7 +2356,8 @@ template <typename T, vec_flags flags = {}, typename Generator>
 }
 
 template <
-   typename T, vec_flags flags = {}, typename Generator, typename Distribution>
+   typename T, vec_flags flags = {}, is_random_generator Generator,
+   typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator,
@@ -2368,7 +2375,7 @@ template <
 
 template <
    typename T, idx inline_count, is_allocator Allocator, vec_flags flags = {},
-   typename Generator>
+   is_random_generator Generator>
 [[nodiscard]] constexpr auto make_vec_small_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<vec_small_fixed<T, inline_count, flags>> {
@@ -2382,7 +2389,7 @@ template <
 
 template <
    typename T, idx inline_count, is_allocator Allocator, vec_flags flags = {},
-   typename Generator, typename Distribution>
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]] constexpr auto make_vec_small_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
@@ -2398,7 +2405,8 @@ template <
 }
 
 template <
-   typename T, idx inline_count, vec_flags flags = {}, typename Generator>
+   typename T, idx inline_count, vec_flags flags = {},
+   is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_small_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -2410,8 +2418,8 @@ template <
 }
 
 template <
-   typename T, idx inline_count, vec_flags flags = {}, typename Generator,
-   typename Distribution>
+   typename T, idx inline_count, vec_flags flags = {},
+   is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_small_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator,
@@ -2429,7 +2437,8 @@ template <
 }
 
 template <
-   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator>
+   typename T, is_allocator Allocator, vec_flags flags = {},
+   is_random_generator Generator>
 [[nodiscard]] constexpr auto make_vec_big_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<vec_big_fixed<T, flags>> {
@@ -2442,8 +2451,8 @@ template <
 }
 
 template <
-   typename T, is_allocator Allocator, vec_flags flags = {}, typename Generator,
-   typename Distribution>
+   typename T, is_allocator Allocator, vec_flags flags = {},
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]] constexpr auto make_vec_big_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
@@ -2458,7 +2467,7 @@ template <
    );
 }
 
-template <typename T, vec_flags flags = {}, typename Generator>
+template <typename T, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_big_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -2471,7 +2480,8 @@ template <typename T, vec_flags flags = {}, typename Generator>
 }
 
 template <
-   typename T, vec_flags flags = {}, typename Generator, typename Distribution>
+   typename T, vec_flags flags = {}, is_random_generator Generator,
+   typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_big_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator,

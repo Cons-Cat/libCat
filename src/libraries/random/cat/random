@@ -16,6 +16,7 @@
 //    SplitMix64 in `./detail/splitmix.hpp`.
 
 #include <cat/detail/bounded_random.hpp>
+#include <cat/detail/random_generator.hpp>
 #include <cat/detail/random_seed.hpp>
 #include <cat/detail/rdrand.hpp>
 #include <cat/detail/rdseed.hpp>
@@ -39,16 +40,6 @@
 
 namespace cat {
 
-template <typename Generator>
-concept is_uniform_random_bit_generator =
-   (is_integral<typename Generator::result_type>
-    || is_simd_integral<typename Generator::result_type>)
-   && requires(Generator& generator) {
-         { generator() } -> is_same<typename Generator::result_type>;
-         Generator::min();
-         Generator::max();
-      };
-
 namespace detail {
 
 enum class xoshiro_scrambler : uint1::raw_type {
@@ -67,13 +58,13 @@ class xoshiro256_engine;
 }  // namespace detail
 
 template <typename Generator>
-concept is_simd_random_bit_generator =
-   is_uniform_random_bit_generator<Generator>
-   && is_simd_integral<typename Generator::result_type>;
+concept is_simd_random_generator =
+   is_random_generator<Generator>
+   && is_simd_integral<typename remove_reference<Generator>::result_type>;
 
 namespace detail {
 
-template <is_uniform_random_bit_generator Generator>
+template <is_random_generator Generator>
 constexpr auto
 random_engine_word(Generator& generator) noexcept(
    !__has_feature(cxx_exceptions)
@@ -104,7 +95,7 @@ random_canonical_calls(Unsigned span) noexcept -> idx {
    return calls;
 }
 
-template <is_uniform_random_bit_generator Generator, is_unsigned_integral T>
+template <is_random_generator Generator, is_unsigned_integral T>
 constexpr auto
 random_bounded(Generator& generator, T bound) noexcept -> T {
    using unsigned_type = make_unsigned_type<T>;
@@ -139,8 +130,7 @@ random_mix_seed(T value) noexcept -> T {
 
 }  // namespace detail
 
-template <
-   is_floating_point Float, idx bits, is_uniform_random_bit_generator Generator>
+template <is_floating_point Float, idx bits, is_random_generator Generator>
 constexpr auto
 generate_canonical(Generator& generator) noexcept -> Float {
    using raw_float = raw_arithmetic_type<Float>;
@@ -169,7 +159,7 @@ generate_canonical(Generator& generator) noexcept -> Float {
    return Float(1) - limits<Float>::epsilon() / Float(2);
 }
 
-template <is_floating_point Float, is_uniform_random_bit_generator Generator>
+template <is_floating_point Float, is_random_generator Generator>
 constexpr auto
 generate_canonical(Generator& generator) noexcept -> Float {
    return generate_canonical<Float, limits<Float>::digits>(generator);
@@ -177,17 +167,17 @@ generate_canonical(Generator& generator) noexcept -> Float {
 
 namespace detail {
 
-template <is_uniform_random_bit_generator Generator>
+template <is_random_generator Generator>
 constexpr auto
 distribution_engine_word(Generator& generator) noexcept(
    !__has_feature(cxx_exceptions)
 );
 
-template <is_uniform_random_bit_generator Generator>
+template <is_random_generator Generator>
 constexpr auto
 distribution_random_bit(Generator& generator) noexcept -> bool;
 
-template <is_uniform_random_bit_generator Generator, is_unsigned_integral T>
+template <is_random_generator Generator, is_unsigned_integral T>
 constexpr auto
 distribution_random_bounded(Generator& generator, T bound) noexcept -> T;
 
@@ -201,12 +191,12 @@ template <typename Float>
 constexpr auto
 distribution_next_toward(Float value, Float toward) noexcept -> Float;
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 distribution_generate_canonical(Generator& generator) noexcept -> Float;
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 distribution_unit(Generator& generator) noexcept -> Float;
@@ -232,7 +222,7 @@ template <typename Int>
 constexpr void
 distribution_add(Int& result, Int value) noexcept;
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 sampling_unit(Generator& generator) noexcept -> Float;
@@ -255,17 +245,17 @@ template <typename Int>
 constexpr auto
 sampling_integer(idx value) noexcept -> Int;
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 random_positive_canonical(Generator& generator) noexcept -> Float;
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 random_standard_normal(Generator& generator) noexcept -> Float;
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 random_gamma(Generator& generator, Float alpha, Float beta) noexcept -> Float;
@@ -489,6 +479,7 @@ class piecewise_linear_distribution;
 #include <cat/detail/distribution_helpers.hpp>
 #include <cat/detail/exponential_distribution.hpp>
 #include <cat/detail/extreme_value_distribution.hpp>
+#include <cat/detail/fill_random.hpp>
 #include <cat/detail/fisher_f_distribution.hpp>
 #include <cat/detail/gamma_distribution.hpp>
 #include <cat/detail/geometric_distribution.hpp>
@@ -513,150 +504,6 @@ class piecewise_linear_distribution;
 #include <cat/splitmix>
 
 namespace cat {
-
-using convenience_random_engine = pcg_dxsm_engine<uint8>;
-
-}  // namespace cat
-
-#include <cat/detail/fill_random.hpp>
-
-namespace cat {
-
-namespace detail {
-
-template <typename Engine>
-auto
-convenience_engine() noexcept(!__has_feature(cxx_exceptions)) -> Engine& {
-   static thread_local Engine engine(nix::sys_urandom_engine{}());
-   return engine;
-}
-
-template <typename Distribution, typename Engine>
-auto
-random_bool() noexcept -> bool {
-   return Distribution{}(convenience_engine<Engine>());
-}
-
-template <typename T>
-struct default_random_engine_type {
-   using type = pcg_dxsm_engine<uint8>;
-};
-
-template <typename T, typename Abi>
-struct default_random_engine_type<simd<T, Abi>> {
-   using unsigned_type = simd<
-      uint_fixed<sizeof(T)>,
-      typename Abi::template make_abi_type<uint_fixed<sizeof(T)>>>;
-   using type = xoshiro_engine<unsigned_type>;
-};
-
-template <typename T>
-using default_random_engine = default_random_engine_type<T>::type;
-
-}  // namespace detail
-
-// https://open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3689r0.pdf
-template <typename T, typename Engine = detail::default_random_engine<T>>
-   requires(is_arithmetic<T> || is_simd_arithmetic<T>)
-auto
-random(T lower_bound, T upper_bound) noexcept -> T {
-   if constexpr (is_integral<T> || is_simd_integral<T>) {
-      return uniform_int_distribution<T>(lower_bound, upper_bound)(
-         detail::convenience_engine<Engine>()
-      );
-   } else {
-      return uniform_float_distribution<T>(lower_bound, upper_bound)(
-         detail::convenience_engine<Engine>()
-      );
-   }
-}
-
-template <typename T, typename Engine = detail::default_random_engine<T>>
-   requires(is_arithmetic<T> || is_simd_arithmetic<T>)
-auto
-random() noexcept -> T {
-   if constexpr (is_simd<T>) {
-      using lane_type = T::value_type;
-      if constexpr (is_integral<lane_type>) {
-         return random<T, Engine>(
-            T(limits<lane_type>::min()), T(limits<lane_type>::max())
-         );
-      } else {
-         return random<T, Engine>(T(0), T(1));
-      }
-   } else if constexpr (is_integral<T>) {
-      return random<T, Engine>(limits<T>::min(), limits<T>::max());
-   } else {
-      return random<T, Engine>(0, 1);
-   }
-}
-
-template <typename Engine = convenience_random_engine>
-auto
-random() noexcept -> bool {
-   return detail::random_bool<bernoulli_distribution<float8>, Engine>();
-}
-
-template <
-   typename Probability,
-   typename Engine = detail::default_random_engine<Probability>>
-   requires(
-      is_floating_point<Probability> || is_simd_floating_point<Probability>
-   )
-auto
-random(Probability probability) noexcept {
-   return bernoulli_distribution<Probability>(probability)(
-      detail::convenience_engine<Engine>()
-   );
-}
-
-template <
-   is_random_access_collection Range,
-   typename Engine = convenience_random_engine>
-auto
-random(Range&& range) noexcept(!__has_feature(cxx_exceptions))
-   -> decltype(auto) {
-   auto position = begin_pos(range);
-   auto const stop = end_pos(range);
-   iword const count = distance(range, position, stop);
-   assert(count > 0);
-   iword const offset = random<iword, Engine>(0, count - 1);
-   offset_pos(range, position, offset);
-   return read_at_unchecked(range, position);
-}
-
-template <typename T, typename Engine = convenience_random_engine>
-auto
-random(initializer_list<T> values) noexcept(!__has_feature(cxx_exceptions))
-   -> T {
-   auto position = begin_pos(values);
-   auto const stop = end_pos(values);
-   iword const count = distance(values, position, stop);
-   assert(count > 0);
-   offset_pos(values, position, random<iword, Engine>(0, count - 1));
-   return read_at_unchecked(values, position);
-}
-
-template <typename T, typename Engine = detail::default_random_engine<T>>
-   requires(is_arithmetic<T> || is_simd_arithmetic<T>)
-auto
-randn(T mean = 0, T standard_deviation = 1) noexcept -> T {
-   return normal_distribution<T>(mean, standard_deviation)(
-      detail::convenience_engine<Engine>()
-   );
-}
-
-template <typename Engine = convenience_random_engine>
-void
-seed(random_seed value) noexcept {
-   detail::convenience_engine<Engine>().seed(value);
-}
-
-template <typename Engine = convenience_random_engine>
-void
-seed() noexcept(!__has_feature(cxx_exceptions)) {
-   detail::convenience_engine<Engine>().seed(nix::sys_urandom_engine{}());
-}
 
 namespace detail {
 

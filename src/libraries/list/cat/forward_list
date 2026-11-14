@@ -626,7 +626,7 @@ make_forward_list_filled(
    return new_list;
 }
 
-template <typename T, is_allocator Allocator, typename Generator>
+template <typename T, is_allocator Allocator, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_forward_list_filled_random(
@@ -644,7 +644,7 @@ make_forward_list_filled_random(
 }
 
 template <
-   typename T, is_allocator Allocator, typename Generator,
+   typename T, is_allocator Allocator, is_random_generator Generator,
    typename Distribution>
 [[nodiscard]]
 constexpr auto

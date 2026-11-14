@@ -6,9 +6,7 @@
 
 namespace cat {
 
-template <
-   is_uniform_random_bit_generator Engine, idx bits,
-   is_unsigned_integral T = uint4>
+template <is_random_generator Engine, idx bits, is_unsigned_integral T = uint4>
    requires(bits > 0u && bits <= limits<T>::digits)
 class independent_bits_engine {
  public:

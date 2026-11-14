@@ -210,11 +210,19 @@ class bitset_enum : public bitwise_interface<bitset_enum<Flags>> {
       return *this;
    }
 
-   template <typename... Arguments>
+   template <is_random_generator Generator>
    constexpr auto
-   fill_random(Arguments&&... arguments) [[clang::lifetimebound]]
-   -> bitset_enum& {
-      m_bits.fill_random($fwd(arguments)...);
+   fill_random(Generator&& generator) [[clang::lifetimebound]] -> bitset_enum& {
+      m_bits.fill_random($fwd(generator));
+      m_bits &= valid_bits;
+      return *this;
+   }
+
+   template <is_random_generator Generator, typename Distribution>
+   constexpr auto
+   fill_random(Generator&& generator, Distribution&& distribution)
+      [[clang::lifetimebound]] -> bitset_enum& {
+      m_bits.fill_random($fwd(generator), $fwd(distribution));
       m_bits &= valid_bits;
       return *this;
    }
@@ -280,13 +288,26 @@ make_bitset_enum_filled(bit_value value) noexcept -> bitset_enum<Flags> {
    return new_flags;
 }
 
-template <is_scoped_enum Flags, typename... Arguments>
+template <is_scoped_enum Flags, is_random_generator Generator>
    requires(is_enum_flag<Flags>)
 [[nodiscard]]
 constexpr auto
-make_bitset_enum_filled_random(Arguments&&... arguments) -> bitset_enum<Flags> {
+make_bitset_enum_filled_random(Generator&& generator) -> bitset_enum<Flags> {
    bitset_enum<Flags> new_flags;
-   new_flags.fill_random($fwd(arguments)...);
+   new_flags.fill_random($fwd(generator));
+   return new_flags;
+}
+
+template <
+   is_scoped_enum Flags, is_random_generator Generator, typename Distribution>
+   requires(is_enum_flag<Flags>)
+[[nodiscard]]
+constexpr auto
+make_bitset_enum_filled_random(
+   Generator&& generator, Distribution&& distribution
+) -> bitset_enum<Flags> {
+   bitset_enum<Flags> new_flags;
+   new_flags.fill_random($fwd(generator), $fwd(distribution));
    return new_flags;
 }
 

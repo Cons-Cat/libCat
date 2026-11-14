@@ -1697,7 +1697,7 @@ make_wzstr_vec_filled(
 
 template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
-   typename Generator>
+   is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_str_vec_filled_random(
@@ -1714,7 +1714,8 @@ make_str_vec_filled_random(
 }
 
 template <
-   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator>
+   str_vec_flags flags = vec_flags::pointer_size_layout,
+   is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec_filled_random(
@@ -1729,7 +1730,7 @@ make_str_vec_filled_random(
 
 template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
-   typename Generator, typename Distribution>
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_str_vec_filled_random(
@@ -1750,8 +1751,8 @@ make_str_vec_filled_random(
 }
 
 template <
-   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator,
-   typename Distribution>
+   str_vec_flags flags = vec_flags::pointer_size_layout,
+   is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec_filled_random(
@@ -1770,7 +1771,7 @@ make_str_vec_filled_random(
 
 template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
-   typename Generator>
+   is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_zstr_vec_filled_random(
@@ -1793,7 +1794,8 @@ make_zstr_vec_filled_random(
 }
 
 template <
-   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator>
+   str_vec_flags flags = vec_flags::pointer_size_layout,
+   is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec_filled_random(
@@ -1812,7 +1814,7 @@ make_zstr_vec_filled_random(
 
 template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
-   typename Generator, typename Distribution>
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_zstr_vec_filled_random(
@@ -1839,8 +1841,8 @@ make_zstr_vec_filled_random(
 }
 
 template <
-   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator,
-   typename Distribution>
+   str_vec_flags flags = vec_flags::pointer_size_layout,
+   is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec_filled_random(
@@ -1863,7 +1865,7 @@ make_zstr_vec_filled_random(
 
 template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
-   typename Generator>
+   is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_wstr_vec_filled_random(
@@ -1882,7 +1884,8 @@ make_wstr_vec_filled_random(
 }
 
 template <
-   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator>
+   str_vec_flags flags = vec_flags::pointer_size_layout,
+   is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec_filled_random(
@@ -1899,7 +1902,7 @@ make_wstr_vec_filled_random(
 
 template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
-   typename Generator, typename Distribution>
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_wstr_vec_filled_random(
@@ -1922,8 +1925,8 @@ make_wstr_vec_filled_random(
 }
 
 template <
-   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator,
-   typename Distribution>
+   str_vec_flags flags = vec_flags::pointer_size_layout,
+   is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec_filled_random(
@@ -1944,7 +1947,7 @@ make_wstr_vec_filled_random(
 
 template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
-   typename Generator>
+   is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_wzstr_vec_filled_random(
@@ -1967,7 +1970,8 @@ make_wzstr_vec_filled_random(
 }
 
 template <
-   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator>
+   str_vec_flags flags = vec_flags::pointer_size_layout,
+   is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec_filled_random(
@@ -1986,7 +1990,7 @@ make_wzstr_vec_filled_random(
 
 template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
-   typename Generator, typename Distribution>
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_wzstr_vec_filled_random(
@@ -2013,8 +2017,8 @@ make_wzstr_vec_filled_random(
 }
 
 template <
-   str_vec_flags flags = vec_flags::pointer_size_layout, typename Generator,
-   typename Distribution>
+   str_vec_flags flags = vec_flags::pointer_size_layout,
+   is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec_filled_random(

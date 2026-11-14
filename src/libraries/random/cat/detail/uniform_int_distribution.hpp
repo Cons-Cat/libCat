@@ -120,13 +120,13 @@ class uniform_int_distribution {
       m_parameters = parameters;
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    constexpr auto
    operator()(Generator& generator) const -> result_type {
       return (*this)(generator, m_parameters);
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    constexpr auto
    operator()(Generator& generator, param_type const& parameters) const
       -> result_type {

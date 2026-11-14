@@ -100,13 +100,13 @@ class geometric_distribution {
       return limits<result_type>::max();
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    constexpr auto
    operator()(Generator& generator) -> result_type {
       return (*this)(generator, m_parameters);
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    constexpr auto
    operator()(Generator& generator, param_type const& parameters)
       -> result_type {

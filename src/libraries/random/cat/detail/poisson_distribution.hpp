@@ -104,13 +104,13 @@ class poisson_distribution {
       return limits<result_type>::max();
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    constexpr auto
    operator()(Generator& generator) -> result_type {
       return (*this)(generator, m_parameters);
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    constexpr auto
    operator()(Generator& generator, param_type const& parameters)
       -> result_type {
@@ -137,7 +137,7 @@ class poisson_distribution {
  private:
    // TODO: Poisson is one of my most important distributions so I should do
    // deeper research/experimentation on quality implementation.
-   template <is_uniform_random_bit_generator Generator, typename Sample>
+   template <is_random_generator Generator, typename Sample>
       requires(is_floating_point<Sample> || is_simd_floating_point<Sample>)
    static constexpr auto
    vector_sample(Generator& generator, Sample mean_value) noexcept
@@ -241,7 +241,7 @@ class poisson_distribution {
       return detail::distribution_integer<result_type>(output);
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    static constexpr auto
    small_mean(Generator& generator, Float mean_value) noexcept -> result_type {
       Float const limit = exp(-mean_value);
@@ -259,7 +259,7 @@ class poisson_distribution {
       }
    }
 
-   template <is_uniform_random_bit_generator Generator>
+   template <is_random_generator Generator>
    static constexpr auto
    transformed_rejection(Generator& generator, Float mean_value) noexcept
       -> result_type {

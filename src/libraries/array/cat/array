@@ -122,7 +122,7 @@ make_array_filled(T const& value) -> array<T, length> {
    return array;
 }
 
-template <idx length, typename T, typename Generator>
+template <idx length, typename T, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_array_filled_random(Generator&& generator) -> array<T, length> {
@@ -132,7 +132,8 @@ make_array_filled_random(Generator&& generator) -> array<T, length> {
    return result;
 }
 
-template <idx length, typename T, typename Generator, typename Distribution>
+template <
+   idx length, typename T, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_array_filled_random(Generator&& generator, Distribution&& distribution)

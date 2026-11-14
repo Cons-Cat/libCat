@@ -702,11 +702,6 @@ $test(random_distribution_bounds) {
 }
 
 $test(random_fill_scalar_forms) {
-   static_assert(
-      cat::is_same<
-         cat::convenience_random_engine, cat::pcg_dxsm_engine<cat::uint8>>
-   );
-
    cat::array<cat::uint8, 17u> direct;
    cat::array<cat::uint8, 17u> expected;
    cat::xoshiro_engine<cat::uint8> direct_engine(44u);
@@ -1257,22 +1252,12 @@ $test(random_fill_factories) {
    cat::verify(distributed_owned.size() == 17u);
 }
 
-$test(random_convenience) {
-   cat::int4 const scalar = cat::random<cat::int4>(2, 9);
-   cat::verify(scalar >= 2 && scalar <= 9);
-   cat::int4x4 const vector =
-      cat::random<cat::int4x4>(cat::int4x4(2), cat::int4x4(9));
-   for (auto value : vector) {
-      cat::verify(value >= 2 && value <= 9);
-   }
-}
-
 $test(random_linux_sources) {
-   static_assert(cat::is_uniform_random_bit_generator<nix::sys_urandom_engine>);
-   static_assert(cat::is_uniform_random_bit_generator<nix::sys_random_engine>);
-   static_assert(cat::is_uniform_random_bit_generator<nix::dev_urandom_engine>);
-   static_assert(cat::is_uniform_random_bit_generator<nix::dev_random_engine>);
-   static_assert(cat::is_uniform_random_bit_generator<x64::rdrand_engine>);
+   static_assert(cat::is_random_generator<nix::sys_urandom_engine>);
+   static_assert(cat::is_random_generator<nix::sys_random_engine>);
+   static_assert(cat::is_random_generator<nix::dev_urandom_engine>);
+   static_assert(cat::is_random_generator<nix::dev_random_engine>);
+   static_assert(cat::is_random_generator<x64::rdrand_engine>);
 
    nix::sys_urandom_engine urandom;
    cat::uint8 const first = urandom();

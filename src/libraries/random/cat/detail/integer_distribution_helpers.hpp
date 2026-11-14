@@ -11,7 +11,7 @@
 
 namespace cat::detail {
 
-template <typename Float, is_uniform_random_bit_generator Generator>
+template <typename Float, is_random_generator Generator>
    requires(is_floating_point<Float> || is_simd_floating_point<Float>)
 constexpr auto
 distribution_unit(Generator& generator) noexcept -> Float {

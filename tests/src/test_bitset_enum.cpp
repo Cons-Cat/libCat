@@ -1,4 +1,5 @@
 #include <cat/bitset_enum>
+#include <cat/random>
 
 #include "../unit_tests.hpp"
 
@@ -75,10 +76,10 @@ $test(bitset_enum) {
    cat::verify(!flags.all_of());
    cat::verify((flags | ~flags).all_of());
 
-   flags_type random_flags =
-      cat::make_bitset_enum_filled_random<test_flags>([] {
-         return true;
-      });
+   cat::xoshiro_engine<cat::uint8> engine(1u);
+   flags_type random_flags = cat::make_bitset_enum_filled_random<test_flags>(
+      engine, cat::bernoulli_distribution<cat::float8>(1.0)
+   );
    cat::verify(random_flags.popcount() == 4u);
    cat::verify(random_flags.all_of());
 }

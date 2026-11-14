@@ -48,7 +48,7 @@ random_relaxed_distribution_fill_enabled() noexcept -> bool {
    }
 }
 
-template <is_simd Simd, typename Element, typename Generator>
+template <is_simd Simd, typename Element, is_random_generator Generator>
 constexpr void
 fill_random_batch_contiguous(
    Element* _Nonnull p_data, idx size, Generator& generator
@@ -68,7 +68,7 @@ fill_random_batch_contiguous(
    }
 }
 
-template <typename Abi, typename Generator>
+template <typename Abi, is_random_generator Generator>
 consteval auto
 exact_random_bulk_chain_count() noexcept -> idx {
    if constexpr (Abi::size >= 64u) {
@@ -78,13 +78,15 @@ exact_random_bulk_chain_count() noexcept -> idx {
    }
 }
 
-template <typename Abi, typename Generator>
+template <typename Abi, is_random_generator Generator>
 consteval auto
 exact_random_bulk_threshold() noexcept -> idx {
    return Abi::size >= 64u ? 256u : 128u;
 }
 
-template <is_simd Simd, idx chain_count, typename Element, typename Generator>
+template <
+   is_simd Simd, idx chain_count, typename Element,
+   is_random_generator Generator>
 constexpr void
 fill_random_exact_bulk_contiguous(
    Element* _Nonnull p_data, idx size, Generator& generator
@@ -141,7 +143,7 @@ fill_random_exact_bulk_contiguous(
    generator.discard(uint8(size));
 }
 
-template <typename Element, typename Generator>
+template <typename Element, is_random_generator Generator>
 constexpr auto
 fill_random_exact_bulk(
    Element* _Nonnull p_data, idx size, Generator& generator
@@ -200,7 +202,7 @@ fill_random_exact_bulk(
    return false;
 }
 
-template <is_simd Simd, typename Element, typename Generator>
+template <is_simd Simd, typename Element, is_random_generator Generator>
 constexpr void
 fill_random_relaxed_bulk_contiguous(
    Element* _Nonnull p_data, idx size, Generator& generator
@@ -266,8 +268,8 @@ fill_random_distribution_batch_contiguous(
 }
 
 template <
-   typename Batch, typename Element, typename Generator, typename Distribution,
-   typename Abi>
+   typename Batch, typename Element, is_random_generator Generator,
+   typename Distribution, typename Abi>
 constexpr void
 fill_random_relaxed_distribution_contiguous(
    Element* _Nonnull p_data, idx size, Generator& generator,
@@ -280,7 +282,7 @@ fill_random_relaxed_distribution_contiguous(
    generator.discard(uint8(session.scalar_draws()));
 }
 
-template <is_iterable Range, typename Generator>
+template <is_iterable Range, is_random_generator Generator>
 constexpr auto
 fill_random_scalar_batch(Range&& range, Generator& generator) noexcept(
    !__has_feature(cxx_exceptions)
@@ -379,7 +381,8 @@ fill_random_scalar_batch(Range&& range, Generator& generator) noexcept(
    return false;
 }
 
-template <is_iterable Range, typename Generator, typename Distribution>
+template <
+   is_iterable Range, is_random_generator Generator, typename Distribution>
 constexpr auto
 fill_random_scalar_distribution_batch(
    Range&& range, Generator& generator, Distribution& distribution
@@ -651,12 +654,12 @@ fill_random_simd(Range&& range, auto&& generate) {
 // Inspired by P1068R11's explicit engine range generation, adapted to libCat
 // iterables and SIMD results.
 // https://open-std.org/jtc1/sc22/wg21/docs/papers/2024/p1068r11.pdf
-template <is_iterable Range, typename Generator>
+template <is_iterable Range, is_random_generator Generator>
 constexpr auto
 fill_random(Range&& range, Generator&& generator) -> iteration_result {
    if constexpr (requires { generator.fill_random($fwd(range)); }) {
       generator.fill_random($fwd(range));
-   } else if constexpr (is_simd_random_bit_generator<remove_cvref<Generator>>) {
+   } else if constexpr (is_simd_random_generator<remove_cvref<Generator>>) {
       using simd_result = remove_cvref<Generator>::result_type;
       detail::fill_random_simd<simd_result>($fwd(range), [&generator] {
          return generator();
@@ -671,7 +674,8 @@ fill_random(Range&& range, Generator&& generator) -> iteration_result {
    return iteration_result::complete;
 }
 
-template <is_iterable Range, typename Generator, typename Distribution>
+template <
+   is_iterable Range, is_random_generator Generator, typename Distribution>
 constexpr auto
 fill_random(Range&& range, Generator&& generator, Distribution&& distribution)
    -> iteration_result {

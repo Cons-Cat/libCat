@@ -766,7 +766,7 @@ make_wzstr_inplace_fixed_filled(wchar_t value) noexcept
    return result;
 }
 
-template <idx inline_capacity, typename Generator>
+template <idx inline_capacity, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_str_inplace_filled_random(idx count, Generator&& generator)
@@ -778,7 +778,8 @@ make_str_inplace_filled_random(idx count, Generator&& generator)
    return result;
 }
 
-template <idx inline_capacity, typename Generator, typename Distribution>
+template <
+   idx inline_capacity, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_str_inplace_filled_random(
@@ -794,7 +795,7 @@ make_str_inplace_filled_random(
    return result;
 }
 
-template <idx inline_capacity, typename Generator>
+template <idx inline_capacity, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_zstr_inplace_filled_random(idx count, Generator&& generator)
@@ -806,7 +807,8 @@ make_zstr_inplace_filled_random(idx count, Generator&& generator)
    return result;
 }
 
-template <idx inline_capacity, typename Generator, typename Distribution>
+template <
+   idx inline_capacity, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_zstr_inplace_filled_random(
@@ -822,7 +824,7 @@ make_zstr_inplace_filled_random(
    return result;
 }
 
-template <idx inline_capacity, typename Generator>
+template <idx inline_capacity, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_wstr_inplace_filled_random(idx count, Generator&& generator)
@@ -834,7 +836,8 @@ make_wstr_inplace_filled_random(idx count, Generator&& generator)
    return result;
 }
 
-template <idx inline_capacity, typename Generator, typename Distribution>
+template <
+   idx inline_capacity, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_wstr_inplace_filled_random(
@@ -850,7 +853,7 @@ make_wstr_inplace_filled_random(
    return result;
 }
 
-template <idx inline_capacity, typename Generator>
+template <idx inline_capacity, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_wzstr_inplace_filled_random(idx count, Generator&& generator)
@@ -862,7 +865,8 @@ make_wzstr_inplace_filled_random(idx count, Generator&& generator)
    return result;
 }
 
-template <idx inline_capacity, typename Generator, typename Distribution>
+template <
+   idx inline_capacity, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_wzstr_inplace_filled_random(
@@ -878,7 +882,7 @@ make_wzstr_inplace_filled_random(
    return result;
 }
 
-template <idx fixed_size, typename Generator>
+template <idx fixed_size, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_str_inplace_fixed_filled_random(Generator&& generator)
@@ -889,7 +893,7 @@ make_str_inplace_fixed_filled_random(Generator&& generator)
    return result;
 }
 
-template <idx fixed_size, typename Generator, typename Distribution>
+template <idx fixed_size, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_str_inplace_fixed_filled_random(
@@ -904,7 +908,7 @@ make_str_inplace_fixed_filled_random(
    return result;
 }
 
-template <idx fixed_size, typename Generator>
+template <idx fixed_size, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_zstr_inplace_fixed_filled_random(Generator&& generator)
@@ -915,7 +919,7 @@ make_zstr_inplace_fixed_filled_random(Generator&& generator)
    return result;
 }
 
-template <idx fixed_size, typename Generator, typename Distribution>
+template <idx fixed_size, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_zstr_inplace_fixed_filled_random(
@@ -930,7 +934,7 @@ make_zstr_inplace_fixed_filled_random(
    return result;
 }
 
-template <idx fixed_size, typename Generator>
+template <idx fixed_size, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_wstr_inplace_fixed_filled_random(Generator&& generator)
@@ -941,7 +945,7 @@ make_wstr_inplace_fixed_filled_random(Generator&& generator)
    return result;
 }
 
-template <idx fixed_size, typename Generator, typename Distribution>
+template <idx fixed_size, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_wstr_inplace_fixed_filled_random(
@@ -956,7 +960,7 @@ make_wstr_inplace_fixed_filled_random(
    return result;
 }
 
-template <idx fixed_size, typename Generator>
+template <idx fixed_size, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_wzstr_inplace_fixed_filled_random(Generator&& generator)
@@ -967,7 +971,7 @@ make_wzstr_inplace_fixed_filled_random(Generator&& generator)
    return result;
 }
 
-template <idx fixed_size, typename Generator, typename Distribution>
+template <idx fixed_size, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_wzstr_inplace_fixed_filled_random(

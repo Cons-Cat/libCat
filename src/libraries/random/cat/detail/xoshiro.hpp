@@ -1884,7 +1884,7 @@ using xoshiro512_selected = xoshiro512_for<T, scrambler>::type;
 template <typename T, xoshiro_scrambler scrambler>
 using xoroshiro1024_selected = xoroshiro1024_for<T, scrambler>::type;
 
-template <typename Engine>
+template <is_random_generator Engine>
 class xoshiro_owned_engine {
  public:
    using result_type = Engine::result_type;

@@ -6,7 +6,7 @@ namespace cat::detail {
 
 class random_batch_access {
  public:
-   template <typename Abi, typename Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    exact(Generator& generator) noexcept
@@ -14,7 +14,7 @@ class random_batch_access {
       return generator.template generate_exact_batch<Abi>();
    }
 
-   template <typename Abi, idx chain_count, typename Generator>
+   template <typename Abi, idx chain_count, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    exact_bulk(Generator const& generator) noexcept
@@ -23,7 +23,7 @@ class random_batch_access {
       return generator.template make_exact_bulk_session<Abi, chain_count>();
    }
 
-   template <typename Abi, typename Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    relaxed(Generator const& generator) noexcept
@@ -31,7 +31,7 @@ class random_batch_access {
       return generator.template make_relaxed_session<Abi>();
    }
 
-   template <typename Abi, typename Generator>
+   template <typename Abi, is_random_generator Generator>
    [[nodiscard]]
    static constexpr auto
    relaxed_threshold() noexcept
@@ -40,7 +40,7 @@ class random_batch_access {
    }
 };
 
-template <typename Abi, typename Generator>
+template <typename Abi, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 generate_exact_random_batch(Generator& generator) noexcept
@@ -48,7 +48,7 @@ generate_exact_random_batch(Generator& generator) noexcept
    return random_batch_access::exact<Abi>(generator);
 }
 
-template <typename Abi, idx chain_count, typename Generator>
+template <typename Abi, idx chain_count, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_exact_random_bulk_session(Generator const& generator) noexcept
@@ -56,7 +56,7 @@ make_exact_random_bulk_session(Generator const& generator) noexcept
    return random_batch_access::exact_bulk<Abi, chain_count>(generator);
 }
 
-template <typename Abi, typename Generator>
+template <typename Abi, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_relaxed_random_bulk_session(Generator const& generator) noexcept
@@ -64,7 +64,7 @@ make_relaxed_random_bulk_session(Generator const& generator) noexcept
    return random_batch_access::relaxed<Abi>(generator);
 }
 
-template <typename Abi, typename Generator>
+template <typename Abi, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 relaxed_random_bulk_threshold() noexcept

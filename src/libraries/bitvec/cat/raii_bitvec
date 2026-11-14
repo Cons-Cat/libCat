@@ -861,7 +861,8 @@ template <vec_flags flags = {}>
    );
 }
 
-template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
+template <
+   is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<raii::bitvec<Allocator, flags>> {
@@ -877,7 +878,7 @@ template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
 }
 
 template <
-   is_allocator Allocator, vec_flags flags = {}, typename Generator,
+   is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator,
    typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
@@ -897,7 +898,7 @@ template <
    return result;
 }
 
-template <vec_flags flags = {}, typename Generator>
+template <vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -908,7 +909,8 @@ template <vec_flags flags = {}, typename Generator>
    );
 }
 
-template <vec_flags flags = {}, typename Generator, typename Distribution>
+template <
+   vec_flags flags = {}, is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator,
@@ -925,7 +927,7 @@ template <vec_flags flags = {}, typename Generator, typename Distribution>
 
 template <
    idx inline_count, is_allocator Allocator, vec_flags flags = {},
-   typename Generator>
+   is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_small_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<bitvec_small<Allocator, inline_count, flags>> {
@@ -938,7 +940,7 @@ template <
 
 template <
    idx inline_count, is_allocator Allocator, vec_flags flags = {},
-   typename Generator, typename Distribution>
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_small_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
@@ -953,7 +955,7 @@ template <
          | flags>(allocator, count, $fwd(generator), $fwd(distribution));
 }
 
-template <idx inline_count, vec_flags flags = {}, typename Generator>
+template <idx inline_count, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -964,7 +966,7 @@ template <idx inline_count, vec_flags flags = {}, typename Generator>
 }
 
 template <
-   idx inline_count, vec_flags flags = {}, typename Generator,
+   idx inline_count, vec_flags flags = {}, is_random_generator Generator,
    typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_filled_random(
@@ -981,7 +983,8 @@ template <
    );
 }
 
-template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
+template <
+   is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_big_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<bitvec_big<Allocator, flags>> {
@@ -993,7 +996,7 @@ template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
 }
 
 template <
-   is_allocator Allocator, vec_flags flags = {}, typename Generator,
+   is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator,
    typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_big_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
@@ -1008,7 +1011,7 @@ template <
    );
 }
 
-template <vec_flags flags = {}, typename Generator>
+template <vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -1019,7 +1022,8 @@ template <vec_flags flags = {}, typename Generator>
    );
 }
 
-template <vec_flags flags = {}, typename Generator, typename Distribution>
+template <
+   vec_flags flags = {}, is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator,
@@ -1034,7 +1038,8 @@ template <vec_flags flags = {}, typename Generator, typename Distribution>
    );
 }
 
-template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
+template <
+   is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<raii::bitvec_fixed<Allocator, flags>> {
@@ -1046,7 +1051,7 @@ template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
 }
 
 template <
-   is_allocator Allocator, vec_flags flags = {}, typename Generator,
+   is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator,
    typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
@@ -1061,7 +1066,7 @@ template <
    );
 }
 
-template <vec_flags flags = {}, typename Generator>
+template <vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -1072,7 +1077,8 @@ template <vec_flags flags = {}, typename Generator>
    );
 }
 
-template <vec_flags flags = {}, typename Generator, typename Distribution>
+template <
+   vec_flags flags = {}, is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator,
@@ -1089,7 +1095,7 @@ template <vec_flags flags = {}, typename Generator, typename Distribution>
 
 template <
    idx inline_count, is_allocator Allocator, vec_flags flags = {},
-   typename Generator>
+   is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_small_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<bitvec_small_fixed<Allocator, inline_count, flags>> {
@@ -1102,7 +1108,7 @@ template <
 
 template <
    idx inline_count, is_allocator Allocator, vec_flags flags = {},
-   typename Generator, typename Distribution>
+   is_random_generator Generator, typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_small_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
    Distribution&& distribution
@@ -1117,7 +1123,7 @@ template <
    );
 }
 
-template <idx inline_count, vec_flags flags = {}, typename Generator>
+template <idx inline_count, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -1128,7 +1134,7 @@ template <idx inline_count, vec_flags flags = {}, typename Generator>
 }
 
 template <
-   idx inline_count, vec_flags flags = {}, typename Generator,
+   idx inline_count, vec_flags flags = {}, is_random_generator Generator,
    typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_fixed_filled_random(
@@ -1145,7 +1151,8 @@ template <
    );
 }
 
-template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
+template <
+   is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_big_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator
 ) -> maybe<bitvec_big_fixed<Allocator, flags>> {
@@ -1157,7 +1164,7 @@ template <is_allocator Allocator, vec_flags flags = {}, typename Generator>
 }
 
 template <
-   is_allocator Allocator, vec_flags flags = {}, typename Generator,
+   is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator,
    typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_big_fixed_filled_random(
    allocator_ref<Allocator> allocator, idx count, Generator&& generator,
@@ -1172,7 +1179,7 @@ template <
    );
 }
 
-template <vec_flags flags = {}, typename Generator>
+template <vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator
@@ -1183,7 +1190,8 @@ template <vec_flags flags = {}, typename Generator>
    );
 }
 
-template <vec_flags flags = {}, typename Generator, typename Distribution>
+template <
+   vec_flags flags = {}, is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_fixed_filled_random(
       allocator_dyn allocator, idx count, Generator&& generator,

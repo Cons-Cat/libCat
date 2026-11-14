@@ -10,7 +10,7 @@
 namespace cat {
 namespace detail {
 
-template <typename Generator>
+template <is_random_generator Generator>
 struct fill_random_impl {
    Generator generator;
 
@@ -25,7 +25,7 @@ struct fill_random_impl {
    }
 };
 
-template <typename Generator, typename Distribution>
+template <is_random_generator Generator, typename Distribution>
 struct fill_random_distribution_impl {
    Generator generator;
    Distribution distribution;
@@ -45,14 +45,14 @@ struct fill_random_distribution_impl {
 
 }  // namespace detail
 
-template <typename Generator>
+template <is_random_generator Generator>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 fill_random(Generator&& generator) -> detail::fill_random_impl<Generator> {
    return {$fwd(generator)};
 }
 
-template <typename Generator, typename Distribution>
+template <is_random_generator Generator, typename Distribution>
    requires(!is_iterable<remove_cvref<Generator>>)
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -62,7 +62,7 @@ fill_random(Generator&& generator, Distribution&& distribution)
 }
 
 template <typename Tag>
-template <typename Self, typename Generator>
+template <typename Self, is_random_generator Generator>
 constexpr auto
 iterable_interface<Tag>::fill_random(this Self&& self, Generator&& generator)
    -> decltype(auto) {
@@ -70,7 +70,7 @@ iterable_interface<Tag>::fill_random(this Self&& self, Generator&& generator)
 }
 
 template <typename Tag>
-template <typename Self, typename Generator, typename Distribution>
+template <typename Self, is_random_generator Generator, typename Distribution>
 constexpr auto
 iterable_interface<Tag>::fill_random(
    this Self&& self, Generator&& generator, Distribution&& distribution
