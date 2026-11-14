@@ -206,7 +206,6 @@ basic_forward_list
 
    // Create a copy of this `cat::raii::basic_forward_list` using current
    // allocator.
-   template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
    clone() const& -> maybe<basic_forward_list> {
@@ -239,6 +238,7 @@ basic_forward_list
    // Insert a value before iterator using the stored allocator.
    template <typename U>
       requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
    constexpr auto
    insert(iterator where, U&& value) -> maybe<iterator> {
       return m_core.insert(m_allocator, where, $fwd(value));
@@ -262,6 +262,7 @@ basic_forward_list
 
    // Emplace an element before iterator using the stored allocator.
    template <typename... Args>
+   [[nodiscard]]
    constexpr auto
    emplace(iterator where, Args&&... arguments) -> maybe<iterator> {
       return m_core.emplace(m_allocator, where, $fwd(arguments)...);
@@ -276,6 +277,7 @@ basic_forward_list
    // Insert a copy of value at front and return its iterator.
    template <typename U>
       requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
    constexpr auto
    push_front(U const& value) -> maybe<iterator> {
       return m_core.push_front(m_allocator, value);
@@ -300,6 +302,7 @@ basic_forward_list
 
    // Emplace an element at the front and return its iterator.
    template <typename... Args>
+   [[nodiscard]]
    constexpr auto
    emplace_front(Args&&... arguments) -> maybe<iterator> {
       return m_core.emplace_front(m_allocator, $fwd(arguments)...);
@@ -321,6 +324,13 @@ basic_forward_list
    constexpr auto
    begin() [[clang::lifetimebound]] -> iterator {
       return m_core.begin();
+   }
+
+   // Return iterator past the last node.
+   [[nodiscard]]
+   constexpr auto
+   end() [[clang::lifetimebound]] -> iterator {
+      return m_core.end();
    }
 
    // Return an iteration context for forward traversal.

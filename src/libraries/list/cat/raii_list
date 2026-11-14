@@ -201,7 +201,6 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    }
 
    // Create a copy of this `cat::raii::basic_list` using the current allocator.
-   template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
    clone() const& -> maybe<basic_list> {
@@ -234,6 +233,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Insert a value before iterator using the stored allocator.
    template <typename U>
       requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
    constexpr auto
    insert(iterator where, U&& value) -> maybe<iterator> {
       return m_core.insert(m_allocator, where, $fwd(value));
@@ -249,6 +249,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
 
    // Emplace an element before iterator using the stored allocator.
    template <typename... Args>
+   [[nodiscard]]
    constexpr auto
    emplace(iterator where, Args&&... arguments) -> maybe<iterator> {
       return m_core.emplace(m_allocator, where, $fwd(arguments)...);
@@ -304,6 +305,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Insert a copy of value at the front and return its iterator.
    template <typename U>
       requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
    constexpr auto
    push_front(U const& value) -> maybe<iterator> {
       return m_core.push_front(m_allocator, value);
@@ -328,6 +330,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
 
    // Emplace an element at the front and return its iterator.
    template <typename... Args>
+   [[nodiscard]]
    constexpr auto
    emplace_front(Args&&... arguments) -> maybe<iterator> {
       return m_core.emplace_front(m_allocator, $fwd(arguments)...);
@@ -342,6 +345,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Append a copy of value and return its iterator.
    template <typename U>
       requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
    constexpr auto
    push_back(U const& value) -> maybe<iterator> {
       return m_core.push_back(m_allocator, value);
@@ -365,6 +369,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
 
    // Emplace an element at the back and return its iterator.
    template <typename... Args>
+   [[nodiscard]]
    constexpr auto
    emplace_back(Args&&... arguments) -> maybe<iterator> {
       return m_core.emplace_back(m_allocator, $fwd(arguments)...);

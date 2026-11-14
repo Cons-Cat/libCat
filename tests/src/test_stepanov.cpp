@@ -51,7 +51,8 @@ $test(iterator_nullable_constructors) {
    );
    cat::verify(simd_first.equal_to(simd_second));
 
-   cat::detail::list_stepanov_iterator<cat::int4> list_first(nullptr);
-   cat::detail::list_stepanov_iterator<cat::int4> list_second(nullptr);
+   cat::detail::list_storage<cat::int4> storage;
+   cat::detail::list_stepanov_iterator<cat::int4> list_first(nullptr, storage);
+   cat::detail::list_stepanov_iterator<cat::int4> list_second(nullptr, storage);
    cat::verify(list_first.equal_to(list_second));
 }

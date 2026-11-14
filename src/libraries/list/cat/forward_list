@@ -101,9 +101,8 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
 
    using node_type = detail::forward_list_node<T>;
 
-   // Allocate a node and construct its element from `arguments`. If the
-   // constructor throws, the node is freed.
    template <is_allocator Allocator, typename... Args>
+   [[nodiscard]]
    constexpr auto
    make_node(allocator_ref<Allocator> allocator, Args&&... arguments)
       -> maybe<node_type* _Nonnull> {
@@ -267,7 +266,6 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       return free<allocator_dyn>(allocator);
    }
 
-
    // Initialize storage with a single head node.
 
  private:
@@ -311,6 +309,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
 
  public:
    template <is_allocator Allocator, typename U>
+   [[nodiscard]]
    constexpr auto
    append_new_node(
       allocator_ref<Allocator> allocator, node_type* _Nullable& p_tail,
@@ -331,6 +330,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
 
    // Variadic append termination overload.
    template <is_allocator Allocator>
+   [[nodiscard]]
    constexpr auto
    append_new_nodes(
       allocator_ref<Allocator> /*unused*/,
@@ -341,6 +341,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
 
    // Append multiple new nodes from parameter pack.
    template <is_allocator Allocator, typename U, typename... Args>
+   [[nodiscard]]
    constexpr auto
    append_new_nodes(
       allocator_ref<Allocator> allocator, node_type* _Nullable& p_tail,
@@ -389,6 +390,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    // Insert a new element before iterator and return its iterator.
    template <is_allocator Allocator, typename U>
       requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
    constexpr auto
    insert(allocator_ref<Allocator> allocator, iterator where, U&& value)
       -> maybe<iterator> {
@@ -465,6 +467,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
 
    // Construct element in place before iterator and return its iterator.
    template <is_allocator Allocator, typename... Args>
+   [[nodiscard]]
    constexpr auto
    emplace(
       allocator_ref<Allocator> allocator, iterator where, Args&&... arguments
@@ -497,6 +500,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    // Insert a copy of value at front and return its iterator.
    template <is_allocator Allocator, typename U>
       requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
    constexpr auto
    push_front(allocator_ref<Allocator> allocator, U const& value)
       -> maybe<iterator> {
@@ -511,6 +515,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    // Insert a moved value at front and return its iterator.
    template <is_allocator Allocator>
       requires(is_move_constructible<T>)
+   [[nodiscard]]
    constexpr auto
    push_front(allocator_ref<Allocator> allocator, T&& value)
       -> maybe<iterator> {
@@ -534,6 +539,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
 
    // Construct an element at the front and return its iterator.
    template <is_allocator Allocator, typename... Args>
+   [[nodiscard]]
    constexpr auto
    emplace_front(allocator_ref<Allocator> allocator, Args&&... arguments)
       -> maybe<iterator> {
@@ -579,6 +585,13 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    constexpr auto
    begin() [[clang::lifetimebound]] -> iterator {
       return iterator(m_storage.m_p_head);
+   }
+
+   // Return iterator past the last node.
+   [[nodiscard]]
+   constexpr auto
+   end() [[clang::lifetimebound]] -> iterator {
+      return iterator(nullptr);
    }
 
    template <typename Node, typename Element>

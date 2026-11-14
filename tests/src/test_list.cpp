@@ -652,7 +652,7 @@ $test(forward_list_throwing_insert) {
 }
 #endif
 
-$test(list_reverse_iteration) {
+$test(list_iterator_range_is_complete) {
    linear_arena arena;
    auto allocator = cat::allocator_ref<cat::allocator_linear>(arena.alloc);
    cat::list<int> list = cat::make_list<int>(allocator, 1, 2, 3).verify();
@@ -660,15 +660,28 @@ $test(list_reverse_iteration) {
       list.free(allocator);
    };
 
-   // `[rbegin(), rend())` includes the head.
-   cat::array<int, 3u> reversed{};
+   // `[begin(), end())` includes the tail.
+   int sum = 0;
    idx count = 0u;
-   for (auto it = list.rbegin(); it != list.rend(); ++it) {
-      reversed[count] = *it;
+   for (auto it = list.begin(); it != list.end(); ++it) {
+      sum += *it;
+      ++count;
+   }
+   cat::verify(count == 3u && sum == 6);
+   cat::verify(*--list.end() == 3);
+
+   // Inserting before `end()` appends.
+   list.insert(allocator, list.end(), 4).verify();
+   cat::verify(list.back() == 4 && list.size() == 4u);
+
+   cat::forward_list<int> forward =
+      cat::make_forward_list<int>(allocator, 1, 2, 3).verify();
+   count = 0u;
+   for (auto it = forward.begin(); it != forward.end(); ++it) {
       ++count;
    }
    cat::verify(count == 3u);
-   cat::verify(reversed[0u] == 3 && reversed[1u] == 2 && reversed[2u] == 1);
+   forward.free(allocator);
 }
 
 $test(list_clear_reuses_nodes) {
@@ -696,4 +709,43 @@ $test(list_clear_reuses_nodes) {
    cat::verify(arena.alloc.bytes_used() == forward_used);
    cat::verify(forward.front() == 3 && forward.size() == 1u);
    forward.free(allocator);
+}
+
+$test(raii_list_clone_and_clear) {
+   cat::allocator_dyn allocator(pager);
+   cat::raii::list list = cat::raii::make_list<int>(allocator, 1, 2).verify();
+   cat::raii::list cloned = list.clone().verify();
+   cat::verify(cloned.size() == 2u && cloned.back() == 2);
+
+   cat::raii::forward_list forward =
+      cat::raii::make_forward_list<int>(allocator, 1, 2).verify();
+   cat::raii::forward_list forward_cloned = forward.clone().verify();
+   cat::verify(forward_cloned.size() == 2u);
+
+   // `.clear()` keeps nodes, while `.free()` frees them.
+   list.clear();
+   cat::verify(list.size() == 0u);
+   list.push_back(3).verify();
+   cat::verify(list.front() == 3);
+   list.free();
+   cat::verify(list.size() == 0u);
+}
+
+$test(list_reverse_iteration) {
+   linear_arena arena;
+   auto allocator = cat::allocator_ref<cat::allocator_linear>(arena.alloc);
+   cat::list<int> list = cat::make_list<int>(allocator, 1, 2, 3).verify();
+   $defer {
+      list.free(allocator);
+   };
+
+   // `[rbegin(), rend())` includes the head.
+   cat::array<int, 3u> reversed{};
+   idx count = 0u;
+   for (auto it = list.rbegin(); it != list.rend(); ++it) {
+      reversed[count] = *it;
+      ++count;
+   }
+   cat::verify(count == 3u);
+   cat::verify(reversed[0u] == 3 && reversed[1u] == 2 && reversed[2u] == 1);
 }

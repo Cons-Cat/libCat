@@ -15,6 +15,8 @@
 //
 //  `cat::list<T>`, a default `basic_list`.
 //  `cat::raii::list<T>`, a default `raii::basic_list`.
+//
+// TODO: This should implement `plf::list`.
 
 #include <cat/allocator>
 #include <cat/allocator_parameters>
@@ -103,9 +105,8 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
 
    using node_type = detail::list_node<T>;
 
-   // Allocate a node and construct its element from `arguments`. If the
-   // constructor throws, the node is freed.
    template <is_allocator Allocator, typename... Args>
+   [[nodiscard]]
    constexpr auto
    make_node(allocator_ref<Allocator> allocator, Args&&... arguments)
       -> maybe<node_type* _Nonnull> {
@@ -274,7 +275,6 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       return free<allocator_dyn>(allocator);
    }
 
-
    // Replace contents with count copies of value using allocator.
    template <is_allocator Allocator>
    [[nodiscard]]
@@ -313,9 +313,14 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       m_size = 1u;
    }
 
-   // Insert node at iterator position updating neighbors.
+   // Insert node before `where`, which may be `end()`.
    constexpr void
    place_node(iterator where, node_type& node) {
+      if (where.m_p_node == nullptr) {
+         this->place_node_back(node);
+         return;
+      }
+
       if (where == this->begin()) {
          node.p_next_node = m_storage.m_p_head;
          node.p_previous_node = nullptr;
@@ -362,6 +367,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
 
  public:
    template <is_allocator Allocator, typename U>
+   [[nodiscard]]
    constexpr auto
    append_new_node(
       allocator_ref<Allocator> allocator, node_type* _Nullable& p_tail,
@@ -379,11 +385,12 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       m_storage.m_p_tail = p_node;
       p_tail = p_node;
       ++m_size;
-      return iterator(p_node);
+      return iterator(p_node, m_storage);
    }
 
    // Termination overload for variadic append_new_nodes.
    template <is_allocator Allocator>
+   [[nodiscard]]
    constexpr auto
    append_new_nodes(
       allocator_ref<Allocator> /*unused*/,
@@ -394,6 +401,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
 
    // Append multiple new nodes from a parameter pack.
    template <is_allocator Allocator, typename U, typename... Args>
+   [[nodiscard]]
    constexpr auto
    append_new_nodes(
       allocator_ref<Allocator> allocator, node_type* _Nullable& p_tail,
@@ -440,6 +448,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Insert a new element before the iterator position.
    template <is_allocator Allocator, typename U>
       requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
    constexpr auto
    insert(allocator_ref<Allocator> allocator, iterator where, U&& value)
       -> maybe<iterator> {
@@ -451,11 +460,12 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       } else {
          this->place_node(where, node);
       }
-      return iterator(p_node);
+      return iterator(p_node, m_storage);
    }
 
    // Construct an element in place before the iterator position.
    template <is_allocator Allocator, typename... Args>
+   [[nodiscard]]
    constexpr auto
    emplace(
       allocator_ref<Allocator> allocator, iterator where, Args&&... arguments
@@ -469,7 +479,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       } else {
          this->place_node(where, node);
       }
-      return iterator(p_node);
+      return iterator(p_node, m_storage);
    }
 
    // Insert every element of `range` before `where`.
@@ -508,11 +518,11 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    constexpr auto
    erase(allocator_ref<Allocator> allocator, iterator where) -> iterator {
       if (m_size == 0) [[unlikely]] {
-         return iterator(m_storage.m_p_head);
+         return iterator(m_storage.m_p_head, m_storage);
       }
 
       node_type& node = *where.m_p_node;
-      iterator next = node.p_next_node;
+      iterator next(node.p_next_node, m_storage);
       if (m_size == 1u) [[unlikely]] {
          m_storage.reset();
       } else if (&node != m_storage.m_p_head && &node != m_storage.m_p_tail)
@@ -529,7 +539,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       m_size = idx(m_size - 1u);
       node.storage.~T();
       allocator.free(&node);
-      return iterator(next);
+      return next;
    }
 
    // Erase `[first, last)` and return `last`.
@@ -584,6 +594,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Insert a copy of value at the front and return its iterator.
    template <is_allocator Allocator, typename U>
       requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
    constexpr auto
    push_front(allocator_ref<Allocator> allocator, U const& value)
       -> maybe<iterator> {
@@ -592,12 +603,13 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       node_type& node = *p_node;
       this->place_node_front(node);
 
-      return iterator(p_node);
+      return iterator(p_node, m_storage);
    }
 
    // Insert a moved value at the front and return its iterator.
    template <is_allocator Allocator>
       requires(is_move_constructible<T>)
+   [[nodiscard]]
    constexpr auto
    push_front(allocator_ref<Allocator> allocator, T&& value)
       -> maybe<iterator> {
@@ -605,7 +617,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       node_type& node = *p_node;
       this->place_node_front(node);
 
-      return iterator(p_node);
+      return iterator(p_node, m_storage);
    }
 
    template <
@@ -621,6 +633,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
 
    // Construct an element at the front and return its iterator.
    template <is_allocator Allocator, typename... Args>
+   [[nodiscard]]
    constexpr auto
    emplace_front(allocator_ref<Allocator> allocator, Args&&... arguments)
       -> maybe<iterator> {
@@ -629,7 +642,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       node_type& node = *p_node;
       this->place_node_front(node);
 
-      return iterator(p_node);
+      return iterator(p_node, m_storage);
    }
 
    // Remove the first element and free its node via allocator.
@@ -656,6 +669,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Append a copy of value and return its iterator.
    template <is_allocator Allocator, typename U>
       requires(is_implicitly_convertible<U, T>)
+   [[nodiscard]]
    constexpr auto
    push_back(allocator_ref<Allocator> allocator, U const& value)
       -> maybe<iterator> {
@@ -664,19 +678,20 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
 
       this->place_node_back(*p_node);
 
-      return iterator(p_node);
+      return iterator(p_node, m_storage);
    }
 
    // Append a moved value and return its iterator.
    template <is_allocator Allocator>
       requires(is_move_constructible<T>)
+   [[nodiscard]]
    constexpr auto
    push_back(allocator_ref<Allocator> allocator, T&& value) -> maybe<iterator> {
       node_type* p_node = $prop(this->make_node(allocator, move(value)));
 
       this->place_node_back(*p_node);
 
-      return iterator(p_node);
+      return iterator(p_node, m_storage);
    }
 
    template <
@@ -692,6 +707,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
 
    // Construct an element at the back and return its iterator.
    template <is_allocator Allocator, typename... Args>
+   [[nodiscard]]
    constexpr auto
    emplace_back(allocator_ref<Allocator> allocator, Args&&... arguments)
       -> maybe<iterator> {
@@ -700,7 +716,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       node_type& node = *p_node;
       this->place_node_back(node);
 
-      return iterator(p_node);
+      return iterator(p_node, m_storage);
    }
 
    // Append elements from a range using the allocator.
@@ -788,7 +804,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    constexpr void
    pop_back(allocator_ref<Allocator> allocator) {
       if (m_size > 0) [[likely]] {
-         node_type& node = *(this->end().m_p_node);
+         node_type& node = *m_storage.m_p_tail;
          if (m_size == 1u) [[unlikely]] {
             m_storage.reset();
          } else if (node.p_previous_node != nullptr) [[likely]] {
@@ -825,7 +841,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       while (p_current != nullptr) {
          node_type* p_next = p_current->p_next_node;
          if (pred(p_current->storage)) {
-            this->erase(allocator, iterator(p_current));
+            this->erase(allocator, iterator(p_current, m_storage));
          }
          p_current = p_next;
       }
@@ -849,7 +865,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       node_type* p_current = m_storage.m_p_head;
       while (p_current != nullptr && p_current->p_next_node != nullptr) {
          if (pred(p_current->storage, p_current->p_next_node->storage)) {
-            this->erase(allocator, iterator(p_current->p_next_node));
+            this->erase(allocator, iterator(p_current->p_next_node, m_storage));
          } else {
             p_current = p_current->p_next_node;
          }
@@ -872,42 +888,30 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    [[nodiscard]]
    constexpr auto
    begin() [[clang::lifetimebound]] -> iterator {
-      return iterator(m_storage.m_p_head);
+      return iterator(m_storage.m_p_head, m_storage);
    }
 
    // Return iterator to the last node.
    [[nodiscard]]
    constexpr auto
    end() [[clang::lifetimebound]] -> iterator {
-      return iterator(m_storage.m_p_tail);
+      return iterator(nullptr, m_storage);
    }
 
    // Return reverse iterator to the last node.
    [[nodiscard]]
    constexpr auto
-   rbegin() [[clang::lifetimebound]] {
-      return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_tail};
+   rbegin(this auto& self [[clang::lifetimebound]]) -> reverse_iterator {
+      return reverse_iterator(
+         iterator(self.m_storage.m_p_tail, self.m_storage)
+      );
    }
 
    // Return reverse iterator to one before the first node.
    [[nodiscard]]
    constexpr auto
-   rend() [[clang::lifetimebound]] {
-      return cat::reverse_proxy_stepanov_iterator<iterator>{nullptr};
-   }
-
-   // Return const reverse iterator to the last node.
-   [[nodiscard]]
-   constexpr auto
-   rbegin() const [[clang::lifetimebound]] {
-      return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_tail};
-   }
-
-   // Return const reverse iterator to one before the first node.
-   [[nodiscard]]
-   constexpr auto
-   rend() const [[clang::lifetimebound]] {
-      return cat::reverse_proxy_stepanov_iterator<iterator>{nullptr};
+   rend(this auto& self [[clang::lifetimebound]]) -> reverse_iterator {
+      return reverse_iterator(iterator(nullptr, self.m_storage));
    }
 
    template <typename Node, typename Element>
@@ -1138,24 +1142,30 @@ class [[gsl::Pointer(T)]] list_stepanov_iterator
 
    using node_type = list_node<T>;
 
-   // Construct iterator from a node pointer.
    constexpr list_stepanov_iterator(
-      node_type* _Nullable p_range [[clang::lifetimebound]]
+      node_type* _Nullable p_node [[clang::lifetimebound]],
+      list_storage<T> const& storage [[clang::lifetimebound]]
    )
-       : m_p_node(p_range) {
+       : m_p_node(p_node), m_p_storage(__builtin_addressof(storage)) {
    }
 
    // Move iterator to next node.
    constexpr auto
    increment() [[clang::lifetimebound]] -> list_stepanov_iterator& {
-      m_p_node = m_p_node->p_next_node;
+      // `end()` is `nullptr`, which is one past the tail and one before the
+      // head.
+      m_p_node =
+         m_p_node == nullptr ? m_p_storage->m_p_head : m_p_node->p_next_node;
       return *this;
    }
 
    // Move iterator to previous node.
    constexpr auto
    decrement() [[clang::lifetimebound]] -> list_stepanov_iterator& {
-      m_p_node = m_p_node->p_previous_node;
+      // `end()` is `nullptr`, which is one past the tail and one before the
+      // head.
+      m_p_node = m_p_node == nullptr ? m_p_storage->m_p_tail
+                                     : m_p_node->p_previous_node;
       return *this;
    }
 
@@ -1173,6 +1183,7 @@ class [[gsl::Pointer(T)]] list_stepanov_iterator
    }
 
    node_type* _Nullable m_p_node;
+   list_storage<T> const* _Nonnull m_p_storage;
 };
 
 // Return true when `cat::basic_list` represents a value or is empty.
