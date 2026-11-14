@@ -107,14 +107,14 @@ raii_map_base {
    // Deallocate this container's storage through its owned allocator.
    [[clang::reinitializes]]
    constexpr void
-   free() {
+   free() noexcept(!__has_feature(cxx_exceptions)) {
       m_core.free(m_allocator);
    }
 
    // Deallocate this container's storage through its owned allocator.
    [[clang::reinitializes]]
    constexpr void
-   cfree() {
+   cfree() noexcept(!__has_feature(cxx_exceptions)) {
       m_core.cfree(m_allocator);
    }
 

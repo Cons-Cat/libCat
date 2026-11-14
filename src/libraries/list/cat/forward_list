@@ -247,7 +247,9 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    template <is_allocator Allocator>
    [[clang::reinitializes]]
    constexpr void
-   free(allocator_ref<Allocator> allocator) {
+   free(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       clear();
       node_type* _Nullable p_current = m_storage.m_p_spare;
       while (p_current != nullptr) {
@@ -262,7 +264,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    // Free nodes using `cat::allocator_dyn`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(allocator_dyn allocator) {
+   free(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
       return free<allocator_dyn>(allocator);
    }
 

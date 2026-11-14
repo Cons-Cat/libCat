@@ -919,7 +919,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_allocator Allocator>
    [[clang::reinitializes]]
    constexpr void
-   free(allocator_ref<Allocator> allocator) {
+   free(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       idx const old_size = size();
       idx const old_capacity = capacity();
       destroy_n_elements(data(), old_size);
@@ -937,7 +939,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // Deallocate this `vec`'s storage from `allocator`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(allocator_dyn allocator) {
+   free(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
       return free<allocator_dyn>(allocator);
    }
 
@@ -945,7 +947,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_allocator Allocator>
    [[clang::reinitializes]]
    constexpr void
-   cfree(allocator_ref<Allocator> allocator) {
+   cfree(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       idx const old_size = size();
       idx const old_capacity = capacity();
       destroy_n_elements(data(), old_size);
@@ -968,7 +972,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // Deallocate this `vec`'s storage from `allocator`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   cfree(allocator_dyn allocator) {
+   cfree(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
       return cfree<allocator_dyn>(allocator);
    }
 

@@ -884,7 +884,7 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    // Free all storage through a type-erased allocator.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(allocator_dyn allocator) noexcept {
+   free(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
       free<allocator_dyn>(allocator);
    }
 

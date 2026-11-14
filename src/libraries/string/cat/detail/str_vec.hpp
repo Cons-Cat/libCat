@@ -576,20 +576,22 @@ class
 
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(allocator_dyn allocator) noexcept {
+   free(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
       return free<allocator_dyn>(allocator);
    }
 
    template <is_allocator Allocator>
    [[clang::reinitializes]]
    constexpr void
-   cfree(allocator_ref<Allocator> allocator) noexcept {
+   cfree(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       m_core.cfree(allocator);
    }
 
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    constexpr void
-   cfree(allocator_dyn allocator) noexcept {
+   cfree(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
       return cfree<allocator_dyn>(allocator);
    }
 

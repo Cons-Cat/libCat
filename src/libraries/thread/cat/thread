@@ -169,7 +169,7 @@ struct thread {
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    void
-   free(allocator_dyn allocator) noexcept {
+   free(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
       free<allocator_dyn>(allocator);
    }
 
@@ -193,7 +193,7 @@ struct thread {
    // Deallocate this `thread`'s stack from `allocator`. Call after `join()`.
    [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
    void
-   cfree(allocator_dyn allocator) noexcept {
+   cfree(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
       cfree<allocator_dyn>(allocator);
    }
 

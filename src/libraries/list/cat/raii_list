@@ -189,7 +189,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Free all elements using the stored allocator.
    [[clang::reinitializes]]
    constexpr void
-   free() {
+   free() noexcept(!__has_feature(cxx_exceptions)) {
       m_core.free(m_allocator);
    }
 

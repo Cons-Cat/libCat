@@ -249,14 +249,14 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    // Deallocate this `vec`'s storage through its owned allocator.
    [[clang::reinitializes]]
    constexpr void
-   free() {
+   free() noexcept(!__has_feature(cxx_exceptions)) {
       m_core.free(m_allocator);
    }
 
    // Deallocate this `vec`'s storage through its owned allocator.
    [[clang::reinitializes]]
    constexpr void
-   cfree() {
+   cfree() noexcept(!__has_feature(cxx_exceptions)) {
       m_core.cfree(m_allocator);
    }
 

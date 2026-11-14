@@ -195,28 +195,36 @@ class [[gsl::Pointer]] map_ref {
    // Deallocate the referenced map's storage from `allocator`.
    template <is_allocator Allocator>
    constexpr void
-   free(allocator_ref<Allocator> allocator) const {
+   free(allocator_ref<Allocator> allocator) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       m_p_map->free(allocator);
    }
 
    // Deallocate the referenced map's storage from `allocator`.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr void
-   free(allocator_dyn allocator) const {
+   free(allocator_dyn allocator) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       free<allocator_dyn>(allocator);
    }
 
    // Deallocate the referenced map's storage from `allocator`.
    template <is_allocator Allocator>
    constexpr void
-   cfree(allocator_ref<Allocator> allocator) const {
+   cfree(allocator_ref<Allocator> allocator) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       m_p_map->cfree(allocator);
    }
 
    // Deallocate the referenced map's storage from `allocator`.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr void
-   cfree(allocator_dyn allocator) const {
+   cfree(allocator_dyn allocator) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       cfree<allocator_dyn>(allocator);
    }
 };

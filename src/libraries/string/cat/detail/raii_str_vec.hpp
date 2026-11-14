@@ -745,13 +745,13 @@ class
 
    [[clang::reinitializes]]
    constexpr void
-   free() noexcept {
+   free() noexcept(!__has_feature(cxx_exceptions)) {
       m_core.free(m_allocator);
    }
 
    [[clang::reinitializes]]
    constexpr void
-   cfree() noexcept {
+   cfree() noexcept(!__has_feature(cxx_exceptions)) {
       m_core.cfree(m_allocator);
    }
 

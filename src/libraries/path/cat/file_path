@@ -596,23 +596,27 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 
    template <is_allocator Allocator>
    constexpr void
-   free(allocator_ref<Allocator> allocator) noexcept {
+   free(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       m_storage.free(allocator);
    }
 
    constexpr void
-   free(allocator_dyn allocator) noexcept {
+   free(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
       m_storage.free(allocator);
    }
 
    template <is_allocator Allocator>
    constexpr void
-   cfree(allocator_ref<Allocator> allocator) noexcept {
+   cfree(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       m_storage.cfree(allocator);
    }
 
    constexpr void
-   cfree(allocator_dyn allocator) noexcept {
+   cfree(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
       m_storage.cfree(allocator);
    }
 
