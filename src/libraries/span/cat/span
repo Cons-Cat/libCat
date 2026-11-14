@@ -289,23 +289,18 @@ span
 
    [[nodiscard]]
    constexpr auto
-   rbegin(this auto&& self) noexcept(false) {
-      // `rbegin` is only valid on non-empty spans. `assert` enforces
-      // `size >= 1` so `size - 1u` does not wrap in unsigned arithmetic.
-      cat::assert(self.size() > 0u);
-      idx const last{self.size().raw - 1u};
-      auto* _Nonnull p_data = self.data();
-      return reverse_proxy_stepanov_iterator(
-         detail::container_stepanov_iterator(last, p_data)
-      );
+   rbegin(this auto&& self) {
+      auto last = self.end();
+      --last;
+      return reverse_proxy_stepanov_iterator(last);
    }
 
    [[nodiscard]]
    constexpr auto
    rend(this auto&& self) {
-      return reverse_proxy_stepanov_iterator(
-         detail::container_stepanov_iterator(0, self.data())
-      );
+      auto before_first = self.begin();
+      --before_first;
+      return reverse_proxy_stepanov_iterator(before_first);
    }
 
    [[nodiscard]]

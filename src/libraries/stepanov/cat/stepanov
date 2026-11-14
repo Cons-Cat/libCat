@@ -460,7 +460,9 @@ operator==(Derived const& left, Derived const& right) -> bool {
       return left.distance_to(right)
              == static_cast<infer_difference_type<iter>>(0);
    } else {
-      __builtin_unreachable();
+      static_assert(
+         false, "This iterator needs `.equal_to()` or `.distance_to()`!"
+      );
    }
 }
 
@@ -603,6 +605,13 @@ class [[gsl::Pointer]] reverse_proxy_stepanov_iterator
    constexpr void
    decrement() {
       ++m_internal_iterator;
+   }
+
+   constexpr auto
+   equal_to(self_type const& other) const -> bool
+      requires(detail::has_equal_to<Iterator>)
+   {
+      return m_internal_iterator.equal_to(other.m_internal_iterator);
    }
 
    constexpr auto

@@ -892,7 +892,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    [[nodiscard]]
    constexpr auto
    rend() [[clang::lifetimebound]] {
-      return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_head};
+      return cat::reverse_proxy_stepanov_iterator<iterator>{nullptr};
    }
 
    // Return const reverse iterator to the last node.
@@ -906,7 +906,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    [[nodiscard]]
    constexpr auto
    rend() const [[clang::lifetimebound]] {
-      return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_head};
+      return cat::reverse_proxy_stepanov_iterator<iterator>{nullptr};
    }
 
    template <typename Node, typename Element>

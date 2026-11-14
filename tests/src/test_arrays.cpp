@@ -4,8 +4,10 @@
 #include <cat/math>
 #include <cat/meta>
 #include <cat/runtime>
+#include <cat/span>
 #include <cat/string>
 #include <cat/utility>
+#include <cat/vec_inplace>
 
 #include "../unit_tests.hpp"
 
@@ -344,4 +346,51 @@ $test(array_subscript_compile_time_bounds) {
    static_assert(cat::is_same<decltype(cat::move(constant)[0u]), int4>);
    static_assert(cat::is_same<decltype(cat::move(constant)[3u]), void>);
    static_assert(cat::is_same<decltype(values[runtime]), int4&>);
+}
+
+namespace {
+
+// Visit `container` from `rbegin()` to `rend()`, and verify that it is the
+// reverse of `expected`.
+template <typename Container, typename Expected>
+constexpr auto
+reverses(Container&& container, Expected const& expected) -> bool {
+   idx count = 0u;
+   for (auto it = container.rbegin(); it != container.rend(); ++it) {
+      if (
+         count == expected.size()
+         || *it != expected[idx(expected.size() - count - 1u)]
+      ) {
+         return false;
+      }
+      ++count;
+   }
+   return count == expected.size();
+}
+
+consteval auto
+array_reverses() -> bool {
+   cat::array<int4, 3u> values = {1, 2, 3};
+   return reverses(values, values) && values.rend() - values.rbegin() == 3;
+}
+
+}  // namespace
+
+$test(array_reverse_iteration) {
+   static_assert(array_reverses());
+
+   cat::array<int4, 3u> array = {1, 2, 3};
+   cat::verify(reverses(array, array));
+   cat::verify(reverses(cat::as_const(array), array));
+   cat::verify(*array.crbegin() == 3 && *(array.crend() - 1) == 1);
+
+   cat::span<int4> span = array;
+   cat::verify(reverses(span, array));
+   cat::verify(span.rend() - span.rbegin() == 3);
+
+   // An empty container's `rbegin()` is its `rend()`.
+   cat::vec_inplace<int4, 4u> empty;
+   cat::verify(empty.rbegin() == empty.rend());
+   cat::span<int4> empty_span;
+   cat::verify(empty_span.rbegin() == empty_span.rend());
 }

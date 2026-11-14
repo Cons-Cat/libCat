@@ -651,3 +651,22 @@ $test(forward_list_throwing_insert) {
    cat::verify(fragile::live == 1);
 }
 #endif
+
+$test(list_reverse_iteration) {
+   linear_arena arena;
+   auto allocator = cat::allocator_ref<cat::allocator_linear>(arena.alloc);
+   cat::list<int> list = cat::make_list<int>(allocator, 1, 2, 3).verify();
+   $defer {
+      list.free(allocator);
+   };
+
+   // `[rbegin(), rend())` includes the head.
+   cat::array<int, 3u> reversed{};
+   idx count = 0u;
+   for (auto it = list.rbegin(); it != list.rend(); ++it) {
+      reversed[count] = *it;
+      ++count;
+   }
+   cat::verify(count == 3u);
+   cat::verify(reversed[0u] == 3 && reversed[1u] == 2 && reversed[2u] == 1);
+}

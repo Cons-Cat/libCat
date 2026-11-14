@@ -262,25 +262,18 @@ class random_access_stepanov_iterable_interface
 
    [[nodiscard]]
    constexpr auto
-   rbegin(this auto&& container [[clang::lifetimebound]]) noexcept(false) {
-      // `cat::forward` must be called on last use, and because argument
-      // evaluation order is unspecified, it cannot be called inside an argument
-      // list. `rbegin` is only valid on non-empty containers. `assert` enforces
-      // `size >= 1` so `size - 1u` does not wrap in unsigned arithmetic.
-      cat::assert(container.size() > 0u);
-      idx const last{container.size().raw - 1u};
-      auto* _Nonnull p_data = $fwd(container).data();
-      return reverse_proxy_stepanov_iterator(
-         detail::container_stepanov_iterator(last, p_data)
-      );
+   rbegin(this auto&& container [[clang::lifetimebound]]) {
+      auto last = $fwd(container).end();
+      --last;
+      return reverse_proxy_stepanov_iterator(last);
    }
 
    [[nodiscard]]
    constexpr auto
    rend(this auto&& container [[clang::lifetimebound]]) {
-      return reverse_proxy_stepanov_iterator(
-         detail::container_stepanov_iterator(0, $fwd(container).data())
-      );
+      auto before_first = $fwd(container).begin();
+      --before_first;
+      return reverse_proxy_stepanov_iterator(before_first);
    }
 };
 

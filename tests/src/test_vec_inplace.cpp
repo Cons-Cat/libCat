@@ -363,10 +363,9 @@ $test(vec_inplace_iterators) {
    cat::verify(*constant.begin() == 10_i4);
    cat::verify(*(values.cbegin() + 1) == 20_i4);
 
-   // TODO: Verify that `rbegin()` to `rend()` visits every element and that
-   // `rbegin() == rend()` when empty. Currently, `rend()` wraps index `0`
-   // instead of `-1`, so reverse iteration skips the first element, and
-   // `rbegin()` asserts on an empty container.
+   // `rbegin()` to `rend()` visits every element.
+   cat::verify(values.rend() - values.rbegin() == 4);
+   cat::verify(*(values.rend() - 1) == 10_i4);
    auto reverse = values.rbegin();
    cat::verify(*reverse == 4_i4);
    cat::verify(*++reverse == 3_i4);
