@@ -81,9 +81,7 @@ target_link_libraries(cat-tests-base INTERFACE cat)
 target_compile_options(cat-tests-base INTERFACE
   ${CAT_CXX_FLAGS_INTERNAL}
   # Tests should fail if they produce sanitizer warnings.
-  # TODO: Re-enable this when threads consistently work.
-  # -fno-sanitize-recover=all
-  #
+  -fno-sanitize-recover=all
   # Tests should be allowed to have unused variables.
   -Wno-unused-variable
   -Wno-self-assign-overloaded
