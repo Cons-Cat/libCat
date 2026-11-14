@@ -295,7 +295,28 @@ $test(vec_flags) {
       cat::vec_flags::pointer_size_layout | cat::vec_flags::inline_storage(4u);
    static_assert(inline_flags.inline_storage_count == 4u);
    static_assert(inline_flags.initial_growth_count == 0u);
-   static_assert(cat::vec<int4>::flags.inline_storage_count == 4u);
+   // The default inline capacity matches LLVM's `SmallVector<T>`.
+   static_assert(cat::vec<char>::flags.inline_storage_count == 40u);
+   static_assert(cat::vec<int2>::flags.inline_storage_count == 20u);
+   static_assert(cat::vec<int4>::flags.inline_storage_count == 12u);
+   static_assert(cat::vec<int8>::flags.inline_storage_count == 6u);
+   static_assert(cat::vec<void*>::flags.inline_storage_count == 6u);
+   static_assert(cat::vec<int4x4>::flags.inline_storage_count == 3u);
+   static_assert(
+      cat::vec<cat::array<int8, 6u>>::flags.inline_storage_count == 1u
+   );
+   static_assert(cat::vec_fixed<int4>::flags.inline_storage_count == 12u);
+   // A `T` larger than 256 bytes gets no inline storage, like LLVM.
+   static_assert(
+      cat::is_same<
+         cat::vec<cat::array<char, 257u>>, cat::vec_big<cat::array<char, 257u>>>
+   );
+   static_assert(
+      cat::vec<cat::array<char, 256u>>::flags.inline_storage_count == 1u
+   );
+   static_assert(cat::is_same<
+                 cat::raii::vec<int4>,
+                 cat::raii::vec_small<int4, cat::allocator_dyn, 12u>>);
    static_assert(cat::vec<int4>::flags.initial_growth_count == 0u);
    static_assert(cat::vec_big<int4>::flags.inline_storage_count == 0u);
    static_assert(cat::vec_big<int4>::flags.initial_growth_count == 4u);
@@ -318,9 +339,15 @@ $test(vec_flags) {
    cat::verify(values.capacity() == 8u);
 
    static_assert(sizeof(cat::vec_big<int4>) == sizeof(void*) * 3u);
+   // `pointer_size_layout` stores `uint4` counts, like LLVM's `SmallVector`,
+   // and holds at most that many elements.
    static_assert(
       sizeof(cat::vec_big<int4, cat::vec_flags::pointer_size_layout>)
-      == sizeof(void*) * 3u
+      == sizeof(void*) * 2u
+   );
+   static_assert(
+      cat::vec_big<int4, cat::vec_flags::pointer_size_layout>::max_size()
+      == cat::uint4::max()
    );
    static_assert(
       sizeof(cat::vec_big<int4, cat::vec_flags::fixed_size>)
@@ -372,7 +399,7 @@ $test(fixed_size_vec) {
    cat::verify(values[1u] == 2_i4);
    values.free(arena.alloc);
 
-   cat::vec_fixed<int4> inline_values =
+   cat::vec_small_fixed<int4, 4u> inline_values =
       cat::make_vec<
          int4, cat::allocator_linear,
          cat::vec_flags::fixed_size | cat::vec_flags::inline_storage(4u)>(
@@ -1035,8 +1062,13 @@ $test(vec_allocator_null_failure) {
 $test(vec_noncontiguous_replace_failure_preserves_values) {
    linear_arena arena;
    cat::allocator_null null_alloc;
-   cat::vec<int4> values =
-      cat::make_vec<int4>(arena.alloc, {1_i4, 2_i4, 3_i4, 4_i4}).verify();
+   // The replacement must not fit inline, so that it has to allocate.
+   cat::vec_small<int4, 4u> values =
+      cat::make_vec<
+         int4, cat::allocator_linear, cat::vec_flags::inline_storage(4u)>(
+         arena.alloc, {1_i4, 2_i4, 3_i4, 4_i4}
+      )
+         .verify();
    cat::array<int4, 2u> replacements{8_i4, 9_i4};
    auto noncontiguous = cat::ref(replacements).filter([](int4) -> bool {
       return true;
@@ -1369,7 +1401,7 @@ $test(raii_vec_shrink_to_fit) {
 
    v.shrink_to_fit().verify();
    cat::verify(v.size() == 2);
-   cat::verify(v.capacity() == 4u);
+   cat::verify(v.capacity() == cat::detail::default_inline_count<int4>());
    cat::verify(v[0] == 31);
 
    v.clear();

@@ -24,7 +24,7 @@ inline constexpr vec_niche_storage<T> vec_niche{};
 
 template <typename T>
 struct vec_count_extent {
-   idx m_count = 0u;
+   uint4 m_count = 0u;
 
    [[nodiscard]]
    constexpr auto
@@ -34,7 +34,7 @@ struct vec_count_extent {
 
    constexpr void
    set([[maybe_unused]] T const* _Nullable p_data, idx count) {
-      m_count = count;
+      m_count = narrow_cast<uint4>(count).assert();
    }
 };
 
@@ -54,9 +54,9 @@ struct vec_pointer_extent {
    }
 };
 
-template <typename T, bool pointer_size_layout>
-using vec_extent =
-   conditional<pointer_size_layout, vec_count_extent<T>, vec_pointer_extent<T>>;
+template <typename T, vec_flags flags>
+using vec_extent = conditional<
+   flags.uses_pointer_size_layout, vec_count_extent<T>, vec_pointer_extent<T>>;
 
 template <typename Extent>
 struct vec_explicit_size {
@@ -102,10 +102,10 @@ template <typename Extent, bool fixed_size>
 using vec_size =
    conditional<fixed_size, vec_capacity_size, vec_explicit_size<Extent>>;
 
-template <typename T, bool pointer_size_layout, bool fixed_size>
+template <typename T, vec_flags flags>
 struct vec_bounds {
-   using extent_type = vec_extent<T, pointer_size_layout>;
-   using size_type = vec_size<extent_type, fixed_size>;
+   using extent_type = vec_extent<T, flags>;
+   using size_type = vec_size<extent_type, flags.is_fixed_size>;
 
    T* _Nullable m_p_data = nullptr;
    [[no_unique_address]]
@@ -146,8 +146,8 @@ struct vec_bounds {
    [[nodiscard]]
    constexpr auto
    has_value() const -> bool {
-      if constexpr (pointer_size_layout) {
-         if constexpr (fixed_size) {
+      if constexpr (flags.uses_pointer_size_layout) {
+         if constexpr (flags.is_fixed_size) {
             return m_p_data != nullptr || capacity() == 0u;
          } else {
             return m_p_data != nullptr || size() == 0u;
@@ -161,8 +161,8 @@ struct vec_bounds {
 
    constexpr void
    set_niche() {
-      if constexpr (pointer_size_layout) {
-         if constexpr (fixed_size) {
+      if constexpr (flags.uses_pointer_size_layout) {
+         if constexpr (flags.is_fixed_size) {
             set_layout(nullptr, 0u, 1u);
          } else {
             set_layout(nullptr, 1u, 0u);
@@ -177,25 +177,18 @@ struct vec_bounds {
 template <
    typename T, vec_flags flags,
    bool has_inline_storage = (flags.inline_storage_count != 0u)>
-struct vec_storage
-    : vec_bounds<T, flags.uses_pointer_size_layout, flags.is_fixed_size> {
+struct vec_storage : vec_bounds<T, flags> {
    static constexpr bool is_inline = false;
 
    constexpr vec_storage() = default;
 
-   constexpr vec_storage(vec_storage&& other)
-       : vec_bounds<T, flags.uses_pointer_size_layout, flags.is_fixed_size>(
-            other
-         ) {
+   constexpr vec_storage(vec_storage&& other) : vec_bounds<T, flags>(other) {
       other.set_layout(nullptr, 0u, 0u);
    }
 
    constexpr auto
    operator=(vec_storage&& other) -> vec_storage& {
-      static_cast<
-         vec_bounds<T, flags.uses_pointer_size_layout, flags.is_fixed_size>&>(
-         *this
-      ) = other;
+      static_cast<vec_bounds<T, flags>&>(*this) = other;
       other.set_layout(nullptr, 0u, 0u);
       return *this;
    }
@@ -206,8 +199,7 @@ struct vec_storage
 };
 
 template <typename T, vec_flags flags>
-struct vec_storage<T, flags, true>
-    : vec_bounds<T, flags.uses_pointer_size_layout, flags.is_fixed_size> {
+struct vec_storage<T, flags, true> : vec_bounds<T, flags> {
    using handle_type =
       remove_cvref<decltype(declval<allocator_ref<allocator_dyn>&>()
                                .template inline_salloc_multi_uninit<
@@ -223,9 +215,7 @@ struct vec_storage<T, flags, true>
    constexpr vec_storage() = default;
 
    constexpr vec_storage(vec_storage&& other)
-       : vec_bounds<T, flags.uses_pointer_size_layout, flags.is_fixed_size>(
-            other
-         ),
+       : vec_bounds<T, flags>(other),
          m_handle(move(other.m_handle)),
          m_has_handle(other.m_has_handle) {
       if (m_has_handle && m_handle.is_inline()) {
@@ -243,10 +233,7 @@ struct vec_storage<T, flags, true>
       if (this == __builtin_addressof(other)) {
          return *this;
       }
-      static_cast<
-         vec_bounds<T, flags.uses_pointer_size_layout, flags.is_fixed_size>&>(
-         *this
-      ) = other;
+      static_cast<vec_bounds<T, flags>&>(*this) = other;
       m_handle = move(other.m_handle);
       m_has_handle = other.m_has_handle;
       if (m_has_handle && m_handle.is_inline()) {

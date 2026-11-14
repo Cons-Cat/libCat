@@ -3,6 +3,8 @@
 #pragma once
 
 #include <cat/arithmetic>
+#include <cat/bit>
+#include <cat/math>
 
 namespace cat {
 
@@ -64,5 +66,44 @@ inline constexpr vec_flags vec_flags::pointer_size_layout{
 inline constexpr vec_flags vec_flags::fixed_size{
    .is_fixed_size = true,
 };
+
+namespace detail {
+
+// The default `inline_storage_count` should be however many `T` fit in a
+// 64-byte `cat::basic_vec`. This size was borrowed from LLVM, which
+// supposedly made the evidence-based determination that it's overall optimal.
+template <typename T>
+consteval auto
+default_inline_count() -> idx {
+   if (sizeof(T) > 256u) {
+      return 0u;
+   }
+
+   idx const size_bytes = sizeof(T) < 4u ? 8u : 4u;
+   idx const header = min(
+      align_up(idx(sizeof(void*) + size_bytes + size_bytes), alignof(T)),
+      idx(64u)
+   );
+   return max(idx(64u - header) / sizeof(T), 1u);
+}
+
+// Set flags for the `vec<T, flags>` alias. When `flags` chooses neither inline
+// storage nor growth, `T` gets an inline capacity, or grows like `vec_big<T>`
+// if none fits. Otherwise `T` is allowed to be incomplete.
+template <typename T, vec_flags flags>
+consteval auto
+vec_alias_flags() -> vec_flags {
+   if constexpr (
+      flags.inline_storage_count != 0u || flags.initial_growth_count != 0u
+   ) {
+      return flags;
+   } else if constexpr (default_inline_count<T>() == 0u) {
+      return vec_flags::initial_growth(4u) | flags;
+   } else {
+      return vec_flags::inline_storage(default_inline_count<T>()) | flags;
+   }
+}
+
+}  // namespace detail
 
 }  // namespace cat

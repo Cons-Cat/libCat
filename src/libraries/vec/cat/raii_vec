@@ -31,7 +31,8 @@
 //
 // Convenience type aliases are provided for these configurations:
 //
-//  `cat::raii::vec<T, Allocator>`, with 4 inline elements.
+//  `cat::raii::vec<T, Allocator>`, with as many inline elements as will fit in
+//     `cat::vec`.
 //  `cat::raii::vec_fixed<T, Allocator>`, a `raii::basic_vec` with `fixed_size`
 //     flag.
 //  `cat::raii::vec_small<T, Allocator, n>`, with `n` inline elements.
@@ -58,16 +59,15 @@ template <
 class basic_vec;
 
 // `vec<T, Allocator>` is the user-facing alias for the managed
-// `raii::basic_vec<T, Allocator>`. Declared above the class definition so
-// the `[[clang::preferred_name]]` attribute can reference it.
+// `raii::basic_vec<T, Allocator>`.
 template <
    typename T, is_allocator Allocator = allocator_dyn, vec_flags flags = {}>
-using vec = basic_vec<T, Allocator, vec_flags::inline_storage(4u) | flags>;
+using vec = basic_vec<T, Allocator, detail::vec_alias_flags<T, flags>()>;
 
 template <
    typename T, is_allocator Allocator = allocator_dyn, vec_flags flags = {}>
 using vec_fixed = basic_vec<
-   T, Allocator, vec_flags::inline_storage(4u) | vec_flags::fixed_size | flags>;
+   T, Allocator, detail::vec_alias_flags<T, vec_flags::fixed_size | flags>()>;
 
 template <
    typename T, is_allocator Allocator, idx inline_count, vec_flags flags = {}>

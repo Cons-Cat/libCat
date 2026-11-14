@@ -35,16 +35,13 @@
 //
 // Convenience type aliases are provided for these configurations:
 //
-//  `cat::vec<T>`, a `basic_vec` with 4 inline elements.
+//  `cat::vec<T>`, a 64-byte `basic_vec` with small buffer optimization.
 //  `cat::vec_fixed<T>`, a `basic_vec` with `fixed_size` flag.
 //  `cat::vec_small<T, n>`, a `basic_vec` with `n` inline elements.
 //  `cat::vec_small_fixed<T, n>`, with `n` inline elements and `fixed_size`.
 //  `cat::vec_big<T>`, a `basic_vec` without inline storage.
 //  `cat::vec_big_fixed<T>`, a `basic_vec` without inline storage and with
 //     `fixed_size` flag.
-//
-// TODO: We should provide a clever-er default value than 4. Look at
-// `llvm::SmallVector` to stay around 64 bytes by default.
 //
 // By default, non small-size optimized `vec`s grow from 0 to a capacity of 4
 // elements in their initial allocation. Reallocations grow to double their
@@ -73,11 +70,11 @@ template <typename T, vec_flags flags = {}>
 class basic_vec;
 
 template <typename T, vec_flags flags = {}>
-using vec = basic_vec<T, vec_flags::inline_storage(4u) | flags>;
+using vec = basic_vec<T, detail::vec_alias_flags<T, flags>()>;
 
 template <typename T, vec_flags flags = {}>
 using vec_fixed =
-   basic_vec<T, vec_flags::inline_storage(4u) | vec_flags::fixed_size | flags>;
+   basic_vec<T, detail::vec_alias_flags<T, vec_flags::fixed_size | flags>()>;
 
 template <typename T, idx inline_count, vec_flags flags = {}>
 using vec_small = basic_vec<T, vec_flags::inline_storage(inline_count) | flags>;
@@ -774,6 +771,10 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       allocator_ref<Allocator> allocator, idx minimum_capacity,
       idx gap_position, idx gap_count, Fill& fill_gap
    ) -> maybe<void> {
+      if (minimum_capacity > max_size()) {
+         return nullopt;
+      }
+
       idx const old_capacity = capacity();
       idx const new_size = size() + gap_count;
       // Allocate manually because unused capacity must remain uninitialized.
@@ -814,7 +815,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
          m_storage.set_layout(
             allocator.get(m_storage.m_handle).data(), new_size,
-            allocation_bytes / sizeof(T)
+            min(idx(allocation_bytes / sizeof(T)), max_size())
          );
       } else {
          auto [alloc_span, alloc_bytes] =
@@ -833,7 +834,8 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
          }
 
          m_storage.set_layout(
-            alloc_span.data(), new_size, alloc_bytes / sizeof(T)
+            alloc_span.data(), new_size,
+            min(idx(alloc_bytes / sizeof(T)), max_size())
          );
       }
 
@@ -1000,6 +1002,10 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
       if (fixed_size == 0u) {
          return monostate;
+      }
+
+      if (fixed_size > max_size()) {
+         return nullopt;
       }
 
       [[maybe_unused]] auto [alloc_span, alloc_bytes] =
@@ -1253,10 +1259,10 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<NewAllocator> allocator) const& -> maybe<vec<T, flags>> {
+   clone(allocator_ref<NewAllocator> allocator) const& -> maybe<basic_vec> {
       // TODO: When allocators gain .remap(), prefer it when allocators compare
       // equal and the allocator can do better than allocate then copy.
-      vec<T, flags> new_vector;
+      basic_vec new_vector;
       auto fill = [&](T* _Nonnull p_first) {
          if (size() > 0u) {
             construct_from<false>(p_first, data(), size());
@@ -1277,7 +1283,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // Deep-copy the contents of this `vec`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(allocator_dyn allocator) const& -> maybe<vec<T, flags>> {
+   clone(allocator_dyn allocator) const& -> maybe<basic_vec> {
       return clone<allocator_dyn>(allocator);
    }
 
@@ -1874,7 +1880,11 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    [[nodiscard]]
    static constexpr auto
    max_size() noexcept -> idx {
-      return idx::max() / sizeof(T);
+      if constexpr (flags.uses_pointer_size_layout) {
+         return min(idx::max() / sizeof(T), uint4::max());
+      } else {
+         return idx::max() / sizeof(T);
+      }
    }
 
  private:
