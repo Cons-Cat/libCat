@@ -64,6 +64,41 @@ dangling_vec_at() -> int4& {
    return local.at(0u).value();
 }
 
+auto
+dangling_vec_first() -> cat::maybe_span<int4> {
+   cat::vec<int4> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.first(2u);
+}
+
+auto
+dangling_vec_const_first() -> cat::maybe_span<int4 const> {
+   cat::vec<int4> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return cat::as_const(local).first(2u);
+}
+
+auto
+dangling_vec_last() -> cat::maybe_span<int4> {
+   cat::vec<int4> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.last(2u);
+}
+
+auto
+dangling_vec_subspan() -> cat::maybe_span<int4> {
+   cat::vec<int4> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.subspan(0u, 2u);
+}
+
+auto
+dangling_vec_emplace_back() -> int4& {
+   cat::vec<int4> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.emplace_back(g_page, 1).value();
+}
+
 void
 use_after_scope_vec() {
    int4* p_escaped = nullptr;
@@ -110,6 +145,48 @@ dangling_vec_inplace_at() -> int4& {
    return local.at(0u).value();
 }
 
+auto
+dangling_vec_inplace_first() -> cat::maybe_span<int4> {
+   cat::vec_inplace<int4, 4u> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.first(2u);
+}
+
+auto
+dangling_vec_inplace_const_first() -> cat::maybe_span<int4 const> {
+   cat::vec_inplace<int4, 4u> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return cat::as_const(local).first(2u);
+}
+
+auto
+dangling_vec_inplace_last() -> cat::maybe_span<int4> {
+   cat::vec_inplace<int4, 4u> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.last(2u);
+}
+
+auto
+dangling_vec_inplace_subspan() -> cat::maybe_span<int4> {
+   cat::vec_inplace<int4, 4u> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.subspan(0u, 2u);
+}
+
+auto
+dangling_vec_inplace_emplace_back() -> int4& {
+   cat::vec_inplace<int4, 4u> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.emplace_back(1).value();
+}
+
+auto
+dangling_vec_inplace_unchecked_emplace_back() -> int4& {
+   cat::vec_inplace<int4, 4u> local;
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.unchecked_emplace_back(1);
+}
+
 void
 use_after_scope_vec_inplace() {
    int4* p_escaped = nullptr;
@@ -154,6 +231,41 @@ dangling_raii_vec_at() -> int4& {
    cat::raii::vec<int4, cat::allocator_page> local{g_page};
    // expected-warning@+1 1+ {{local variable 'local'}}
    return local.at(0u).value();
+}
+
+auto
+dangling_raii_vec_first() -> cat::maybe_span<int4> {
+   cat::raii::vec<int4, cat::allocator_page> local{g_page};
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.first(2u);
+}
+
+auto
+dangling_raii_vec_const_first() -> cat::maybe_span<int4 const> {
+   cat::raii::vec<int4, cat::allocator_page> local{g_page};
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return cat::as_const(local).first(2u);
+}
+
+auto
+dangling_raii_vec_last() -> cat::maybe_span<int4> {
+   cat::raii::vec<int4, cat::allocator_page> local{g_page};
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.last(2u);
+}
+
+auto
+dangling_raii_vec_subspan() -> cat::maybe_span<int4> {
+   cat::raii::vec<int4, cat::allocator_page> local{g_page};
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.subspan(0u, 2u);
+}
+
+auto
+dangling_raii_vec_emplace_back() -> int4& {
+   cat::raii::vec<int4, cat::allocator_page> local{g_page};
+   // expected-warning@+1 1+ {{local variable 'local'}}
+   return local.emplace_back(1).value();
 }
 
 void

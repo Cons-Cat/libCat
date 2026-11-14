@@ -217,19 +217,32 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
 
    [[nodiscard]]
    constexpr auto
-   push_back(T const& value) [[clang::lifetimebound]] -> maybe<T&>
+   push_back(T const& value) -> maybe<void>
       requires(is_copy_constructible<T>)
    {
-      return emplace_back(value);
+      if (emplace_back(value).is_empty()) {
+         return nullopt;
+      }
+      return monostate;
    }
 
    [[nodiscard]]
    constexpr auto
-   push_back(T&& value) [[clang::lifetimebound]] -> maybe<T&>
+   push_back(T&& value) -> maybe<void>
       requires(is_move_constructible<T>)
    {
-      return emplace_back(move(value));
+      if (emplace_back(move(value)).is_empty()) {
+         return nullopt;
+      }
+      return monostate;
    }
+
+   template <typename First, typename Second, typename... Remaining>
+   constexpr auto
+   push_back(First&&, Second&&, Remaining&&...) -> maybe<void> =
+      delete ("`push_back()` is not variadic! Consider either `emplace_back()` "
+              "to construct an element or `append_range()` to "
+              "append a range.");
 
    template <typename... Args>
       requires(is_constructible<T, Args...>)
@@ -240,18 +253,18 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
       return construct_back($fwd(arguments)...);
    }
 
-   constexpr auto
-   unchecked_push_back(T const& value) [[clang::lifetimebound]] -> T&
+   constexpr void
+   unchecked_push_back(T const& value)
       requires(is_copy_constructible<T>)
    {
-      return unchecked_emplace_back(value);
+      unchecked_emplace_back(value);
    }
 
-   constexpr auto
-   unchecked_push_back(T&& value) [[clang::lifetimebound]] -> T&
+   constexpr void
+   unchecked_push_back(T&& value)
       requires(is_move_constructible<T>)
    {
-      return unchecked_emplace_back(move(value));
+      unchecked_emplace_back(move(value));
    }
 
    [[nodiscard]]
@@ -635,6 +648,33 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    alignas(T) storage_element m_storage[storage_count]{};
    idx m_size = 0u;
 };
+
+// Make a `cat::vec_inplace<T>` holding `values`, with a capacity of how many
+// there are.
+template <typename T, typename... Ts>
+   requires(is_constructible<T, Ts&&> && ...)
+[[nodiscard]]
+constexpr auto
+make_vec_inplace(Ts&&... values) -> vec_inplace<T, sizeof...(Ts)> {
+   vec_inplace<T, sizeof...(Ts)> result;
+   (result.unchecked_emplace_back($fwd(values)), ...);
+   return result;
+}
+
+// Make a `cat::vec_inplace<T, inline_capacity>` holding `values`.
+template <typename T, idx inline_capacity, typename... Ts>
+   requires(is_constructible<T, Ts&&> && ...)
+[[nodiscard]]
+constexpr auto
+make_vec_inplace(Ts&&... values) -> vec_inplace<T, inline_capacity> {
+   static_assert(
+      sizeof...(Ts) <= inline_capacity,
+      "There are more values than `inline_capacity`!"
+   );
+   vec_inplace<T, inline_capacity> result;
+   (result.unchecked_emplace_back($fwd(values)), ...);
+   return result;
+}
 
 template <typename T, idx inline_capacity>
 [[nodiscard]]

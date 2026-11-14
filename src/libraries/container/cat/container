@@ -481,15 +481,13 @@ class container_interface : public contiguous_collection_interface<Derived> {
    constexpr auto
    subspan(idx start_index, idx end_index) & noexcept(
       !__has_feature(cxx_exceptions)
-   )
-      requires(is_array_like);
+   ) [[clang::lifetimebound]] requires(is_array_like);
 
    [[nodiscard]]
    constexpr auto
    subspan(idx start_index, idx end_index) const& noexcept(
       !__has_feature(cxx_exceptions)
-   )
-      requires(is_array_like);
+   ) [[clang::lifetimebound]] requires(is_array_like);
 
    constexpr auto
    subspan(idx, idx) && = delete (
@@ -502,12 +500,12 @@ class container_interface : public contiguous_collection_interface<Derived> {
    [[nodiscard]]
    constexpr auto
    first(idx count) & noexcept(!__has_feature(cxx_exceptions))
-      requires(is_array_like);
+      [[clang::lifetimebound]] requires(is_array_like);
 
    [[nodiscard]]
    constexpr auto
    first(idx count) const& noexcept(!__has_feature(cxx_exceptions))
-      requires(is_array_like);
+      [[clang::lifetimebound]] requires(is_array_like);
 
    constexpr auto
    first(idx) && = delete (
@@ -520,12 +518,12 @@ class container_interface : public contiguous_collection_interface<Derived> {
    [[nodiscard]]
    constexpr auto
    last(idx count) & noexcept(!__has_feature(cxx_exceptions))
-      requires(is_array_like);
+      [[clang::lifetimebound]] requires(is_array_like);
 
    [[nodiscard]]
    constexpr auto
    last(idx count) const& noexcept(!__has_feature(cxx_exceptions))
-      requires(is_array_like);
+      [[clang::lifetimebound]] requires(is_array_like);
 
    constexpr auto
    last(idx) && = delete (

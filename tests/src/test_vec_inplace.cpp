@@ -82,7 +82,7 @@ $test(vec_inplace_default_and_access) {
 $test(vec_inplace_push_and_unchecked_push) {
    cat::vec_inplace<int4, 2u> values;
 
-   int4& first = values.push_back(1_i4).verify();
+   int4& first = values.emplace_back(1_i4).verify();
    int4& second = values.unchecked_emplace_back(2_i4);
    first = 3_i4;
    second = 4_i4;
@@ -955,3 +955,21 @@ $test(vec_inplace_pop_back_strong_guarantee) {
    cat::verify(fragile::live == 0);
 }
 #endif
+
+$test(vec_inplace_make_from_values) {
+   auto deduced = cat::make_vec_inplace<int4>(1_i4, 2_i4, 3_i4);
+   static_assert(cat::is_same<decltype(deduced), cat::vec_inplace<int4, 3u>>);
+   verify_ints(deduced, cat::array{1_i4, 2_i4, 3_i4});
+   cat::verify(deduced.push_back(4_i4).is_empty());
+
+   auto spacious = cat::make_vec_inplace<int4, 8u>(1_i4, 2_i4);
+   static_assert(cat::is_same<decltype(spacious), cat::vec_inplace<int4, 8u>>);
+   verify_ints(spacious, cat::array{1_i4, 2_i4});
+
+   auto empty = cat::make_vec_inplace<int4>();
+   cat::verify(empty.size() == 0u);
+
+   static_assert(
+      cat::is_same<decltype(spacious.push_back(3_i4)), cat::maybe<void>>
+   );
+}
