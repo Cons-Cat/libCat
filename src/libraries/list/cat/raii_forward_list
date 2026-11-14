@@ -145,7 +145,7 @@ basic_forward_list
    // Destroy the `cat::raii::basic_forward_list` and release resources using
    // allocator.
    constexpr ~basic_forward_list() {
-      reset();
+      free();
    }
 
    // Swap contents; requires matching allocators.
@@ -197,18 +197,11 @@ basic_forward_list
       m_core.free(m_allocator);
    }
 
-   // Reset the `cat::raii::basic_forward_list` and free resources.
+   // Destroy contained elements without deallocating.
    [[clang::reinitializes]]
    constexpr void
-   reset() noexcept(!__has_feature(cxx_exceptions)) {
-      this->free();
-   }
-
-   // Clear elements without deallocating.
-   [[clang::reinitializes]]
-   constexpr void
-   clear() {
-      m_core.reset();
+   clear() noexcept {
+      m_core.clear();
    }
 
    // Create a copy of this `cat::raii::basic_forward_list` using current

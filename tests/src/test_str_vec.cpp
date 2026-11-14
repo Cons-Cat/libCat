@@ -484,7 +484,7 @@ $test(raii_str_vec_lifecycle) {
 
    string.clear();
    cat::verify(string.size() == 0u);
-   string.reset();
+   string.free();
    cat::verify(string.data() == nullptr);
 
    cat::raii::wstr_vec wide_string =

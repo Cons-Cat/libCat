@@ -73,6 +73,25 @@ raii_map_base {
       return m_core.size();
    }
 
+   [[nodiscard]]
+   constexpr auto
+   is_empty() const noexcept -> bool {
+      return m_core.is_empty();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   capacity() const noexcept -> idx {
+      return m_core.capacity();
+   }
+
+   // Destroy every entry while keeping storage.
+   [[clang::reinitializes]]
+   constexpr void
+   clear() noexcept(noexcept(m_core.clear())) {
+      m_core.clear();
+   }
+
    // Deallocate this container's storage through its owned allocator.
    [[clang::reinitializes]]
    constexpr void

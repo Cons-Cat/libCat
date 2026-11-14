@@ -634,12 +634,12 @@ $test(vec_push_back_after_pop_restarts_lifetime) {
    values.free(arena.alloc);
 }
 
-$test(vec_push_back_after_reset_restarts_lifetime) {
+$test(vec_push_back_after_clear_restarts_lifetime) {
    linear_arena arena;
    lifetime_dead_assignment_count = 0u;
    cat::vec<lifetime_probe> values;
    values.push_back(arena.alloc, lifetime_probe(1_i4)).verify();
-   values.reset();
+   values.clear();
 
    values.push_back(arena.alloc, lifetime_probe(2_i4)).verify();
    cat::verify(lifetime_dead_assignment_count == 0u);
@@ -713,7 +713,7 @@ $test(vec_emplace_back_starts_element_lifetime) {
    values.free(arena.alloc);
 }
 
-$test(vec_reset_preserves_capacity) {
+$test(vec_clear_preserves_capacity) {
    linear_arena arena;
    cat::vec_big<int4> v;
    $defer {
@@ -723,7 +723,7 @@ $test(vec_reset_preserves_capacity) {
    v.push_back(arena.alloc, 2_i4).verify();
    idx const cap_before = v.capacity();
 
-   v.reset();
+   v.clear();
    cat::verify(v.size() == 0);
    cat::verify(v.capacity() == cap_before);
 }
@@ -1120,7 +1120,7 @@ $test(vec_shrink_to_fit) {
    cat::verify(v.capacity() == 2);
 
    // Shrinking an emptied vec releases its storage.
-   v.reset();
+   v.clear();
    v.shrink_to_fit(arena.alloc).verify();
    cat::verify(v.size() == 0);
    cat::verify(v.capacity() == 0);
@@ -1238,14 +1238,13 @@ $test(raii_vec_reserve) {
    cat::verify(v.capacity() >= 128);
 }
 
-$test(raii_vec_reset_releases_storage) {
+$test(raii_vec_free_releases_storage) {
    linear_arena arena;
    cat::raii::vec v = cat::raii::make_vec<int4>(arena.alloc).verify();
    v.push_back(1_i4).verify();
    v.push_back(2_i4).verify();
-   // raii's `reset()` deallocates (unlike unmanaged), since the wrapper
-   // owns the allocator.
-   v.reset();
+   // `.free()` deallocates through the owned allocator.
+   v.free();
    cat::verify(v.size() == 0);
    cat::verify(v.capacity() == 0);
 }
@@ -1373,7 +1372,7 @@ $test(raii_vec_shrink_to_fit) {
    cat::verify(v.capacity() == 4u);
    cat::verify(v[0] == 31);
 
-   v.reset();
+   v.clear();
    v.shrink_to_fit().verify();
    cat::verify(v.capacity() == 0);
    cat::verify(v.data() == nullptr);
@@ -1593,11 +1592,10 @@ constexpr bool is_nothrow_destroying =
    cat::is_nothrow_destructible<Vector>
    && noexcept(cat::declval<Vector&>().~Vector());
 
-// Fixed-size `vec`s have no `.reset()` or `.clear()`.
+// Fixed-size `vec`s have no `.clear()`.
 template <typename Vector>
 constexpr bool is_nothrow_clearing =
-   is_nothrow_destroying<Vector> && noexcept(cat::declval<Vector&>().reset())
-   && noexcept(cat::declval<Vector&>().clear());
+   is_nothrow_destroying<Vector> && noexcept(cat::declval<Vector&>().clear());
 
 using throwing = throwing_destructor_element;
 static_assert(is_nothrow_clearing<cat::vec<throwing>>);
@@ -1610,10 +1608,10 @@ static_assert(is_nothrow_destroying<cat::vec_big_fixed<throwing>>);
 static_assert(is_nothrow_destroying<cat::vec_small_fixed<throwing, 1u>>);
 static_assert(is_nothrow_destroying<cat::raii::vec<throwing>>);
 static_assert(is_nothrow_destroying<cat::raii::vec_big<throwing>>);
-// `raii::vec::reset()` frees through an allocator, which may assert, and an
+// `raii::vec::free()` frees through an allocator, which may assert, and an
 // assert handler may throw.
 static_assert(
-   noexcept(cat::declval<cat::raii::vec<throwing>&>().reset())
+   noexcept(cat::declval<cat::raii::vec<throwing>&>().free())
    == !__has_feature(cxx_exceptions)
 );
 

@@ -5,9 +5,9 @@
 // `cat::basic_list` is a doubly-linked owning container inspired by
 // `std::list`. Upon construction, the `list` is empty.
 //
-// As this is a `manual` namespace container, its `.reset()` and destructor do
+// As this is a `manual` namespace container, its `.clear()` and destructor do
 // not deallocate nodes, they only call its elements' destructors. To
-// deallocate nodes, call `.free(allocator)` or `.cfree(allocator)`.
+// deallocate nodes, call `.free(allocator)`.
 //
 // The `cat::raii::basic_list` deallocates its own memory automatically.
 //
@@ -55,6 +55,7 @@ struct list_storage {
 
    detail::list_node<T>* _Nullable m_p_head = nullptr;
    detail::list_node<T>* _Nullable m_p_tail = nullptr;
+   detail::list_node<T>* _Nullable m_p_spare = nullptr;
 
    // Reset storage pointers to empty state.
    constexpr void
@@ -108,8 +109,14 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    constexpr auto
    make_node(allocator_ref<Allocator> allocator, Args&&... arguments)
       -> maybe<node_type* _Nonnull> {
+      node_type* _Nullable const p_spare = m_storage.m_p_spare;
+      if (p_spare != nullptr) {
+         m_storage.m_p_spare = p_spare->p_next_node;
+      }
+
       node_type* _Nonnull const p_node =
-         $prop(allocator.template alloc<node_type>());
+         p_spare != nullptr ? p_spare
+                            : $prop(allocator.template alloc<node_type>());
       detail::exception_defer guard([&] {
          allocator.free(p_node);
       });
@@ -139,8 +146,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Move construct by taking ownership of other's nodes.
    constexpr basic_list(basic_list&& other_list) noexcept
        : m_storage(other_list.m_storage), m_size(other_list.m_size) {
-      other_list.m_storage.m_p_head = nullptr;
-      other_list.m_storage.m_p_tail = nullptr;
+      other_list.m_storage = {};
       other_list.m_size = 0u;
    }
 
@@ -164,22 +170,22 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
          return *this;
       }
       cat::assert(
-         m_storage.m_p_head == nullptr && m_size == 0u,
+         m_storage.m_p_head == nullptr && m_storage.m_p_spare == nullptr
+            && m_size == 0u,
          "basic_list move-assigned over while still owning nodes. "
          "Call .free(allocator) first."
       );
       m_storage = other_list.m_storage;
       m_size = other_list.m_size;
 
-      other_list.m_storage.m_p_head = nullptr;
-      other_list.m_storage.m_p_tail = nullptr;
+      other_list.m_storage = {};
       other_list.m_size = 0u;
       return *this;
    }
 
    // Destroy the `cat::basic_list` and release contained elements.
    constexpr ~basic_list() {
-      reset();
+      clear();
    }
 
    // Swap contents with another `cat::basic_list`.
@@ -227,37 +233,38 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Destroy contained elements and set size to zero.
    [[clang::reinitializes]]
    constexpr void
-   reset() noexcept {
+   clear() noexcept {
       if constexpr (!is_trivially_destructible<T>) {
-         node_type* p_current = m_storage.m_p_head;
-         for (idx i = 0u; i < m_size; ++i) {
+         for (node_type* _Nullable p_current = m_storage.m_p_head;
+              p_current != nullptr; p_current = p_current->p_next_node) {
             p_current->storage.~T();
-            p_current = p_current->p_next_node;
          }
       }
+
+      // Keep the nodes to construct later elements in.
+      if (m_storage.m_p_tail != nullptr) {
+         m_storage.m_p_tail->p_next_node = m_storage.m_p_spare;
+         m_storage.m_p_spare = m_storage.m_p_head;
+      }
+
+      m_storage.reset();
       m_size = 0u;
    }
 
-   // Free all nodes using the provided allocator and clear storage.
+   // Destroy contained elements and free every node through `allocator`.
    template <is_allocator Allocator>
    [[clang::reinitializes]]
    constexpr void
    free(allocator_ref<Allocator> allocator) {
-      node_type* p_current = m_storage.m_p_head;
-      idx remaining = m_size;
-      while (p_current) {
-         node_type* p_next = p_current->p_next_node;
-         if (remaining > 0u) {
-            if constexpr (!is_trivially_destructible<T>) {
-               p_current->storage.~T();
-            }
-            remaining = idx(remaining - 1u);
-         }
+      clear();
+      node_type* _Nullable p_current = m_storage.m_p_spare;
+      while (p_current != nullptr) {
+         node_type* _Nullable const p_next = p_current->p_next_node;
          allocator.free(p_current);
          p_current = p_next;
       }
-      m_storage.reset();
-      m_size = 0u;
+
+      m_storage.m_p_spare = nullptr;
    }
 
    // Free nodes using `cat::allocator_dyn`.
@@ -267,12 +274,6 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       return free<allocator_dyn>(allocator);
    }
 
-   // Clear the `cat::basic_list` contents without deallocating storage.
-   [[clang::reinitializes]]
-   constexpr void
-   clear() {
-      reset();
-   }
 
    // Replace contents with count copies of value using allocator.
    template <is_allocator Allocator>

@@ -541,7 +541,7 @@ class bitset_shared {
    }
 
    constexpr auto
-   clear(memory_order order = memory_order::seq_cst) noexcept(
+   reset(memory_order order = memory_order::seq_cst) noexcept(
       !__has_feature(cxx_exceptions)
    ) [[clang::lifetimebound]] -> bitset_shared& {
       for (idx word; word < storage_array_size; ++word) {
@@ -563,7 +563,7 @@ class bitset_shared {
    constexpr auto
    fill(bool value, memory_order order = memory_order::seq_cst) noexcept
       [[clang::lifetimebound]] -> bitset_shared& {
-      return value ? fill(order) : clear(order);
+      return value ? fill(order) : reset(order);
    }
 
    constexpr auto

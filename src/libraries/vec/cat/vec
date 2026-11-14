@@ -6,8 +6,8 @@
 // by `std::vector`, `llvm::SmallVector`, `boost::small_vector`, and
 // `absl::InlinedVector`.
 //
-// As this is a `manual` namespace container, its `.reset()` and destructor does
-// not deallocate storage, it only calls its elements' destructors. To
+// As this is a `manual` namespace container, its `.clear()` and destructor do
+// not deallocate storage, they only call its elements' destructors. To
 // deallocate storage, call `.free(allocator)` or `.cfree(allocator)`.
 //
 // The `cat::raii::basic_vec` deallocates its own memory automatically.
@@ -173,7 +173,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    }
 
    // The manual `basic_vec` does not own its storage, so its destructor
-   // only invokes element destructors via `.reset()`. To deallocate
+   // only invokes element destructors via `.clear()`. To deallocate
    // immediately, call `.free(allocator)`. This is strongly encouraged for
    // non-trivially-destructible `T`.
    constexpr ~basic_vec() noexcept {
@@ -913,19 +913,6 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       return m_storage.capacity();
    }
 
-   // Destroy every element of this `vec`. Storage is left allocated, the
-   // capacity is unchanged, and the size is reset to zero. Memory must be
-   // deallocated separately through `.free(allocator)`.
-   [[clang::reinitializes]]
-   constexpr void
-   reset() noexcept
-      requires(!flags.is_fixed_size)
-   {
-      destroy_n_elements(data(), size());
-      annotate_size_change(size(), 0u);
-      m_storage.set_size(0u);
-   }
-
    // Deallocate this `vec`'s storage from `allocator`.
    template <is_allocator Allocator>
    [[clang::reinitializes]]
@@ -1175,7 +1162,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
       if (count > capacity()) {
          // Nothing needs to be relocated into the new storage.
-         reset();
+         clear();
       } else {
          idx const overlap = min(count, size());
          for (idx i; i < overlap; ++i) {
@@ -1587,13 +1574,16 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    }
 
    // Destroy every element of this `vec`. Storage is left allocated and the
-   // capacity is unchanged. This is equivalent to `.reset()`.
+   // capacity is unchanged. Memory must be deallocated separately through
+   // `.free(allocator)`.
    [[clang::reinitializes]]
    constexpr void
    clear() noexcept
       requires(!flags.is_fixed_size)
    {
-      reset();
+      destroy_n_elements(data(), size());
+      annotate_size_change(size(), 0u);
+      m_storage.set_size(0u);
    }
 
    // Remove the element at `index`, shifting subsequent elements left.

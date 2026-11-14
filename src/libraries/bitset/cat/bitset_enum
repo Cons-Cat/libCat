@@ -198,8 +198,8 @@ class bitset_enum : public bitwise_interface<bitset_enum<Flags>> {
    }
 
    constexpr auto
-   clear() noexcept -> bitset_enum& {
-      m_bits.clear();
+   reset() noexcept -> bitset_enum& {
+      m_bits.reset();
       return *this;
    }
 

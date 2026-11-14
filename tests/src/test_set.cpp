@@ -176,3 +176,19 @@ $test(dyn_set_and_view) {
    small.free(pager);
    big.free(pager);
 }
+
+$test(set_clear) {
+   cat::set_big<int4> set;
+   cat::verify(set.insert(pager, 1).has_value());
+   idx const capacity = set.capacity();
+   set.clear();
+   cat::verify(set.is_empty() && set.capacity() == capacity);
+   cat::verify(set.insert(pager, 1).has_value());
+   set.free(pager);
+
+   cat::allocator_dyn allocator(pager);
+   cat::raii::set_big<int4> raii_set(allocator);
+   cat::verify(raii_set.insert(1).has_value());
+   raii_set.free();
+   cat::verify(raii_set.is_empty() && raii_set.capacity() == 0u);
+}

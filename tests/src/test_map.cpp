@@ -1071,3 +1071,52 @@ $test(map_throwing_rehash) {
    }
 }
 #endif
+
+template <typename Map>
+concept can_assign_through_lookup =
+   requires(Map& map, int4& value) { map[1] = value; };
+
+$test(map_clear) {
+   cat::map_big<int4, int4> map;
+   cat::verify(map.is_empty());
+   for (int4 i = 0; i < 100; ++i) {
+      cat::verify(map.insert(pager, i, i).has_value());
+   }
+   idx const capacity = map.capacity();
+   cat::verify(!map.is_empty());
+
+   // `.clear()` keeps storage, and every slot may be inserted into again.
+   map.clear();
+   cat::verify(map.is_empty() && map.capacity() == capacity);
+   cat::verify(!map.contains(5) && map[5].is_empty());
+   for (int4 i = 0; i < 100; ++i) {
+      cat::verify(map.insert(pager, i, -i).has_value());
+   }
+   cat::verify(map.capacity() == capacity && map[7].verify() == -7);
+   map.free(pager);
+
+   // Entries are destroyed.
+   destructor_count = 0;
+   cat::map_big<int4, tracked> tracked_map;
+   for (int4 i = 0; i < 10; ++i) {
+      cat::verify(tracked_map.insert(pager, i, tracked(i)).has_value());
+   }
+   tracked_map.clear();
+   cat::verify(destructor_count == 10);
+   tracked_map.free(pager);
+
+   // A `raii` map's `.clear()` does not deallocate either.
+   cat::allocator_dyn allocator(pager);
+   cat::raii::map_big<int4, int4> raii_map(allocator);
+   cat::verify(raii_map.insert(1, 2).has_value());
+   raii_map.clear();
+   cat::verify(raii_map.is_empty() && raii_map.capacity() > 0u);
+   cat::verify(raii_map.insert(1, 3).has_value());
+   raii_map.free();
+   cat::verify(raii_map.is_empty() && raii_map.capacity() == 0u);
+
+   // `map[key] = value` would only rebind a temporary, so it is ill-formed.
+   // Assign through `.value()`, or call `.update()`.
+   static_assert(!can_assign_through_lookup<cat::map_big<int4, int4>>);
+   static_assert(!can_assign_through_lookup<cat::raii::map_big<int4, int4>>);
+}

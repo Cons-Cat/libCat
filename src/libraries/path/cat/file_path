@@ -594,11 +594,6 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
       m_storage.clear();
    }
 
-   constexpr void
-   reset() noexcept {
-      m_storage.reset();
-   }
-
    template <is_allocator Allocator>
    constexpr void
    free(allocator_ref<Allocator> allocator) noexcept {

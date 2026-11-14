@@ -238,7 +238,7 @@ $test(bit_span_algorithms) {
    });
    cat::verify(right_words[0u] == 0b1101'0011_u1);
 
-   right.clear();
+   right.reset();
    cat::verify(right_words[0u] == 0u);
    right.fill();
    cat::verify(right_words[0u] == cat::uint1::max());
@@ -421,7 +421,7 @@ $test(bit_span_const_correctness_and_noexcept) {
                 bits.rotate_left(1);
                 bits.rotate_right(1);
                 bits.fill();
-                bits.clear();
+                bits.reset();
                 bits.shift_left(1u);
                 bits.shift_right(1u);
                 bits.reverse_inplace();
@@ -436,7 +436,7 @@ $test(bit_span_const_correctness_and_noexcept) {
    static_assert(noexcept(bits.rotate_left(1)));
    static_assert(noexcept(bits.rotate_right(1)));
    static_assert(noexcept(bits.fill()));
-   static_assert(noexcept(bits.clear()));
+   static_assert(noexcept(bits.reset()));
    static_assert(noexcept(bits.shift_left(1u)));
    static_assert(noexcept(bits.shift_right(1u)));
    static_assert(noexcept(bits.reverse_inplace()));

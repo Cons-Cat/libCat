@@ -524,10 +524,21 @@ class [[gsl::Owner]] basic_bitvec
       return m_core.pop_back();
    }
 
-   // Clear all logical bits while keeping storage.
+   // Remove every bit while keeping storage.
+   [[clang::reinitializes]]
    constexpr void
-   clear() noexcept {
+   clear() noexcept
+      requires(!flags.is_fixed_size)
+   {
       m_core.clear();
+   }
+
+   // Reset every logical bit to false.
+   constexpr auto
+   reset() noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> basic_bitvec& {
+      m_core.reset();
+      return *this;
    }
 
    // Set every logical bit to the requested value.

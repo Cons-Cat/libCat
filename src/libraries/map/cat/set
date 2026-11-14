@@ -112,8 +112,10 @@ class [[gsl::Owner]] set_base
 
    using base::capacity;
    using base::cfree;
+   using base::clear;
    using base::contains;
    using base::free;
+   using base::is_empty;
    using base::rehash;
    using base::remove;
    using base::reserve;

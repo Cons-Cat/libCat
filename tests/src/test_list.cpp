@@ -229,10 +229,10 @@ $test(raii_list_modifiers_release) {
    cat::verify(list.size() == 0);
    released.free(allocator);
 
-   cat::raii::list reset_list =
+   cat::raii::list freed_list =
       cat::raii::make_list<int>(allocator, 1, 2, 3).verify();
-   reset_list.reset();
-   cat::verify(reset_list.size() == 0);
+   freed_list.free();
+   cat::verify(freed_list.size() == 0);
 }
 
 $test(list_iterable_range_modifiers) {
@@ -669,4 +669,31 @@ $test(list_reverse_iteration) {
    }
    cat::verify(count == 3u);
    cat::verify(reversed[0u] == 3 && reversed[1u] == 2 && reversed[2u] == 1);
+}
+
+$test(list_clear_reuses_nodes) {
+   linear_arena arena;
+   auto allocator = cat::allocator_ref<cat::allocator_linear>(arena.alloc);
+   cat::list<int> list = cat::make_list<int>(allocator, 1, 2, 3).verify();
+
+   // `.clear()` keeps nodes, so pushing again does not allocate.
+   idx const used = arena.alloc.bytes_used();
+   list.clear();
+   cat::verify(list.size() == 0u);
+   list.push_back(allocator, 4).verify();
+   list.push_back(allocator, 5).verify();
+   list.push_back(allocator, 6).verify();
+   cat::verify(arena.alloc.bytes_used() == used);
+   cat::verify(list.front() == 4 && list.back() == 6);
+   list.clear();
+   list.free(allocator);
+
+   cat::forward_list<int> forward =
+      cat::make_forward_list<int>(allocator, 1, 2).verify();
+   idx const forward_used = arena.alloc.bytes_used();
+   forward.clear();
+   forward.push_front(allocator, 3).verify();
+   cat::verify(arena.alloc.bytes_used() == forward_used);
+   cat::verify(forward.front() == 3 && forward.size() == 1u);
+   forward.free(allocator);
 }

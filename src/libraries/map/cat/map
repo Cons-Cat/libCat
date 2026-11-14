@@ -429,6 +429,33 @@ class [[gsl::Owner]] map_base {
       return m_size;
    }
 
+   [[nodiscard]]
+   constexpr auto
+   is_empty() const noexcept -> bool {
+      return m_size == 0u;
+   }
+
+   // Destroy every entry while keeping storage.
+   [[clang::reinitializes]]
+   constexpr void
+   clear() noexcept(is_nothrow_destructible<tuple<Key, T>>) {
+      for (group_type& group : m_groups) {
+         for (idx i = 0u; i < group_slots; ++i) {
+            if (group.is_occupied(i)) {
+               group.map_slots[i].value.~tuple();
+            }
+         }
+         group.metadata = {};
+      }
+
+      if (!m_groups.is_empty()) {
+         m_groups.back().metadata.set_lane(group_slots - 1u, sentinel);
+         m_max_load = max_load(m_groups.size());
+      }
+
+      m_size = 0u;
+   }
+
    // The number of slots, which is 0 before the first insertion.
    [[nodiscard]]
    constexpr auto

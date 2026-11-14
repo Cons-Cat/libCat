@@ -737,13 +737,13 @@ $test(bitset_clear_fill) {
    cat::verify(fill17.countl_zero() == 0u);
    cat::verify(fill17 == complement_zero_17);
 
-   // `.clear()` zeroes out every bit.
+   // `.reset()` zeroes out every bit.
    cat::bitset<17u> clear_me = complement_zero_17;
-   clear_me.clear();
+   clear_me.reset();
    cat::verify(clear_me.none_of());
    cat::verify(clear_me == cat::bitset<17u>{});
 
-   // `.fill(false)` is equivalent to `.clear()`.
+   // `.fill(false)` is equivalent to `.reset()`.
    cat::bitset<17u> fill_false_17 = complement_zero_17;
    fill_false_17.fill(false);
    cat::verify(fill_false_17.none_of());
@@ -751,14 +751,14 @@ $test(bitset_clear_fill) {
 
    // Both return a reference so they chain.
    cat::bitset<17u> chained;
-   chained.fill().clear().fill();
+   chained.fill().reset().fill();
    cat::verify(chained.all_of());
 
    // Word-aligned single-word case.
    cat::bitset<8u> fill8;
    fill8.fill();
    cat::verify(fill8.all_of());
-   fill8.clear();
+   fill8.reset();
    cat::verify(fill8.none_of());
 
    // Multi-word case preserves padding on the top word.
@@ -766,7 +766,7 @@ $test(bitset_clear_fill) {
    fill129.fill();
    cat::verify(fill129.all_of());
    cat::verify(fill129.countl_zero() == 0u);
-   fill129.clear();
+   fill129.reset();
    cat::verify(fill129.none_of());
 }
 

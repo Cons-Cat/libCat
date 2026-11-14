@@ -161,7 +161,7 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    }
 
    constexpr ~basic_vec() {
-      reset();
+      free();
    }
 
    // [[nodiscard]]
@@ -260,13 +260,6 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
       m_core.cfree(m_allocator);
    }
 
-   // Destroy every element of this `vec` and deallocate its storage.
-   [[clang::reinitializes]]
-   constexpr void
-   reset() noexcept(!__has_feature(cxx_exceptions)) {
-      this->free();
-   }
-
    // Try to allocate storage for at least `minimum_capacity` number of `T`s.
    [[nodiscard]]
    constexpr auto
@@ -352,14 +345,14 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    }
 
    // Destroy every element of this `vec`. Storage is left allocated and the
-   // capacity is unchanged. Equivalent to std `.clear()`. Use `.reset()` to
+   // capacity is unchanged. Equivalent to std `.clear()`. Use `.free()` to
    // also release the allocation.
    [[clang::reinitializes]]
    constexpr void
    clear()
       requires(!flags.is_fixed_size)
    {
-      m_core.reset();
+      m_core.clear();
    }
 
    // Remove the element at `index`, shifting subsequent elements left.

@@ -593,12 +593,6 @@ class
       return cfree<allocator_dyn>(allocator);
    }
 
-   [[clang::reinitializes]]
-   constexpr void
-   reset() noexcept {
-      this->clear();
-   }
-
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
@@ -743,7 +737,7 @@ class
    constexpr void
    clear() noexcept(!__has_feature(cxx_exceptions)) {
       if constexpr (!flags.str.is_null_terminated) {
-         m_core.reset();
+         m_core.clear();
       } else {
          if (m_core.size() == 0u) {
             return;

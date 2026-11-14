@@ -345,7 +345,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    }
 
    constexpr auto
-   clear() const noexcept -> bit_span
+   reset() const noexcept -> bit_span
       requires(!is_const<Storage>)
    {
       return fill(false);
@@ -418,7 +418,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
       requires(!is_const<Storage>)
    {
       if (count >= m_bit_size) {
-         return clear();
+         return reset();
       }
       rotate_toward_front(idx(m_bit_size - count));
       for (idx i = 0u; i < count; ++i) {
@@ -436,7 +436,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
       requires(!is_const<Storage>)
    {
       if (count >= m_bit_size) {
-         return clear();
+         return reset();
       }
       rotate_toward_front(count);
       for (idx i = idx(m_bit_size - count); i < m_bit_size; ++i) {

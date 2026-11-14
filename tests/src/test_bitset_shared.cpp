@@ -297,7 +297,7 @@ $test(bitset_shared_copy_and_load) {
    cat::verify(copied.load() == loaded);
    cat::verify(assigned.load() == loaded);
 
-   source.clear();
+   source.reset();
    cat::verify(source.none_of());
    cat::verify(copied.popcount() == 5u);
    cat::verify(assigned.popcount() == 5u);

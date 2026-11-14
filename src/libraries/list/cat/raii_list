@@ -134,7 +134,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Destroy the `cat::raii::basic_list` and release resources using its
    // allocator.
    constexpr ~basic_list() {
-      reset();
+      free();
    }
 
    // Swap contents; requires matching allocators.
@@ -193,18 +193,11 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
       m_core.free(m_allocator);
    }
 
-   // Reset the `cat::raii::basic_list` and free resources.
+   // Destroy contained elements without deallocating.
    [[clang::reinitializes]]
    constexpr void
-   reset() noexcept(!__has_feature(cxx_exceptions)) {
-      this->free();
-   }
-
-   // Clear elements without deallocating.
-   [[clang::reinitializes]]
-   constexpr void
-   clear() {
-      m_core.reset();
+   clear() noexcept {
+      m_core.clear();
    }
 
    // Create a copy of this `cat::raii::basic_list` using the current allocator.

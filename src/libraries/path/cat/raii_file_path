@@ -200,11 +200,6 @@ basic_file_path
       m_path.clear();
    }
 
-   constexpr void
-   reset() noexcept {
-      m_path.free(m_allocator);
-   }
-
    [[nodiscard]]
    constexpr auto
    allocator(this auto&& self) noexcept -> allocator_ref<Allocator> {

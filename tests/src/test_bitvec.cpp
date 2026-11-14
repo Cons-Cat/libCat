@@ -641,3 +641,31 @@ $test(bitvec_bitwise_predicates) {
    cat::verify(not_bits.popcount() == 129u);
    cat::verify((not_bits.data()[2u] & ~cat::uword(0b11u)) == 0u);
 }
+
+$test(bitvec_clear_and_reset) {
+   cat::bitvec bits;
+   $defer {
+      bits.free(pager);
+   };
+   for (idx i = 0u; i < 100u; ++i) {
+      bits.push_back(pager, true).verify();
+   }
+
+   // `.reset()` zeroes every bit and keeps the size, like `std::bitset`.
+   bits.reset();
+   cat::verify(bits.size() == 100u && bits.none());
+
+   // `.clear()` removes every bit, like `std::vector<bool>`.
+   idx const capacity = bits.capacity();
+   bits.clear();
+   cat::verify(bits.size() == 0u && bits.capacity() == capacity);
+   bits.push_back(pager, true).verify();
+   cat::verify(bits.size() == 1u && bits[0u]);
+
+   cat::raii::bitvec<> raii_bits{cat::allocator_dyn(g_tests_alloc)};
+   raii_bits.push_back(true).verify();
+   raii_bits.reset();
+   cat::verify(raii_bits.size() == 1u && !raii_bits[0u]);
+   raii_bits.clear();
+   cat::verify(raii_bits.size() == 0u);
+}

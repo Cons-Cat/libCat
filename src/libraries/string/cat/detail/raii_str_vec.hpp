@@ -656,7 +656,7 @@ class
    }
 
    constexpr ~basic_str_vec() noexcept {
-      reset();
+      free();
    }
 
    [[nodiscard]]
@@ -753,12 +753,6 @@ class
    constexpr void
    cfree() noexcept {
       m_core.cfree(m_allocator);
-   }
-
-   [[clang::reinitializes]]
-   constexpr void
-   reset() noexcept {
-      this->free();
    }
 
    [[nodiscard]]

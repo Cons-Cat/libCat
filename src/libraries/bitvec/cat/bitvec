@@ -888,12 +888,21 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
       free<allocator_dyn>(allocator);
    }
 
-   // Clear all logical bits while keeping storage.
+   // Remove every bit while keeping storage.
+   [[clang::reinitializes]]
    constexpr void
-   clear() noexcept {
-      for (idx word_index = 0u; word_index < word_count(); ++word_index) {
-         m_words[word_index] = 0u;
-      }
+   clear() noexcept
+      requires(!flags.is_fixed_size)
+   {
+      m_words.clear();
+      m_bit_size = 0u;
+   }
+
+   // Reset every logical bit to false.
+   constexpr auto
+   reset() noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> basic_bitvec& {
+      return fill(false);
    }
 
    // Set every logical bit to the requested value.

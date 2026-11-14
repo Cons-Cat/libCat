@@ -378,9 +378,9 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
       return count;
    }
 
-   // Clear every bit (all logical indices `0..bits_count`) to 0.
+   // Reset every bit (all logical indices `0..bits_count`) to 0.
    constexpr auto
-   clear() noexcept [[clang::lifetimebound]] -> bitset& {
+   reset() noexcept [[clang::lifetimebound]] -> bitset& {
       for (auto& word : m_data) {
          word = array_type_element(0u);
       }
@@ -399,7 +399,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
             clear_padding_bits();
          }
       } else {
-         clear();
+         reset();
       }
       return *this;
    }
