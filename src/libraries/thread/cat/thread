@@ -124,13 +124,14 @@ struct thread {
 #else
    [[nodiscard]]
    auto
-   native_handle() noexcept -> native_handle_type& {
+   native_handle() noexcept [[clang::lifetimebound]] -> native_handle_type& {
       return m_handle;
    }
 
    [[nodiscard]]
    auto
-   native_handle() const noexcept -> native_handle_type const& {
+   native_handle() const noexcept [[clang::lifetimebound]]
+   -> native_handle_type const& {
       return m_handle;
    }
 #endif
