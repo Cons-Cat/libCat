@@ -35,7 +35,7 @@ span<T, fixed_extent>::operator<=>(R const& rhs) const {
       declval<element_type const&>(), declval<element_type const&>()
    ));
 
-   idx i = 0u;
+   idx index = 0u;
    idx const lhs_size = this->size();
    idx const rhs_size = rhs.size();
    idx const shared_size = lhs_size < rhs_size ? lhs_size : rhs_size;
@@ -74,12 +74,12 @@ span<T, fixed_extent>::operator<=>(R const& rhs) const {
       }
    }
 
-   while (i < shared_size) {
-      auto comparison = synth_three_way(this->data()[i], rhs.data()[i]);
+   while (index < shared_size) {
+      auto comparison = synth_three_way(this->data()[index], rhs.data()[index]);
       if (comparison != 0) {
          return comparison;
       }
-      ++i;
+      ++index;
    }
 
    if (lhs_size < rhs_size) {
@@ -124,8 +124,8 @@ span<T, fixed_extent>::operator==(R const& rhs) const -> bool {
       }
    }
 
-   for (idx i = 0u; i < lhs_size; ++i) {
-      if (!(this->data()[i] == rhs.data()[i])) {
+   for (idx index = 0u; index < lhs_size; ++index) {
+      if (!(this->data()[index] == rhs.data()[index])) {
          return false;
       }
    }

@@ -40,7 +40,7 @@ struct take_while_view_impl : iterable_interface<> {
    };
 
    constexpr auto
-   iterate() {
+   iterate() [[clang::lifetimebound]] {
       using incoming_context = iterable_iteration_context_type<Base>;
       return context_type<incoming_context, Callback>{
          cat::iterate(m_base),
@@ -49,7 +49,7 @@ struct take_while_view_impl : iterable_interface<> {
    }
 
    constexpr auto
-   iterate() const
+   iterate() const [[clang::lifetimebound]] -> auto
       requires(
          is_iterable<Base const>
          && is_predicate<Callback const, iterable_element_type<Base const>>

@@ -9,20 +9,12 @@ namespace cat {
 
 namespace detail {
 
-// Single-variant switch dispatcher in batches of 32.
-//
-// The dispatcher always invokes the callback as
-// `callback.template operator()<I>(v.template get<I>())`, exposing the
-// resolved alternative index as a non-type template parameter. The
-// value-only `cat::visit` adapts to this contract by wrapping its
-// callback in a generic lambda that ignores the index. The indexed
-// `cat::visit_indexed` calls it directly. This keeps the 32-way
-// `switch` body in exactly one place rather than duplicated per call
-// style.
+// Single-`variant` recursive `switch` dispatcher in batches of 32. Michael Park
+// determined this is the optimal batch size.
 template <bool is_valid, typename Result>
 struct visit_dispatcher;
 
-// Prune the unreachable branches during optimization.
+// These recursive base cases let the compiler optimize unreachable `case`s.
 template <typename Result>
 struct visit_dispatcher<false, Result> {
    template <unsigned int /*case_index*/, typename Variant, typename Callback>
@@ -45,16 +37,16 @@ struct visit_dispatcher<true, Result> {
    template <unsigned int case_index, typename Variant, typename Callback>
    [[gnu::always_inline]]
    static constexpr auto
-   dispatch_case(Variant&& v, Callback&& callback) -> Result {
+   dispatch_case(Variant&& variant, Callback&& callback) -> Result {
       return $fwd(callback).template operator()<idx(case_index)>(
-         $fwd(v).template get<idx(case_index)>()
+         $fwd(variant).template get<idx(case_index)>()
       );
    }
 
    template <unsigned int base, typename Variant, typename Callback>
    [[gnu::always_inline]]
    static constexpr auto
-   dispatch_switch(Variant&& v, Callback&& callback) -> Result {
+   dispatch_switch(Variant&& variant, Callback&& callback) -> Result {
       using variant_type = remove_cvref<Variant>;
       constexpr unsigned int size =
          static_cast<unsigned int>(variant_type::variant_size.raw);
@@ -64,13 +56,15 @@ struct visit_dispatcher<true, Result> {
 #define CAT_VARIANT_CASE(offset)                                    \
    case base + (offset):                                            \
       return visit_dispatcher<((base + (offset)) < size), Result>:: \
-         template dispatch_case<base + (offset)>($fwd(v), $fwd(callback))
+         template dispatch_case<base + (offset)>(                   \
+            $fwd(variant), $fwd(callback)                           \
+         )
 
       // `.value_or_niche()` reads the raw discriminant bits. On an empty
       // variant it yields the niche, which never matches a valid `case`
-      // label, so the default arm routes through the unreachable false
-      // specialization.
-      switch (static_cast<unsigned int>(v.index().value_or_niche().raw)) {
+      // label, so the `default` branch matches the `false` partial
+      // template specializations.
+      switch (static_cast<unsigned int>(variant.index().value_or_niche().raw)) {
          CAT_VARIANT_CASE(0u);
          CAT_VARIANT_CASE(1u);
          CAT_VARIANT_CASE(2u);
@@ -105,34 +99,12 @@ struct visit_dispatcher<true, Result> {
          CAT_VARIANT_CASE(31u);
          default:
             return visit_dispatcher<((base + 32u) < size), Result>::
-               template dispatch_switch<base + 32u>($fwd(v), $fwd(callback));
+               template dispatch_switch<base + 32u>(
+                  $fwd(variant), $fwd(callback)
+               );
       }
 
 #undef CAT_VARIANT_CASE
-   }
-};
-
-// Adapter that converts an indexed-style callable
-// `callback.template operator()<I>(value)` into a value-only call to the
-// underlying `Callback`. Also re-introduces the per-alternative
-// same-return-type `static_assert` that the previous value-only
-// dispatcher had baked into its `dispatch_case`. The compiler inlines
-// the adapter away through `[[gnu::always_inline]]`.
-template <typename Result, typename Callback>
-struct visit_value_adapter {
-   Callback&& callback;
-
-   template <idx /*case_index*/, typename Value>
-   [[gnu::always_inline]]
-   constexpr auto
-   operator()(Value&& value) -> Result {
-      using actual = decltype(invoke($fwd(callback), $fwd(value)));
-      static_assert(
-         is_same<Result, actual>,
-         "`cat::visit` requires every alternative to have the "
-         "same callback return type."
-      );
-      return invoke($fwd(callback), $fwd(value));
    }
 };
 
@@ -141,13 +113,23 @@ struct visit_value_adapter {
 template <typename Callback, is_variant_like Variant>
 [[gnu::always_inline]]
 constexpr auto
-visit(Callback&& callback, Variant&& v) noexcept(false) -> decltype(auto) {
-   cat::assert(v.has_value());
+visit(Callback&& callback, Variant&& variant) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> decltype(auto) {
+   cat::assert(variant.has_value());
    using result_type =
-      decltype(invoke($fwd(callback), $fwd(v).template get<0u>()));
-   detail::visit_value_adapter<result_type, Callback> adapter{$fwd(callback)};
+      decltype(invoke($fwd(callback), $fwd(variant).template get<0u>()));
+   // The dispatcher calls `.template operator()<index>(value)`, so the index
+   // is accepted and ignored.
    return detail::visit_dispatcher<true, result_type>::template dispatch_switch<
-      0u>($fwd(v), adapter);
+      0u>($fwd(variant), [&]<idx>(auto&& value) -> result_type {
+      static_assert(
+         is_same<result_type, decltype(invoke($fwd(callback), $fwd(value)))>,
+         "`cat::visit` requires every alternative to have the same callback "
+         "return type!"
+      );
+      return invoke($fwd(callback), $fwd(value));
+   });
 }
 
 // `cat::visit(callback, v0, v1, ...)` folds the visitor across the variants.
@@ -171,39 +153,60 @@ visit(Callback&& callback, First&& first, Rest&&... rest) -> decltype(auto) {
    );
 }
 
-// `cat::visit_indexed(callback, v)` is the index-aware counterpart of
+// `cat::visit<Result>(callback, variant...)` converts every alternative's
+// result to `Result`, like C++20's `std::visit<R>`, or discards it if `Result`
+// is `void`.
+template <typename Result, typename Callback, is_variant_like... Variants>
+   requires(sizeof...(Variants) > 0)
+[[gnu::always_inline]]
+constexpr auto
+visit(Callback&& callback, Variants&&... variants) -> Result {
+   return cat::visit(
+      [&](auto&&... values) -> Result {
+         if constexpr (is_void<Result>) {
+            invoke($fwd(callback), $fwd(values)...);
+         } else {
+            return invoke($fwd(callback), $fwd(values)...);
+         }
+      },
+      $fwd(variants)...
+   );
+}
+
+// `cat::visit_indexed(callback, variant)` is the index-aware counterpart of
 // `cat::visit`. The callback's templated `operator()` is invoked as
-// `callback.template operator()<I>(v.template get<I>())` where `I` is
+// `callback.template operator()<I>(variant.template get<I>())` where `I` is
 // the active alternative's index. Used by the P3561R2 helpers below.
 // Shares its switch-case dispatcher with `cat::visit`; only the call
 // shape at each case differs.
 template <typename Callback, is_variant_like Variant>
 [[gnu::always_inline]]
 constexpr auto
-visit_indexed(Callback&& callback, Variant&& v) noexcept(false)
-   -> decltype(auto) {
-   cat::assert(v.has_value());
+visit_indexed(Callback&& callback, Variant&& variant) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> decltype(auto) {
+   cat::assert(variant.has_value());
    using result_type = decltype($fwd(callback).template operator()<idx{0u}>(
-      $fwd(v).template get<0u>()
+      $fwd(variant).template get<0u>()
    ));
    return detail::visit_dispatcher<true, result_type>::template dispatch_switch<
-      0u>($fwd(v), $fwd(callback));
+      0u>($fwd(variant), $fwd(callback));
 }
 
-// P3561R2 `cat::visit_invoke_cases(v, fs...)`. The `I`th callable in
+// P3561R2 `cat::visit_invoke_cases(variant, fs...)`. The `I`th callable in
 // `fs...` is invoked on the active alternative's value, where `I` is
-// the resolved index of `v`. Number of callables must match the
+// the resolved index of `variant`. Number of callables must match the
 // variant's alternative count.
 template <is_variant_like Variant, typename... Fs>
    requires(sizeof...(Fs) == remove_cvref<Variant>::variant_size)
 constexpr auto
-visit_invoke_cases(Variant&& v, Fs&&... fs) -> decltype(auto) {
+visit_invoke_cases(Variant&& variant, Fs&&... fs) -> decltype(auto) {
    return visit_indexed(
       [fs_tuple = forward_as_tuple($fwd(fs)...)]<idx index_value>(auto&& value)
          -> decltype(auto) {
          return invoke(fs_tuple.template get<index_value>(), $fwd(value));
       },
-      $fwd(v)
+      $fwd(variant)
    );
 }
 
@@ -214,36 +217,37 @@ visit_invoke_cases(Variant&& v, Fs&&... fs) -> decltype(auto) {
 template <typename... Fs>
 constexpr auto
 invoke_cases(Fs&&... fs) {
-   return [fs_tuple = make_tuple($fwd(fs)...)](auto&& v) -> decltype(auto) {
-      using variant_type = __typeof_unqual(v);
-      static_assert(
-         sizeof...(Fs) == variant_type::variant_size,
-         "`cat::invoke_cases` requires one callable per "
-         "alternative."
-      );
-      return visit_indexed(
-         [&fs_tuple]<idx index_value>(auto&& value) -> decltype(auto) {
-            return invoke(fs_tuple.template get<index_value>(), $fwd(value));
-         },
-         $fwd(v)
-      );
-   };
+   return
+      [fs_tuple = make_tuple($fwd(fs)...)](auto&& variant) -> decltype(auto) {
+         using variant_type = __typeof_unqual(variant);
+         static_assert(
+            sizeof...(Fs) == variant_type::variant_size,
+            "`cat::invoke_cases` requires one callable per "
+            "alternative!"
+         );
+         return visit_indexed(
+            [&fs_tuple]<idx index_value>(auto&& value) -> decltype(auto) {
+               return invoke(fs_tuple.template get<index_value>(), $fwd(value));
+            },
+            $fwd(variant)
+         );
+      };
 }
 
-// P3561R2 `cat::visit_apply_cases(v, fs...)`. Each alternative of `v`
-// must be a `cat::tuple`. The `I`th callable is invoked via
+// P3561R2 `cat::visit_apply_cases(variant, fs...)`. Each alternative of
+// `variant` must be a `cat::tuple`. The `I`th callable is invoked via
 // `cat::apply`, so a function `f_i(x, y, z)` matches a tuple-of-three
 // alternative.
 template <is_variant_like Variant, typename... Fs>
    requires(sizeof...(Fs) == remove_cvref<Variant>::variant_size)
 constexpr auto
-visit_apply_cases(Variant&& v, Fs&&... fs) -> decltype(auto) {
+visit_apply_cases(Variant&& variant, Fs&&... fs) -> decltype(auto) {
    return visit_indexed(
       [fs_tuple = forward_as_tuple($fwd(fs)...)]<idx index_value>(auto&& tup)
          -> decltype(auto) {
          return cat::apply(fs_tuple.template get<index_value>(), $fwd(tup));
       },
-      $fwd(v)
+      $fwd(variant)
    );
 }
 
@@ -251,23 +255,24 @@ visit_apply_cases(Variant&& v, Fs&&... fs) -> decltype(auto) {
 template <typename... Fs>
 constexpr auto
 apply_cases(Fs&&... fs) {
-   return [fs_tuple = make_tuple($fwd(fs)...)](auto&& v) -> decltype(auto) {
-      using variant_type = __typeof_unqual(v);
+   return [fs_tuple =
+              make_tuple($fwd(fs)...)](auto&& variant) -> decltype(auto) {
+      using variant_type = __typeof_unqual(variant);
       static_assert(
          sizeof...(Fs) == variant_type::variant_size,
          "`cat::apply_cases` requires one callable per "
-         "alternative."
+         "alternative!"
       );
       return visit_indexed(
          [&fs_tuple]<idx index_value>(auto&& tup) -> decltype(auto) {
             return cat::apply(fs_tuple.template get<index_value>(), $fwd(tup));
          },
-         $fwd(v)
+         $fwd(variant)
       );
    };
 }
 
-// P3561R2 `cat::visit_apply(v, fs_tuple)`. Like `visit_apply_cases` but
+// P3561R2 `cat::visit_apply(variant, fs_tuple)`. Like `visit_apply_cases` but
 // takes the callables in a `cat::tuple` rather than as a variadic pack.
 template <is_variant_like Variant, typename FsTuple>
    requires(
@@ -276,28 +281,32 @@ template <is_variant_like Variant, typename FsTuple>
             == remove_cvref<Variant>::variant_size
    )
 constexpr auto
-visit_apply(Variant&& v, FsTuple&& fs_tuple) -> decltype(auto) {
+visit_apply(Variant&& variant, FsTuple&& fs_tuple) -> decltype(auto) {
    return visit_indexed(
       [&fs_tuple]<idx index_value>(auto&& tup) -> decltype(auto) {
          return cat::apply(
             $fwd(fs_tuple).template get<index_value>(), $fwd(tup)
          );
       },
-      $fwd(v)
+      $fwd(variant)
    );
 }
 
-// Out-of-line definition of `variant<Alternatives...>::visit`.
+// Out-of-line definition of `detail::variant_base<Alternatives...>::visit`.
+namespace detail {
 template <typename... Alternatives>
-   requires(
-      type_list<Alternatives...>::is_all_references
-      || !type_list<Alternatives...>::is_any_reference
-   )
+   requires(is_valid_variant_alternatives<Alternatives...>)
 template <typename Callback>
 constexpr auto
-variant<Alternatives...>::visit(this auto&& self, Callback&& callback)
+variant_base<Alternatives...>::visit(this auto&& self, Callback&& callback)
    -> decltype(auto) {
-   return cat::visit($fwd(callback), $fwd(self).as_base());
+   return cat::visit(
+      $fwd(callback),
+      static_cast<copy_cvref_from<decltype(self), variant<Alternatives...>>>(
+         $fwd(self)
+      )
+   );
 }
+}  // namespace detail
 
 }  // namespace cat

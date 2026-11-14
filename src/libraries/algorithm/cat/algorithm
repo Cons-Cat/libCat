@@ -18,7 +18,7 @@ template <typename InputIterator, typename OutputIterator>
 auto
 copy(
    InputIterator source_begin, InputIterator source_end,
-   OutputIterator destination_begin
+   OutputIterator destination_begin [[clang::lifetimebound]]
 ) -> OutputIterator {
    using destination_element = typeof(*destination_begin);
 
@@ -36,7 +36,7 @@ template <typename InputIterator, typename OutputIterator>
 auto
 move(
    InputIterator source_begin, InputIterator source_end,
-   OutputIterator destination_begin
+   OutputIterator destination_begin [[clang::lifetimebound]]
 ) -> OutputIterator {
    using destination_element = typeof(*destination_begin);
 
@@ -55,7 +55,7 @@ template <typename InputIterator, typename OutputIterator>
 auto
 relocate(
    InputIterator source_begin, InputIterator source_end,
-   OutputIterator destination_begin
+   OutputIterator destination_begin [[clang::lifetimebound]]
 ) -> OutputIterator {
    using source_element = typeof(*source_begin);
    using destination_element = decltype(*destination_begin);

@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/allocator>
+#include <cat/array>
 
 // TODO: Should we remove deriving from `allocator_interface` and require
 // wrapping in `allocator_ref` to reduce template monomorphization?
@@ -123,6 +124,7 @@ allocator_inplace : public allocator_interface<allocator_inplace<arena_bytes>> {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wlifetime-safety-intra-tu-suggestions"
 
+   [[clang::ownership_returns(libcat)]]
    auto
    reallocate(span<byte> allocation, idx new_bytes) noexcept
       -> void* _Nullable {

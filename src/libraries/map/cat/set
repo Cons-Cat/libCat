@@ -87,13 +87,26 @@ class [[gsl::Owner]] set_base
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   insert(allocator_ref<Allocator> allocator, Key key) -> maybe<void> {
-      return base::insert(allocator, move(key), monostate_type{});
+   insert(allocator_ref<Allocator> allocator, Key const& key) -> maybe<void> {
+      return base::insert(allocator, key);
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   insert(allocator_ref<Allocator> allocator, Key&& key) -> maybe<void> {
+      return base::insert(allocator, move(key));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   insert(allocator_dyn allocator, Key key) -> maybe<void> {
+   insert(allocator_dyn allocator, Key const& key) -> maybe<void> {
+      return insert<allocator_dyn>(allocator, key);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(allocator_dyn allocator, Key&& key) -> maybe<void> {
       return insert<allocator_dyn>(allocator, move(key));
    }
 
@@ -177,13 +190,27 @@ class [[gsl::Pointer]] set_ref {
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   insert(allocator_ref<Allocator> allocator, Key key) const -> maybe<void> {
+   insert(allocator_ref<Allocator> allocator, Key const& key) const
+      -> maybe<void> {
+      return m_p_set->insert(allocator, key);
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   insert(allocator_ref<Allocator> allocator, Key&& key) const -> maybe<void> {
       return m_p_set->insert(allocator, move(key));
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   insert(allocator_dyn allocator, Key key) const -> maybe<void> {
+   insert(allocator_dyn allocator, Key const& key) const -> maybe<void> {
+      return insert<allocator_dyn>(allocator, key);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(allocator_dyn allocator, Key&& key) const -> maybe<void> {
       return insert<allocator_dyn>(allocator, move(key));
    }
 
@@ -316,7 +343,15 @@ class [[gsl::Pointer]] dyn_set {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   insert(allocator_dyn allocator, Key key) const -> maybe<void> {
+   insert(allocator_dyn allocator, Key const& key) const -> maybe<void> {
+      return m_set.template invoke<detail::dyn_set_insert<Key>>(
+         allocator, Key(key)
+      );
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(allocator_dyn allocator, Key&& key) const -> maybe<void> {
       return m_set.template invoke<detail::dyn_set_insert<Key>>(
          allocator, move(key)
       );

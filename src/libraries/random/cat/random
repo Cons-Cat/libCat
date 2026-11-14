@@ -375,7 +375,7 @@ class seed_sequence {
 
    [[nodiscard]]
    constexpr auto
-   values() const noexcept -> span<uint4 const> {
+   values() const noexcept [[clang::lifetimebound]] -> span<uint4 const> {
       return {m_values.data(), m_size};
    }
 

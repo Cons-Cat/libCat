@@ -111,6 +111,9 @@ struct hash_table {
    idx m_allocation_bytes;
 };
 
+// Freeing the table's mapping ends its lifetime without a destructor call.
+static_assert(__is_trivially_destructible(hash_table));
+
 inline atomic<hash_table*> p_hash_table;
 inline atomic<idx> num_threads;
 
@@ -208,7 +211,7 @@ template <is_allocator Allocator>
 auto
 allocate_hash_table(
    allocator_ref<Allocator> allocator, idx thread_count
-) noexcept(false) -> maybe<hash_table*> {
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<hash_table*> {
    assert(thread_count > 0);
 
    idx const size = bit_ceil(thread_count * load_factor);
@@ -250,7 +253,7 @@ template <is_allocator Allocator, typename Free>
 void
 destroy_hash_table(
    allocator_ref<Allocator> allocator, hash_table* p_table, Free&& free_mapping
-) noexcept(false) {
+) noexcept(!__has_feature(cxx_exceptions)) {
    if (p_table == nullptr) {
       return;
    }
@@ -266,7 +269,6 @@ destroy_hash_table(
    }
 
    idx const allocation_bytes = p_table->m_allocation_bytes;
-   p_table->~hash_table();
    $fwd(free_mapping)(
       allocator, span<byte>(reinterpret_cast<byte*>(p_table), allocation_bytes)
    );

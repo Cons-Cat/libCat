@@ -705,3 +705,390 @@ $test(scaredy_get_ptr) {
    cat::scaredy<int4*, error_type_one> bad_ptr = error_type_one{1};
    cat::verify(bad_ptr.get_ptr() == nullptr);
 }
+
+struct scaredy_incomplete_type;
+
+static_assert(!cat::detail::is_pointer_scaredy<scaredy_incomplete_type>);
+static_assert(cat::detail::is_pointer_scaredy<scaredy_incomplete_type*>);
+static_assert(
+   cat::detail::is_pointer_scaredy<cat::compact_scaredy<
+      scaredy_incomplete_type*, [](scaredy_incomplete_type* p) -> bool {
+         return p != nullptr;
+      }>>
+);
+
+struct scaredy_incomplete_holder {
+   cat::scaredy<scaredy_incomplete_type*, error_type_one> ptr_result;
+};
+
+namespace {
+
+enum class compact_ptr_error : unsigned char {
+   null_pointer = 0u,
+};
+
+using compact_ptr_scaredy = cat::scaredy<
+   cat::compact_scaredy<
+      int4*,
+      [](int4* p) -> bool {
+         return p != nullptr;
+      }>,
+   compact_ptr_error>;
+
+static_assert(sizeof(compact_ptr_scaredy) == sizeof(int4*));
+
+struct scaredy_ptr_base {
+   int4 tag = 5;
+};
+
+struct scaredy_ptr_derived : scaredy_ptr_base {
+   int4 extra = 6;
+};
+
+constinit cat::idx g_scaredy_handler_hits{};
+
+void
+counting_scaredy_assert_handler(cat::source_location const& /*unused*/) {
+   ++g_scaredy_handler_hits;
+}
+
+#if __has_feature(cxx_exceptions)
+struct scaredy_assert_thrown {};
+
+void
+throwing_scaredy_assert_handler(cat::source_location const& /*unused*/) {
+   throw scaredy_assert_thrown{};
+}
+#endif
+
+auto
+make_temp_ptr_scaredy(int4* p_target [[clang::lifetimebound]])
+   -> cat::scaredy<int4*, error_type_one> {
+   return p_target;
+}
+
+auto
+make_temp_compact_ptr_scaredy(int4* p_target [[clang::lifetimebound]])
+   -> compact_ptr_scaredy {
+   return p_target;
+}
+
+}  // namespace
+
+// Plain pointer `scaredy<T*, Errors...>`: construction, observers, `value_or`,
+// `or_else`, `match`, `constexpr`, and temporary unwrapping without
+// `-Wdangling`.
+$test(scaredy_plain_pointer_specialization) {
+   g_scaredy_handler_hits = 0u;
+
+   // Default construction initializes the pointer to `nullptr` (engaged).
+   cat::scaredy<int4*, error_type_one> defaulted;
+   cat::verify(defaulted.has_value());
+   cat::verify(defaulted.value() == nullptr);
+   cat::verify(defaulted.get_ptr() == nullptr);
+   cat::verify(defaulted.assert() == nullptr);
+   cat::verify(defaulted.verify(&counting_scaredy_assert_handler) == nullptr);
+
+   int4 target = 55;
+   int4 fallback = 88;
+   int4* p_local = &target;
+   cat::scaredy<int4*, error_type_one> engaged = p_local;
+   cat::verify(engaged.has_value());
+   cat::verify(engaged.value() == &target);
+   cat::verify(engaged.get_ptr() == &target);
+   cat::verify(engaged.assert() == &target);
+   cat::verify(engaged.assert(&counting_scaredy_assert_handler) == &target);
+   cat::verify(engaged.verify() == &target);
+   cat::verify(engaged.verify(&counting_scaredy_assert_handler) == &target);
+   cat::verify(engaged.value_or(&fallback) == &target);
+
+   // Derived-to-base pointer conversion.
+   scaredy_ptr_derived derived_obj{};
+   cat::scaredy<scaredy_ptr_base*, error_type_one> base_ptr = &derived_obj;
+   cat::verify(base_ptr.verify()->tag == 5);
+
+   // Incomplete-pointee holder compiles and defaults to `nullptr`.
+   scaredy_incomplete_holder holder{};
+   cat::verify(holder.ptr_result.has_value());
+   cat::verify(holder.ptr_result.get_ptr() == nullptr);
+
+   // Error state: `get_ptr()` is `nullptr`, `value_or()` returns fallback.
+   cat::scaredy<int4*, error_type_one> failed = error_type_one{9};
+   cat::verify(failed.is_empty());
+   cat::verify(failed.get_ptr() == nullptr);
+   cat::verify(failed.value_or(&fallback) == &fallback);
+
+   // `or_else()` preserves engaged pointer and recovers from error.
+   auto kept = engaged.or_else([&] {
+      return cat::scaredy<int4*, error_type_one>{&fallback};
+   });
+   cat::verify(kept.value() == &target);
+
+   auto recovered = failed.or_else([&] {
+      return cat::scaredy<int4*, error_type_one>{&fallback};
+   });
+   cat::verify(recovered.value() == &fallback);
+
+   // `.match()` and `cat::match(...)` on pointer `scaredy`.
+   bool matched_ptr = false;
+   engaged.match(
+      is_a<error_type_one>().then_do([&] {
+         cat::exit(1);
+      }),
+      is_a<int4*>().then_do([&] {
+         matched_ptr = true;
+      })
+   );
+   cat::verify(matched_ptr);
+
+   bool matched_err = false;
+   cat::match(failed)(
+      is_a<int4*>().then_do([&] {
+         cat::exit(1);
+      }),
+      is_a<error_type_one>().then_do([&] {
+         matched_err = true;
+      })
+   );
+   cat::verify(matched_err);
+
+   // Temporary unwrapping without `-Wdangling`.
+   int4* p_ver = make_temp_ptr_scaredy(&target).verify();
+   int4* p_ver_h =
+      make_temp_ptr_scaredy(&target).verify(&counting_scaredy_assert_handler);
+   int4* p_ass = make_temp_ptr_scaredy(&target).assert();
+   int4* p_ass_h =
+      make_temp_ptr_scaredy(&target).assert(&counting_scaredy_assert_handler);
+   int4* p_val = make_temp_ptr_scaredy(&target).value();
+   int4* p_get = make_temp_ptr_scaredy(&target).get_ptr();
+   cat::verify(p_ver == &target && p_ver_h == &target);
+   cat::verify(p_ass == &target && p_ass_h == &target);
+   cat::verify(p_val == &target && p_get == &target);
+   cat::verify(g_scaredy_handler_hits == 0u);
+
+   // `consteval` support for plain pointer `scaredy`.
+   constexpr auto consteval_ok = [] consteval -> bool {
+      int4 x = 19;
+      cat::scaredy<int4*, error_type_one> s_null;
+      if (
+         !s_null.has_value() || s_null.value() != nullptr
+         || s_null.get_ptr() != nullptr
+      ) {
+         return false;
+      }
+      cat::scaredy<int4*, error_type_one> s_ok = &x;
+      return s_ok.has_value() && *s_ok.value() == 19 && s_ok.get_ptr() == &x
+             && s_ok.value_or(nullptr) == &x;
+   }();
+   static_assert(consteval_ok);
+
+#if __has_feature(cxx_exceptions)
+   bool caught = false;
+   try {
+      auto _ = failed.verify(&throwing_scaredy_assert_handler);
+   } catch (scaredy_assert_thrown const&) {
+      caught = true;
+   }
+   cat::verify(caught);
+#endif
+}
+
+// Compact pointer `scaredy<compact_scaredy<T*, pred>, Error>`: pointer-sized
+// niche layout, observers, `value_or`, `or_else`, `match`, and temporary
+// unwrapping.
+$test(scaredy_compact_pointer_specialization) {
+   g_scaredy_handler_hits = 0u;
+   int4 target = 101;
+   int4 fallback = 202;
+
+   compact_ptr_scaredy engaged = &target;
+   cat::verify(engaged.has_value());
+   cat::verify(engaged.value() == &target);
+   cat::verify(engaged.get_ptr() == &target);
+   cat::verify(engaged.assert() == &target);
+   cat::verify(engaged.assert(&counting_scaredy_assert_handler) == &target);
+   cat::verify(engaged.verify() == &target);
+   cat::verify(engaged.verify(&counting_scaredy_assert_handler) == &target);
+   cat::verify(engaged.value_or(&fallback) == &target);
+
+   compact_ptr_scaredy failed = compact_ptr_error::null_pointer;
+   cat::verify(failed.is_empty());
+   cat::verify(failed.error() == compact_ptr_error::null_pointer);
+   cat::verify(failed.get_ptr() == nullptr);
+   cat::verify(failed.value_or(&fallback) == &fallback);
+
+   // Assigning `nullptr` directly triggers the compact predicate's empty state.
+   engaged = static_cast<int4*>(nullptr);
+   cat::verify(engaged.is_empty());
+   cat::verify(engaged.get_ptr() == nullptr);
+
+   engaged = &target;
+   auto kept = engaged.or_else([&] {
+      return compact_ptr_scaredy{&fallback};
+   });
+   cat::verify(kept.value() == &target);
+
+   auto recovered = failed.or_else([&] {
+      return compact_ptr_scaredy{&fallback};
+   });
+   cat::verify(recovered.value() == &fallback);
+
+   bool matched_val = false;
+   engaged.match(
+      is_a<compact_ptr_error>().then_do([&] {
+         cat::exit(1);
+      }),
+      is_a<int4*>().then_do([&] {
+         matched_val = true;
+      })
+   );
+   cat::verify(matched_val);
+
+   bool matched_err = false;
+   failed.match(
+      is_a<int4*>().then_do([&] {
+         cat::exit(1);
+      }),
+      is_a<compact_ptr_error>().then_do([&] {
+         matched_err = true;
+      })
+   );
+   cat::verify(matched_err);
+
+   // Temporary unwrapping without `-Wdangling`.
+   int4* p_ver = make_temp_compact_ptr_scaredy(&target).verify();
+   int4* p_ver_h = make_temp_compact_ptr_scaredy(&target).verify(
+      &counting_scaredy_assert_handler
+   );
+   int4* p_ass = make_temp_compact_ptr_scaredy(&target).assert();
+   int4* p_ass_h = make_temp_compact_ptr_scaredy(&target).assert(
+      &counting_scaredy_assert_handler
+   );
+   int4* p_val = make_temp_compact_ptr_scaredy(&target).value();
+   int4* p_get = make_temp_compact_ptr_scaredy(&target).get_ptr();
+   cat::verify(p_ver == &target && p_ver_h == &target);
+   cat::verify(p_ass == &target && p_ass_h == &target);
+   cat::verify(p_val == &target && p_get == &target);
+   cat::verify(g_scaredy_handler_hits == 0u);
+
+#if __has_feature(cxx_exceptions)
+   bool caught = false;
+   try {
+      auto _ = failed.verify(&throwing_scaredy_assert_handler);
+   } catch (scaredy_assert_thrown const&) {
+      caught = true;
+   }
+   cat::verify(caught);
+#endif
+}
+
+// Value and `void` `scaredy` `assert()` / `verify()` overloads, `noexcept`
+// specifiers, and `operator=` return types.
+$test(scaredy_checked_accessors_and_noexcept) {
+   constexpr bool no_exc = !__has_feature(cxx_exceptions);
+   g_scaredy_handler_hits = 0u;
+
+   cat::scaredy<int4, error_type_one> ok_val = 17;
+   cat::scaredy<int4, error_type_one> bad_val = error_type_one{3};
+   cat::scaredy<void, error_type_one> ok_void;
+   cat::scaredy<void, error_type_one> bad_void = error_type_one{4};
+   int4 pointee = 9;
+   cat::scaredy<int4*, error_type_one> ok_ptr = &pointee;
+   compact_ptr_scaredy ok_compact_ptr = &pointee;
+
+   cat::verify(&ok_val.assert() == &ok_val.value());
+   cat::verify(
+      &ok_val.assert(&counting_scaredy_assert_handler) == &ok_val.value()
+   );
+   cat::verify(&ok_val.verify() == &ok_val.value());
+   cat::verify(
+      &ok_val.verify(&counting_scaredy_assert_handler) == &ok_val.value()
+   );
+
+   ok_void.value();
+   ok_void.assert();
+   ok_void.assert(&counting_scaredy_assert_handler);
+   ok_void.verify();
+   ok_void.verify(&counting_scaredy_assert_handler);
+   cat::verify(g_scaredy_handler_hits == 0u);
+
+   // Disengaged `scaredy<void, ...>` invokes the custom handler safely.
+   bad_void.verify(&counting_scaredy_assert_handler);
+   cat::verify(g_scaredy_handler_hits == 1u);
+#ifndef NDEBUG
+   bad_void.assert(&counting_scaredy_assert_handler);
+   cat::verify(g_scaredy_handler_hits == 2u);
+#endif
+
+#if __has_feature(cxx_exceptions)
+   bool caught_val = false;
+   try {
+      auto _ = bad_val.verify(&throwing_scaredy_assert_handler);
+   } catch (scaredy_assert_thrown const&) {
+      caught_val = true;
+   }
+   cat::verify(caught_val);
+#endif
+
+   // Assignment operators return `scaredy<T, Errors...>&`, not `scaredy_base&`.
+   static_assert(
+      cat::is_same<decltype(ok_val = 2), cat::scaredy<int4, error_type_one>&>
+   );
+   static_assert(cat::is_same<
+                 decltype(ok_val = error_type_one{1}),
+                 cat::scaredy<int4, error_type_one>&>);
+   static_assert(
+      cat::is_same<
+         decltype(ok_ptr = &pointee), cat::scaredy<int4*, error_type_one>&>
+   );
+   static_assert(
+      cat::is_same<decltype(ok_compact_ptr = &pointee), compact_ptr_scaredy&>
+   );
+
+   // `noexcept` invariants across value, `void`, plain-pointer, and
+   // compact-pointer `scaredy`.
+   static_assert(noexcept(ok_val.value()) == no_exc);
+   static_assert(noexcept(ok_val.assert()) == no_exc);
+   static_assert(
+      noexcept(ok_val.assert(&counting_scaredy_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(ok_val.verify()) == no_exc);
+   static_assert(
+      noexcept(ok_val.verify(&counting_scaredy_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(bad_val.error()) == no_exc);
+
+   static_assert(noexcept(ok_void.value()) == no_exc);
+   static_assert(noexcept(ok_void.assert()) == no_exc);
+   static_assert(
+      noexcept(ok_void.assert(&counting_scaredy_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(ok_void.verify()) == no_exc);
+   static_assert(
+      noexcept(ok_void.verify(&counting_scaredy_assert_handler)) == no_exc
+   );
+
+   static_assert(noexcept(ok_ptr.value()) == no_exc);
+   static_assert(noexcept(ok_ptr.assert()) == no_exc);
+   static_assert(
+      noexcept(ok_ptr.assert(&counting_scaredy_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(ok_ptr.verify()) == no_exc);
+   static_assert(
+      noexcept(ok_ptr.verify(&counting_scaredy_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(ok_ptr.get_ptr()));
+
+   static_assert(noexcept(ok_compact_ptr.value()) == no_exc);
+   static_assert(noexcept(ok_compact_ptr.assert()) == no_exc);
+   static_assert(
+      noexcept(ok_compact_ptr.assert(&counting_scaredy_assert_handler))
+      == no_exc
+   );
+   static_assert(noexcept(ok_compact_ptr.verify()) == no_exc);
+   static_assert(
+      noexcept(ok_compact_ptr.verify(&counting_scaredy_assert_handler))
+      == no_exc
+   );
+   static_assert(noexcept(ok_compact_ptr.get_ptr()));
+}

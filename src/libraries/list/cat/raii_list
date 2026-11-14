@@ -466,42 +466,42 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    // Return iterator to first element.
    [[nodiscard]]
    constexpr auto
-   begin() -> iterator {
+   begin() [[clang::lifetimebound]] -> iterator {
       return m_core.begin();
    }
 
    // Return iterator to one past the last element.
    [[nodiscard]]
    constexpr auto
-   end() -> iterator {
+   end() [[clang::lifetimebound]] -> iterator {
       return m_core.end();
    }
 
    // Return reverse iterator to the last element.
    [[nodiscard]]
    constexpr auto
-   rbegin() {
+   rbegin() [[clang::lifetimebound]] {
       return m_core.rbegin();
    }
 
    // Return reverse iterator to one before the first element.
    [[nodiscard]]
    constexpr auto
-   rend() {
+   rend() [[clang::lifetimebound]] {
       return m_core.rend();
    }
 
    // Return const reverse iterator to last element.
    [[nodiscard]]
    constexpr auto
-   rbegin() const {
+   rbegin() const [[clang::lifetimebound]] {
       return m_core.rbegin();
    }
 
    // Return const reverse iterator to one before first element.
    [[nodiscard]]
    constexpr auto
-   rend() const {
+   rend() const [[clang::lifetimebound]] {
       return m_core.rend();
    }
 

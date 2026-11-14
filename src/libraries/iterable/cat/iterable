@@ -187,16 +187,19 @@ dec_pos(Collection const& collection, Position& position)
 template <typename Collection, typename Position>
 [[nodiscard]]
 constexpr auto
-read_at_unchecked(Collection& collection, Position const& position)
-   -> decltype(collection.read_at_unchecked(position)) {
+read_at_unchecked(
+   Collection& collection [[clang::lifetimebound]], Position const& position
+) -> decltype(collection.read_at_unchecked(position)) {
    return collection.read_at_unchecked(position);
 }
 
 template <typename Collection, typename Position>
 [[nodiscard]]
 constexpr auto
-read_at_unchecked(Collection const& collection, Position const& position)
-   -> decltype(collection.read_at_unchecked(position)) {
+read_at_unchecked(
+   Collection const& collection [[clang::lifetimebound]],
+   Position const& position
+) -> decltype(collection.read_at_unchecked(position)) {
    return collection.read_at_unchecked(position);
 }
 
@@ -289,8 +292,8 @@ class collection_iteration_context {
    ));
 
    constexpr collection_iteration_context(
-      T* _Nonnull p_collection, position_type<T> begin_position,
-      position_type<T> end_position
+      T* _Nonnull p_collection [[clang::lifetimebound]],
+      position_type<T> begin_position, position_type<T> end_position
    )
        : m_p_collection(p_collection),
          m_position(begin_position),
@@ -340,8 +343,8 @@ class reverse_collection_iteration_context {
    ));
 
    constexpr reverse_collection_iteration_context(
-      T* _Nonnull p_collection, position_type<T> begin_position,
-      position_type<T> end_position
+      T* _Nonnull p_collection [[clang::lifetimebound]],
+      position_type<T> begin_position, position_type<T> end_position
    )
        : m_p_collection(p_collection),
          m_position(begin_position),
@@ -388,27 +391,32 @@ concept has_member_reverse_iterate = requires(T& t) { t.reverse_iterate(); };
 // auto-derives an `iterate` for any type that satisfies `is_collection` by
 // wrapping it in a `collection_iteration_context`.
 struct iterate_fn {
-   // Forward this call through a mutable borrow from `reference_wrapper`.
+   // Forward this call through a borrow from `reference_wrapper`.
    template <typename T>
    constexpr auto
-   operator()(reference_wrapper<T>& borrow) const
-      -> decltype((*this)(borrow.get())) {
-      return (*this)(borrow.get());
-   }
-
-   // Forward this call through a `const` borrow from `reference_wrapper`.
-   template <typename T>
-   constexpr auto
-   operator()(reference_wrapper<T> const& borrow) const
+   operator()(reference_wrapper<T> borrow [[clang::lifetimebound]]) const
       -> decltype((*this)(borrow.get())) {
       return (*this)(borrow.get());
    }
 
    // Use the type's own `.iterate()` when present.
    template <typename T>
-      requires(!is_reference_wrapper<T> && has_member_iterate<T>)
+      requires(
+         !is_reference_wrapper<T> && is_view_owned<T> && has_member_iterate<T>
+      )
    constexpr auto
-   operator()(T& source) const -> decltype(source.iterate()) {
+   operator()(T& source [[clang::lifetimebound]]) const
+      -> decltype(source.iterate()) {
+      return source.iterate();
+   }
+
+   template <typename T>
+      requires(
+         !is_reference_wrapper<T> && !is_view_owned<T> && has_member_iterate<T>
+      )
+   constexpr auto
+   operator()(T source [[clang::lifetimebound]]) const
+      -> decltype(source.iterate()) {
       return source.iterate();
    }
 
@@ -418,35 +426,45 @@ struct iterate_fn {
          !is_reference_wrapper<T> && !has_member_iterate<T> && is_collection<T>
       )
    constexpr auto
-   operator()(T& source) const -> collection_iteration_context<T> {
+   operator()(T& source [[clang::lifetimebound]]) const
+      -> collection_iteration_context<T> {
       return collection_iteration_context<T>{
-         __builtin_addressof(source), begin_pos(source), end_pos(source)
+         __builtin_addressof(source),
+         begin_pos(source),
+         end_pos(source),
       };
    }
 };
 
 struct reverse_iterate_fn {
-   // Forward this call through a mutable borrow from `reference_wrapper`.
+   // Forward this call through a borrow from `reference_wrapper`.
    template <typename T>
    constexpr auto
-   operator()(reference_wrapper<T>& borrow) const
-      -> decltype((*this)(borrow.get())) {
-      return (*this)(borrow.get());
-   }
-
-   // Forward this call through a `const` borrow from `reference_wrapper`.
-   template <typename T>
-   constexpr auto
-   operator()(reference_wrapper<T> const& borrow) const
+   operator()(reference_wrapper<T> borrow [[clang::lifetimebound]]) const
       -> decltype((*this)(borrow.get())) {
       return (*this)(borrow.get());
    }
 
    // Use the type's own `.reverse_iterate()` when present.
    template <typename T>
-      requires(!is_reference_wrapper<T> && has_member_reverse_iterate<T>)
+      requires(
+         !is_reference_wrapper<T> && is_view_owned<T>
+         && has_member_reverse_iterate<T>
+      )
    constexpr auto
-   operator()(T& source) const -> decltype(source.reverse_iterate()) {
+   operator()(T& source [[clang::lifetimebound]]) const
+      -> decltype(source.reverse_iterate()) {
+      return source.reverse_iterate();
+   }
+
+   template <typename T>
+      requires(
+         !is_reference_wrapper<T> && !is_view_owned<T>
+         && has_member_reverse_iterate<T>
+      )
+   constexpr auto
+   operator()(T source [[clang::lifetimebound]]) const
+      -> decltype(source.reverse_iterate()) {
       return source.reverse_iterate();
    }
 
@@ -457,9 +475,12 @@ struct reverse_iterate_fn {
          && is_bidirectional_collection<T>
       )
    constexpr auto
-   operator()(T& source) const -> reverse_collection_iteration_context<T> {
+   operator()(T& source [[clang::lifetimebound]]) const
+      -> reverse_collection_iteration_context<T> {
       return reverse_collection_iteration_context<T>{
-         __builtin_addressof(source), end_pos(source), begin_pos(source)
+         __builtin_addressof(source),
+         end_pos(source),
+         begin_pos(source),
       };
    }
 };
@@ -606,14 +627,52 @@ template <typename Derived>
 // NOLINTNEXTLINE This must be structural, so its constructor is `public`.
 struct view_interface {
    template <typename Iterable>
-      requires(is_iterable<remove_cvref<Iterable>>)
+      requires(is_iterable<Iterable> && !is_view_owned<Iterable>)
+   friend constexpr auto
+   operator|(Iterable incoming [[clang::lifetimebound]], Derived&& pipe_impl) {
+      return move(pipe_impl).apply(move(incoming));
+   }
+
+   template <typename Iterable>
+      requires(is_iterable<Iterable> && !is_view_owned<Iterable>)
+   friend constexpr auto
+   operator|(
+      Iterable incoming [[clang::lifetimebound]], Derived const& pipe_impl
+   ) {
+      return pipe_impl.apply(move(incoming));
+   }
+
+   template <typename Iterable>
+      requires(is_iterable<remove_const<Iterable>> && is_view_owned<Iterable>)
+   friend constexpr auto
+   operator|(Iterable& incoming [[clang::lifetimebound]], Derived&& pipe_impl) {
+      return move(pipe_impl).apply(incoming);
+   }
+
+   template <typename Iterable>
+      requires(is_iterable<remove_const<Iterable>> && is_view_owned<Iterable>)
+   friend constexpr auto
+   operator|(
+      Iterable& incoming [[clang::lifetimebound]], Derived const& pipe_impl
+   ) {
+      return pipe_impl.apply(incoming);
+   }
+
+   template <typename Iterable>
+      requires(
+         !is_lvalue_reference<Iterable> && is_iterable<remove_cvref<Iterable>>
+         && is_view_owned<Iterable>
+      )
    friend constexpr auto
    operator|(Iterable&& incoming, Derived&& pipe_impl) {
       return move(pipe_impl).apply($fwd(incoming));
    }
 
    template <typename Iterable>
-      requires(is_iterable<remove_cvref<Iterable>>)
+      requires(
+         !is_lvalue_reference<Iterable> && is_iterable<remove_cvref<Iterable>>
+         && is_view_owned<Iterable>
+      )
    friend constexpr auto
    operator|(Iterable&& incoming, Derived const& pipe_impl) {
       return pipe_impl.apply($fwd(incoming));

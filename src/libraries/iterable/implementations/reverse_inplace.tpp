@@ -68,8 +68,10 @@ struct reverse_inplace_impl {
    template <is_iterable Iterable>
       requires(!is_const<Iterable>)
    friend constexpr auto
-   operator|(Iterable&& incoming, reverse_inplace_impl /*reverse_inplace_impl*/)
-      -> decltype(auto) {
+   operator|(
+      Iterable&& incoming [[clang::lifetimebound]],
+      reverse_inplace_impl /*reverse_inplace_impl*/
+   ) -> decltype(auto) {
       auto&& range = unwrap_ref(incoming);
       if constexpr (has_void_reverse_inplace_member<decltype(range)>) {
          range.reverse_inplace();

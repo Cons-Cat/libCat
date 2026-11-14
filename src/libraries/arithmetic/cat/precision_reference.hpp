@@ -37,7 +37,9 @@ class precision_reference
    friend struct formatter;
 
  public:
-   constexpr explicit precision_reference(Float& w) noexcept
+   constexpr explicit precision_reference(
+      Float& w [[clang::lifetimebound]]
+   ) noexcept
        : m_wrapped(addressof(w)) {
    }
 

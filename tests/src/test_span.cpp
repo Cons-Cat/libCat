@@ -144,6 +144,10 @@ $test(span_data_size_extent_observers) {
 
    cat::span<int4 const> const_span{values, 3u};
    static_assert(cat::is_same<decltype(const_span.data()), int4 const*>);
+
+   // Like `std::span`, `span` is shallow-`const`.
+   cat::span<int4> const shallow{values, 3u};
+   static_assert(cat::is_same<decltype(shallow.data()), int4*>);
 }
 
 $test(span_subscript_compile_time_bounds) {
@@ -155,9 +159,9 @@ $test(span_subscript_compile_time_bounds) {
 
    static_assert(cat::is_same<decltype(fixed[2u]), int4&>);
    static_assert(cat::is_same<decltype(fixed[3u]), void>);
-   static_assert(cat::is_same<decltype(constant[0u]), int4 const&>);
+   static_assert(cat::is_same<decltype(constant[0u]), int4&>);
    static_assert(cat::is_same<decltype(constant[3u]), void>);
-   static_assert(cat::is_same<decltype(cat::move(fixed)[0u]), int4>);
+   static_assert(cat::is_same<decltype(cat::move(fixed)[0u]), int4&>);
    static_assert(cat::is_same<decltype(cat::move(fixed)[3u]), void>);
    static_assert(cat::is_same<decltype(dynamic[3u]), int4&>);
    static_assert(cat::is_same<decltype(dynamic[999u]), int4&>);

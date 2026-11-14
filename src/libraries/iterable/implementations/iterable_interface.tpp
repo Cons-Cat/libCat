@@ -13,111 +13,47 @@
 namespace cat {
 namespace detail {
 
-template <typename Self, typename Callback>
-constexpr auto
-iterable_pipe_transform(Self&& self, Callback callback) {
-   return $fwd(self) | transform(move(callback));
-}
-
-template <typename Self, typename Callback>
-constexpr auto
-iterable_pipe_filter(Self&& self, Callback callback) {
-   return $fwd(self) | filter(move(callback));
-}
-
 template <typename Self>
 constexpr auto
-iterable_pipe_take(Self&& self, idx count) {
-   return $fwd(self) | take(count);
-}
-
-template <typename Self>
-constexpr auto
-iterable_pipe_take_last(Self&& self, idx count) {
-   return $fwd(self) | take_last(count);
-}
-
-template <typename Self, typename Callback>
-constexpr auto
-iterable_pipe_take_while(Self&& self, Callback callback) {
-   return $fwd(self) | take_while(move(callback));
-}
-
-template <typename Self, typename Callback>
-constexpr auto
-iterable_pipe_take_last_while(Self&& self, Callback callback) {
-   return $fwd(self) | take_last_while(move(callback));
-}
-
-template <typename Self>
-constexpr auto
-iterable_pipe_drop(Self&& self, idx count) {
-   return $fwd(self) | drop(count);
-}
-
-template <typename Self>
-constexpr auto
-iterable_pipe_drop_last(Self&& self, idx count) {
-   return $fwd(self) | drop_last(count);
-}
-
-template <typename Self, typename Callback>
-constexpr auto
-iterable_pipe_drop_while(Self&& self, Callback callback) {
-   return $fwd(self) | drop_while(move(callback));
-}
-
-template <typename Self, typename Callback>
-constexpr auto
-iterable_pipe_drop_last_while(Self&& self, Callback callback) {
-   return $fwd(self) | drop_last_while(move(callback));
-}
-
-template <typename Self>
-constexpr auto
-iterable_pipe_reverse(Self&& self) {
-   return $fwd(self) | reverse();
-}
-
-template <typename Self>
-constexpr auto
-iterable_pipe_reverse_inplace(Self&& self) -> decltype(auto) {
+iterable_pipe_reverse_inplace(Self&& self [[clang::lifetimebound]])
+   -> decltype(auto) {
    return $fwd(self) | reverse_inplace();
 }
 
 template <typename Self, typename Value>
 constexpr auto
-iterable_pipe_fill(Self&& self, Value value) -> decltype(auto) {
+iterable_pipe_fill(Self&& self [[clang::lifetimebound]], Value value)
+   -> decltype(auto) {
    return $fwd(self) | fill($fwd(value));
-}
-
-template <typename Self>
-constexpr auto
-iterable_pipe_as_rvalue(Self&& self) {
-   return $fwd(self) | as_rvalue();
 }
 
 template <typename Self, typename Position>
 constexpr auto
-iterable_pipe_read_at(Self& self, Position const& position) -> decltype(auto) {
+iterable_pipe_read_at(
+   Self& self [[clang::lifetimebound]], Position const& position
+) -> decltype(auto) {
    return read_at(self, position);
 }
 
 template <typename Self, typename Position>
 constexpr auto
-iterable_pipe_try_read_at(Self& self, Position const& position) {
+iterable_pipe_try_read_at(
+   Self& self [[clang::lifetimebound]], Position const& position
+) {
    return try_read_at(self, position);
 }
 
 template <typename Self, typename Position>
 constexpr auto
-iterable_pipe_slice(Self& self, Position first, Position last) {
+iterable_pipe_slice(
+   Self& self [[clang::lifetimebound]], Position first, Position last
+) {
    return slice(self, first, last);
 }
 
 template <typename Self>
 constexpr auto
-iterable_pipe_as_span(Self& self) {
+iterable_pipe_as_span(Self& self [[clang::lifetimebound]]) {
    return as_span(self);
 }
 
@@ -219,79 +155,266 @@ iterable_pipe_is_none(Self&& self, Predicate... predicate) -> bool {
 
 template <typename Tag>
 template <typename Self, typename Callback>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::transform(this Self self, Callback callback) {
+   return $fwd(self) | cat::transform(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::transform(this Self& self, Callback callback) {
+   return $fwd(self) | cat::transform(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::transform(this Self&& self, Callback callback) {
-   return detail::iterable_pipe_transform($fwd(self), move(callback));
+   return $fwd(self) | cat::transform(move(callback));
 }
 
 template <typename Tag>
 template <typename Self, typename Callback>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::filter(this Self self, Callback callback) {
+   return $fwd(self) | cat::filter(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::filter(this Self& self, Callback callback) {
+   return $fwd(self) | cat::filter(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::filter(this Self&& self, Callback callback) {
-   return detail::iterable_pipe_filter($fwd(self), move(callback));
+   return $fwd(self) | cat::filter(move(callback));
 }
 
 template <typename Tag>
 template <typename Self>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::take(this Self self, idx count) {
+   return $fwd(self) | cat::take(count);
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::take(this Self& self, idx count) {
+   return $fwd(self) | cat::take(count);
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::take(this Self&& self, idx count) {
-   return detail::iterable_pipe_take($fwd(self), count);
+   return $fwd(self) | cat::take(count);
 }
 
 template <typename Tag>
 template <typename Self>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::take_last(this Self self, idx count) {
+   return $fwd(self) | cat::take_last(count);
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::take_last(this Self& self, idx count) {
+   return $fwd(self) | cat::take_last(count);
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::take_last(this Self&& self, idx count) {
-   return detail::iterable_pipe_take_last($fwd(self), count);
+   return $fwd(self) | cat::take_last(count);
 }
 
 template <typename Tag>
 template <typename Self, typename Callback>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::take_while(this Self self, Callback callback) {
+   return $fwd(self) | cat::take_while(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::take_while(this Self& self, Callback callback) {
+   return $fwd(self) | cat::take_while(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::take_while(this Self&& self, Callback callback) {
-   return detail::iterable_pipe_take_while($fwd(self), move(callback));
+   return $fwd(self) | cat::take_while(move(callback));
 }
 
 template <typename Tag>
 template <typename Self, typename Callback>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::take_last_while(this Self self, Callback callback) {
+   return $fwd(self) | cat::take_last_while(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::take_last_while(this Self& self, Callback callback) {
+   return $fwd(self) | cat::take_last_while(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::take_last_while(this Self&& self, Callback callback) {
-   return detail::iterable_pipe_take_last_while($fwd(self), move(callback));
+   return $fwd(self) | cat::take_last_while(move(callback));
 }
 
 template <typename Tag>
 template <typename Self>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::drop(this Self self, idx count) {
+   return $fwd(self) | cat::drop(count);
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::drop(this Self& self, idx count) {
+   return $fwd(self) | cat::drop(count);
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::drop(this Self&& self, idx count) {
-   return detail::iterable_pipe_drop($fwd(self), count);
+   return $fwd(self) | cat::drop(count);
 }
 
 template <typename Tag>
 template <typename Self>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::drop_last(this Self self, idx count) {
+   return $fwd(self) | cat::drop_last(count);
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::drop_last(this Self& self, idx count) {
+   return $fwd(self) | cat::drop_last(count);
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::drop_last(this Self&& self, idx count) {
-   return detail::iterable_pipe_drop_last($fwd(self), count);
+   return $fwd(self) | cat::drop_last(count);
 }
 
 template <typename Tag>
 template <typename Self, typename Callback>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::drop_while(this Self self, Callback callback) {
+   return $fwd(self) | cat::drop_while(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::drop_while(this Self& self, Callback callback) {
+   return $fwd(self) | cat::drop_while(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::drop_while(this Self&& self, Callback callback) {
-   return detail::iterable_pipe_drop_while($fwd(self), move(callback));
+   return $fwd(self) | cat::drop_while(move(callback));
 }
 
 template <typename Tag>
 template <typename Self, typename Callback>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::drop_last_while(this Self self, Callback callback) {
+   return $fwd(self) | cat::drop_last_while(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::drop_last_while(this Self& self, Callback callback) {
+   return $fwd(self) | cat::drop_last_while(move(callback));
+}
+
+template <typename Tag>
+template <typename Self, typename Callback>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::drop_last_while(this Self&& self, Callback callback) {
-   return detail::iterable_pipe_drop_last_while($fwd(self), move(callback));
+   return $fwd(self) | cat::drop_last_while(move(callback));
 }
 
 template <typename Tag>
 template <typename Self>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::reverse(this Self self) {
+   return $fwd(self) | cat::reverse();
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::reverse(this Self& self) {
+   return $fwd(self) | cat::reverse();
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::reverse(this Self&& self) {
-   return detail::iterable_pipe_reverse($fwd(self));
+   return $fwd(self) | cat::reverse();
 }
 
 template <typename Tag>
@@ -310,9 +433,26 @@ iterable_interface<Tag>::fill(this Self&& self, Value value) -> decltype(auto) {
 
 template <typename Tag>
 template <typename Self>
+   requires(!is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::as_rvalue(this Self self) {
+   return $fwd(self) | cat::as_rvalue();
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(is_view_owned<Self>)
+constexpr auto
+iterable_interface<Tag>::as_rvalue(this Self& self) {
+   return $fwd(self) | cat::as_rvalue();
+}
+
+template <typename Tag>
+template <typename Self>
+   requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
 constexpr auto
 iterable_interface<Tag>::as_rvalue(this Self&& self) {
-   return detail::iterable_pipe_as_rvalue($fwd(self));
+   return $fwd(self) | cat::as_rvalue();
 }
 
 template <typename Tag>

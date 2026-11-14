@@ -407,7 +407,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // Set every even-indexed bit (logical indices 0, 2, 4, ...) to 1. Bits at
    // odd logical indices are left unchanged.
    constexpr auto
-   set_even() noexcept -> bitset& {
+   set_even() noexcept [[clang::lifetimebound]] -> bitset& {
       if constexpr (bits_count != 0u) {
          for (auto& word : m_data) {
             word |= even_bits_pattern;
@@ -420,7 +420,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // Set every odd-indexed bit (logical indices 1, 3, 5, ...) to 1. Bits at
    // even logical indices are left unchanged.
    constexpr auto
-   set_odd() noexcept -> bitset& {
+   set_odd() noexcept [[clang::lifetimebound]] -> bitset& {
       if constexpr (bits_count != 0u) {
          for (auto& word : m_data) {
             word |= odd_bits_pattern;
@@ -433,7 +433,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // Clear every even-indexed bit (logical indices 0, 2, 4, ...) to 0. Bits at
    // odd logical indices are left unchanged.
    constexpr auto
-   unset_even() noexcept -> bitset& {
+   unset_even() noexcept [[clang::lifetimebound]] -> bitset& {
       if constexpr (bits_count != 0u) {
          // AND cannot set padding bits, so no post-clear is needed.
          for (auto& word : m_data) {
@@ -446,7 +446,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    // Clear every odd-indexed bit (logical indices 1, 3, 5, ...) to 0. Bits at
    // even logical indices are left unchanged.
    constexpr auto
-   unset_odd() noexcept -> bitset& {
+   unset_odd() noexcept [[clang::lifetimebound]] -> bitset& {
       if constexpr (bits_count != 0u) {
          for (auto& word : m_data) {
             word &= ~odd_bits_pattern;
@@ -500,37 +500,37 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
 
    [[nodiscard]]
    constexpr auto
-   begin() noexcept -> iterator {
+   begin() noexcept [[clang::lifetimebound]] -> iterator {
       return iterator(m_data.begin());
    }
 
    [[nodiscard]]
    constexpr auto
-   end() noexcept -> iterator {
+   end() noexcept [[clang::lifetimebound]] -> iterator {
       return iterator(m_data.end());
    }
 
    [[nodiscard]]
    constexpr auto
-   begin() const noexcept -> const_iterator {
+   begin() const noexcept [[clang::lifetimebound]] -> const_iterator {
       return const_iterator(m_data.begin());
    }
 
    [[nodiscard]]
    constexpr auto
-   end() const noexcept -> const_iterator {
+   end() const noexcept [[clang::lifetimebound]] -> const_iterator {
       return const_iterator(m_data.end());
    }
 
    [[nodiscard]]
    constexpr auto
-   cbegin() const noexcept -> const_iterator {
+   cbegin() const noexcept [[clang::lifetimebound]] -> const_iterator {
       return const_iterator(m_data.cbegin());
    }
 
    [[nodiscard]]
    constexpr auto
-   cend() const noexcept -> const_iterator {
+   cend() const noexcept [[clang::lifetimebound]] -> const_iterator {
       return const_iterator(m_data.cend());
    }
 

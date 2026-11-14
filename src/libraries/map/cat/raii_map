@@ -194,16 +194,38 @@ class
       return this->m_core[key];
    }
 
+   template <typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
    [[nodiscard]]
    constexpr auto
-   insert(Key key, T value) -> maybe<void> {
-      return this->m_core.insert(this->m_allocator, move(key), move(value));
+   insert(Key const& key, Arguments&&... arguments) -> maybe<void> {
+      return this->m_core.insert(this->m_allocator, key, $fwd(arguments)...);
    }
 
+   template <typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
    [[nodiscard]]
    constexpr auto
-   update(Key key, T value) -> maybe<void> {
-      return this->m_core.update(this->m_allocator, move(key), move(value));
+   insert(Key&& key, Arguments&&... arguments) -> maybe<void> {
+      return this->m_core.insert(
+         this->m_allocator, move(key), $fwd(arguments)...
+      );
+   }
+
+   template <typename Value>
+      requires(is_constructible<T, Value> && is_assignable<T&, Value>)
+   [[nodiscard]]
+   constexpr auto
+   update(Key const& key, Value&& value) -> maybe<void> {
+      return this->m_core.update(this->m_allocator, key, $fwd(value));
+   }
+
+   template <typename Value>
+      requires(is_constructible<T, Value> && is_assignable<T&, Value>)
+   [[nodiscard]]
+   constexpr auto
+   update(Key&& key, Value&& value) -> maybe<void> {
+      return this->m_core.update(this->m_allocator, move(key), $fwd(value));
    }
 };
 

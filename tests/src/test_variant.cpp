@@ -118,6 +118,8 @@ $test(variant_discriminant_tiers) {
    static_assert(sizeof(small_variant::maybe_discriminant) == 1);
 
    small_variant small_empty;
+
+   small_empty.reset();
    cat::verify(small_empty.is_empty());
    cat::verify(small_empty.index().is_empty());
 
@@ -136,6 +138,8 @@ $test(variant_discriminant_tiers) {
    static_assert(sizeof(mid_variant::maybe_discriminant) == 4);
 
    mid_variant mid_empty;
+
+   mid_empty.reset();
    cat::verify(mid_empty.is_empty());
    cat::verify(mid_empty.index().is_empty());
    cat::verify(
@@ -239,6 +243,8 @@ $test(variant_nested_construction_and_assignment) {
    cat::verify(outer.get<inner_type>().get<int>() == 42);
 
    inner_type empty;
+
+   empty.reset();
    outer_type outer_empty(empty);
    cat::verify(outer_empty.has_value());
    cat::verify(outer_empty.get<inner_type>().is_empty());
@@ -350,9 +356,18 @@ $test(variant_constexpr) {
    static_assert(in_place_variant.has_value());
    static_assert(in_place_variant.get<0u>() == 2);
 
-   // Default-construction yields the empty state. `is<T>` and `.index()`
-   // both observe it.
-   constexpr cat::variant<int, uint4> empty_variant;
+   // Like `std::variant`, default-construction value-initializes the first
+   // alternative.
+   constexpr cat::variant<int, uint4> default_variant;
+   static_assert(default_variant.is<int>());
+   static_assert(default_variant.get<int>() == 0);
+
+   // `.reset()` yields the empty state. `is<T>` and `.index()` both observe it.
+   constexpr cat::variant<int, uint4> empty_variant = [] {
+      cat::variant<int, uint4> empty;
+      empty.reset();
+      return empty;
+   }();
    static_assert(empty_variant.is_empty());
    static_assert(!empty_variant.is<int>());
    static_assert(!empty_variant.is<uint4>());
@@ -376,7 +391,7 @@ $test(variant_constexpr) {
    // and not to engaged.
    constexpr cat::variant<int, uint4> equal_variant = 1;
    static_assert(const_variant == equal_variant);
-   constexpr cat::variant<int, uint4> empty_too;
+   constexpr cat::variant<int, uint4> empty_too = empty_variant;
    static_assert(empty_variant == empty_too);
    static_assert(empty_variant != const_variant);
 
@@ -462,6 +477,7 @@ $test(variant_pattern_matching) {
 
 $test(variant_empty_pattern_matching) {
    cat::variant<int, char> empty;
+   empty.reset();
    bool matched = false;
    cat::match(empty)(
       is_a<int>().then_do([&]() {
@@ -517,6 +533,43 @@ $test(variant_visit_single) {
       v
    );
    cat::verify(hit_index == 1);
+
+   // Like C++20's `std::visit<R>`, `cat::visit<R>` converts each alternative's
+   // result to `R`, so the alternatives' results may differ.
+   cat::variant<int, char> narrow = 42;
+   static_assert(cat::is_same<
+                 decltype(cat::visit<int8>(
+                    [](auto value) {
+                       return value;
+                    },
+                    narrow
+                 )),
+                 int8>);
+   int8 widened = cat::visit<int8>(
+      [](auto value) {
+         return value;
+      },
+      narrow
+   );
+   cat::verify(widened == 42);
+
+   // `cat::visit<void>` discards the results.
+   cat::visit<void>(
+      [](auto value) {
+         return value;
+      },
+      narrow
+   );
+
+   // `cat::visit<R>` also accepts several variants.
+   cat::variant<int, char> other = 'a';
+   int8 summed = cat::visit<int8>(
+      [](auto left, auto right) {
+         return left + right;
+      },
+      narrow, other
+   );
+   cat::verify(summed == 42 + 'a');
 
    // Callbacks may have a non-`void` return type.
    v = 42;
@@ -624,8 +677,8 @@ $test(variant_get_ptr) {
    cat::verify(*p_const == 42);
 };
 
-// `variant<T&, U&, ...>` per P4198. The active alternative is fixed at
-// construction and assignment writes through the held reference.
+// `variant<T&, U&, ...>`. Like `maybe<T&>`, assignment rebinds the held
+// reference, and can change the active alternative.
 $test(variant_reference_alternatives) {
    int my_int = 1;
    double my_double = 2.0;
@@ -635,41 +688,40 @@ $test(variant_reference_alternatives) {
    cat::verify(r1.get<int&>() == 1);
    cat::verify(&r1.get<int&>() == &my_int);
 
-   // Assignment writes through to the original.
-   r1 = 99;
-   cat::verify(my_int == 99);
-   cat::verify(r1.get<int&>() == 99);
+   // Assigning an l-value rebinds instead of writing through.
+   int other_int = 5;
+   r1 = other_int;
+   cat::verify(my_int == 1);
+   cat::verify(&r1.get<int&>() == &other_int);
 
-   // A second reference variant binds a different alternative.
-   cat::variant<int&, double&> r2(my_double);
-   cat::verify(r2.holds_alternative<double&>());
-   cat::verify(&r2.get<double&>() == &my_double);
-   r2 = 3.5;
-   cat::verify(my_double == 3.5);
+   // Rebinding can change the active alternative.
+   r1 = my_double;
+   cat::verify(r1.holds_alternative<double&>());
+   cat::verify(&r1.get<double&>() == &my_double);
+   cat::verify(my_int == 1);
+   r1 = my_int;
 
+   // Rebinding to a temporary is rejected, like binding to one.
+   static_assert(!cat::is_assignable<cat::variant<int&, double&>&, int>);
+   static_assert(!cat::is_assignable<
+                 cat::variant<variant_move_only&, int&>&, variant_move_only&&>);
+
+   // Copy and move assignment rebind to the source's referent.
    int copied_from = 17;
    cat::variant<int&, double&> copy_source(copied_from);
    r1 = copy_source;
-   cat::verify(my_int == 17);
-   cat::verify(&r1.get<int&>() == &my_int);
-   copied_from = 18;
-   cat::verify(my_int == 17);
+   cat::verify(my_int == 1);
+   cat::verify(&r1.get<int&>() == &copied_from);
 
    variant_move_only move_target{1};
    variant_move_only move_source{2};
    cat::variant<variant_move_only&, int&> move_target_variant(move_target);
    cat::variant<variant_move_only&, int&> move_source_variant(move_source);
    move_target_variant = cat::move(move_source_variant);
-   cat::verify(move_target.value == 2);
-   cat::verify(move_source.value == -1);
-   cat::verify(&move_target_variant.get<variant_move_only&>() == &move_target);
-
-   variant_move_only direct_target{3};
-   variant_move_only direct_source{4};
-   cat::variant<variant_move_only&, int&> direct_move(direct_target);
-   direct_move = cat::move(direct_source);
-   cat::verify(direct_target.value == 4);
-   cat::verify(direct_source.value == -1);
+   cat::verify(move_target.value == 1);
+   cat::verify(move_source.value == 2);
+   cat::verify(&move_target_variant.get<variant_move_only&>() == &move_source);
+   r1 = my_int;
 
    // Reference variants are pointer-sized + discriminant.
    static_assert(
@@ -697,14 +749,14 @@ $test(variant_reference_alternatives) {
    cat::maybe<double&> missed = r1.get_if<double>();
    cat::verify(missed.is_empty());
 
-   // Const reference alternatives bind l-values without write-through.
+   // Const reference alternatives bind and rebind to l-values.
    int const my_const = 7;
+   int const other_const = 8;
    cat::variant<int const&, double const&> r_const(my_const);
    cat::verify(r_const.holds_alternative<int const&>());
    cat::verify(r_const.get<int const&>() == 7);
-   static_assert(!cat::is_assignable<
-                 cat::variant<int const&, double const&>&,
-                 cat::variant<int const&, double const&> const&>);
+   r_const = other_const;
+   cat::verify(&r_const.get<int const&>() == &other_const);
 };
 
 // P2162 "upside-down inheritance". A type that publicly inherits from
@@ -1078,11 +1130,12 @@ struct destruct_tracer {
    }
 };
 
-// A value variant is `valueless` by default and after `reset()`/`= nullopt`.
+// A value variant is `valueless` after `reset()`.
 // `.is<T>()`, `.has_value()`, `.get_if<T>()`, and `.get_ptr<T>()` all reflect
 // the empty state without UB.
 $test(variant_empty_state) {
    cat::variant<int, char, float4> v;
+   v.reset();
    cat::verify(v.is_empty());
    cat::verify(!v.is<int>());
    cat::verify(!v.is<char>());
@@ -1104,11 +1157,17 @@ $test(variant_empty_state) {
    v = 7;
    cat::verify(v.has_value());
 
-   v = cat::nullopt;
+   v.reset();
    cat::verify(v.is_empty());
 
-   cat::variant<int, char, float4> from_nullopt(cat::nullopt);
-   cat::verify(from_nullopt.is_empty());
+   // `nullopt` is not special to `variant`. It converts to an alternative like
+   // any other value.
+   static_assert(
+      !cat::is_constructible<cat::variant<int, char>, cat::detail::nullopt_type>
+   );
+   cat::variant<cat::maybe<int>, char> from_nullopt = cat::nullopt;
+   cat::verify(from_nullopt.is<cat::maybe<int>>());
+   cat::verify(from_nullopt.get<cat::maybe<int>>().is_empty());
 
    // Copy of an empty variant remains empty.
    cat::variant<int, char, float4> copied = v;
@@ -1202,8 +1261,9 @@ $test(variant_duplicate_alternatives) {
    static_assert(cat::is_same<dup::alternative_type<1u>, int>);
    static_assert(cat::is_same<dup::alternative_type<2u>, char>);
 
-   // Default-constructed: empty.
+   // Empty after `.reset()`.
    dup empty;
+   empty.reset();
    cat::verify(empty.is_empty());
 
    // Build the first `int` slot.
@@ -1395,3 +1455,327 @@ static_assert(
 );
 static_assert(!cat::is_nothrow_move_constructible<
               cat::variant<int4, throwing_move_element>>);
+
+namespace {
+
+struct ref_serial_packet : cat::variant<int&, double&> {
+   using cat::variant<int&, double&>::variant;
+};
+
+struct throwing_assign_referent {
+   int4 value = 0;
+
+   auto
+   operator=(throwing_assign_referent const& other) noexcept(false)
+      -> throwing_assign_referent& {
+      value = other.value;
+      return *this;
+   }
+
+   auto
+   operator=(throwing_assign_referent&& other) noexcept(false)
+      -> throwing_assign_referent& {
+      value = other.value;
+      return *this;
+   }
+
+   auto
+   operator=(int4 input) noexcept(false) -> throwing_assign_referent& {
+      value = input;
+      return *this;
+   }
+};
+
+auto
+make_temp_ref_variant(int& target [[clang::lifetimebound]])
+   -> cat::variant<int&, double&> {
+   return target;
+}
+
+}  // namespace
+
+// Comprehensive coverage of reference-variant member accessors (`get<I>`,
+// bare `get<T>`, bare `get_ptr<T>`, `get_ptr<I>`, `get_if<T&>`, `get_if<I>`),
+// value-variant `get_if<I>`, shallow-`const`, `match()`, `visit()`, and
+// temporary unwrapping without `-Wdangling`.
+$test(variant_reference_accessors_match_visit_and_lifetime) {
+   // Value-variant index-keyed `get_if<I>()` (member and free) across active,
+   // inactive, and empty states, plus `cat::get` cvref propagation.
+   cat::variant<int, char> val_v = 12;
+   cat::maybe<int&> val_if_0 = val_v.get_if<0u>();
+   cat::maybe<char&> val_if_1 = val_v.get_if<1u>();
+   cat::verify(val_if_0.has_value() && &val_if_0.value() == &val_v.get<0u>());
+   cat::verify(val_if_1.is_empty());
+   cat::verify(cat::get_if<0u>(val_v).has_value());
+   cat::verify(cat::get_if<1u>(val_v).is_empty());
+
+   cat::variant<int, char> const const_val_v = 12;
+   static_assert(cat::is_same<decltype(cat::get<int>(val_v)), int&>);
+   static_assert(
+      cat::is_same<decltype(cat::get<int>(const_val_v)), int const&>
+   );
+   static_assert(
+      cat::is_same<decltype(cat::get<int>(cat::move(val_v))), int&&>
+   );
+   static_assert(cat::is_same<decltype(cat::get<0u>(val_v)), int&>);
+   static_assert(cat::is_same<decltype(cat::get<0u>(const_val_v)), int const&>);
+   static_assert(cat::is_same<decltype(cat::get<0u>(cat::move(val_v))), int&&>);
+
+   cat::variant<int, char> empty_val_v;
+
+   empty_val_v.reset();
+   cat::verify(empty_val_v.get_if<0u>().is_empty());
+   cat::verify(cat::get_if<0u>(empty_val_v).is_empty());
+
+   // Reference-variant member accessors across index, bare type, and reference
+   // type keys.
+   int my_int = 33;
+   double my_double = 4.5;
+   cat::variant<int&, double&> r_int(my_int);
+   cat::variant<int&, double&> r_dbl(my_double);
+
+   cat::verify(&r_int.get<0u>() == &my_int);
+   cat::verify(&r_int.get<int>() == &my_int);
+   cat::verify(&r_int.get<int&>() == &my_int);
+   cat::verify(&r_dbl.get<1u>() == &my_double);
+   cat::verify(&r_dbl.get<double>() == &my_double);
+
+   cat::verify(r_int.get_ptr<0u>() == &my_int);
+   cat::verify(r_int.get_ptr<1u>() == nullptr);
+   cat::verify(r_int.get_ptr<int>() == &my_int);
+   cat::verify(r_int.get_ptr<double>() == nullptr);
+
+   cat::maybe<int&> ref_if_ref = r_int.get_if<int&>();
+   cat::maybe<double&> ref_if_ref_miss = r_int.get_if<double&>();
+   cat::maybe<int&> ref_if_idx = r_int.get_if<0u>();
+   cat::maybe<double&> ref_if_idx_miss = r_int.get_if<1u>();
+   cat::verify(ref_if_ref.has_value() && &ref_if_ref.value() == &my_int);
+   cat::verify(ref_if_ref_miss.is_empty());
+   cat::verify(ref_if_idx.has_value() && &ref_if_idx.value() == &my_int);
+   cat::verify(ref_if_idx_miss.is_empty());
+
+   // A reference variant is shallow-`const`: all accessors still yield
+   // mutable `int&` / `int*` / `maybe<int&>`.
+   cat::variant<int&, double&> const const_r(my_int);
+   static_assert(cat::is_same<decltype(const_r.get<0u>()), int&>);
+   static_assert(cat::is_same<decltype(const_r.get<int&>()), int&>);
+   static_assert(cat::is_same<decltype(const_r.get<int>()), int&>);
+   static_assert(cat::is_same<decltype(const_r.get_ptr<0u>()), int*>);
+   static_assert(cat::is_same<decltype(const_r.get_ptr<int&>()), int*>);
+   static_assert(cat::is_same<decltype(const_r.get_ptr<int>()), int*>);
+   static_assert(
+      cat::is_same<decltype(const_r.get_if<0u>()), cat::maybe<int&>>
+   );
+   static_assert(
+      cat::is_same<decltype(const_r.get_if<int&>()), cat::maybe<int&>>
+   );
+   static_assert(
+      cat::is_same<decltype(const_r.get_if<int>()), cat::maybe<int&>>
+   );
+   const_r.get<0u>() = 44;
+   cat::verify(my_int == 44);
+
+   // Temporary reference-variant unwrapping via member accessors must not
+   // trigger `-Wdangling`.
+   int& tmp_get_ref = make_temp_ref_variant(my_int).get<int&>();
+   int& tmp_get_bare = make_temp_ref_variant(my_int).get<int>();
+   int& tmp_get_idx = make_temp_ref_variant(my_int).get<0u>();
+   int* p_tmp_ref = make_temp_ref_variant(my_int).get_ptr<int&>();
+   int* p_tmp_bare = make_temp_ref_variant(my_int).get_ptr<int>();
+   int* p_tmp_idx = make_temp_ref_variant(my_int).get_ptr<0u>();
+   cat::maybe<int&> tmp_if_ref = make_temp_ref_variant(my_int).get_if<int&>();
+   cat::maybe<int&> tmp_if_bare = make_temp_ref_variant(my_int).get_if<int>();
+   cat::maybe<int&> tmp_if_idx = make_temp_ref_variant(my_int).get_if<0u>();
+
+   cat::verify(&tmp_get_ref == &my_int && &tmp_get_bare == &my_int);
+   cat::verify(&tmp_get_idx == &my_int);
+   cat::verify(p_tmp_ref == &my_int && p_tmp_bare == &my_int);
+   cat::verify(p_tmp_idx == &my_int);
+   cat::verify(&tmp_if_ref.value() == &my_int);
+   cat::verify(&tmp_if_bare.value() == &my_int);
+   cat::verify(&tmp_if_idx.value() == &my_int);
+
+   // `.match()`, `.visit()`, `cat::visit`, and `cat::visit_indexed` on
+   // reference variants.
+   bool matched = false;
+   r_int.match(
+      is_a<double>().then_do([&] {
+         cat::exit(1);
+      }),
+      is_a<int>().then_do([&] {
+         matched = true;
+      })
+   );
+   cat::verify(matched);
+
+   int visited_addr_matches = r_int.visit([&](auto& active) -> int {
+      if constexpr (cat::is_same<__typeof_unqual(active), int>) {
+         active = 55;
+         return (&active == &my_int) ? 1 : 0;
+      }
+      return 0;
+   });
+   cat::verify(visited_addr_matches == 1);
+   cat::verify(my_int == 55);
+
+   cat::idx active_idx = cat::visit_indexed(
+      []<cat::idx index_value>(auto& /*active*/) -> cat::idx {
+         return index_value;
+      },
+      r_dbl
+   );
+   cat::verify(active_idx == 1u);
+}
+
+// Free `cat::get` / `cat::get_ptr` / `cat::get_if` on lvalue, `const` lvalue,
+// rvalue temporary, and P2162 derived reference variants.
+$test(variant_reference_free_accessors_and_inheritance) {
+   int my_int = 71;
+   cat::variant<int&, double&> lv(my_int);
+   cat::variant<int&, double&> const clv(my_int);
+
+   // Lvalue and `const` lvalue reference variants.
+   cat::verify(&cat::get<int&>(lv) == &my_int);
+   cat::verify(&cat::get<int>(lv) == &my_int);
+   cat::verify(&cat::get<0u>(lv) == &my_int);
+   cat::verify(&cat::get<int&>(clv) == &my_int);
+   cat::verify(&cat::get<0u>(clv) == &my_int);
+
+   cat::verify(cat::get_ptr<int&>(lv) == &my_int);
+   cat::verify(cat::get_ptr<int>(clv) == &my_int);
+   cat::verify(cat::get_ptr<0u>(clv) == &my_int);
+   cat::verify(cat::get_ptr<1u>(clv) == nullptr);
+
+   cat::verify(&cat::get_if<int&>(lv).value() == &my_int);
+   cat::verify(&cat::get_if<int>(clv).value() == &my_int);
+   cat::verify(&cat::get_if<0u>(clv).value() == &my_int);
+   cat::verify(cat::get_if<1u>(clv).is_empty());
+
+   // Rvalue temporary reference variants unwrap cleanly without `-Wdangling`.
+   int& r_free_ref = cat::get<int&>(make_temp_ref_variant(my_int));
+   int& r_free_bare = cat::get<int>(cat::variant<int&, double&>(my_int));
+   int& r_free_idx = cat::get<0u>(make_temp_ref_variant(my_int));
+   int* p_free_ref = cat::get_ptr<int&>(make_temp_ref_variant(my_int));
+   int* p_free_idx = cat::get_ptr<0u>(make_temp_ref_variant(my_int));
+   cat::maybe<int&> m_free_bare =
+      cat::get_if<int>(make_temp_ref_variant(my_int));
+   cat::maybe<int&> m_free_ref =
+      cat::get_if<int&>(make_temp_ref_variant(my_int));
+   cat::maybe<int&> m_free_idx = cat::get_if<0u>(make_temp_ref_variant(my_int));
+
+   cat::verify(&r_free_ref == &my_int && &r_free_bare == &my_int);
+   cat::verify(&r_free_idx == &my_int);
+   cat::verify(p_free_ref == &my_int && p_free_idx == &my_int);
+   cat::verify(&m_free_bare.value() == &my_int);
+   cat::verify(&m_free_ref.value() == &my_int);
+   cat::verify(&m_free_idx.value() == &my_int);
+
+   // P2162 derived reference variant: lvalue, rvalue, and upcast/slicing into
+   // `cat::variant<int&, double&>`.
+   static_assert(cat::is_variant_like<ref_serial_packet>);
+   ref_serial_packet pkt(my_int);
+   cat::variant<int&, double&> sliced_from_lval = pkt;
+   cat::variant<int&, double&> sliced_from_rval = ref_serial_packet(my_int);
+   cat::verify(&sliced_from_lval.get<int&>() == &my_int);
+   cat::verify(&sliced_from_rval.get<int&>() == &my_int);
+
+   int& r_pkt_lv = cat::get<int&>(pkt);
+   int& r_pkt_rv = cat::get<0u>(ref_serial_packet(my_int));
+   int* p_pkt_rv = cat::get_ptr<int&>(ref_serial_packet(my_int));
+   cat::maybe<int&> m_pkt_rv = cat::get_if<int>(ref_serial_packet(my_int));
+   cat::verify(&r_pkt_lv == &my_int && &r_pkt_rv == &my_int);
+   cat::verify(p_pkt_rv == &my_int && &m_pkt_rv.value() == &my_int);
+}
+
+// `noexcept` and assignment return-type invariants for value and reference
+// variants and `cat::visit`.
+$test(variant_reference_noexcept_and_assign_types) {
+   constexpr bool no_exc = !__has_feature(cxx_exceptions);
+
+   int x = 1;
+   cat::variant<int, char> val_v = 1;
+   cat::variant<int&, double&> ref_v(x);
+   cat::variant<int&, double&> other_ref_v(x);
+
+   // Assignment operators return `variant<Alternatives...>&`, not
+   // `variant_base&`.
+   static_assert(cat::is_same<decltype(val_v = 2), cat::variant<int, char>&>);
+   static_assert(
+      cat::is_same<decltype(val_v = val_v), cat::variant<int, char>&>
+   );
+   static_assert(
+      cat::is_same<decltype(ref_v = x), cat::variant<int&, double&>&>
+   );
+   static_assert(
+      cat::is_same<decltype(ref_v = other_ref_v), cat::variant<int&, double&>&>
+   );
+   static_assert(
+      cat::is_same<
+         decltype(ref_v = cat::move(other_ref_v)), cat::variant<int&, double&>&>
+   );
+
+   // Reference-variant construction from lvalues and copy/move construction are
+   // unconditionally `noexcept`.
+   static_assert(
+      cat::is_nothrow_constructible<cat::variant<int&, double&>, int&>
+   );
+   static_assert(cat::is_nothrow_constructible<
+                 cat::variant<int const&, double const&>, int const&>);
+   static_assert(
+      cat::is_nothrow_copy_constructible<cat::variant<int&, double&>>
+   );
+   static_assert(
+      cat::is_nothrow_move_constructible<cat::variant<int&, double&>>
+   );
+
+   // Reference-variant assignment only rebinds, so it is trivial and
+   // `noexcept`, even when the referent's own assignment can throw.
+   static_assert(noexcept(ref_v = x));
+   static_assert(
+      cat::is_trivially_copy_assignable<cat::variant<int&, double&>>
+   );
+   static_assert(
+      cat::is_trivially_move_assignable<cat::variant<int&, double&>>
+   );
+   using throwing_ref_variant = cat::variant<throwing_assign_referent&, int4&>;
+   static_assert(cat::is_nothrow_copy_assignable<throwing_ref_variant>);
+   static_assert(cat::is_nothrow_move_assignable<throwing_ref_variant>);
+
+   // `.get()` asserts that its alternative is active, so it is only `noexcept`
+   // without exceptions. The other accessors are `noexcept`.
+   constexpr bool get_is_noexcept = !__has_feature(cxx_exceptions);
+   static_assert(noexcept(ref_v.get<0u>()) == get_is_noexcept);
+   static_assert(noexcept(ref_v.get<int&>()) == get_is_noexcept);
+   static_assert(noexcept(ref_v.get<int>()) == get_is_noexcept);
+   static_assert(noexcept(ref_v.get_ptr<0u>()));
+   static_assert(noexcept(ref_v.get_ptr<int&>()));
+   static_assert(noexcept(ref_v.get_ptr<int>()));
+   static_assert(noexcept(ref_v.get_if<0u>()));
+   static_assert(noexcept(ref_v.get_if<int&>()));
+   static_assert(noexcept(ref_v.get_if<int>()));
+
+   static_assert(noexcept(cat::get<0u>(ref_v)) == get_is_noexcept);
+   static_assert(noexcept(cat::get<int&>(ref_v)) == get_is_noexcept);
+   static_assert(noexcept(cat::get<int>(ref_v)) == get_is_noexcept);
+   static_assert(noexcept(cat::get_ptr<0u>(ref_v)));
+   static_assert(noexcept(cat::get_ptr<int&>(ref_v)));
+   static_assert(noexcept(cat::get_ptr<int>(ref_v)));
+   static_assert(noexcept(cat::get_if<0u>(ref_v)));
+   static_assert(noexcept(cat::get_if<int&>(ref_v)));
+   static_assert(noexcept(cat::get_if<int>(ref_v)));
+
+   // Single-variant `cat::visit` and `cat::visit_indexed` follow
+   // `noexcept(!__has_feature(cxx_exceptions))`.
+   auto noop_visitor = [](auto&) noexcept {
+   };
+   auto noop_indexed_visitor = []<cat::idx>(auto&) noexcept {
+   };
+   static_assert(noexcept(cat::visit(noop_visitor, val_v)) == no_exc);
+   static_assert(noexcept(cat::visit(noop_visitor, ref_v)) == no_exc);
+   static_assert(
+      noexcept(cat::visit_indexed(noop_indexed_visitor, val_v)) == no_exc
+   );
+   static_assert(
+      noexcept(cat::visit_indexed(noop_indexed_visitor, ref_v)) == no_exc
+   );
+}

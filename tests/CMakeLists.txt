@@ -5,11 +5,9 @@ cat_gdb_symlink(cat-gdb-tests)
 # Clang `-verify` ill-formed checks for `cat/arithmetic`.
 set(_cat_arith_verify_src
   "${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic_verify.cpp")
-set(_cat_arith_verify_incs "-I${CMAKE_SOURCE_DIR}/src")
-foreach(_subdir IN LISTS CAT_INCLUDE_SUBDIRS)
-  list(APPEND _cat_arith_verify_incs
-    "-I${CMAKE_SOURCE_DIR}/src/libraries/${_subdir}")
-endforeach()
+# `cat`'s include directories, expanded by `COMMAND_EXPAND_LISTS`.
+set(_cat_arith_verify_incs
+  "-I$<JOIN:$<TARGET_PROPERTY:cat,INTERFACE_INCLUDE_DIRECTORIES>,$<SEMICOLON>-I>")
 add_test(
   NAME ArithmeticTypeCheck
   COMMAND
@@ -37,12 +35,39 @@ add_test(
     -Xclang -verify-ignore-unexpected=note
     -Xclang -verify-ignore-unexpected=warning
     ${_cat_arith_verify_incs}
-    ${_cat_arith_verify_src})
+    ${_cat_arith_verify_src}
+  COMMAND_EXPAND_LISTS)
 set_tests_properties(
   ArithmeticTypeCheck
   PROPERTIES
     LABELS "arithmetic")
 
+# Clang `-verify` lifetime and static bounds checks.
+set(CAT_CXX_FLAGS_VERIFY_TEST
+  ${CAT_CXX_FLAGS_ESSENTIAL}
+  ${CAT_CXX_FLAGS_COMMON})
+list(FILTER CAT_CXX_FLAGS_VERIFY_TEST EXCLUDE REGEX "^SHELL:")
+list(
+  APPEND CAT_CXX_FLAGS_VERIFY_TEST
+  -fsyntax-only
+  -std=gnu++26
+  -ferror-limit=0
+  -Wno-unused-variable
+  -Wno-unused-value
+  -Xclang -verify
+  -Xclang -verify-ignore-unexpected=note
+  ${_cat_arith_verify_incs})
+foreach(_container IN ITEMS
+    allocator array bit bitset bitvec file_path iterable list map maybe ring
+    scaredy span string tuple variant vec)
+  set(_source "${CMAKE_SOURCE_DIR}/tests/src/test_${_container}_verify.cpp")
+  add_test(
+    NAME SafetyTypeCheck_${_container}
+    COMMAND ${CMAKE_CXX_COMPILER} ${CAT_CXX_FLAGS_VERIFY_TEST} ${_source}
+    COMMAND_EXPAND_LISTS)
+  set_tests_properties(SafetyTypeCheck_${_container}
+    PROPERTIES LABELS "safety")
+endforeach()
 
 # `cat-tests-base` holds the flags/links needed to match `cat-impl`'s compile
 # commands (so `REUSE_FROM cat-impl` passes PCH validation) but no test sources.

@@ -5,7 +5,6 @@ CompileFlags:
   CompilationDatabase: .
   Add:
     - -std=gnu++26
-    - -Wno-lifetime-safety-intra-tu-suggestions
 
 # Merged with `.clang-tidy`. clangd config wins on conflict. Stops unusable
 # lints if another layer (e.g. user `config.yaml`) re-enables them.

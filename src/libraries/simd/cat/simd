@@ -781,16 +781,16 @@ class
    // forces saturating forms. Integer lanes whose lane type carries a
    // `policy` use that by default on `simd` without an accessor.
    constexpr auto
-   undef() & noexcept
-      -> detail::simd_overflow_reference<T, Abi, overflow_policies::undefined>
+   undef() & noexcept [[clang::lifetimebound]]
+   -> detail::simd_overflow_reference<T, Abi, overflow_policies::undefined>
       requires(is_integral<T> && !is_bool<T>);
    constexpr auto
-   wrap() & noexcept
-      -> detail::simd_overflow_reference<T, Abi, overflow_policies::wrap>
+   wrap() & noexcept [[clang::lifetimebound]]
+   -> detail::simd_overflow_reference<T, Abi, overflow_policies::wrap>
       requires(is_integral<T> && !is_bool<T>);
    constexpr auto
-   sat() & noexcept
-      -> detail::simd_overflow_reference<T, Abi, overflow_policies::saturate>
+   sat() & noexcept [[clang::lifetimebound]]
+   -> detail::simd_overflow_reference<T, Abi, overflow_policies::saturate>
       requires(is_integral<T> && !is_bool<T>);
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -830,13 +830,13 @@ class
    }
 
    constexpr auto
-   precise() & noexcept
-      -> detail::simd_precision_reference<simd, precision_policies::precise>
+   precise() & noexcept [[clang::lifetimebound]]
+   -> detail::simd_precision_reference<simd, precision_policies::precise>
       requires(is_floating_point<T>);
 
    constexpr auto
-   precise() const& noexcept -> detail::simd_precision_reference<
-      simd const, precision_policies::precise>
+   precise() const& noexcept [[clang::lifetimebound]]
+   -> detail::simd_precision_reference<simd const, precision_policies::precise>
       requires(is_floating_point<T>);
 
    // An r-value is copied bit for bit into lanes with this precision policy.
@@ -854,8 +854,8 @@ class
    }
 
    constexpr auto
-   fast() & noexcept
-      -> detail::simd_precision_reference<simd, precision_policies::fast>
+   fast() & noexcept [[clang::lifetimebound]]
+   -> detail::simd_precision_reference<simd, precision_policies::fast>
       requires(is_floating_point<T>);
 
    constexpr auto
@@ -1318,7 +1318,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator++() noexcept -> simd&
+   operator++() noexcept [[clang::lifetimebound]] -> simd&
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       *this = *this + simd(static_cast<T>(1));
@@ -1337,7 +1337,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator--() noexcept -> simd&
+   operator--() noexcept [[clang::lifetimebound]] -> simd&
       requires(is_arithmetic<T> && !is_bool<T>)
    {
       *this = *this - simd(static_cast<T>(1));
@@ -1407,7 +1407,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator<<=(simd const& operand) noexcept -> simd&
+   operator<<=(simd const& operand) noexcept [[clang::lifetimebound]] -> simd&
       requires(!is_bool<T>)
    {
       *this = detail::simd_integral_shl_policy(*this, operand);
@@ -1424,7 +1424,7 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   operator>>=(simd const& operand) noexcept -> simd&
+   operator>>=(simd const& operand) noexcept [[clang::lifetimebound]] -> simd&
       requires(!is_bool<T>)
    {
       *this = detail::simd_integral_shr_policy(*this, operand);
@@ -1709,7 +1709,8 @@ class
    // Load a vector from aligned `data` (also called a "gather").
    [[gnu::always_inline]]
    constexpr auto
-   load_aligned(value_type const* _Nonnull p_data) noexcept -> simd& {
+   load_aligned(value_type const* _Nonnull p_data) noexcept
+      [[clang::lifetimebound]] -> simd& {
       if consteval {
          for (idx i = 0u; i < abi_type::lanes; ++i) {
             this->set_lane(i, static_cast<T>(p_data[i]));
@@ -1753,7 +1754,8 @@ class
 
    [[gnu::always_inline]]
    constexpr auto
-   load_non_temporal(value_type const* _Nonnull p_data) noexcept -> simd&
+   load_non_temporal(value_type const* _Nonnull p_data) noexcept
+      [[clang::lifetimebound]] -> simd&
       requires(raw_storage_has_no_padding)
    {
       if consteval {
@@ -1844,7 +1846,7 @@ class
    // scalars are read.
    constexpr auto
    partial_load(value_type const* _Nonnull p_data, idx count) noexcept
-      -> simd& {
+      [[clang::lifetimebound]] -> simd& {
       this->fill(scalar_type{});
       idx const n = count < abi_type::lanes ? count : abi_type::lanes;
       for (idx i = 0u; i < n; ++i) {
@@ -1912,13 +1914,13 @@ class
    // Implement Stepanov iteration as well, as per P3983R1.
    [[nodiscard]]
    constexpr auto
-   begin() noexcept -> iterator {
+   begin() noexcept [[clang::lifetimebound]] -> iterator {
       return iterator(this, 0u);
    }
 
    [[nodiscard]]
    constexpr auto
-   begin() const noexcept -> const_iterator {
+   begin() const noexcept [[clang::lifetimebound]] -> const_iterator {
       return const_iterator(this, 0u);
    }
 
@@ -2628,7 +2630,8 @@ class
    // from memory into mask lanes. Not a `raw_type` object representation. Use
    // `raw` assignment for that).
    constexpr auto
-   load(bool const* _Nonnull p_lane_bools) noexcept -> mask_type& {
+   load(bool const* _Nonnull p_lane_bools) noexcept [[clang::lifetimebound]]
+   -> mask_type& {
       this->raw = raw_type{};
       for (idx i = 0u; i < abi_type::lanes; ++i) {
          this->set_lane(i, p_lane_bools[i]);

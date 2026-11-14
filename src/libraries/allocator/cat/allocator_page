@@ -191,6 +191,7 @@ class [[clang::trivial_abi]] allocator_page
    // kernel is free to relocate the mapping, so the returned pointer can
    // differ from `allocation.data()`. The pages are moved without a userspace
    // copy, and the old mapping is consumed. Both sizes round up to whole pages.
+   [[clang::ownership_returns(libcat)]]
    static auto
    reallocate(span<byte> allocation, idx new_bytes) -> void* _Nullable {
       idx const from_size =

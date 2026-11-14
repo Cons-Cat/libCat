@@ -32,7 +32,7 @@ struct transform_view_impl : iterable_interface<> {
    };
 
    constexpr auto
-   iterate() {
+   iterate() [[clang::lifetimebound]] {
       using incoming_iteration_context_type =
          iterable_iteration_context_type<Base>;
       return context_type<incoming_iteration_context_type, Callback>{
@@ -41,7 +41,7 @@ struct transform_view_impl : iterable_interface<> {
    }
 
    constexpr auto
-   iterate() const
+   iterate() const [[clang::lifetimebound]] -> auto
       requires(is_iterable<Base const>)
    {
       using incoming_iteration_context_type =
@@ -52,7 +52,7 @@ struct transform_view_impl : iterable_interface<> {
    }
 
    constexpr auto
-   reverse_iterate()
+   reverse_iterate() [[clang::lifetimebound]] -> auto
       requires(is_reverse_iterable<Base>)
    {
       using incoming_iteration_context_type =
@@ -63,7 +63,7 @@ struct transform_view_impl : iterable_interface<> {
    }
 
    constexpr auto
-   reverse_iterate() const
+   reverse_iterate() const [[clang::lifetimebound]] -> auto
       requires(is_reverse_iterable<Base const>)
    {
       using incoming_iteration_context_type =

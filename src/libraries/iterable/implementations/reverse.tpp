@@ -10,16 +10,26 @@ template <typename Base>
 struct reverse_view_impl : iterable_interface<> {
    Base m_base;
 
+   // This works around limitation in recursive `concept`s.
+   static constexpr bool is_borrowing_view = !is_view_owned<Base>;
+
    constexpr auto
-   iterate() -> decltype(reverse_iterate(unwrap_ref(m_base))) {
-      return reverse_iterate(unwrap_ref(m_base));
+   iterate(this auto&& self [[clang::lifetimebound]])
+      -> decltype(reverse_iterate(unwrap_ref(self.m_base)))
+      requires(
+         is_view_owned<Base>
+         && is_reverse_iterable<decltype(unwrap_ref(self.m_base))>
+      )
+   {
+      return reverse_iterate(unwrap_ref(self.m_base));
    }
 
    constexpr auto
-   iterate() const -> decltype(reverse_iterate(unwrap_ref(m_base)))
-      requires(is_reverse_iterable<decltype(unwrap_ref(m_base))>)
+   iterate(this reverse_view_impl self [[clang::lifetimebound]])
+      -> decltype(reverse_iterate(unwrap_ref(self.m_base)))
+      requires(!is_view_owned<Base>)
    {
-      return reverse_iterate(unwrap_ref(m_base));
+      return reverse_iterate(unwrap_ref(self.m_base));
    }
 };
 

@@ -33,7 +33,7 @@ class simd_mask;
 namespace detail {
 
 template <typename Pack>
-class simd_range_stepanov_iterator
+class [[gsl::Pointer(Pack)]] simd_range_stepanov_iterator
     : public proxy_stepanov_iterator_interface<
          random_access_iterator_tag, typename remove_const<Pack>::value_type,
          typename remove_const<Pack>::value_type, iword> {
@@ -55,7 +55,7 @@ class simd_range_stepanov_iterator
       default;
 
    constexpr simd_range_stepanov_iterator(
-      Pack* _Nullable p_data_in, idx offset_in
+      Pack* _Nullable p_data_in [[clang::lifetimebound]], idx offset_in
    ) noexcept
        : m_data(p_data_in), m_offset(offset_in) {
    }

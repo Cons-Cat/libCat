@@ -66,32 +66,81 @@ class [[gsl::Pointer]] map_ref {
       return (*m_p_map)[key];
    }
 
-   template <is_allocator Allocator>
+   template <is_allocator Allocator, typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
    [[nodiscard]]
    constexpr auto
-   insert(allocator_ref<Allocator> allocator, Key key, T value) const
-      -> maybe<void> {
-      return m_p_map->insert(allocator, move(key), move(value));
+   insert(
+      allocator_ref<Allocator> allocator, Key const& key,
+      Arguments&&... arguments
+   ) const -> maybe<void> {
+      return m_p_map->insert(allocator, key, $fwd(arguments)...);
    }
 
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   insert(allocator_dyn allocator, Key key, T value) const -> maybe<void> {
-      return insert<allocator_dyn>(allocator, move(key), move(value));
-   }
-
-   template <is_allocator Allocator>
+   template <is_allocator Allocator, typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
    [[nodiscard]]
    constexpr auto
-   update(allocator_ref<Allocator> allocator, Key key, T value) const
-      -> maybe<void> {
-      return m_p_map->update(allocator, move(key), move(value));
+   insert(
+      allocator_ref<Allocator> allocator, Key&& key, Arguments&&... arguments
+   ) const -> maybe<void> {
+      return m_p_map->insert(allocator, move(key), $fwd(arguments)...);
    }
 
+   template <typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   update(allocator_dyn allocator, Key key, T value) const -> maybe<void> {
-      return update<allocator_dyn>(allocator, move(key), move(value));
+   insert(
+      allocator_dyn allocator, Key const& key, Arguments&&... arguments
+   ) const -> maybe<void> {
+      return insert<allocator_dyn>(allocator, key, $fwd(arguments)...);
+   }
+
+   template <typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(allocator_dyn allocator, Key&& key, Arguments&&... arguments) const
+      -> maybe<void> {
+      return insert<allocator_dyn>(allocator, move(key), $fwd(arguments)...);
+   }
+
+   template <is_allocator Allocator, typename Value>
+      requires(is_constructible<T, Value> && is_assignable<T&, Value>)
+   [[nodiscard]]
+   constexpr auto
+   update(
+      allocator_ref<Allocator> allocator, Key const& key, Value&& value
+   ) const -> maybe<void> {
+      return m_p_map->update(allocator, key, $fwd(value));
+   }
+
+   template <is_allocator Allocator, typename Value>
+      requires(is_constructible<T, Value> && is_assignable<T&, Value>)
+   [[nodiscard]]
+   constexpr auto
+   update(allocator_ref<Allocator> allocator, Key&& key, Value&& value) const
+      -> maybe<void> {
+      return m_p_map->update(allocator, move(key), $fwd(value));
+   }
+
+   template <typename Value>
+      requires(is_constructible<T, Value> && is_assignable<T&, Value>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   update(allocator_dyn allocator, Key const& key, Value&& value) const
+      -> maybe<void> {
+      return update<allocator_dyn>(allocator, key, $fwd(value));
+   }
+
+   template <typename Value>
+      requires(is_constructible<T, Value> && is_assignable<T&, Value>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   update(allocator_dyn allocator, Key&& key, Value&& value) const
+      -> maybe<void> {
+      return update<allocator_dyn>(allocator, move(key), $fwd(value));
    }
 
    constexpr auto

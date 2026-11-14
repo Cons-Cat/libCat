@@ -11,6 +11,9 @@ struct drop_last_while_view_impl : iterable_interface<> {
    Base m_base;
    Callback m_callback;
 
+   // This works around limitation in recursive `concept`s.
+   static constexpr bool is_borrowing_view = !is_view_owned<Base>;
+
  private:
    template <is_collection Collection, typename Predicate>
    static constexpr auto
@@ -44,33 +47,37 @@ struct drop_last_while_view_impl : iterable_interface<> {
       }
    }
 
- public:
-   constexpr auto
-   iterate() {
-      auto& collection = unwrap_ref(m_base);
+   template <typename Collection, typename Predicate>
+   static constexpr auto
+   make_context(
+      Collection& collection [[clang::lifetimebound]], Predicate& predicate
+   ) {
       using collection_type = typeof(collection);
       return collection_iteration_context<collection_type>{
          __builtin_addressof(collection),
          begin_pos(collection),
-         suffix_begin(collection, m_callback),
+         suffix_begin(collection, predicate),
       };
    }
 
+ public:
    constexpr auto
-   iterate() const
+   iterate(this auto&& self [[clang::lifetimebound]])
       requires(
-         is_collection<decltype(unwrap_ref(m_base))>
+         is_view_owned<Base> && is_collection<decltype(unwrap_ref(self.m_base))>
          && is_predicate<
-            Callback const, iterable_element_type<decltype(unwrap_ref(m_base))>>
+            Callback const,
+            iterable_element_type<decltype(unwrap_ref(self.m_base))>>
       )
    {
-      auto& collection = unwrap_ref(m_base);
-      using collection_type = typeof(collection);
-      return collection_iteration_context<collection_type>{
-         __builtin_addressof(collection),
-         begin_pos(collection),
-         suffix_begin(collection, m_callback),
-      };
+      return make_context(unwrap_ref(self.m_base), self.m_callback);
+   }
+
+   constexpr auto
+   iterate(this drop_last_while_view_impl self [[clang::lifetimebound]])
+      requires(!is_view_owned<Base>)
+   {
+      return make_context(unwrap_ref(self.m_base), self.m_callback);
    }
 };
 

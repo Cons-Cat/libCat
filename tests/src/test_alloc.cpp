@@ -195,12 +195,16 @@ $test(alloc_uninit_family) {
    allocator.free_uninit(p_scalar_storage);
    cat::verify(live == 0u);
 
+   // Releasing storage after destroying its object only uses its address.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-experimental-invalidation"
    auto* p_aligned_storage =
       allocator.align_xalloc_uninit<alloc_uninit_lifetime>(16u);
    cat::verify(cat::is_aligned(p_aligned_storage, 16u));
    new (p_aligned_storage) alloc_uninit_lifetime(live);
    p_aligned_storage->~alloc_uninit_lifetime();
    allocator.free_uninit(p_aligned_storage);
+#pragma clang diagnostic pop
    cat::verify(live == 0u);
 
    auto [inline_scalar, inline_bytes] =

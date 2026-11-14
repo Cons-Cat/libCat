@@ -28,9 +28,9 @@
 // only model < (without a native <=>) still order lexicographically. The
 // implementations live out-of-line in `implementations/span.tpp`.
 //
-// `cat::span` is `[[clang::trivial_abi]]` so it passes in registers, and
-// `[[gsl::Pointer(T)]]` so it participates in Clang's lifetime analysis. It
+// `cat::span` is `[[clang::trivial_abi]]` so it passes in registers. It
 // matches the ABI of `nix::io_vector` for trivial syscall compatibility.
+// TODO: A policy for matching Windows' `WSABUF`?
 
 #include <cat/detail/compact.hpp>
 
@@ -106,7 +106,11 @@ span
 
    template <__SIZE_TYPE__ length>
       requires(fixed_extent == dynamic_extent || length == fixed_extent)
-   constexpr span(T (&array)[length]) : m_p_data(array), m_size(length) {
+
+   constexpr span(T (
+      &array [[clang::lifetimebound]]
+   )[length])
+       : m_p_data(array), m_size(length) {
    }
 
    // Implicitly convert a contiguous container into a span. `const`-correctness
@@ -154,8 +158,8 @@ span
    template <typename U>
       requires(!is_lvalue_reference<U> && !detail::is_span<remove_cvref<U>>)
    constexpr span(U&& container) =
-      delete ("A `cat::span` cannot alias a temporary, because the span would "
-              "immediately dangle!");
+      delete ("A `cat::span` cannot alias a temporary! It would immediately "
+              "dangle.");
 
    constexpr auto
    operator=(span<T, fixed_extent> const&) -> span<T, fixed_extent>& = default;
@@ -196,36 +200,14 @@ span
       return *this;
    }
 
-   // Implicitly convert a contiguous container into a span. `const`-correctness
-   // is managed by the deduction guides below.
-   template <is_random_access U>
-   auto
-   operator=(U& container
-             [[clang::lifetimebound]]) noexcept(!__has_feature(cxx_exceptions))
-      -> span<T, fixed_extent>&
-      requires(
-         !detail::is_span<remove_cv<U>>
-         && is_convertible<
-            remove_pointer<decltype(declval<U&>().data())> (*_Nonnull)[],
-            T (*_Nonnull)[]>
-      )
-   {
-      if constexpr (fixed_extent != dynamic_extent) {
-         assert(container.size() == fixed_extent);
-      }
-      m_p_data = container.data();
-      m_size = container.size();
-      return *this;
-   }
-
    // Only reject temporaries. Spans are assigned through the converting
    // constructor.
    template <typename U>
       requires(!is_lvalue_reference<U> && !detail::is_span<remove_cvref<U>>)
    auto
    operator=(U&& container) =
-      delete ("A `cat::span` cannot alias a temporary, because the span would "
-              "immediately dangle.");
+      delete ("A `cat::span` cannot alias a temporary! It would immediately "
+              "dangle.");
 
    constexpr void
    swap(span& other) {
@@ -236,15 +218,118 @@ span
    // Returns `nullptr` when this `span` is default-constructed (empty).
    [[nodiscard]]
    constexpr auto
-   data() noexcept -> T* _Nullable {
+   data() const noexcept -> T* _Nullable {
       return m_p_data;
    }
 
-   // Returns `nullptr` when this `span` is default-constructed (empty).
+   template <typename = void>
    [[nodiscard]]
    constexpr auto
-   data() const noexcept -> T const* _Nullable {
-      return m_p_data;
+   operator[](this span self [[clang::lifetimebound]], idx index) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> T& {
+      // This shadows the inherited implementation with shallow-`const`
+      // semantics instead. This is a template so it doesn't hide the bounds
+      // checking overload.
+      assert(index < self.size());
+      return self.data()[index];
+   }
+
+   // A constant subscript that is out of constant bounds is an error.
+   template <typename = void>
+   constexpr void
+   operator[](
+      idx index
+   ) const& __attribute__((enable_if(index >= fixed_extent, ""))) {
+      static_assert(false, "Index is out of bounds!");
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   at(this span self [[clang::lifetimebound]], idx index) noexcept
+      -> maybe<T&> {
+      if (index < self.size()) {
+         return self.data()[index];
+      }
+      return nullopt;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   front(this span self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> T& {
+      cat::assert(self.size() > 0u);
+      return self.data()[0];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   back(this span self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> T& {
+      cat::assert(self.size() > 0u);
+      return self.data()[self.size().raw - 1u];
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   begin(this auto&& self) {
+      // This shadows the inherited implementation with shallow-`const`
+      // semantics instead.
+      return detail::container_stepanov_iterator(0u, self.data());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end(this auto&& self) {
+      auto* _Nonnull p_data = self.data();
+      return detail::container_stepanov_iterator(self.size(), p_data);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   rbegin(this auto&& self) noexcept(false) {
+      // `rbegin` is only valid on non-empty spans. `assert` enforces
+      // `size >= 1` so `size - 1u` does not wrap in unsigned arithmetic.
+      cat::assert(self.size() > 0u);
+      idx const last{self.size().raw - 1u};
+      auto* _Nonnull p_data = self.data();
+      return reverse_proxy_stepanov_iterator(
+         detail::container_stepanov_iterator(last, p_data)
+      );
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   rend(this auto&& self) {
+      return reverse_proxy_stepanov_iterator(
+         detail::container_stepanov_iterator(0, self.data())
+      );
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   cbegin() const {
+      return begin();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   cend() const {
+      return end();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   crbegin() const {
+      return rbegin();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   crend() const {
+      return rend();
    }
 
    // Get the number of elements owned by this `span`.
@@ -465,7 +550,7 @@ span(T const&) -> span<typename T::value_type const>;
 template <typename T, idx fixed_extent>
 [[nodiscard]]
 auto
-as_bytes(span<T, fixed_extent> source) noexcept(
+as_bytes(span<T, fixed_extent> source [[clang::lifetimebound]]) noexcept(
    !__has_feature(cxx_exceptions)
 ) {
    constexpr idx result_extent = (fixed_extent == dynamic_extent)
@@ -484,9 +569,9 @@ template <typename T, idx fixed_extent>
    requires(!is_const<T>)
 [[nodiscard]]
 auto
-as_writable_bytes(span<T, fixed_extent> source) noexcept(
-   !__has_feature(cxx_exceptions)
-) {
+as_writable_bytes(
+   span<T, fixed_extent> source [[clang::lifetimebound]]
+) noexcept(!__has_feature(cxx_exceptions)) {
    constexpr idx result_extent = (fixed_extent == dynamic_extent)
                                     ? dynamic_extent
                                     : fixed_extent * sizeof(T);
@@ -590,7 +675,7 @@ constexpr auto
 is_pointer_in_range(T const* _Nullable p_pointer, span<U> const range) noexcept
    -> bool {
    static_assert(
-      !is_function<T>, "`is_pointer_in_range` does not accept function types."
+      !is_function<T>, "`is_pointer_in_range` does not accept function types!"
    );
 
    if (p_pointer == nullptr) {

@@ -326,7 +326,7 @@ basic_forward_list
    // Return iterator to the first element.
    [[nodiscard]]
    constexpr auto
-   begin() -> iterator {
+   begin() [[clang::lifetimebound]] -> iterator {
       return m_core.begin();
    }
 

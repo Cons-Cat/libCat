@@ -41,6 +41,11 @@ namespace cat {
 // underlying allocator hooks. Allocator implementations should `friend` this
 // type. If the allocator's members are `public`, that is not required.
 struct allocator_dyn_friend {
+   // Only some allocators' storage borrows `self`, such as
+   // `allocator_inplace`'s.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-intra-tu-suggestions"
+
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    static auto
@@ -48,6 +53,8 @@ struct allocator_dyn_friend {
       -> decltype(self.allocate(allocation_bytes)) {
       return self.allocate(allocation_bytes);
    }
+
+#pragma clang diagnostic pop
 
    template <typename T>
    [[gnu::always_inline, gnu::nodebug, clang::ownership_takes(libcat, 2)]]
@@ -880,6 +887,13 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
    // storage lets this stay non-const-correct in the same way the raw
    // `Allocator*`-through-const-pointer access did before, so const methods
    // on the ref can still reach non-const allocator methods.
+   //
+   // The result is the referenced allocator, which outlives this ref, so
+   // `[[clang::lifetimebound]]` would flag valid code like
+   // `return allocator_ref.get_allocator();`.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-intra-tu-suggestions"
+
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    get_allocator() const -> Allocator& {
@@ -889,6 +903,8 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
          return *m_storage;
       }
    }
+
+#pragma clang diagnostic pop
 
  private:
    [[gnu::always_inline, gnu::nodebug]]

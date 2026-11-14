@@ -10,6 +10,9 @@ template <typename Base>
 struct as_rvalue_view_impl : iterable_interface<> {
    Base m_base;
 
+   // This works around limitation in recursive `concept`s.
+   static constexpr bool is_borrowing_view = !is_view_owned<Base>;
+
    template <typename BaseContext>
    struct context_type {
       BaseContext incoming_context;
@@ -29,44 +32,40 @@ struct as_rvalue_view_impl : iterable_interface<> {
    };
 
    constexpr auto
-   iterate() {
-      using incoming_iteration_context_type =
-         iterable_iteration_context_type<Base>;
-      return context_type<incoming_iteration_context_type>{
-         cat::iterate(m_base)
+   iterate(this auto&& self [[clang::lifetimebound]])
+      requires(is_view_owned<Base> && is_iterable<decltype((self.m_base))>)
+   {
+      return context_type<decltype(cat::iterate(self.m_base))>{
+         cat::iterate(self.m_base)
       };
    }
 
    constexpr auto
-   iterate() const
-      requires(is_iterable<Base const>)
+   iterate(this as_rvalue_view_impl self [[clang::lifetimebound]])
+      requires(!is_view_owned<Base>)
    {
-      using incoming_iteration_context_type =
-         iterable_iteration_context_type<Base const>;
-      return context_type<incoming_iteration_context_type>{
-         cat::iterate(m_base)
+      return context_type<decltype(cat::iterate(self.m_base))>{
+         cat::iterate(self.m_base)
       };
    }
 
    constexpr auto
-   reverse_iterate()
-      requires(is_reverse_iterable<Base>)
+   reverse_iterate(this auto&& self [[clang::lifetimebound]])
+      requires(
+         is_view_owned<Base> && is_reverse_iterable<decltype((self.m_base))>
+      )
    {
-      using incoming_iteration_context_type =
-         decltype(cat::reverse_iterate(m_base));
-      return context_type<incoming_iteration_context_type>{
-         cat::reverse_iterate(m_base)
+      return context_type<decltype(cat::reverse_iterate(self.m_base))>{
+         cat::reverse_iterate(self.m_base)
       };
    }
 
    constexpr auto
-   reverse_iterate() const
-      requires(is_reverse_iterable<Base const>)
+   reverse_iterate(this as_rvalue_view_impl self [[clang::lifetimebound]])
+      requires(!is_view_owned<Base> && is_reverse_iterable<Base>)
    {
-      using incoming_iteration_context_type =
-         decltype(cat::reverse_iterate(m_base));
-      return context_type<incoming_iteration_context_type>{
-         cat::reverse_iterate(m_base)
+      return context_type<decltype(cat::reverse_iterate(self.m_base))>{
+         cat::reverse_iterate(self.m_base)
       };
    }
 };

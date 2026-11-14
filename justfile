@@ -481,6 +481,8 @@ test *args:
             add_test_selector GdbPrettyPrinters; shift ;; \
           arithmetic|arithmetictypecheck) \
             add_test_selector ArithmeticTypeCheck; shift ;; \
+          safety|safetytypecheck) \
+            add_test_selector 'SafetyTypeCheck_.*'; shift ;; \
           runtime|runtimetests) \
             add_test_selector RuntimeTests; shift ;; \
           rng|randommatrixtests) \
@@ -488,7 +490,7 @@ test *args:
           full) full="true"; shift ;; \
           list) list="true"; shift ;; \
           *) printf '%s\n' "just test: unknown option '$arg'!" >&2; \
-             printf '%s\n' "options: unit, gdb, arithmetic, runtime, rng, full, list, san, nosan, asan, noasan, ubsan, noubsan, tsan, notsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
+             printf '%s\n' "options: unit, gdb, arithmetic, safety, runtime, rng, full, list, san, nosan, asan, noasan, ubsan, noubsan, tsan, notsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
              exit 1 ;; \
         esac; \
       done; \
@@ -506,6 +508,7 @@ test *args:
       if [ "$full" = "false" ] && [ -z "$tests" ]; then tests="UnitTests"; fi; \
       regex=""; \
       if [ "$full" = "false" ]; then \
+        set -f; \
         for test_name in $tests; do \
           regex="${regex:+$regex|}$test_name"; \
         done; \

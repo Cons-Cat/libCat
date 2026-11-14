@@ -98,13 +98,15 @@ class piecewise_linear_distribution {
 
       [[nodiscard]]
       constexpr auto
-      boundaries() const noexcept -> span<scalar_type const> {
+      boundaries() const noexcept [[clang::lifetimebound]]
+      -> span<scalar_type const> {
          return {m_boundaries.data(), m_boundary_count};
       }
 
       [[nodiscard]]
       constexpr auto
-      densities() const noexcept -> span<scalar_type const> {
+      densities() const noexcept [[clang::lifetimebound]]
+      -> span<scalar_type const> {
          return {m_densities.data(), m_boundary_count};
       }
 
@@ -260,13 +262,15 @@ class piecewise_linear_distribution {
 
    [[nodiscard]]
    constexpr auto
-   boundaries() const noexcept -> span<scalar_type const> {
+   boundaries() const noexcept [[clang::lifetimebound]]
+   -> span<scalar_type const> {
       return m_parameters.boundaries();
    }
 
    [[nodiscard]]
    constexpr auto
-   densities() const noexcept -> span<scalar_type const> {
+   densities() const noexcept [[clang::lifetimebound]]
+   -> span<scalar_type const> {
       return m_parameters.densities();
    }
 

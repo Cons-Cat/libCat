@@ -310,41 +310,86 @@ class [[gsl::Owner]] map_base {
       return found.entry().second();
    }
 
-   template <is_allocator Allocator>
+   // Insert an entry for `key` iff `key` has not been inserted previously. The
+   // returned `maybe` is empty iff `key` was already present or allocation
+   // failed.
+
+   template <is_allocator Allocator, typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
    [[nodiscard]]
    constexpr auto
-   insert(allocator_ref<Allocator> allocator, Key key, T value) -> maybe<void> {
-      uint8 const hash = m_hash(key);
-      if (find(key, hash).is_found()) {
-         return nullopt;
-      }
-      return insert_new(allocator, hash, move(key), move(value));
+   insert(
+      allocator_ref<Allocator> allocator, Key const& key,
+      Arguments&&... arguments
+   ) -> maybe<void> {
+      return insert_impl(allocator, key, $fwd(arguments)...);
    }
 
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   insert(allocator_dyn allocator, Key key, T value) -> maybe<void> {
-      return insert<allocator_dyn>(allocator, move(key), move(value));
-   }
-
-   // The returned `maybe` is empty iff allocation failed.
-   template <is_allocator Allocator>
+   template <is_allocator Allocator, typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
    [[nodiscard]]
    constexpr auto
-   update(allocator_ref<Allocator> allocator, Key key, T value) -> maybe<void> {
-      uint8 const hash = m_hash(key);
-      auto const found = find(key, hash);
-      if (found.is_found()) {
-         found.entry().second() = move(value);
-         return monostate;
-      }
-      return insert_new(allocator, hash, move(key), move(value));
+   insert(
+      allocator_ref<Allocator> allocator, Key&& key, Arguments&&... arguments
+   ) -> maybe<void> {
+      return insert_impl(allocator, move(key), $fwd(arguments)...);
    }
 
+   template <typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   update(allocator_dyn allocator, Key key, T value) -> maybe<void> {
-      return update<allocator_dyn>(allocator, move(key), move(value));
+   insert(allocator_dyn allocator, Key const& key, Arguments&&... arguments)
+      -> maybe<void> {
+      return insert<allocator_dyn>(allocator, key, $fwd(arguments)...);
+   }
+
+   template <typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(allocator_dyn allocator, Key&& key, Arguments&&... arguments)
+      -> maybe<void> {
+      return insert<allocator_dyn>(allocator, move(key), $fwd(arguments)...);
+   }
+
+   // Insert an entry for `key` iff `key` has not been inserted previously,
+   // otherwise assign `value` to its value. The returned `maybe` is empty iff
+   // allocation failed.
+
+   template <is_allocator Allocator, typename Value>
+      requires(is_constructible<T, Value> && is_assignable<T&, Value>)
+   [[nodiscard]]
+   constexpr auto
+   update(allocator_ref<Allocator> allocator, Key const& key, Value&& value)
+      -> maybe<void> {
+      return update_impl(allocator, key, $fwd(value));
+   }
+
+   template <is_allocator Allocator, typename Value>
+      requires(is_constructible<T, Value> && is_assignable<T&, Value>)
+   [[nodiscard]]
+   constexpr auto
+   update(allocator_ref<Allocator> allocator, Key&& key, Value&& value)
+      -> maybe<void> {
+      return update_impl(allocator, move(key), $fwd(value));
+   }
+
+   template <typename Value>
+      requires(is_constructible<T, Value> && is_assignable<T&, Value>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   update(allocator_dyn allocator, Key const& key, Value&& value)
+      -> maybe<void> {
+      return update<allocator_dyn>(allocator, key, $fwd(value));
+   }
+
+   template <typename Value>
+      requires(is_constructible<T, Value> && is_assignable<T&, Value>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   update(allocator_dyn allocator, Key&& key, Value&& value) -> maybe<void> {
+      return update<allocator_dyn>(allocator, move(key), $fwd(value));
    }
 
    constexpr auto
@@ -354,6 +399,7 @@ class [[gsl::Owner]] map_base {
          return nullopt;
       }
       group_type& group = *found.p_group;
+
       // If this entry's hash could have pushed another entry past this group,
       // lower the maximum load so that repeatedly inserting and removing cannot
       // make probe sequences grow unboundedly.
@@ -364,6 +410,7 @@ class [[gsl::Owner]] map_base {
       ) {
          m_max_load = idx(m_max_load - 1u);
       }
+
       found.entry().~tuple();
       group.metadata.set_lane(found.slot, 0u);
       m_size = idx(m_size - 1u);
@@ -581,11 +628,44 @@ class [[gsl::Owner]] map_base {
       return result{};
    }
 
+   // `KeyArgument` is `Key const&` or `Key`.
+   template <
+      is_allocator Allocator, typename KeyArgument, typename... Arguments>
+   [[nodiscard]]
+   constexpr auto
+   insert_impl(
+      allocator_ref<Allocator> allocator, KeyArgument&& key,
+      Arguments&&... arguments
+   ) -> maybe<void> {
+      uint8 const hash = m_hash(key);
+      if (find(key, hash).is_found()) {
+         return nullopt;
+      }
+      return insert_new(allocator, hash, $fwd(key), $fwd(arguments)...);
+   }
+
+   // `KeyArgument` is `Key const&` or `Key`.
+   template <is_allocator Allocator, typename KeyArgument, typename Value>
+   [[nodiscard]]
+   constexpr auto
+   update_impl(
+      allocator_ref<Allocator> allocator, KeyArgument&& key, Value&& value
+   ) -> maybe<void> {
+      uint8 const hash = m_hash(key);
+      auto const found = find(key, hash);
+      if (found.is_found()) {
+         found.entry().second() = $fwd(value);
+         return monostate;
+      }
+      return insert_new(allocator, hash, $fwd(key), $fwd(value));
+   }
+
    // Construct an entry in the first empty slot along its probe sequence. The
    // caller guarantees that `key` is not present and the load is below
    // `m_max_load`, so an empty slot exists.
+   template <typename KeyArgument, typename... Arguments>
    constexpr void
-   place(uint8 hash, Key&& key, T&& value) {
+   place(uint8 hash, KeyArgument&& key, Arguments&&... arguments) {
       uint1 const reduced = detail::map_reduced_hash(hash);
       detail::map_prober probe(hash, m_groups_size_index, m_groups_size_mask);
 
@@ -596,7 +676,7 @@ class [[gsl::Owner]] map_base {
          if (empty.any_of()) {
             idx const i = empty.countr_zero();
             new (&group.map_slots[i].value)
-               tuple<Key, T>(make_tuple(move(key), move(value)));
+               tuple<Key, T>{$fwd(key), T($fwd(arguments)...)};
 
             group.metadata.set_lane(i, reduced);
             return;
@@ -615,16 +695,18 @@ class [[gsl::Owner]] map_base {
 
    // Add an entry for a `key` that is not present, growing if the map is at
    // its maximum load.
-   template <is_allocator Allocator>
+   template <
+      is_allocator Allocator, typename KeyArgument, typename... Arguments>
    [[nodiscard]]
    constexpr auto
    insert_new(
-      allocator_ref<Allocator> allocator, uint8 hash, Key&& key, T&& value
+      allocator_ref<Allocator> allocator, uint8 hash, KeyArgument&& key,
+      Arguments&&... arguments
    ) -> maybe<void> {
       if (m_size < m_max_load) {
-         place(hash, move(key), move(value));
+         place(hash, $fwd(key), $fwd(arguments)...);
       } else {
-         $prop(grow(allocator, hash, move(key), move(value)));
+         $prop(grow(allocator, hash, $fwd(key), $fwd(arguments)...));
       }
 
       ++m_size;
@@ -714,11 +796,14 @@ class [[gsl::Owner]] map_base {
 
    // Place the new entry in larger groups, then move every existing entry into
    // them.
-   template <is_allocator Allocator>
+   template <
+      is_allocator Allocator, typename KeyArgument, typename... Arguments>
    [[nodiscard]]
    constexpr auto
-   grow(allocator_ref<Allocator> allocator, uint8 hash, Key&& key, T&& value)
-      -> maybe<void> {
+   grow(
+      allocator_ref<Allocator> allocator, uint8 hash, KeyArgument&& key,
+      Arguments&&... arguments
+   ) -> maybe<void> {
       // Make room for one more entry at the maximum load factor. The extra 1/61
       // of `m_size` keeps anti-drift from bringing the table back to its
       // current size.
@@ -732,7 +817,7 @@ class [[gsl::Owner]] map_base {
       detail::exception_defer guard([&] {
          swap_groups(move(old_groups)).free(allocator);
       });
-      place(hash, move(key), move(value));
+      place(hash, $fwd(key), $fwd(arguments)...);
       guard.commit();
       move_entries_from(allocator, move(old_groups));
       return monostate;

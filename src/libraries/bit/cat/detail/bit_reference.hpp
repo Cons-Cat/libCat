@@ -31,7 +31,7 @@ class bit_reference {
    constexpr bit_reference(bit_reference<Storage> const&) = default;
    constexpr bit_reference(bit_reference<Storage>&&) = default;
 
-   constexpr bit_reference(bit_value& other) noexcept
+   constexpr bit_reference(bit_value& other [[clang::lifetimebound]]) noexcept
        : m_p_storage(addressof(detail::get_bit_value(other))), m_bit_mask(1u) {
    }
 
@@ -131,7 +131,7 @@ class bit_reference {
 
    // Flag this bit as the opposite of its current state.
    constexpr auto
-   flip() noexcept -> bit_reference& {
+   flip() noexcept [[clang::lifetimebound]] -> bit_reference& {
       *m_p_storage ^= m_bit_mask;
       return *this;
    }
@@ -231,9 +231,9 @@ swap(bit_reference<Storage> left, bit_reference<Storage> right) noexcept {
 
 template <is_unsigned_integral Storage, is_unsigned_integral Mask>
 constexpr auto
-make_bit_reference_from_mask(Storage& reference, Mask mask) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> bit_reference<Storage> {
+make_bit_reference_from_mask(
+   Storage& reference [[clang::lifetimebound]], Mask mask
+) noexcept(!__has_feature(cxx_exceptions)) -> bit_reference<Storage> {
    return bit_reference<Storage>(reference, Storage(mask));
 }
 

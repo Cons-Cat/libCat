@@ -452,7 +452,7 @@ class
    }
 
    constexpr auto
-   fill(remove_const<CharT> value) -> basic_str_span&
+   fill(remove_const<CharT> value) [[clang::lifetimebound]] -> basic_str_span&
       requires(!is_const<CharT>)
    {
       idx const content_size =

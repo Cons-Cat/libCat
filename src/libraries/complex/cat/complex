@@ -992,7 +992,7 @@ class complex_parts {
       requires(index.raw < 2u)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   get(this Self&& self) noexcept -> auto&& {
+   get(this Self&& self [[clang::lifetimebound]]) noexcept -> auto&& {
       if constexpr (index.raw == 0u) {
          return $fwd(self).m_real;
       } else {
@@ -1003,7 +1003,7 @@ class complex_parts {
  private:
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   self() const noexcept -> Derived const& {
+   self() const noexcept [[clang::lifetimebound]] -> Derived const& {
       return static_cast<Derived const&>(*this);
    }
 

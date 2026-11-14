@@ -1641,3 +1641,551 @@ $test(maybe_void_comparison) {
 
 static_assert(cat::is_nothrow_default_constructible<cat::maybe<int4>>);
 static_assert(cat::is_nothrow_default_constructible<cat::maybe<void>>);
+
+inline int4 g_maybe_ptr_sentinel_target = 0;
+
+struct maybe_incomplete_type;
+
+static_assert(!cat::detail::is_pointer_maybe<maybe_incomplete_type>);
+static_assert(cat::detail::is_pointer_maybe<maybe_incomplete_type*>);
+static_assert(
+   cat::detail::is_pointer_maybe<cat::sentinel<maybe_incomplete_type*, nullptr>>
+);
+
+struct maybe_incomplete_holder {
+   cat::maybe<maybe_incomplete_type*> plain_ptr;
+   cat::maybe_ptr<maybe_incomplete_type> compact_ptr;
+};
+
+namespace {
+
+using non_null_niche_ptr_maybe =
+   cat::maybe<cat::sentinel<int4*, &g_maybe_ptr_sentinel_target>>;
+
+struct maybe_ptr_base_item {
+   int4 base_value = 10;
+};
+
+struct maybe_ptr_derived_item : maybe_ptr_base_item {
+   int4 derived_value = 20;
+};
+
+constinit cat::idx g_maybe_handler_hits{};
+
+void
+counting_maybe_assert_handler(cat::source_location const& /*unused*/) {
+   ++g_maybe_handler_hits;
+}
+
+#if __has_feature(cxx_exceptions)
+struct maybe_assert_thrown {};
+
+void
+throwing_maybe_assert_handler(cat::source_location const& /*unused*/) {
+   throw maybe_assert_thrown{};
+}
+#endif
+
+auto
+make_temp_maybe_ref(int4& target [[clang::lifetimebound]])
+   -> cat::maybe<int4&> {
+   return target;
+}
+
+auto
+make_temp_plain_ptr_maybe(int4* p_target [[clang::lifetimebound]])
+   -> cat::maybe<int4*> {
+   return p_target;
+}
+
+auto
+make_temp_maybe_ptr(int4* p_target [[clang::lifetimebound]])
+   -> cat::maybe_ptr<int4> {
+   return p_target;
+}
+
+auto
+make_temp_sentinel_ptr_maybe(int4* p_target [[clang::lifetimebound]])
+   -> non_null_niche_ptr_maybe {
+   return p_target;
+}
+
+}  // namespace
+
+// `maybe<T&>` observers (`assert`, `verify`, `data`, `begin`, `end`),
+// shallow-`const`, `match`, `or_else`, and temporary unwrapping without
+// `-Wdangling`.
+$test(maybe_reference_observers_and_lifetime) {
+   g_maybe_handler_hits = 0u;
+
+   int4 referent = 12;
+   cat::maybe<int4&> ref = referent;
+
+   cat::verify(&ref.assert() == &referent);
+   cat::verify(&ref.assert(&counting_maybe_assert_handler) == &referent);
+   cat::verify(&ref.verify() == &referent);
+   cat::verify(&ref.verify(&counting_maybe_assert_handler) == &referent);
+   cat::verify(g_maybe_handler_hits == 0u);
+
+   ref.assert() = 15;
+   cat::verify(referent == 15);
+   ref.verify(&counting_maybe_assert_handler) = 18;
+   cat::verify(referent == 18);
+
+   // Disengaged `data()`, `begin()`, and `end()` all yield `nullptr`, and
+   // range-for executes zero iterations.
+   cat::maybe<int4&> empty_ref;
+   cat::verify(empty_ref.data() == nullptr);
+   cat::verify(empty_ref.begin() == nullptr);
+   cat::verify(empty_ref.end() == nullptr);
+   cat::verify(empty_ref.end() - empty_ref.begin() == 0);
+
+   int4 iterations = 0;
+   for (int4& element : empty_ref) {
+      element = 99;
+      ++iterations;
+   }
+   cat::verify(iterations == 0);
+
+   // `maybe<T&>` is shallow-`const`: observers still yield mutable `T&` /
+   // `T*`.
+   cat::maybe<int4&> const const_ref = referent;
+   static_assert(cat::is_same<decltype(const_ref.value()), int4&>);
+   static_assert(cat::is_same<decltype(const_ref.get_ptr()), int4* _Nullable>);
+   static_assert(cat::is_same<decltype(const_ref.data()), int4* _Nullable>);
+   static_assert(cat::is_same<decltype(const_ref.begin()), int4* _Nullable>);
+   static_assert(cat::is_same<decltype(const_ref.end()), int4* _Nullable>);
+   static_assert(cat::is_same<decltype(const_ref.assert()), int4&>);
+   static_assert(cat::is_same<decltype(const_ref.verify()), int4&>);
+
+   const_ref.value() = 21;
+   cat::verify(referent == 21);
+   *const_ref.get_ptr() = 22;
+   cat::verify(referent == 22);
+   const_ref.verify() = 23;
+   cat::verify(referent == 23);
+
+   // Temporary unwrapping into local references/pointers must not trigger
+   // `-Wdangling`.
+   int4 items[2] = {40, 50};
+   cat::span<int4> view{items, 2u};
+   int4& from_span_verify = view.at(0u).verify();
+   int4& from_span_verify_h =
+      view.at(0u).verify(&counting_maybe_assert_handler);
+   int4& from_span_assert = view.at(1u).assert();
+   int4& from_span_assert_h =
+      view.at(1u).assert(&counting_maybe_assert_handler);
+   int4& from_fn_value = make_temp_maybe_ref(referent).value();
+   int4* p_from_temp_ptr = make_temp_maybe_ref(referent).get_ptr();
+   int4* p_from_temp_data = make_temp_maybe_ref(referent).data();
+   int4* p_from_temp_begin = make_temp_maybe_ref(referent).begin();
+   int4* p_from_temp_end = make_temp_maybe_ref(referent).end();
+
+   cat::verify(&from_span_verify == &items[0]);
+   cat::verify(&from_span_verify_h == &items[0]);
+   cat::verify(&from_span_assert == &items[1]);
+   cat::verify(&from_span_assert_h == &items[1]);
+   cat::verify(&from_fn_value == &referent);
+   cat::verify(p_from_temp_ptr == &referent);
+   cat::verify(p_from_temp_data == &referent);
+   cat::verify(p_from_temp_begin == &referent);
+   cat::verify(p_from_temp_end == &referent + 1);
+   cat::verify(g_maybe_handler_hits == 0u);
+
+   // `match()` and `or_else()` on `maybe<T&>`.
+   bool matched_ref = false;
+   ref.match(
+      is_a(cat::nullopt).then_do([&] {
+         cat::exit(1);
+      }),
+      is_a(23).then_do([&] {
+         matched_ref = true;
+      })
+   );
+   cat::verify(matched_ref);
+
+   bool matched_empty = false;
+   empty_ref.match(is_a(cat::nullopt).then_do([&] {
+      matched_empty = true;
+   }));
+   cat::verify(matched_empty);
+
+   int4 fallback_referent = 77;
+   cat::maybe<int4&> kept = ref.or_else([&]() -> cat::maybe<int4&> {
+      return fallback_referent;
+   });
+   cat::verify(&kept.value() == &referent);
+
+   cat::maybe<int4&> recovered = empty_ref.or_else([&]() -> cat::maybe<int4&> {
+      return fallback_referent;
+   });
+   cat::verify(&recovered.value() == &fallback_referent);
+
+   // `maybe<void>` 2-arg handler overloads on disengaged state.
+   cat::maybe<void> empty_void;
+   empty_void.verify(&counting_maybe_assert_handler);
+   cat::verify(g_maybe_handler_hits == 1u);
+#ifndef NDEBUG
+   empty_void.assert(&counting_maybe_assert_handler);
+   cat::verify(g_maybe_handler_hits == 2u);
+#endif
+
+#if __has_feature(cxx_exceptions)
+   bool caught_verify = false;
+   try {
+      auto _ = empty_ref.verify(&throwing_maybe_assert_handler);
+   } catch (maybe_assert_thrown const&) {
+      caught_verify = true;
+   }
+   cat::verify(caught_verify);
+
+#ifndef NDEBUG
+   bool caught_assert = false;
+   try {
+      auto _ = empty_ref.assert(&throwing_maybe_assert_handler);
+   } catch (maybe_assert_thrown const&) {
+      caught_assert = true;
+   }
+   cat::verify(caught_assert);
+#endif
+#endif
+}
+
+// Plain `maybe<T*>` (`!uses_compact_storage`), compact `maybe_ptr<T>`
+// (`uses_compact_storage && is_nonnull`), and non-`nullptr`-niche compact
+// pointer `maybe<sentinel<T*, &target>>` (`uses_compact_storage &&
+// !is_nonnull`).
+$test(maybe_pointer_specializations) {
+   g_maybe_handler_hits = 0u;
+   int4 target = 64;
+
+   // ----- 1. Plain `maybe<int4*>` (`!uses_compact_storage`) -----
+   static_assert(sizeof(cat::maybe<int4*>) > sizeof(int4*));
+   cat::maybe<int4*> plain_empty;
+   cat::verify(plain_empty.is_empty());
+   cat::verify(plain_empty.get_ptr() == nullptr);
+   cat::verify(plain_empty.data() == nullptr);
+
+   // `nullptr` engages a plain `maybe<int4*>`, distinct from `nullopt`.
+   cat::maybe<int4*> plain_null = nullptr;
+   cat::verify(plain_null.has_value());
+   cat::verify(plain_null.value() == nullptr);
+   cat::verify(plain_null.get_ptr() == nullptr);
+   cat::verify(plain_null.assert() == nullptr);
+   cat::verify(plain_null.verify(&counting_maybe_assert_handler) == nullptr);
+
+   int4 fallback = 99;
+   int4* p_local = &target;
+   cat::maybe<int4*> plain_engaged = p_local;
+   cat::verify(plain_engaged.has_value());
+   cat::verify(plain_engaged.value() == &target);
+   cat::verify(plain_engaged.get_ptr() == &target);
+   cat::verify(plain_engaged.value_or(&fallback) == &target);
+   cat::verify(plain_empty.value_or(&fallback) == &fallback);
+   cat::verify(plain_engaged.assert() == &target);
+   cat::verify(plain_engaged.assert(&counting_maybe_assert_handler) == &target);
+   cat::verify(plain_engaged.verify() == &target);
+   cat::verify(plain_engaged.verify(&counting_maybe_assert_handler) == &target);
+
+   // `.data()`, `.begin()`, and `.end()` point at the stored pointer inside the
+   // `maybe<int4*>`, not the pointee.
+   static_assert(cat::is_same<decltype(plain_engaged.data()), int4**>);
+   cat::verify(plain_engaged.data() != nullptr);
+   cat::verify(*plain_engaged.data() == &target);
+   cat::verify(plain_engaged.end() - plain_engaged.begin() == 1);
+
+   plain_engaged = cat::nullopt;
+   cat::verify(plain_engaged.is_empty());
+   cat::verify(plain_engaged.get_ptr() == nullptr);
+
+   // ----- 2. Non-`nullptr`-niche compact pointer `maybe` -----
+   static_assert(sizeof(non_null_niche_ptr_maybe) == sizeof(int4*));
+   non_null_niche_ptr_maybe custom_empty;
+   cat::verify(custom_empty.is_empty());
+   cat::verify(custom_empty.get_ptr() == nullptr);
+
+   // `nullptr` is not the sentinel, so `nullptr` is an engaged value!
+   non_null_niche_ptr_maybe custom_null = nullptr;
+   cat::verify(custom_null.has_value());
+   cat::verify(custom_null.value() == nullptr);
+   cat::verify(custom_null.get_ptr() == nullptr);
+   cat::verify(custom_null.assert() == nullptr);
+   cat::verify(custom_null.assert(&counting_maybe_assert_handler) == nullptr);
+   cat::verify(custom_null.verify() == nullptr);
+   cat::verify(custom_null.verify(&counting_maybe_assert_handler) == nullptr);
+
+   // Assigning the sentinel address disengages the compact `maybe`.
+   custom_null = &g_maybe_ptr_sentinel_target;
+   cat::verify(custom_null.is_empty());
+   cat::verify(custom_null.get_ptr() == nullptr);
+
+   non_null_niche_ptr_maybe custom_engaged = &target;
+   cat::verify(custom_engaged.has_value());
+   cat::verify(custom_engaged.value() == &target);
+   cat::verify(custom_engaged.get_ptr() == &target);
+   cat::verify(custom_engaged.assert() == &target);
+   cat::verify(
+      custom_engaged.assert(&counting_maybe_assert_handler) == &target
+   );
+   cat::verify(custom_engaged.verify() == &target);
+   cat::verify(
+      custom_engaged.verify(&counting_maybe_assert_handler) == &target
+   );
+
+   // ----- 3. Compact `maybe_ptr<T>` (`uses_compact_storage && is_nonnull`) ---
+   cat::maybe_ptr<int4> mptr_empty;
+   cat::verify(mptr_empty.is_empty());
+   cat::verify(mptr_empty.get_ptr() == nullptr);
+
+   cat::maybe_ptr<int4> mptr_engaged = &target;
+   cat::verify(mptr_engaged.value_or(&fallback) == &target);
+   cat::verify(mptr_empty.value_or(&fallback) == &fallback);
+   cat::verify(custom_engaged.value_or(&fallback) == &target);
+   cat::verify(custom_empty.value_or(&fallback) == &fallback);
+   cat::verify(mptr_engaged.assert() == &target);
+   cat::verify(mptr_engaged.assert(&counting_maybe_assert_handler) == &target);
+   cat::verify(mptr_engaged.verify() == &target);
+   cat::verify(mptr_engaged.verify(&counting_maybe_assert_handler) == &target);
+   mptr_engaged = nullptr;
+   cat::verify(mptr_engaged.is_empty());
+   cat::verify(mptr_engaged.get_ptr() == nullptr);
+
+   // Derived-to-base pointer conversions work across pointer `maybe`s.
+   maybe_ptr_derived_item derived_item{};
+   cat::maybe<maybe_ptr_base_item*> plain_base = &derived_item;
+   cat::maybe_ptr<maybe_ptr_base_item> compact_base = &derived_item;
+   cat::verify(plain_base.verify()->base_value == 10);
+   cat::verify(compact_base.verify()->base_value == 10);
+
+   // Incomplete-pointee holder round-trips null/empty states cleanly.
+   maybe_incomplete_holder holder{};
+   cat::verify(holder.plain_ptr.is_empty());
+   cat::verify(holder.plain_ptr.get_ptr() == nullptr);
+   cat::verify(holder.compact_ptr.is_empty());
+   cat::verify(holder.compact_ptr.get_ptr() == nullptr);
+
+   // Temporary unwrapping across all three pointer `maybe` regimes without
+   // `-Wdangling`.
+   int4* p_plain_ver = make_temp_plain_ptr_maybe(&target).verify();
+   int4* p_plain_ass = make_temp_plain_ptr_maybe(&target).assert();
+   int4* p_plain_val = make_temp_plain_ptr_maybe(&target).value();
+   int4* p_plain_get = make_temp_plain_ptr_maybe(&target).get_ptr();
+
+   int4* p_mptr_ver = make_temp_maybe_ptr(&target).verify();
+   int4* p_mptr_ass = make_temp_maybe_ptr(&target).assert();
+   int4* p_mptr_val = make_temp_maybe_ptr(&target).value();
+   int4* p_mptr_get = make_temp_maybe_ptr(&target).get_ptr();
+
+   int4* p_cust_ver = make_temp_sentinel_ptr_maybe(&target).verify();
+   int4* p_cust_ass = make_temp_sentinel_ptr_maybe(&target).assert();
+   int4* p_cust_val = make_temp_sentinel_ptr_maybe(&target).value();
+   int4* p_cust_get = make_temp_sentinel_ptr_maybe(&target).get_ptr();
+
+   cat::verify(p_plain_ver == &target && p_plain_ass == &target);
+   cat::verify(p_plain_val == &target && p_plain_get == &target);
+   cat::verify(p_mptr_ver == &target && p_mptr_ass == &target);
+   cat::verify(p_mptr_val == &target && p_mptr_get == &target);
+   cat::verify(p_cust_ver == &target && p_cust_ass == &target);
+   cat::verify(p_cust_val == &target && p_cust_get == &target);
+   cat::verify(g_maybe_handler_hits == 0u);
+
+#if __has_feature(cxx_exceptions)
+   bool caught_plain = false;
+   try {
+      auto _ = plain_empty.verify(&throwing_maybe_assert_handler);
+   } catch (maybe_assert_thrown const&) {
+      caught_plain = true;
+   }
+   cat::verify(caught_plain);
+
+   bool caught_custom = false;
+   try {
+      auto _ = custom_empty.verify(&throwing_maybe_assert_handler);
+   } catch (maybe_assert_thrown const&) {
+      caught_custom = true;
+   }
+   cat::verify(caught_custom);
+
+   bool caught_mptr = false;
+   try {
+      auto _ = mptr_empty.verify(&throwing_maybe_assert_handler);
+   } catch (maybe_assert_thrown const&) {
+      caught_mptr = true;
+   }
+   cat::verify(caught_mptr);
+#endif
+}
+
+// `consteval` coverage for `maybe<T&>` and all three pointer `maybe` regimes.
+$test(maybe_reference_and_pointer_constexpr) {
+   constexpr auto ok = [] consteval -> bool {
+      int4 x = 31;
+
+      cat::maybe<int4&> empty_ref;
+      if (
+         !empty_ref.is_empty() || empty_ref.get_ptr() != nullptr
+         || empty_ref.data() != nullptr || empty_ref.begin() != nullptr
+         || empty_ref.end() != nullptr
+      ) {
+         return false;
+      }
+
+      cat::maybe<int4&> engaged_ref = x;
+      if (
+         !engaged_ref.has_value() || engaged_ref.value() != 31
+         || engaged_ref.get_ptr() != &x || engaged_ref.data() != &x
+         || engaged_ref.begin() != &x || engaged_ref.end() != &x + 1
+      ) {
+         return false;
+      }
+
+      cat::maybe<int4*> plain_empty;
+      cat::maybe<int4*> plain_null = nullptr;
+      cat::maybe<int4*> plain_engaged = &x;
+      if (!plain_empty.is_empty() || plain_empty.get_ptr() != nullptr) {
+         return false;
+      }
+      if (
+         !plain_null.has_value() || plain_null.value() != nullptr
+         || plain_null.get_ptr() != nullptr
+      ) {
+         return false;
+      }
+      if (
+         !plain_engaged.has_value() || *plain_engaged.value() != 31
+         || plain_engaged.get_ptr() != &x
+      ) {
+         return false;
+      }
+
+      cat::maybe_ptr<int4> mptr_empty;
+      cat::maybe_ptr<int4> mptr_engaged = &x;
+      if (!mptr_empty.is_empty() || mptr_empty.get_ptr() != nullptr) {
+         return false;
+      }
+      if (
+         !mptr_engaged.has_value() || *mptr_engaged.value() != 31
+         || mptr_engaged.get_ptr() != &x
+      ) {
+         return false;
+      }
+
+      non_null_niche_ptr_maybe custom_empty;
+      non_null_niche_ptr_maybe custom_null = nullptr;
+      non_null_niche_ptr_maybe custom_engaged = &x;
+      if (!custom_empty.is_empty() || custom_empty.get_ptr() != nullptr) {
+         return false;
+      }
+      if (
+         !custom_null.has_value() || custom_null.value() != nullptr
+         || custom_null.get_ptr() != nullptr
+      ) {
+         return false;
+      }
+      if (
+         !custom_engaged.has_value() || *custom_engaged.value() != 31
+         || custom_engaged.get_ptr() != &x
+      ) {
+         return false;
+      }
+
+      return true;
+   }();
+   static_assert(ok);
+}
+
+// `noexcept` and assignment return-type invariants across `maybe` flavors.
+$test(maybe_noexcept_and_assign_types) {
+   constexpr bool no_exc = !__has_feature(cxx_exceptions);
+
+   int4 x = 1;
+   cat::maybe<int4> val = 1;
+   cat::maybe<void> unit = cat::monostate;
+   cat::maybe<int4&> ref = x;
+   cat::maybe<int4*> plain_ptr = &x;
+   cat::maybe_ptr<int4> compact_ptr = &x;
+   non_null_niche_ptr_maybe sentinel_ptr = &x;
+
+   // Assignment operators return the derived `maybe<T>&`, not `maybe_base<T>&`.
+   static_assert(cat::is_same<decltype(val = 2), cat::maybe<int4>&>);
+   static_assert(cat::is_same<decltype(val = cat::nullopt), cat::maybe<int4>&>);
+   static_assert(cat::is_same<decltype(ref = x), cat::maybe<int4&>&>);
+   static_assert(
+      cat::is_same<decltype(ref = cat::nullopt), cat::maybe<int4&>&>
+   );
+   static_assert(cat::is_same<decltype(plain_ptr = &x), cat::maybe<int4*>&>);
+   static_assert(
+      cat::is_same<decltype(compact_ptr = &x), cat::maybe_ptr<int4>&>
+   );
+   static_assert(
+      cat::is_same<decltype(sentinel_ptr = &x), non_null_niche_ptr_maybe&>
+   );
+
+   // Checked accessors follow `noexcept(!__has_feature(cxx_exceptions))`.
+   static_assert(noexcept(val.value()) == no_exc);
+   static_assert(noexcept(val.assert()) == no_exc);
+   static_assert(
+      noexcept(val.assert(&counting_maybe_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(val.verify()) == no_exc);
+   static_assert(
+      noexcept(val.verify(&counting_maybe_assert_handler)) == no_exc
+   );
+
+   static_assert(noexcept(unit.value()) == no_exc);
+   static_assert(noexcept(unit.assert()) == no_exc);
+   static_assert(
+      noexcept(unit.assert(&counting_maybe_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(unit.verify()) == no_exc);
+   static_assert(
+      noexcept(unit.verify(&counting_maybe_assert_handler)) == no_exc
+   );
+
+   static_assert(noexcept(ref.value()) == no_exc);
+   static_assert(noexcept(ref.assert()) == no_exc);
+   static_assert(
+      noexcept(ref.assert(&counting_maybe_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(ref.verify()) == no_exc);
+   static_assert(
+      noexcept(ref.verify(&counting_maybe_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(ref.get_ptr()));
+   static_assert(noexcept(ref.data()));
+   static_assert(noexcept(ref.begin()));
+   static_assert(noexcept(ref.end()));
+
+   static_assert(noexcept(plain_ptr.value()) == no_exc);
+   static_assert(noexcept(plain_ptr.assert()) == no_exc);
+   static_assert(
+      noexcept(plain_ptr.assert(&counting_maybe_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(plain_ptr.verify()) == no_exc);
+   static_assert(
+      noexcept(plain_ptr.verify(&counting_maybe_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(plain_ptr.get_ptr()));
+
+   static_assert(noexcept(compact_ptr.value()) == no_exc);
+   static_assert(noexcept(compact_ptr.assert()) == no_exc);
+   static_assert(
+      noexcept(compact_ptr.assert(&counting_maybe_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(compact_ptr.verify()) == no_exc);
+   static_assert(
+      noexcept(compact_ptr.verify(&counting_maybe_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(compact_ptr.get_ptr()));
+
+   static_assert(noexcept(sentinel_ptr.value()) == no_exc);
+   static_assert(noexcept(sentinel_ptr.assert()) == no_exc);
+   static_assert(
+      noexcept(sentinel_ptr.assert(&counting_maybe_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(sentinel_ptr.verify()) == no_exc);
+   static_assert(
+      noexcept(sentinel_ptr.verify(&counting_maybe_assert_handler)) == no_exc
+   );
+   static_assert(noexcept(sentinel_ptr.get_ptr()));
+}

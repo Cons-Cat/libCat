@@ -91,7 +91,7 @@ concept has_stepanov_cend = requires(T t) { t.cend(); };
 // This iterator's type can be accessed as:
 //    cat::vec<int4>::iterator
 template <typename T>
-class container_stepanov_iterator
+class [[gsl::Pointer(T)]] container_stepanov_iterator
     : public stepanov_iterator_interface<random_access_iterator_tag, T> {
  public:
    using value_type = T;
@@ -198,7 +198,7 @@ class stepanov_iterable_interface {
 
    [[nodiscard]]
    constexpr auto
-   cbegin(this auto const& container) {
+   cbegin(this auto const& container [[clang::lifetimebound]]) {
       if constexpr (
          detail::has_stepanov_begin_const_qual<decltype(container)>
       ) {
@@ -212,7 +212,7 @@ class stepanov_iterable_interface {
 
    [[nodiscard]]
    constexpr auto
-   cend(this auto const& container) {
+   cend(this auto const& container [[clang::lifetimebound]]) {
       if constexpr (detail::has_stepanov_end_const_qual<decltype(container)>) {
          return container.end();
       } else {
@@ -227,13 +227,13 @@ class stepanov_iterable_interface {
 
    [[nodiscard]]
    constexpr auto
-   crbegin(this auto const& container) {
+   crbegin(this auto const& container [[clang::lifetimebound]]) {
       return container.rbegin();
    }
 
    [[nodiscard]]
    constexpr auto
-   crend(this auto const& container) {
+   crend(this auto const& container [[clang::lifetimebound]]) {
       return container.rend();
    }
 };
@@ -262,7 +262,7 @@ class random_access_stepanov_iterable_interface
 
    [[nodiscard]]
    constexpr auto
-   rbegin(this auto&& container) noexcept(false) {
+   rbegin(this auto&& container [[clang::lifetimebound]]) noexcept(false) {
       // `cat::forward` must be called on last use, and because argument
       // evaluation order is unspecified, it cannot be called inside an argument
       // list. `rbegin` is only valid on non-empty containers. `assert` enforces
@@ -277,7 +277,7 @@ class random_access_stepanov_iterable_interface
 
    [[nodiscard]]
    constexpr auto
-   rend(this auto&& container) {
+   rend(this auto&& container [[clang::lifetimebound]]) {
       return reverse_proxy_stepanov_iterator(
          detail::container_stepanov_iterator(0, $fwd(container).data())
       );
@@ -627,7 +627,9 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    template <is_stepanov_container Other>
    auto
-   copy_to(Other& destination) const noexcept(!__has_feature(cxx_exceptions)) {
+   copy_to(Other& destination [[clang::lifetimebound]]) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
       Derived const& self = static_cast<Derived const&>(*this);
       assert(destination.capacity() >= self.capacity());
       return cat::copy(self.begin(), self.end(), destination.begin());
@@ -635,7 +637,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    template <is_stepanov_container Other>
    auto
-   move_to(Other& destination) const noexcept(false) {
+   move_to(Other& destination [[clang::lifetimebound]]) const noexcept(false) {
       Derived const& self = static_cast<Derived const&>(*this);
       assert(destination.capacity() >= self.capacity());
       return move(self.begin(), self.end(), destination.begin());
@@ -643,7 +645,7 @@ class container_interface : public contiguous_collection_interface<Derived> {
 
    template <is_stepanov_container Other>
    auto
-   relocate_to(Other& destination) const noexcept(
+   relocate_to(Other& destination [[clang::lifetimebound]]) const noexcept(
       !__has_feature(cxx_exceptions)
    ) {
       Derived const& self = static_cast<Derived const&>(*this);

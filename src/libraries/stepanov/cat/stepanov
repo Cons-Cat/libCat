@@ -288,8 +288,10 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
 
    // If the derived iterator does not have `.advance_to()`, generate it.
    constexpr auto
-   advance_to(this auto&& self, __typeof_unqual(self) const& other_iterator)
-      -> __typeof_unqual(self) const& {
+   advance_to(
+      this auto&& self [[clang::lifetimebound]],
+      __typeof_unqual(self) const& other_iterator
+   ) -> __typeof_unqual(self) const& {
       if (other_iterator > self) {
          while (other_iterator > self) {
             ++self;
@@ -326,7 +328,8 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    }
 
    constexpr auto
-   operator+=(this auto&& self, auto offset) -> decltype(auto)
+   operator+=(this auto&& self [[clang::lifetimebound]], auto offset)
+      -> decltype(auto)
       requires(
          detail::is_difference_type<decltype(offset), __typeof_unqual(self)>
       )
@@ -341,6 +344,42 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
          }
       }
       return self;
+   }
+
+   constexpr auto
+   operator+(this auto const& self, auto offset) -> __typeof_unqual(self)
+      requires(
+         detail::is_difference_type<decltype(offset), __typeof_unqual(self)>
+      )
+   {
+      using iter = __typeof_unqual(self);
+      iter new_iterator = self;
+      if constexpr (detail::has_advance<iter>) {
+         new_iterator.advance(static_cast<iter::difference_type>(offset));
+      } else {
+         for (idx i; i < offset; ++i) {
+            ++new_iterator;
+         }
+      }
+      return new_iterator;
+   }
+
+   constexpr auto
+   operator-(this auto const& self, auto offset) -> __typeof_unqual(self)
+      requires(
+         detail::is_difference_type<decltype(offset), __typeof_unqual(self)>
+      )
+   {
+      using iter = __typeof_unqual(self);
+      iter new_iterator = self;
+      if constexpr (detail::has_advance<iter>) {
+         new_iterator.advance(-static_cast<iter::difference_type>(offset));
+      } else {
+         for (idx i; i < offset; ++i) {
+            --new_iterator;
+         }
+      }
+      return new_iterator;
    }
 
    constexpr auto
@@ -363,7 +402,7 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    }
 
    constexpr auto
-   operator--(this auto&& self) -> decltype(auto)
+   operator--(this auto&& self [[clang::lifetimebound]]) -> decltype(auto)
       requires(detail::has_bidirectional<__typeof_unqual(self)>)
    {
       if constexpr (detail::has_decrement<__typeof_unqual(self)>) {
@@ -447,54 +486,18 @@ operator<=>(Derived const& left, Derived const& right) {
 }
 
 template <typename Derived>
-   requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>)
+   requires(is_base_of<stepanov_iterator_interface_base, Derived>)
 constexpr auto
-operator+(Derived const& left, auto offset) -> remove_cvref<Derived>
-   requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
+operator+(auto offset, Derived right [[clang::lifetimebound]]) -> Derived
+   requires(detail::is_difference_type<decltype(offset), Derived>)
 {
-   using iter = remove_cvref<Derived>;
-   iter new_iterator = left;
-   if constexpr (detail::has_advance<iter>) {
-      new_iterator.advance(static_cast<iter::difference_type>(offset));
-   } else {
-      for (idx i; i < offset; ++i) {
-         ++new_iterator;
-      }
-   }
-   return new_iterator;
-}
-
-template <typename Derived>
-   requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>)
-constexpr auto
-operator+(auto offset, Derived const& right) -> remove_cvref<Derived>
-   requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
-{
-   using iter = remove_cvref<Derived>;
+   using iter = Derived;
    iter new_iterator = right;
    if constexpr (detail::has_advance<iter>) {
       new_iterator.advance(static_cast<iter::difference_type>(offset));
    } else {
       for (idx i; i < offset; ++i) {
          ++new_iterator;
-      }
-   }
-   return new_iterator;
-}
-
-template <typename Derived>
-   requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>)
-constexpr auto
-operator-(Derived const& left, auto offset) -> remove_cvref<Derived>
-   requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
-{
-   using iter = remove_cvref<Derived>;
-   iter new_iterator = left;
-   if constexpr (detail::has_advance<iter>) {
-      new_iterator.advance(-static_cast<iter::difference_type>(offset));
-   } else {
-      for (idx i; i < offset; ++i) {
-         --new_iterator;
       }
    }
    return new_iterator;
@@ -529,7 +532,7 @@ operator-(Derived const& left, Derived const& right)
 }
 
 template <typename Iterator>
-class reverse_proxy_stepanov_iterator
+class [[gsl::Pointer]] reverse_proxy_stepanov_iterator
     : public stepanov_iterator_interface<
          random_access_iterator_tag, typename Iterator::value_type,
          typename Iterator::reference,
@@ -755,12 +758,12 @@ struct as_reverse_stepanov : Collection {
    }
 
    constexpr auto
-   begin() {
+   begin() [[clang::lifetimebound]] {
       return static_cast<Collection*>(this)->rbegin();
    }
 
    constexpr auto
-   end() {
+   end() [[clang::lifetimebound]] {
       return static_cast<Collection*>(this)->rend();
    }
 
@@ -829,12 +832,12 @@ struct as_const_reverse_stepanov : Collection {
    }
 
    constexpr auto
-   begin() const {
+   begin() const [[clang::lifetimebound]] {
       return static_cast<Collection const*>(this)->rbegin();
    }
 
    constexpr auto
-   end() const {
+   end() const [[clang::lifetimebound]] {
       return static_cast<Collection const*>(this)->rend();
    }
 

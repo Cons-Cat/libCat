@@ -67,7 +67,9 @@ class simd_precision_reference
    }
 
  public:
-   constexpr explicit simd_precision_reference(Simd& w) noexcept
+   constexpr explicit simd_precision_reference(
+      Simd& w [[clang::lifetimebound]]
+   ) noexcept
        : m_wrapped(addressof(w)) {
    }
 

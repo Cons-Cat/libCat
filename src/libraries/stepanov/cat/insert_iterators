@@ -9,13 +9,15 @@
 namespace cat {
 
 template <typename T>
-class back_insert_stepanov_iterator
+class [[gsl::Pointer(T)]] back_insert_stepanov_iterator
     : public stepanov_iterator_interface<
          output_iterator_tag, void, back_insert_stepanov_iterator<T>&, void> {
  public:
    using container_type = T;
 
-   constexpr explicit back_insert_stepanov_iterator(T& input_iterable)
+   constexpr explicit back_insert_stepanov_iterator(
+      T& input_iterable [[clang::lifetimebound]]
+   )
        : m_iterable(input_iterable) {
    }
 
@@ -82,7 +84,8 @@ class back_insert_stepanov_iterator
 
    template <typename U>
    constexpr auto
-   insert(U&& value) -> maybe<back_insert_stepanov_iterator<T>&> {
+   insert(U&& value) [[clang::lifetimebound]]
+   -> maybe<back_insert_stepanov_iterator<T>&> {
       $prop(m_iterable.push_back($fwd(value)));
       return *this;
    }
@@ -131,13 +134,16 @@ get_container(Outputter iterator) -> typename Outputter::container_type& {
 }  // namespace detail
 
 template <is_stepanov_iterable T>
-class front_insert_stepanov_iterator
+class [[gsl::Pointer(T)]]
+front_insert_stepanov_iterator
     : public stepanov_iterator_interface<
          output_iterator_tag, void, front_insert_stepanov_iterator<T>&, void> {
  public:
    using container_type = T;
 
-   constexpr explicit front_insert_stepanov_iterator(T& input_iterable)
+   constexpr explicit front_insert_stepanov_iterator(
+      T& input_iterable [[clang::lifetimebound]]
+   )
        : m_iterable(input_iterable) {
    }
 
@@ -204,7 +210,8 @@ class front_insert_stepanov_iterator
 
    template <typename U>
    constexpr auto
-   insert(U&& value) -> maybe<front_insert_stepanov_iterator<T>&> {
+   insert(U&& value) [[clang::lifetimebound]]
+   -> maybe<front_insert_stepanov_iterator<T>&> {
       $prop(m_iterable.push_front($fwd(value)));
       return *this;
    }
@@ -235,14 +242,16 @@ class front_insert_stepanov_iterator
 template <is_stepanov_iterable T>
 [[nodiscard]]
 constexpr auto
-as_back_inserter(T& container) -> back_insert_stepanov_iterator<T> {
+as_back_inserter(T& container [[clang::lifetimebound]])
+   -> back_insert_stepanov_iterator<T> {
    return back_insert_stepanov_iterator<T>(container);
 }
 
 template <is_stepanov_iterable T>
 [[nodiscard]]
 constexpr auto
-as_front_inserter(T& container) -> front_insert_stepanov_iterator<T> {
+as_front_inserter(T& container [[clang::lifetimebound]])
+   -> front_insert_stepanov_iterator<T> {
    return front_insert_stepanov_iterator<T>(container);
 }
 

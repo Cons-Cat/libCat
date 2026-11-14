@@ -160,7 +160,9 @@ eprintln() -> maybe<idx>;
 template <typename T>
 [[nodiscard]]
 auto
-cat::maybe<T>::or_exit(cat::str_view const error_message, iword exit_code) & {
+cat::detail::maybe_base<T>::or_exit(
+   cat::str_view const error_message, iword exit_code
+) & {
    if (this->has_value()) [[likely]] {
       if constexpr (!is_void<T>) {
          return this->value();
@@ -178,7 +180,7 @@ cat::maybe<T>::or_exit(cat::str_view const error_message, iword exit_code) & {
 template <typename T>
 [[nodiscard]]
 auto
-cat::maybe<T>::or_exit(
+cat::detail::maybe_base<T>::or_exit(
    cat::str_view const error_message, iword exit_code
 ) const& {
    if (this->has_value()) [[likely]] {
@@ -196,7 +198,9 @@ cat::maybe<T>::or_exit(
 template <typename T>
 [[nodiscard]]
 auto
-cat::maybe<T>::or_exit(cat::str_view const error_message, iword exit_code) && {
+cat::detail::maybe_base<T>::or_exit(
+   cat::str_view const error_message, iword exit_code
+) && {
    if (this->has_value()) [[likely]] {
       if constexpr (!is_void<T>) {
          return move(this)->value();
@@ -212,7 +216,7 @@ cat::maybe<T>::or_exit(cat::str_view const error_message, iword exit_code) && {
 template <typename T>
 [[nodiscard]]
 auto
-cat::maybe<T>::or_exit(
+cat::detail::maybe_base<T>::or_exit(
    cat::str_view const error_message, iword exit_code
 ) const&& {
    if (this->has_value()) [[likely]] {

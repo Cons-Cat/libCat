@@ -12,9 +12,8 @@
 // supported for single and multi-variant visitation. A member-`.visit()` is
 // also provided for "upside-down polymorphism".
 //
-// `cat::variant` is empty upon default-construction. Its emptiness can be
-// queried by `.has_value()` or `.is_empty()`, like other libCat sum-types. It
-// can similarly be made empty by `.reset()` or assigning `cat::nullopt`.
+// Default-constructing a `cat::variant` default-initializes its first
+// alternative.
 //
 // Selected papers informing the design:
 //
@@ -24,13 +23,9 @@
 //           The "upside-down inheritance" idiom uses this to replace
 //           virtual dispatch with value semantics.
 //
-// P4198R0   `variant<T&>`. When every alternative is a reference type the
-//           active alternative is fixed at construction. Assignment writes
-//           through the held reference instead of swapping the active type.
-//           Tuple integration is not extended.
-//           `get_ptr()` on optional and variant. `.get_ptr<T>()` returns a
-//           pointer to the held value when `T` is active, otherwise
-//           `nullptr`. `.get_ptr<index>()` is the index-typed overload.
+// P4198R0   `variant<T&>` and `.get_ptr<T>()`, which returns a pointer to the
+//           held value when `T` is active, otherwise `nullptr`.
+//           `.get_ptr<index>()` is the index-typed overload.
 //
 // P3561R2   Index-based coproduct operations. `cat::invoke_cases(fs...)`,
 //           `cat::visit_invoke_cases(v, fs...)`, `cat::apply_cases(fs...)`,
@@ -44,6 +39,10 @@
 //           variant-like; otherwise the primary specialization is empty so
 //           concept-detection machinery can probe `variant_size<not_a_variant>`
 //           without a hard error.
+//
+// Like `cat::maybe`, `cat::variant` supports reference-qualified alternatives.
+// It implements rebinding assignment semantics, like `cat::maybe`.
+// TODO: We should consider whether this is the right semantics for `variant`.
 //
 // `cat::variant` also takes inspiration from `mpark::variant` and
 // `ts::basic_variant`.
@@ -63,10 +62,7 @@ namespace cat {
 
 namespace detail {
 
-// Recursive `union` storage for value-typed `variant`. A `monostate_type`
-// dummy member is required to constant-evaluate this union without
-// initializing one of the alternatives when those alternatives are
-// non-trivial.
+// Recursive `union` storage for `variant`.
 template <typename...>
 struct variant_node {};
 
@@ -77,10 +73,6 @@ struct variant_node<Alternative> {
    constexpr variant_node() noexcept {
    }
 
-   // Trivial destructor when the alternative is trivial. Otherwise an empty
-   // user-declared destructor: the enclosing `cat::variant` destroys the
-   // active alternative through its own discriminant before the node's
-   // destructor runs.
    constexpr ~variant_node() = default;
 
    constexpr ~variant_node()
@@ -92,7 +84,7 @@ struct variant_node<Alternative> {
    constexpr auto
    get(this auto&& self [[clang::lifetimebound]]) -> auto&& {
       static_assert(
-         index == 0u, "`variant_node` leaf only owns the index-`0` slot."
+         index == 0u, "`variant_node` leaf only owns the index-`0` slot!"
       );
       return $fwd(self).storage;
    }
@@ -168,21 +160,24 @@ union variant_ref_union<Alternative, Remaining...> {
 // (a pointer) rather than the pointee.
 template <idx index, typename... Ts>
 constexpr auto
-variant_ref_slot(variant_ref_union<Ts...>& u) -> auto& {
+variant_ref_slot(variant_ref_union<Ts...>& storage [[clang::lifetimebound]])
+   -> auto& {
    if constexpr (index == 0u) {
-      return u.head;
+      return storage.head;
    } else {
-      return variant_ref_slot<idx(index - 1u)>(u.tail);
+      return variant_ref_slot<idx(index - 1u)>(storage.tail);
    }
 }
 
 template <idx index, typename... Ts>
 constexpr auto
-variant_ref_slot(variant_ref_union<Ts...> const& u) -> auto& {
+variant_ref_slot(
+   variant_ref_union<Ts...> const& storage [[clang::lifetimebound]]
+) -> auto& {
    if constexpr (index == 0u) {
-      return u.head;
+      return storage.head;
    } else {
-      return variant_ref_slot<idx(index - 1u)>(u.tail);
+      return variant_ref_slot<idx(index - 1u)>(storage.tail);
    }
 }
 
@@ -197,7 +192,7 @@ struct fun_alt {
    template <typename From>
       requires(is_convertible_without_narrowing<From, Alternative>)
    static auto
-   invoke(From&&) -> Alternative;
+   invoke(From&&) -> identity_trait<Alternative>;
 };
 
 // Deduplicate the alternative pack so each unique alternative contributes
@@ -247,7 +242,8 @@ using fun_set = fun_set_impl<
 // substitution failure when no overload is viable and a hard error when
 // the call is ambiguous, mirroring `std::variant<Ts...>::variant(T&&)`.
 template <typename From, typename... Alts>
-using fun_selected_type = decltype(fun_set<Alts...>::invoke(declval<From>()));
+using fun_selected_type =
+   decltype(fun_set<Alts...>::invoke(declval<From>()))::type;
 
 }  // namespace detail
 
@@ -262,12 +258,24 @@ struct in_place_index_type {
 template <idx alternative_index>
 inline constexpr in_place_index_type<alternative_index> in_place_index;
 
+namespace detail {
 template <typename... Alternatives>
-   requires(
-      type_list<Alternatives...>::is_all_references
-      || !type_list<Alternatives...>::is_any_reference
-   )
-class variant {
+concept is_valid_variant_alternatives =
+   type_list<Alternatives...>::is_all_references
+   || !type_list<Alternatives...>::is_any_reference;
+}  // namespace detail
+
+template <typename... Alternatives>
+   requires(detail::is_valid_variant_alternatives<Alternatives...>)
+class variant;
+
+namespace detail {
+// `variant_base<Alternatives...>` implements `cat::variant<Alternatives...>`.
+template <typename... Alternatives>
+   requires(is_valid_variant_alternatives<Alternatives...>)
+class variant_base {
+   friend class cat::variant<Alternatives...>;
+
  public:
    using types = type_list<Alternatives...>;
    static constexpr bool is_reference_variant = types::is_all_references;
@@ -306,7 +314,7 @@ class variant {
    template <typename T>
    [[nodiscard]]
    friend constexpr auto
-   operator==(variant const& self, T other) -> bool {
+   operator==(variant<Alternatives...> const& self, T other) -> bool {
       return self.template recurse_converting_equality<T>(other);
    }
 
@@ -315,16 +323,20 @@ class variant {
    // values compare equal.
    [[nodiscard]]
    friend constexpr auto
-   operator==(variant const& a, variant const& b) -> bool {
+   operator==(
+      variant<Alternatives...> const& left,
+      variant<Alternatives...> const& right
+   ) -> bool {
       if (
-         a.m_discriminant.value_or_niche() != b.m_discriminant.value_or_niche()
+         left.m_discriminant.value_or_niche()
+         != right.m_discriminant.value_or_niche()
       ) {
          return false;
       }
-      if (a.is_empty()) {
+      if (left.is_empty()) {
          return true;
       }
-      return a.template recurse_compare_eq_indexed<>(b);
+      return left.template recurse_compare_eq_indexed<>(right);
    }
 
    // Variant-vs-variant three-way comparison. The empty state orders
@@ -333,25 +345,29 @@ class variant {
    // the same active alternative are ordered by their stored values.
    [[nodiscard]]
    friend constexpr auto
-   operator<=>(variant const& a, variant const& b)
+   operator<=>(
+      variant<Alternatives...> const& left,
+      variant<Alternatives...> const& right
+   )
       requires((is_threeway_comparable<Alternatives> && ...))
    {
       using result = common_comparison_category_t<
          decltype(declval<Alternatives const&>() <=> declval<Alternatives const&>())...>;
-      if (a.is_empty()) {
+      if (left.is_empty()) {
          return static_cast<result>(
-            b.has_value() ? strong_ordering::less : strong_ordering::equivalent
+            right.has_value() ? strong_ordering::less
+                              : strong_ordering::equivalent
          );
       }
-      if (b.is_empty()) {
+      if (right.is_empty()) {
          return static_cast<result>(strong_ordering::greater);
       }
-      auto const a_index = a.m_discriminant.value_or_niche();
-      auto const b_index = b.m_discriminant.value_or_niche();
-      if (a_index != b_index) {
-         return static_cast<result>(a_index <=> b_index);
+      auto const left_index = left.m_discriminant.value_or_niche();
+      auto const right_index = right.m_discriminant.value_or_niche();
+      if (left_index != right_index) {
+         return static_cast<result>(left_index <=> right_index);
       }
-      return a.template recurse_compare_threeway_indexed<>(b);
+      return left.template recurse_compare_threeway_indexed<>(right);
    }
 
  private:
@@ -387,16 +403,25 @@ class variant {
       detail::variant_node<Alternatives...>>;
 
  private:
+   // Unchecked access to `T`'s slot, for constructing or assigning into it
+   // while it may be inactive. `.get<T>()` asserts that `T` is active.
+   template <typename T>
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   slot() [[clang::lifetimebound]] -> T& {
+      return m_storage.template get<alternative_index<T>>();
+   }
+
    template <typename Self>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    as_base(this Self&& self [[clang::lifetimebound]])
-      -> copy_cvref_from<Self&&, variant> {
+      -> copy_cvref_from<Self&&, variant_base> {
       // C-cast preserves cvref while upcasting through the inheritance
       // chain, so callers reach `variant`'s overload set instead of a
       // derived class's shadowing overloads.
       // NOLINTNEXTLINE
-      return (copy_cvref_from<Self&&, variant>)$fwd(self);
+      return (copy_cvref_from<Self&&, variant_base>)$fwd(self);
    }
 
    // Index-based dispatch helpers. These walk the alternative pack by index
@@ -425,7 +450,7 @@ class variant {
 
    template <idx index_value = 0u>
    constexpr void
-   copy_construct_indexed(variant const& other)
+   copy_construct_indexed(variant_base const& other)
       requires(!is_reference_variant)
    {
       if constexpr (index_value < variant_size) {
@@ -442,7 +467,7 @@ class variant {
 
    template <idx index_value = 0u>
    constexpr void
-   move_construct_indexed(variant&& other)
+   move_construct_indexed(variant_base&& other)
       requires(!is_reference_variant)
    {
       if constexpr (index_value < variant_size) {
@@ -459,7 +484,7 @@ class variant {
 
    template <idx index_value = 0u>
    constexpr void
-   copy_assign_indexed(variant const& other)
+   copy_assign_indexed(variant_base const& other)
       requires(!is_reference_variant)
    {
       if constexpr (index_value < variant_size) {
@@ -484,7 +509,7 @@ class variant {
 
    template <idx index_value = 0u>
    constexpr void
-   move_assign_indexed(variant&& other)
+   move_assign_indexed(variant_base&& other)
       requires(!is_reference_variant)
    {
       if constexpr (index_value < variant_size) {
@@ -507,38 +532,6 @@ class variant {
       }
    }
 
-   template <idx index_value = 0u>
-   constexpr void
-   copy_assign_reference_indexed(variant const& other)
-      requires(is_reference_variant)
-   {
-      if constexpr (index_value < variant_size) {
-         if (m_discriminant.value_or_niche() == index_value) {
-            *detail::variant_ref_slot<index_value>(m_storage) =
-               *detail::variant_ref_slot<index_value>(other.m_storage);
-            return;
-         }
-         this->template copy_assign_reference_indexed<index_value + 1u>(other);
-      }
-   }
-
-   template <idx index_value = 0u>
-   constexpr void
-   move_assign_reference_indexed(variant&& other)
-      requires(is_reference_variant)
-   {
-      if constexpr (index_value < variant_size) {
-         if (m_discriminant.value_or_niche() == index_value) {
-            *detail::variant_ref_slot<index_value>(m_storage) =
-               move(*detail::variant_ref_slot<index_value>(other.m_storage));
-            return;
-         }
-         this->template move_assign_reference_indexed<index_value + 1u>(
-            move(other)
-         );
-      }
-   }
-
    // Type-keyed converting helpers used by the cross-variant copy/move
    // overloads below. Each source alternative must either be absent from
    // this variant's alternative pack or appear in it exactly once, so
@@ -555,7 +548,7 @@ class variant {
          remove_reference<decltype(other)>::types::template has_type<U>
       ) {
          if (other.template is<U>()) {
-            new (__builtin_addressof(this->template get<U>()))
+            new (__builtin_addressof(this->template slot<U>()))
                U($fwd(other).template get<U>());
             m_discriminant = this->alternative_index<U>;
             return;
@@ -578,10 +571,10 @@ class variant {
       ) {
          if (other.template is<U>()) {
             if (this->template is<U>()) {
-               this->template get<U>() = $fwd(other).template get<U>();
+               this->template slot<U>() = $fwd(other).template get<U>();
             } else {
                this->template hard_reset_indexed<>();
-               new (__builtin_addressof(this->template get<U>()))
+               new (__builtin_addressof(this->template slot<U>()))
                   U($fwd(other).template get<U>());
                m_discriminant = this->alternative_index<U>;
             }
@@ -596,34 +589,37 @@ class variant {
    }
 
  public:
-   // Default-construct a value variant in the empty state.
-   constexpr variant() = default;
+   // Like `std::variant`, default-construction value-initializes the first
+   // alternative.
+   constexpr variant_base() noexcept(
+      is_nothrow_default_constructible<typename types::template get<0u>>
+   )
+      requires(
+         !is_reference_variant
+         && is_default_constructible<typename types::template get<0u>>
+      )
+       : variant_base(in_place_index<0u>) {
+   }
 
    // Reference variants are never valueless (P4198), so default-construction is
    // forbidden for them. Callers must bind to an l-value alternative at the
    // call site.
-   constexpr variant()
+   constexpr variant_base()
       requires(is_reference_variant)
    = delete ("A reference `cat::variant` must be constructed with an active "
              "alternative! It has no valueless state to default into.");
 
    // Destructor: destroy the active alternative if any. Trivially-destructible
    // alternatives use the implicitly-generated trivial destructor.
-   constexpr ~variant() = default;
+   constexpr ~variant_base() = default;
 
-   constexpr ~variant()
+   constexpr ~variant_base()
       requires(
          !is_reference_variant
          && (!is_trivially_destructible<Alternatives> || ...)
       )
    {
       this->template hard_reset_indexed<>();
-   }
-
-   // Empty-state construction via `cat::nullopt`. Mirrors `cat::maybe`.
-   constexpr variant(detail::nullopt_type /*nullopt*/)
-      requires(!is_reference_variant)
-   {
    }
 
    // In-place construction at a known alternative index. Required for
@@ -635,7 +631,7 @@ class variant {
          !is_reference_variant && index_value < variant_size
          && is_constructible<typename types::template get<index_value>, Args...>
       )
-   constexpr variant(
+   constexpr variant_base(
       in_place_index_type<index_value> /*in_place_index*/, Args&&... args
    ) {
       using active = types::template get<index_value>;
@@ -644,7 +640,7 @@ class variant {
       m_discriminant = alternative_index_type{index_value};
    }
 
-   constexpr variant(variant const& other) noexcept(
+   constexpr variant_base(variant_base const& other) noexcept(
       (is_nothrow_copy_constructible<Alternatives> && ...)
    )
       requires(
@@ -655,7 +651,7 @@ class variant {
       this->template copy_construct_indexed<>(other);
    }
 
-   constexpr variant(variant&& other) noexcept(
+   constexpr variant_base(variant_base&& other) noexcept(
       (is_nothrow_move_constructible<Alternatives> && ...)
    )
       requires(
@@ -676,10 +672,10 @@ class variant {
          !is_reference_variant
          && types::template is_unique<T> && is_constructible<T, T const&>
       )
-   constexpr variant(
+   constexpr variant_base(
       T const& input
    ) noexcept(is_nothrow_copy_constructible<T>) {
-      new (__builtin_addressof(this->template get<T>())) T(input);
+      new (__builtin_addressof(this->template slot<T>())) T(input);
       m_discriminant = this->alternative_index<T>;
    }
 
@@ -690,9 +686,11 @@ class variant {
       )
    // NOLINTNEXTLINE `is_forwarding_move` sufficiently constrains this
    // constructor.
-   constexpr variant(T&& input) noexcept(is_nothrow_move_constructible<T>) {
+   constexpr variant_base(
+      T&& input
+   ) noexcept(is_nothrow_move_constructible<T>) {
       // NOLINTNEXTLINE
-      new (__builtin_addressof(this->template get<T>())) T(move(input));
+      new (__builtin_addressof(this->template slot<T>())) T(move(input));
       m_discriminant = this->alternative_index<T>;
    }
 
@@ -710,13 +708,15 @@ class variant {
    template <typename T>
       requires(
          !is_reference_variant && !types::template has_type<remove_cvref<T>>
+         && !is_same<remove_cvref<T>, variant_base>
+         && !is_same<remove_cvref<T>, variant<Alternatives...>>
          && requires { typename detail::fun_selected_type<T&&, Alternatives...>; })
-   constexpr variant(T&& input) noexcept(
+   constexpr variant_base(T&& input) noexcept(
       is_nothrow_constructible<
          detail::fun_selected_type<T&&, Alternatives...>, T&&>
    ) {
       using selected = detail::fun_selected_type<T&&, Alternatives...>;
-      new (__builtin_addressof(this->template get<selected>()))
+      new (__builtin_addressof(this->template slot<selected>()))
          selected(static_cast<selected>($fwd(input)));
       m_discriminant = this->alternative_index<selected>;
    }
@@ -728,7 +728,7 @@ class variant {
          !is_reference_variant && (types::template is_unique<Us> && ...)
          && (is_constructible<Us, Us const&> && ...)
       )
-   constexpr variant(variant<Us...> const& other) {
+   constexpr variant_base(variant<Us...> const& other) {
       this->template construct_from_other_variant<Us...>(other);
    }
 
@@ -737,25 +737,26 @@ class variant {
          !is_reference_variant && (types::template is_unique<Us> && ...)
          && (is_constructible<Us, Us&&> && ...)
       )
-   constexpr variant(variant<Us...>&& other) {
+   constexpr variant_base(variant<Us...>&& other) {
       this->template construct_from_other_variant<Us...>(move(other));
    }
 
    // Reference-variant copy and move: trivial. The held pointer is rebound
    // but no value is mutated.
-   constexpr variant(variant const&)
+   constexpr variant_base(variant_base const&)
       requires(is_reference_variant)
    = default;
 
-   constexpr variant(variant&&)
+   constexpr variant_base(variant_base&&)
       requires(is_reference_variant)
    = default;
 
-   // Reference-variant construction. The active alternative is fixed for
-   // the lifetime of the `variant`. Binding to a temporary is rejected.
+   // Reference-variant construction. Binding to a temporary is rejected.
    template <typename T>
       requires(is_reference_variant && types::template is_unique<T&>)
-   constexpr variant(T& input) {
+   constexpr variant_base(
+      T& input [[clang::lifetimebound]]
+   ) noexcept {
       detail::variant_ref_slot<alternative_index<T&>>(m_storage) =
          __builtin_addressof(input);
       m_discriminant = this->alternative_index<T&>;
@@ -763,7 +764,9 @@ class variant {
 
    template <typename T>
       requires(is_reference_variant && types::template is_unique<T const&>)
-   constexpr variant(T const& input) {
+   constexpr variant_base(
+      T const& input [[clang::lifetimebound]]
+   ) noexcept {
       detail::variant_ref_slot<alternative_index<T const&>>(m_storage) =
          __builtin_addressof(input);
       m_discriminant = this->alternative_index<T const&>;
@@ -775,9 +778,10 @@ class variant {
    // viable l-value constructor exists.
    template <typename T>
       requires(is_reference_variant
+               && !is_base_of<variant_base, remove_cvref<T>>
                && __reference_constructs_from_temporary(T &&, T))
-   constexpr variant(T&&) =
-      delete ("A reference `cat::variant` cannot bind to a temporary; the "
+   constexpr variant_base(T&&) =
+      delete ("A reference `cat::variant` cannot bind to a temporary! The "
               "referent would dangle immediately.");
 
    // Value-variant assignment. When the active alternative is already `T`
@@ -794,15 +798,15 @@ class variant {
    constexpr auto
    operator=(T const& operand) noexcept(
       is_nothrow_copy_constructible<T> && is_nothrow_copy_assignable<T>
-   ) -> variant& {
+   ) [[clang::lifetimebound]] -> variant<Alternatives...>& {
       if (this->template is<T>()) {
-         this->template get<T>() = operand;
+         this->template slot<T>() = operand;
       } else {
          this->template hard_reset_indexed<>();
-         new (__builtin_addressof(this->template get<T>())) T(operand);
+         new (__builtin_addressof(this->template slot<T>())) T(operand);
          m_discriminant = this->alternative_index<T>;
       }
-      return *this;
+      return static_cast<variant<Alternatives...>&>(*this);
    }
 
    template <is_forwarding_move T>
@@ -813,20 +817,22 @@ class variant {
    constexpr auto
    operator=(T&& operand) noexcept(
       is_nothrow_move_constructible<T> && is_nothrow_move_assignable<T>
-   ) -> variant& {
+   ) [[clang::lifetimebound]] -> variant<Alternatives...>& {
       if (this->template is<T>()) {
-         this->template get<T>() = $fwd(operand);
+         this->template slot<T>() = $fwd(operand);
       } else {
          this->template hard_reset_indexed<>();
-         new (__builtin_addressof(this->template get<T>())) T($fwd(operand));
+         new (__builtin_addressof(this->template slot<T>())) T($fwd(operand));
          m_discriminant = this->alternative_index<T>;
       }
-      return *this;
+      return static_cast<variant<Alternatives...>&>(*this);
    }
 
    template <typename T>
       requires(
          !is_reference_variant && !types::template has_type<remove_cvref<T>>
+         && !is_same<remove_cvref<T>, variant_base>
+         && !is_same<remove_cvref<T>, variant<Alternatives...>>
          && requires { typename detail::fun_selected_type<T&&, Alternatives...>; }
          && is_constructible<
             detail::fun_selected_type<T&&, Alternatives...>, T&&>
@@ -839,34 +845,25 @@ class variant {
          detail::fun_selected_type<T&&, Alternatives...>, T&&>
       && is_nothrow_assignable<
          detail::fun_selected_type<T&&, Alternatives...>&, T&&>
-   ) -> variant& {
+   ) [[clang::lifetimebound]] -> variant<Alternatives...>& {
       using selected = detail::fun_selected_type<T&&, Alternatives...>;
       if (this->template is<selected>()) {
-         this->template get<selected>() = $fwd(operand);
+         this->template slot<selected>() = $fwd(operand);
       } else {
          this->template hard_reset_indexed<>();
-         new (__builtin_addressof(this->template get<selected>()))
+         new (__builtin_addressof(this->template slot<selected>()))
             selected($fwd(operand));
          m_discriminant = this->alternative_index<selected>;
       }
-      return *this;
-   }
-
-   // Assigning `cat::nullopt` empties the variant.
-   constexpr auto
-   operator=(detail::nullopt_type /*nullopt*/) noexcept -> variant&
-      requires(!is_reference_variant)
-   {
-      this->reset();
-      return *this;
+      return static_cast<variant<Alternatives...>&>(*this);
    }
 
    constexpr auto
-   operator=(variant const& operand) noexcept(
+   operator=(variant_base const& operand) noexcept(
       ((is_nothrow_copy_constructible<Alternatives>
         && is_nothrow_copy_assignable<Alternatives>)
        && ...)
-   ) -> variant&
+   ) [[clang::lifetimebound]] -> variant<Alternatives...>&
       requires(
          !is_reference_variant
          && (is_constructible<Alternatives, Alternatives const&> && ...)
@@ -874,15 +871,15 @@ class variant {
       )
    {
       this->template copy_assign_indexed<>(operand);
-      return *this;
+      return static_cast<variant<Alternatives...>&>(*this);
    }
 
    constexpr auto
-   operator=(variant&& operand) noexcept(
+   operator=(variant_base&& operand) noexcept(
       ((is_nothrow_move_constructible<Alternatives>
         && is_nothrow_move_assignable<Alternatives>)
        && ...)
-   ) -> variant&
+   ) [[clang::lifetimebound]] -> variant<Alternatives...>&
       requires(
          !is_reference_variant
          && (is_constructible<Alternatives, Alternatives&&> && ...)
@@ -890,7 +887,7 @@ class variant {
       )
    {
       this->template move_assign_indexed<>(move(operand));
-      return *this;
+      return static_cast<variant<Alternatives...>&>(*this);
    }
 
    template <typename... Us>
@@ -900,9 +897,10 @@ class variant {
          && (is_assignable<Us&, Us const&> && ...)
       )
    constexpr auto
-   operator=(variant<Us...> const& operand) -> variant& {
+   operator=(variant<Us...> const& operand) [[clang::lifetimebound]]
+   -> variant<Alternatives...>& {
       this->template assign_other_variant<Us...>(operand);
-      return *this;
+      return static_cast<variant<Alternatives...>&>(*this);
    }
 
    template <typename... Us>
@@ -912,78 +910,36 @@ class variant {
          && (is_assignable<Us&, Us&&> && ...)
       )
    constexpr auto
-   operator=(variant<Us...>&& operand) -> variant& {
+   operator=(variant<Us...>&& operand) [[clang::lifetimebound]]
+   -> variant<Alternatives...>& {
       this->template assign_other_variant<Us...>(move(operand));
-      return *this;
-   }
-
-   // Reference-variant assignment writes through the held reference.
-   template <typename T>
-      requires(
-         is_reference_variant
-         && types::template is_unique<add_lvalue_reference<remove_cvref<T>>>
-         && is_assignable<remove_cvref<T>&, T&&>
-      )
-   constexpr auto
-   operator=(T&& operand) noexcept(false) -> variant& {
-      using alternative = add_lvalue_reference<remove_cvref<T>>;
-      cat::assert(this->template is<alternative>());
-      *detail::variant_ref_slot<alternative_index<alternative>>(m_storage) =
-         $fwd(operand);
-      return *this;
+      return static_cast<variant<Alternatives...>&>(*this);
    }
 
    constexpr auto
-   operator=(variant const& operand) noexcept(
-      !__has_feature(cxx_exceptions)
-      && (is_nothrow_copy_assignable<remove_reference<Alternatives>> && ...)
-   ) -> variant&
-      requires(
-         is_reference_variant
-         && (is_assignable<remove_reference<Alternatives>&, remove_reference<Alternatives> const&> && ...)
-      )
-   {
-      if (this == &operand) {
-         return *this;
-      }
-      cat::assert(
-         m_discriminant.value_or_niche()
-         == operand.m_discriminant.value_or_niche()
-      );
-      this->template copy_assign_reference_indexed<>(operand);
-      return *this;
-   }
+   operator=(variant_base const&) -> variant_base&
+      requires(is_reference_variant)
+   = default;
 
    constexpr auto
-   operator=(variant&& operand) noexcept(false) -> variant&
-      requires(
-         is_reference_variant
-         && (is_assignable<remove_reference<Alternatives>&, remove_reference<Alternatives>&&> && ...)
-      )
-   {
-      if (this == &operand) {
-         return *this;
-      }
-      cat::assert(
-         m_discriminant.value_or_niche()
-         == operand.m_discriminant.value_or_niche()
-      );
-      this->template move_assign_reference_indexed<>(move(operand));
-      return *this;
-   }
+   operator=(variant_base&&) -> variant_base&
+      requires(is_reference_variant)
+   = default;
 
    // The `get`/`get_if`/`get_ptr` family is forward-declared here and
    // defined out-of-line in `implementations/variant_get.tpp`. The
    // per-function `requires`-clauses are trailing so the class-scope
    // names (`types`, `is_reference_variant`, ...) resolve identically
    // in the out-of-line definitions.
-   //
+
    // Position-typed accessor by index. For reference variants this
    // yields the referent type, not the slot's pointer.
    template <idx index>
    [[nodiscard]]
    constexpr auto
-   get(this auto&& self) noexcept -> decltype(auto)
+   get(this auto&& self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> decltype(auto)
       requires(index < sizeof...(Alternatives));
 
    // Type-keyed accessor. The alternative type must appear exactly once
@@ -992,7 +948,9 @@ class variant {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   get(this auto&& self) noexcept -> decltype(auto)
+   get(this auto&& self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> decltype(auto)
       requires(
          types::template is_unique<T>
          || (is_reference_variant && types::template is_unique<add_lvalue_reference<T>>)
@@ -1004,7 +962,7 @@ class variant {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   get_ptr(this auto&& self)
+   get_ptr(this auto&& self [[clang::lifetimebound]])
       requires(
          types::template is_unique<T>
          || (is_reference_variant && types::template is_unique<add_lvalue_reference<T>>)
@@ -1013,7 +971,7 @@ class variant {
    template <idx index>
    [[nodiscard]]
    constexpr auto
-   get_ptr(this auto&& self)
+   get_ptr(this auto&& self [[clang::lifetimebound]])
       requires(index < sizeof...(Alternatives));
 
    // Type-keyed `get_if`. Engaged when `T` is the active alternative.
@@ -1022,7 +980,7 @@ class variant {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   get_if(this auto&& self)
+   get_if(this auto&& self [[clang::lifetimebound]])
       requires(types::template is_unique<T> && !is_reference<T>);
 
    // Reference-variant `get_if`: queried by the bare type and yields
@@ -1030,7 +988,8 @@ class variant {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   get_if(this auto&& self) -> maybe<add_lvalue_reference<T>>
+   get_if(this auto&& self [[clang::lifetimebound]])
+      -> maybe<add_lvalue_reference<T>>
       requires(
          is_reference_variant && !types::template has_type<T>
          && types::template is_unique<add_lvalue_reference<T>>
@@ -1044,7 +1003,7 @@ class variant {
    template <idx index>
    [[nodiscard]]
    constexpr auto
-   get_if(this auto&& self)
+   get_if(this auto&& self [[clang::lifetimebound]])
       requires(index < sizeof...(Alternatives));
 
    // `.index()` exposes the active alternative as a `maybe_discriminant`,
@@ -1116,7 +1075,7 @@ class variant {
    // `other` agree on the active alternative.
    template <idx index_value = 0u>
    constexpr auto
-   recurse_compare_eq_indexed(variant const& other) const -> bool {
+   recurse_compare_eq_indexed(variant_base const& other) const -> bool {
       if constexpr (index_value < variant_size) {
          if (m_discriminant.value_or_niche() == index_value) {
             return m_storage.template get<index_value>()
@@ -1134,7 +1093,7 @@ class variant {
    // and `other` agree on the active alternative.
    template <idx index_value = 0u>
    constexpr auto
-   recurse_compare_threeway_indexed(variant const& other) const {
+   recurse_compare_threeway_indexed(variant_base const& other) const {
       using result = common_comparison_category_t<
          decltype(declval<Alternatives const&>() <=> declval<Alternatives const&>())...>;
       if constexpr (index_value < variant_size) {
@@ -1169,7 +1128,9 @@ class variant {
       requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
    constexpr void
    match(Patterns&&... patterns) {
-      detail::match_patterns (*this)($fwd(patterns)...);
+      detail::match_patterns(static_cast<variant<Alternatives...>&>(*this))(
+         $fwd(patterns)...
+      );
    }
 
    // `.visit(callback)` is a member shortcut for `cat::visit(callback, *this)`.
@@ -1222,6 +1183,171 @@ class variant {
    storage_type m_storage;
 };
 
+template <typename... Alternatives>
+concept is_reference_variant_pack =
+   sizeof...(Alternatives) > 0 && type_list<Alternatives...>::is_all_references;
+}  // namespace detail
+
+template <typename... Alternatives>
+   requires(detail::is_valid_variant_alternatives<Alternatives...>)
+class variant : public detail::variant_base<Alternatives...> {
+   using base = detail::variant_base<Alternatives...>;
+
+ public:
+   using base::base;
+   using base::operator=;
+
+   constexpr variant() = default;
+
+   constexpr variant(variant const&)
+      requires(__is_constructible(base, base const&))
+   = default;
+
+   constexpr variant(variant&&)
+      requires(__is_constructible(base, base &&))
+   = default;
+
+   constexpr auto
+   operator=(variant const&) -> variant&
+      requires(__is_assignable(base&, base const&))
+   = default;
+
+   constexpr auto
+   operator=(variant&&) -> variant&
+      requires(__is_assignable(base&, base &&))
+   = default;
+};
+
+template <typename... Alternatives>
+   requires(
+      detail::is_valid_variant_alternatives<Alternatives...>
+      && detail::is_reference_variant_pack<Alternatives...>
+   )
+class [[gsl::Pointer]]
+variant<Alternatives...> : public detail::variant_base<Alternatives...> {
+   using base = detail::variant_base<Alternatives...>;
+
+ public:
+   using base::base;
+
+   constexpr variant() =
+      delete ("A reference `cat::variant` must be constructed with an active "
+              "alternative! It has no valueless state to default into.");
+
+   constexpr variant(variant const&) = default;
+   constexpr variant(variant&&) = default;
+   constexpr auto
+   operator=(variant const&) -> variant& = default;
+   constexpr auto
+   operator=(variant&&) -> variant& = default;
+
+   template <idx index>
+   [[nodiscard]]
+   constexpr auto
+   get(this variant self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> decltype(auto)
+      requires(index < sizeof...(Alternatives))
+   {
+      cat::assert(self.index().value_or_niche() == index);
+      return *detail::variant_ref_slot<index>(self.m_storage);
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   get(this variant self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> decltype(auto)
+      requires(
+         base::types::template is_unique<T>
+         || base::types::template is_unique<add_lvalue_reference<T>>
+      )
+   {
+      if constexpr (base::types::template has_type<T>) {
+         return self.template get<base::template alternative_index<T>>();
+      } else {
+         return self.template get<
+            base::template alternative_index<add_lvalue_reference<T>>>();
+      }
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   get_ptr(this variant self [[clang::lifetimebound]]) noexcept
+      requires(
+         base::types::template is_unique<T>
+         || base::types::template is_unique<add_lvalue_reference<T>>
+      )
+   {
+      using key = conditional<
+         base::types::template has_type<T>, T, add_lvalue_reference<T>>;
+      using result_type =
+         decltype(__builtin_addressof(self.template get<key>()));
+      if (self.template is<key>()) {
+         return __builtin_addressof(self.template get<key>());
+      }
+      return result_type{nullptr};
+   }
+
+   template <idx index>
+   [[nodiscard]]
+   constexpr auto
+   get_ptr(this variant self [[clang::lifetimebound]]) noexcept
+      requires(index < sizeof...(Alternatives))
+   {
+      using result_type =
+         decltype(__builtin_addressof(self.template get<index>()));
+      if (self.index().value_or_niche() == index) {
+         return __builtin_addressof(self.template get<index>());
+      }
+      return result_type{nullptr};
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   get_if(this variant self [[clang::lifetimebound]]) noexcept -> maybe<T>
+      requires(base::types::template is_unique<T>)
+   {
+      if (self.template is<T>()) {
+         return self.template get<T>();
+      }
+      return nullopt;
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   get_if(this variant self [[clang::lifetimebound]]) noexcept
+      -> maybe<add_lvalue_reference<T>>
+      requires(
+         !base::types::template has_type<T>
+         && base::types::template is_unique<add_lvalue_reference<T>>
+      )
+   {
+      using key = add_lvalue_reference<T>;
+      if (self.template is<key>()) {
+         return self.template get<key>();
+      }
+      return nullopt;
+   }
+
+   template <idx index>
+   [[nodiscard]]
+   constexpr auto
+   get_if(this variant self [[clang::lifetimebound]]) noexcept
+      -> maybe<typename base::types::template get<index>>
+      requires(index < sizeof...(Alternatives))
+   {
+      if (self.index().value_or_niche() == index) {
+         return self.template get<index>();
+      }
+      return nullopt;
+   }
+};
+
 // `is_variant_like` is satisfied by `cat::variant<Ts...>`, by every type
 // that publicly and unambiguously inherits from one (P2162), and by any
 // other type that models the variant protocol used for pattern matching.
@@ -1238,30 +1364,32 @@ class variant {
 // https://open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3527r1.html#design
 template <typename T>
 concept is_variant_like =
-   requires(remove_cvref<T> const& v) {
+   requires(remove_cvref<T> const& variant) {
       typename remove_cvref<T>::types;
       remove_cvref<T>::variant_size;
       typename remove_cvref<T>::template alternative_type<idx{0u}>;
-      v.index();
-      v.template get<idx{0u}>();
-      { v.template is<remove_cvref<T>>() } -> is_same<bool>;
+      variant.index();
+      variant.template get<idx{0u}>();
+      { variant.template is<remove_cvref<T>>() } -> is_same<bool>;
    };
 
-// P2527R3 `variant_alternative_index<T, Variant>`: the inverse of
-// `variant_alternative<index, Variant>`. Yields the zero-based index of `T`
-// in `Variant`'s alternatives.
+// Based on P2527R3, `variant_alternative_index<T, Variant>` is essentially the
+// inverse of `variant_alternative<index, Variant>`. It evaluates to the
+// zero-based index of `T` in `Variant`'s alternatives.
 //
-// Strict semantics per P2527:
+// Strict semantics based on P2527:
+//   Error if `T` does not appear exactly once in `Variant`'s
+//   alternatives.
 //
-//   - Hard error if `T` does not appear exactly once in `Variant`'s
-//     alternatives.
-//   - Hard error if `Variant` is not exactly `cat::variant<Ts...>` (derived
-//     classes do not satisfy `is_specialization<Variant, variant>`).
-//   - Hard error if `Variant` is const-qualified (the same reason).
-//   - Constness of `T` must match an alternative exactly.
+//   Error if `Variant` is not exactly `cat::variant<Ts...>` (derived
+//   classes do not satisfy `is_specialization<Variant, variant>`).
 //
-// `cat::variant<...>::alternative_index<T>` remains the more permissive
-// member form that works through P2162 inheritance.
+//   Error if `Variant` is `const`-qualified.
+//
+//   `const`-ness of `T` must match an alternative perfectly.
+//
+// `cat::variant<...>::alternative_index<T>` is a relaxed form that works
+// through P2162 inheritance, "upside-down polymorphism".
 //
 // https://open-std.org/jtc1/sc22/wg21/docs/papers/2024/p2527r3.html
 template <typename T, typename Variant>
@@ -1270,13 +1398,6 @@ template <typename T, typename Variant>
 inline constexpr idx variant_alternative_index =
    Variant::template alternative_index<T>;
 
-// P3664R0 SFINAE-friendly `variant_size<T>`. A constrained variable
-// template - probing it for a non-variant `T` is a substitution failure
-// on the `requires`-clause rather than a hard error, which is what P3664
-// asks for so concept-detection machinery (P2688R5 pattern matching,
-// etc.) can ask "is this a variant?" without provoking a diagnostic.
-// Mirrors `cat::variant_alternative_index<T, V>`'s shape.
-//
 // https://open-std.org/jtc1/sc22/wg21/docs/papers/2025/p3664r0.html
 template <is_variant_like T>
 inline constexpr idx variant_size = remove_cvref<T>::variant_size;

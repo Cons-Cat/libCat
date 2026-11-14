@@ -608,7 +608,8 @@ class atomic<T> {
    constexpr atomic() = default;
 
    // Construction has no racing observer, so initialize storage directly.
-   constexpr atomic(T desired) noexcept : m_value(desired) {
+   constexpr atomic(T desired [[clang::lifetimebound]]) noexcept
+       : m_value(desired) {
    }
 
    ~atomic() = default;
@@ -642,8 +643,8 @@ class atomic<T> {
    relaxed() const&& = delete;
 
    constexpr auto
-   acquire() & noexcept
-      -> memory_order_reference<atomic, memory_order::acquire>;
+   acquire() & noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic, memory_order::acquire>;
 
    constexpr auto
    acquire() const& noexcept [[clang::lifetimebound]]
@@ -670,8 +671,8 @@ class atomic<T> {
    release() const&& = delete;
 
    constexpr auto
-   acq_rel() & noexcept
-      -> memory_order_reference<atomic, memory_order::acq_rel>;
+   acq_rel() & noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic, memory_order::acq_rel>;
 
    constexpr auto
    acq_rel() const& noexcept
@@ -684,8 +685,8 @@ class atomic<T> {
    acq_rel() const&& = delete;
 
    constexpr auto
-   seq_cst() & noexcept
-      -> memory_order_reference<atomic, memory_order::seq_cst>;
+   seq_cst() & noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic, memory_order::seq_cst>;
 
    constexpr auto
    seq_cst() const& noexcept
@@ -717,8 +718,8 @@ class atomic<T> {
    }
 
    constexpr auto
-   sat() & noexcept
-      -> detail::atomic_overflow_reference<atomic, overflow_policies::saturate>
+   sat() & noexcept [[clang::lifetimebound]]
+   -> detail::atomic_overflow_reference<atomic, overflow_policies::saturate>
       requires(is_integral<T> && !is_same<T, bool>)
    {
       return detail::atomic_overflow_reference<
@@ -1418,7 +1419,7 @@ class atomic<T> {
 
    [[nodiscard]]
    constexpr auto
-   storage_ptr(this auto& self) noexcept {
+   storage_ptr(this auto& self [[clang::lifetimebound]]) noexcept {
       if constexpr (requires { self.m_value.raw; }) {
          return &self.m_value.raw;
       } else {
@@ -1494,20 +1495,20 @@ class atomic<T&> {
       -> memory_order_reference<atomic, memory_order::relaxed>;
 
    constexpr auto
-   relaxed() const& noexcept
-      -> memory_order_reference<atomic const, memory_order::relaxed>;
+   relaxed() const& noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic const, memory_order::relaxed>;
 
    constexpr auto
-   acquire() & noexcept
-      -> memory_order_reference<atomic, memory_order::acquire>;
+   acquire() & noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic, memory_order::acquire>;
 
    constexpr auto
    acquire() const& noexcept
       -> memory_order_reference<atomic const, memory_order::acquire>;
 
    constexpr auto
-   release() & noexcept
-      -> memory_order_reference<atomic, memory_order::release>;
+   release() & noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic, memory_order::release>;
 
    constexpr auto
    release() const& noexcept
@@ -1522,8 +1523,8 @@ class atomic<T&> {
       -> memory_order_reference<atomic const, memory_order::acq_rel>;
 
    constexpr auto
-   seq_cst() & noexcept
-      -> memory_order_reference<atomic, memory_order::seq_cst>;
+   seq_cst() & noexcept [[clang::lifetimebound]]
+   -> memory_order_reference<atomic, memory_order::seq_cst>;
 
    constexpr auto
    seq_cst() const& noexcept
@@ -1539,8 +1540,8 @@ class atomic<T&> {
    }
 
    constexpr auto
-   wrap() & noexcept
-      -> detail::atomic_overflow_reference<atomic, overflow_policies::wrap>
+   wrap() & noexcept [[clang::lifetimebound]]
+   -> detail::atomic_overflow_reference<atomic, overflow_policies::wrap>
       requires(!is_const<T> && !is_same<T, bool>)
    {
       return detail::atomic_overflow_reference<atomic, overflow_policies::wrap>(
@@ -1549,8 +1550,8 @@ class atomic<T&> {
    }
 
    constexpr auto
-   sat() & noexcept
-      -> detail::atomic_overflow_reference<atomic, overflow_policies::saturate>
+   sat() & noexcept [[clang::lifetimebound]]
+   -> detail::atomic_overflow_reference<atomic, overflow_policies::saturate>
       requires(!is_const<T> && is_integral<T> && !is_same<T, bool>)
    {
       return detail::atomic_overflow_reference<
@@ -2900,14 +2901,18 @@ class basic_atomic_accessor {
    }
 
    constexpr auto
-   access(data_handle_type _Nonnull p_data, __SIZE_TYPE__ index) const noexcept
-      -> reference {
+   access(
+      data_handle_type _Nonnull p_data [[clang::lifetimebound]],
+      __SIZE_TYPE__ index
+   ) const noexcept -> reference {
       return reference(p_data[index]);
    }
 
    constexpr auto
-   offset(data_handle_type _Nonnull p_data, __SIZE_TYPE__ index) const noexcept
-      -> data_handle_type _Nonnull {
+   offset(
+      data_handle_type _Nonnull p_data [[clang::lifetimebound]],
+      __SIZE_TYPE__ index
+   ) const noexcept -> data_handle_type _Nonnull {
       return p_data + index;
    }
 };

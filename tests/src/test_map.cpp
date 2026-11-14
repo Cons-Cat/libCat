@@ -210,6 +210,26 @@ $test(map_nontrivial_values) {
    cat::verify(destructor_count == 1'000);
 }
 
+// `.insert()` only constructs a value from its arguments when it inserts one.
+$test(map_insert_constructs_in_place) {
+   destructor_count = 0;
+   {
+      cat::map_big<int4, tracked> map;
+      int4 const key = 1;
+      cat::verify(map.insert<cat::allocator_page>(pager, key, 10).has_value());
+      cat::verify(!map.insert<cat::allocator_page>(pager, key, 20).has_value());
+      cat::verify(destructor_count == 0);
+      cat::verify(map[key].value().value == 10);
+
+      cat::verify(
+         map.update<cat::allocator_page>(pager, key, tracked(30)).has_value()
+      );
+      cat::verify(map[key].value().value == 30);
+      map.free<cat::allocator_page>(pager);
+   }
+   cat::verify(destructor_count == 1);
+}
+
 $test(map_hash_and_key_equal) {
    // Groups, their size index and mask, the size, and the maximum load. The
    // default hash and equality take no space.
