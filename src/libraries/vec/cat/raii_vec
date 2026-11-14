@@ -271,14 +271,6 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
       return m_core.reserve(m_allocator, minimum_capacity);
    }
 
-   [[nodiscard]]
-   constexpr auto
-   initialize_fixed(idx fixed_size) -> maybe<void>
-      requires(flags.is_fixed_size && is_default_constructible<T>)
-   {
-      return m_core.initialize_fixed(m_allocator, fixed_size);
-   }
-
    // Try to change the size of this `vec`.
    [[nodiscard]]
    constexpr auto
@@ -486,6 +478,40 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
    friend constexpr auto
    detail::raii_vec_nullopt() -> basic_vec<U, allocator_dyn, other_flags>;
 
+   // These size fixed-size `vec`s through `.initialize_fixed()`.
+   template <typename U, is_allocator OtherAllocator, vec_flags other_flags>
+   friend constexpr auto
+      make_vec(allocator_ref<OtherAllocator>, initializer_list<U>)
+         -> maybe<raii::vec<U, OtherAllocator, other_flags>>;
+
+   template <typename U, is_allocator OtherAllocator, vec_flags other_flags>
+   friend constexpr auto make_vec_reserved(allocator_ref<OtherAllocator>, idx)
+      -> maybe<raii::vec<U, OtherAllocator, other_flags>>;
+
+   template <
+      typename U, is_allocator OtherAllocator, vec_flags other_flags,
+      typename Generator>
+   friend constexpr auto
+   make_vec_filled_random(allocator_ref<OtherAllocator>, idx, Generator&&)
+      -> maybe<raii::vec<U, OtherAllocator, other_flags>>;
+
+   template <
+      typename U, is_allocator OtherAllocator, vec_flags other_flags,
+      typename Generator, typename Distribution>
+   friend constexpr auto
+   make_vec_filled_random(
+      allocator_ref<OtherAllocator>, idx, Generator&&, Distribution&&
+   ) -> maybe<raii::vec<U, OtherAllocator, other_flags>>;
+
+   // Allocate and default-construct `fixed_size` elements.
+   [[nodiscard]]
+   constexpr auto
+   initialize_fixed(idx fixed_size) -> maybe<void>
+      requires(flags.is_fixed_size && is_default_constructible<T>)
+   {
+      return m_core.initialize_fixed(m_allocator, fixed_size);
+   }
+
    cat::basic_vec<T, flags> m_core;
    [[no_unique_address]]
    allocator_ref<Allocator> m_allocator;
@@ -530,22 +556,7 @@ template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec(allocator_dyn allocator, initializer_list<T> values)
       -> maybe<raii::vec<T, allocator_dyn, flags>> {
-   raii::vec<T, allocator_dyn, flags> new_vector(allocator);
-   if constexpr (flags.is_fixed_size) {
-      $prop(new_vector.initialize_fixed(values.size()));
-   } else {
-      $prop(new_vector.reserve(max(values.size(), 4u)));
-   }
-   idx index;
-   for (T const& value : values) {
-      if constexpr (flags.is_fixed_size) {
-         new_vector[index] = value;
-         ++index;
-      } else {
-         $prop(new_vector.push_back(value));
-      }
-   }
-   return new_vector;
+   return raii::make_vec<T, allocator_dyn, flags>(allocator, values);
 }
 
 template <typename T, is_allocator Allocator, vec_flags flags = {}>
@@ -565,13 +576,7 @@ template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_vec_reserved(allocator_dyn allocator, idx capacity)
       -> maybe<raii::vec<T, allocator_dyn, flags>> {
-   raii::vec<T, allocator_dyn, flags> new_vector(allocator);
-   if constexpr (flags.is_fixed_size) {
-      $prop(new_vector.initialize_fixed(capacity));
-   } else {
-      $prop(new_vector.reserve(max(capacity, 4u)));
-   }
-   return new_vector;
+   return raii::make_vec_reserved<T, allocator_dyn, flags>(allocator, capacity);
 }
 
 template <typename T, is_allocator Allocator, vec_flags flags = {}>

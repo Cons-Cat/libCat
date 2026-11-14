@@ -531,20 +531,18 @@ $test(vec_inplace_emplace_and_insert) {
    // `values` is full, so nothing changes.
    cat::verify(values.emplace(1u, 9_i4).is_empty());
    cat::verify(values.insert(1u, five).is_empty());
-   cat::verify(values.insert_n(0u, 1u, five).is_empty());
    verify_ints(values, cat::array{0_i4, 1_i4, 5_i4, 2_i4, 3_i4, 4_i4});
 
    // Inserting an element of `values` copies it before anything moves.
-   values.truncate(3u);
+   values.erase(3u, values.size());
    values.insert(0u, values[2u]).verify();
-   values.insert_n(1u, 2u, values[0u]).verify();
+   values.insert(1u, values[0u]).verify();
+   values.insert(1u, values[0u]).verify();
    verify_ints(values, cat::array{5_i4, 5_i4, 5_i4, 0_i4, 1_i4, 5_i4});
 
-   values.truncate(2u);
-   values.insert_n(1u, 3u, 7_i4).verify();
+   values.erase(2u, values.size());
+   values.insert_range(1u, cat::array{7_i4, 7_i4, 7_i4}).verify();
    verify_ints(values, cat::array{5_i4, 7_i4, 7_i4, 7_i4, 5_i4});
-   values.insert_n(5u, 0u, 7_i4).verify();
-   cat::verify(values.size() == 5u);
 }
 
 $test(vec_inplace_insert_range) {
@@ -569,11 +567,11 @@ $test(vec_inplace_insert_range) {
    auto single_pass = cat::ref(source).filter([](int4) -> bool {
       return true;
    });
-   values.truncate(6u);
+   values.erase(6u, values.size());
    cat::verify(values.append_range(single_pass).is_empty());
    cat::verify(values.insert_range(0u, single_pass).is_empty());
    verify_ints(values, cat::array{1_i4, 8_i4, 9_i4, 2_i4, 1_i4, 8_i4});
-   values.truncate(5u);
+   values.erase(5u, values.size());
    values.insert_range(1u, single_pass).verify();
    verify_ints(
       values, cat::array{1_i4, 10_i4, 11_i4, 12_i4, 8_i4, 9_i4, 2_i4, 1_i4}
@@ -629,14 +627,14 @@ $test(vec_inplace_replace_and_assign) {
    cat::verify(values.size() == 3u);
 }
 
-$test(vec_inplace_truncate) {
+$test(vec_inplace_erase_tail) {
    lifetime_value::live_count = 0u;
    {
       cat::vec_inplace<lifetime_value, 6u> values;
       values.resize(6u, lifetime_value(1_i4)).verify();
-      values.truncate(4u);
+      values.erase(4u, values.size());
       cat::verify(lifetime_value::live_count == 4u);
-      values.pop_back_n(3u);
+      values.erase(idx(values.size() - 3u), values.size());
       cat::verify(lifetime_value::live_count == 1u);
       values.resize(2u).verify();
       cat::verify(lifetime_value::live_count == 2u);
@@ -874,7 +872,7 @@ $test(vec_inplace_swap_throwing) {
    }
 }
 
-// Inserting a single element or copies of one has no effects if a constructor
+// Inserting or appending copies of an element has no effects if a constructor
 // throws.
 $test(vec_inplace_insert_strong_guarantee) {
    fragile::live = 0;
@@ -884,10 +882,6 @@ $test(vec_inplace_insert_strong_guarantee) {
       fragile const source(9);
 
       for (iword failure = 1; failure <= 2; ++failure) {
-         fragile::arm(failure);
-         cat::verify(throws_injected_failure([&] {
-            auto _ = values.insert_n(1u, 2u, source);
-         }));
          fragile::arm(failure);
          cat::verify(throws_injected_failure([&] {
             auto _ = values.append(2u, source);

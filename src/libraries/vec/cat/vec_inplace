@@ -379,19 +379,6 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
       return monostate;
    }
 
-   // Insert `count` copies of `value` before `position`.
-   [[nodiscard]]
-   constexpr auto
-   insert_n(idx position, idx count, T const& value) -> maybe<void>
-      requires(is_copy_constructible<T> && is_move_assignable<T>)
-   {
-      assert(position <= size());
-      idx const old_size = size();
-      $prop(append(count, value));
-      rotate_into_place(position, old_size);
-      return monostate;
-   }
-
    // Insert every element of `range` before `position`. They are appended and
    // then rotated into place, so `range` may be part of this `vec_inplace`.
    template <is_iterable Range>
@@ -481,21 +468,6 @@ vec_inplace : public container_interface<vec_inplace<T, inline_capacity>, T>,
    constexpr void
    clear() noexcept {
       destroy_back_to(0u);
-   }
-
-   // Destroy the elements from `new_size` onwards. `new_size` must not exceed
-   // the current size.
-   constexpr void
-   truncate(idx new_size) noexcept(!__has_feature(cxx_exceptions)) {
-      assert(new_size <= size());
-      destroy_back_to(new_size);
-   }
-
-   // Destroy the last `count` elements, which must exist.
-   constexpr void
-   pop_back_n(idx count) noexcept(!__has_feature(cxx_exceptions)) {
-      assert(count <= size());
-      destroy_back_to(idx(size() - count));
    }
 
    constexpr void

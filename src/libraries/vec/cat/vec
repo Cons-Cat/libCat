@@ -108,7 +108,15 @@ constexpr auto
 maybe_vec_nullopt() noexcept(false) -> basic_vec<T, flags>;
 }  // namespace detail
 
+namespace raii {
+template <typename T, is_allocator Allocator, vec_flags flags>
+class basic_vec;
+}  // namespace raii
+
 inline namespace manual {
+
+template <vec_flags flags>
+class basic_bitvec;
 
 template <typename T, vec_flags configuration>
 class [[clang::preferred_name(vec<T, configuration>), gsl::Owner]]
@@ -433,6 +441,17 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
       fill(data() + old_size);
       guard.commit();
+      m_storage.set_size(new_size);
+   }
+
+   // Destroy the elements from `new_size` onwards. `new_size` must not exceed
+   // the current size.
+   constexpr void
+   destroy_tail(idx new_size) noexcept(!__has_feature(cxx_exceptions)) {
+      idx const old_size = size();
+      assert(new_size <= old_size);
+      destroy_n_elements(data() + new_size, idx(old_size - new_size));
+      annotate_size_change(old_size, new_size);
       m_storage.set_size(new_size);
    }
 
@@ -892,7 +911,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       if (new_size > old_size) {
          construct_tail(new_size, fill);
       } else {
-         truncate(new_size);
+         destroy_tail(new_size);
       }
 
       return monostate;
@@ -986,6 +1005,8 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       return cfree<allocator_dyn>(allocator);
    }
 
+ private:
+   // Allocate and default-construct `fixed_size` elements.
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
@@ -1000,7 +1021,6 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       });
    }
 
- private:
    // Allocate `fixed_size` elements and construct them with `fill(p_first)`.
    // If that throws, the storage is freed.
    template <is_allocator Allocator, typename Fill>
@@ -1119,28 +1139,6 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       };
 
       return resize_with(allocator, size, fill);
-   }
-
-   // Destroy the elements from `size` onwards. `size` must not exceed the
-   // current size.
-   constexpr void
-   truncate(idx size) noexcept(!__has_feature(cxx_exceptions))
-      requires(!flags.is_fixed_size)
-   {
-      idx const old_size = this->size();
-      assert(size <= old_size);
-      destroy_n_elements(data() + size, idx(old_size - size));
-      annotate_size_change(old_size, size);
-      m_storage.set_size(size);
-   }
-
-   // Destroy the last `count` elements, which must exist.
-   constexpr void
-   pop_back_n(idx count) noexcept(!__has_feature(cxx_exceptions))
-      requires(!flags.is_fixed_size)
-   {
-      assert(count <= size());
-      truncate(idx(size() - count));
    }
 
    // Append `count` copies of `value`, which may be an element of this `vec`.
@@ -1521,59 +1519,6 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       return insert<allocator_dyn>(allocator, position, move(value));
    }
 
-   // Insert `count` copies of `value` before `position`. It may be an element
-   // of this `vec`.
-   template <is_allocator Allocator>
-      requires(
-         is_copy_constructible<T> && is_copy_assignable<T>
-         && is_assignable<T&, T&&>
-      )
-   [[nodiscard]]
-   constexpr auto
-   insert_n(
-      allocator_ref<Allocator> allocator, idx position, idx count,
-      T const& value
-   ) -> maybe<void>
-      requires(!flags.is_fixed_size)
-   {
-      assert(position <= size());
-      if (count == 0u) {
-         return monostate;
-      }
-
-      // Shifting the tail may move `value`, so copy it first if it aliases.
-      if (is_pointer_in_range(&value, span(*this))) {
-         T const copy = value;
-         return insert_n(allocator, position, count, copy);
-      }
-
-      return insert_n_elements(
-         allocator, position, count,
-         [&](T* _Nonnull p_first, idx, idx fill_count) {
-            construct_n_elements(p_first, fill_count, [&](idx) -> T const& {
-               return value;
-            });
-         },
-         [&](idx) -> T const& {
-            return value;
-         }
-      );
-   }
-
-   // Insert `count` copies of `value` before `position`. It may be an element
-   // of this `vec`.
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   insert_n(allocator_dyn allocator, idx position, idx count, T const& value)
-      -> maybe<void>
-      requires(
-         !flags.is_fixed_size && is_copy_constructible<T>
-         && is_copy_assignable<T> && is_assignable<T&, T&&>
-      )
-   {
-      return insert_n<allocator_dyn>(allocator, position, count, value);
-   }
-
    // Remove and return the last element. Returns `nullopt` when the vec
    // is empty.
    [[nodiscard]]
@@ -1635,7 +1580,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
             copy_memory_backward(
                data() + end, data() + start, moved * sizeof(T)
             );
-            truncate(idx(old_size - count));
+            destroy_tail(idx(old_size - count));
             return;
          }
       }
@@ -1644,7 +1589,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
          data()[start + i] = move(data()[end + i]);
       }
 
-      truncate(idx(old_size - count));
+      destroy_tail(idx(old_size - count));
    }
 
    // Append every element of `range` to the end of this `vec`.
@@ -1909,6 +1854,41 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <typename U, vec_flags other_flags>
    friend constexpr auto
    detail::maybe_vec_nullopt() -> basic_vec<U, other_flags>;
+
+   // These size fixed-size `vec`s through `.initialize_fixed()`.
+   template <typename U, is_allocator Allocator, vec_flags other_flags>
+   friend class raii::basic_vec;
+
+   template <vec_flags other_flags>
+   friend class basic_bitvec;
+
+   template <typename U, is_allocator Allocator, vec_flags other_flags>
+   friend constexpr auto make_vec(allocator_ref<Allocator>, initializer_list<U>)
+      -> maybe<vec<U, other_flags>>;
+
+   template <typename U, is_allocator Allocator, vec_flags other_flags>
+   friend constexpr auto make_vec_reserved(allocator_ref<Allocator>, idx)
+      -> maybe<vec<U, other_flags>>;
+
+   template <typename U, is_allocator Allocator, vec_flags other_flags>
+   friend constexpr auto
+   make_vec_filled(allocator_ref<Allocator>, idx, U const&)
+      -> maybe<vec<U, other_flags>>;
+
+   template <
+      typename U, is_allocator Allocator, vec_flags other_flags,
+      typename Generator>
+   friend constexpr auto
+   make_vec_filled_random(allocator_ref<Allocator>, idx, Generator&&)
+      -> maybe<vec<U, other_flags>>;
+
+   template <
+      typename U, is_allocator Allocator, vec_flags other_flags,
+      typename Generator, typename Distribution>
+   friend constexpr auto
+   make_vec_filled_random(
+      allocator_ref<Allocator>, idx, Generator&&, Distribution&&
+   ) -> maybe<vec<U, other_flags>>;
 
    detail::vec_storage<T, flags> m_storage;
 };

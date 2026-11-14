@@ -11,6 +11,8 @@ namespace cat::detail {
 template <typename T>
 union vec_niche_storage {
    T value;
+   // Makes this a literal type when `T` is not one.
+   unsigned char _;
 
    constexpr vec_niche_storage() {
    }

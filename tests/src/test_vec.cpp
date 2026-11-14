@@ -1242,8 +1242,11 @@ $test(vec_element_destructors) {
 $test(fixed_inline_vec_free_destroys_all_elements) {
    linear_arena arena;
    lifetime_destructor_count = 0u;
-   cat::vec_fixed<lifetime_probe> values;
-   values.initialize_fixed<cat::allocator_linear>(arena.alloc, 3u).verify();
+   cat::vec_fixed<lifetime_probe> values =
+      cat::make_vec_fixed_filled<lifetime_probe, cat::allocator_linear>(
+         arena.alloc, 3u, lifetime_probe()
+      )
+         .verify();
    lifetime_destructor_count = 0u;
 
    values.free(arena.alloc);
@@ -1253,8 +1256,11 @@ $test(fixed_inline_vec_free_destroys_all_elements) {
 $test(fixed_inline_vec_cfree_destroys_all_elements) {
    linear_arena arena;
    lifetime_destructor_count = 0u;
-   cat::vec_fixed<lifetime_probe> values;
-   values.initialize_fixed<cat::allocator_linear>(arena.alloc, 3u).verify();
+   cat::vec_fixed<lifetime_probe> values =
+      cat::make_vec_fixed_filled<lifetime_probe, cat::allocator_linear>(
+         arena.alloc, 3u, lifetime_probe()
+      )
+         .verify();
    lifetime_destructor_count = 0u;
 
    values.cfree(arena.alloc);
@@ -1868,26 +1874,6 @@ $test(vec_emplace_and_insert_single) {
    objects.free(g_tests_alloc);
 }
 
-$test(vec_insert_repeated_value) {
-   cat::vec_big<int4> vector;
-   fill_ints(vector, 4);
-   cat::verify(vector.insert_n(g_tests_alloc, 1u, 2u, 9).has_value());
-   verify_ints(vector, cat::array<int4, 6u>{0, 9, 9, 1, 2, 3});
-
-   // An element of this `vec` is copied before the tail shifts.
-   cat::verify(vector.insert_n(g_tests_alloc, 0u, 3u, vector[5]).has_value());
-   verify_ints(vector, cat::array<int4, 9u>{3, 3, 3, 0, 9, 9, 1, 2, 3});
-   vector.free(g_tests_alloc);
-
-   cat::vec_big<self_pointer> objects;
-   cat::verify(objects.reserve(g_tests_alloc, 16u).has_value());
-   cat::verify(objects.push_back(g_tests_alloc, self_pointer(0)).has_value());
-   cat::verify(objects.push_back(g_tests_alloc, self_pointer(1)).has_value());
-   cat::verify(objects.insert_n(g_tests_alloc, 1u, 3u, objects[0]).has_value());
-   verify_self_pointers(objects, cat::array<int4, 5u>{0, 0, 0, 0, 1});
-   objects.free(g_tests_alloc);
-}
-
 $test(vec_append_and_assign_values) {
    cat::vec_big<int4> vector;
    fill_ints(vector, 2);
@@ -1919,7 +1905,7 @@ $test(vec_append_and_assign_values) {
    vector.free(g_tests_alloc);
 }
 
-$test(vec_resize_and_truncate) {
+$test(vec_resize_and_erase_tail) {
    cat::vec_big<int4> vector;
    fill_ints(vector, 3);
    cat::verify(vector.resize(g_tests_alloc, 64u).has_value());
@@ -1927,7 +1913,7 @@ $test(vec_resize_and_truncate) {
    verify_ints(
       cat::span<int4>(vector.data(), 3u), cat::array<int4, 3u>{0, 1, 2}
    );
-   vector.truncate(2u);
+   vector.erase(2u, vector.size());
    verify_ints(vector, cat::array<int4, 2u>{0, 1});
    vector.free(g_tests_alloc);
 
@@ -1936,10 +1922,10 @@ $test(vec_resize_and_truncate) {
    for (int4 i = 0; i < 5; ++i) {
       cat::verify(objects.emplace_back(g_tests_alloc, i).has_value());
    }
-   objects.pop_back_n(2u);
+   objects.erase(idx(objects.size() - 2u), objects.size());
    cat::verify(counted_destructions == 2u);
    cat::verify(objects.size() == 3u);
-   objects.truncate(1u);
+   objects.erase(1u, objects.size());
    cat::verify(counted_destructions == 4u);
    cat::verify(objects[0].value == 0);
    objects.free(g_tests_alloc);
@@ -2062,7 +2048,9 @@ consteval_modifiers() -> bool {
             && has_values(values, cat::array<int4, 7u>{0, 10, 11, 12, 1, 2, 3});
    result = result && values.insert(pager, 0u, 20).has_value();
    result = result && values.emplace(pager, 2u, 30).has_value();
-   result = result && values.insert_n(pager, 1u, 2u, values[3]).has_value();
+   result = result
+            && values.insert_range(pager, 1u, cat::array<int4, 2u>{10, 10})
+                  .has_value();
    result =
       result
       && has_values(
@@ -2098,8 +2086,8 @@ consteval_modifiers() -> bool {
       result && has_values(values, cat::array<int4, 5u>{0, 10, 11, 12, 3});
 
    result = result && values.append(pager, 2u, values[4]).has_value();
-   values.truncate(5u);
-   values.pop_back_n(1u);
+   values.erase(5u, values.size());
+   values.erase(idx(values.size() - 1u), values.size());
    result = result && has_values(values, cat::array<int4, 4u>{0, 10, 11, 12});
    result = result && values.assign(pager, 3u, values[1]).has_value();
    result = result && has_values(values, cat::array<int4, 3u>{10, 10, 10});
@@ -2133,7 +2121,13 @@ consteval_modifier_lifetimes() -> bool {
    {
       cat::vec_big<constexpr_lifetime_probe> values;
       result = result && values.resize(pager, 3u, value).has_value();
-      result = result && values.insert_n(pager, 1u, 2u, value).has_value();
+      result = result
+               && values
+                     .insert_range(
+                        pager, 1u,
+                        cat::array<constexpr_lifetime_probe, 2u>{value, value}
+                     )
+                     .has_value();
       result = result && live == values.size() + 1u;
       values.erase(0u, 2u);
       result = result && live == values.size() + 1u;
@@ -2195,10 +2189,13 @@ exercise_self_references() {
    idx const full = vector.size();
    cat::verify(vector.emplace_back(g_tests_alloc, vector[0]).has_value());
    cat::verify(element_value(vector[full]) == 1);
-   vector.truncate(6u);
+   vector.erase(6u, vector.size());
 
    cat::verify(vector.reserve(g_tests_alloc, 16u).has_value());
-   cat::verify(vector.insert_n(g_tests_alloc, 2u, 3u, vector[1]).has_value());
+   for (idx i; i < 3u; ++i) {
+      cat::verify(vector.insert(g_tests_alloc, 2u, vector[1]).has_value());
+   }
+
    cat::verify(
       has_values(vector, cat::array<int4, 9u>{1, 0, 0, 0, 0, 1, 0, 1, 1})
    );
@@ -2309,7 +2306,9 @@ exercise_construct_only() {
       cat::verify(vector[idx(i)].value == i);
    }
    cat::verify(vector.pop_back().verify().value == 9);
-   vector.truncate(3u);
+   while (vector.size() > 3u) {
+      auto _ = vector.pop_back();
+   }
 
    Vector other;
    cat::verify(other.emplace_back(g_tests_alloc, 7).has_value());
@@ -2409,11 +2408,9 @@ $test(vec_empty_and_end_edge_cases) {
    cat::vec_big<int4> vector;
    cat::span<int4> const empty{};
    vector.erase(0u, 0u);
-   vector.truncate(0u);
-   vector.pop_back_n(0u);
+   vector.erase(0u, vector.size());
    cat::verify(vector.pop_back().is_empty());
    cat::verify(vector.insert_range(g_tests_alloc, 0u, empty).has_value());
-   cat::verify(vector.insert_n(g_tests_alloc, 0u, 0u, 5).has_value());
    cat::verify(
       vector.replace_with_range(g_tests_alloc, 0u, 0u, empty).has_value()
    );
@@ -2435,11 +2432,8 @@ $test(vec_empty_and_end_edge_cases) {
    cat::verify(
       vector.insert_range(g_tests_alloc, vector.size(), tail).has_value()
    );
-   cat::verify(
-      vector.insert_n(g_tests_alloc, vector.size(), 2u, 9).has_value()
-   );
+   cat::verify(vector.append(g_tests_alloc, 2u, 9).has_value());
    cat::verify(vector.insert_range(g_tests_alloc, 2u, empty).has_value());
-   cat::verify(vector.insert_n(g_tests_alloc, 2u, 0u, 5).has_value());
    verify_ints(vector, cat::array<int4, 8u>{0, 1, 2, 3, 7, 8, 9, 9});
    vector.erase(idx(vector.size() - 1u));
    vector.erase(2u, 2u);
@@ -2473,7 +2467,7 @@ $test(vec_single_pass_range_failure) {
    cat::verify(vector.size() == capacity && vector[0] == 0);
 
    // What fits is inserted at the position, in order.
-   vector.truncate(idx(capacity - 2u));
+   vector.erase(idx(capacity - 2u), vector.size());
    cat::verify(vector.insert_range(null_alloc, 1u, single_pass).is_empty());
    cat::verify(vector.size() == capacity);
    cat::verify(vector[0] == 0 && vector[1] == 10 && vector[2] == 11);
@@ -2512,7 +2506,7 @@ $test(vec_destroys_each_element_once) {
    cat::verify(live == vector.size() + outside);
    cat::verify(vector.assign(g_tests_alloc, 12u, value).has_value());
    cat::verify(live == vector.size() + outside);
-   vector.truncate(5u);
+   vector.erase(5u, vector.size());
    cat::verify(live == vector.size() + outside);
    vector.clear();
    cat::verify(live == outside);
@@ -2529,7 +2523,7 @@ $test(vec_destroys_in_reverse_order) {
       cat::verify(vector.emplace_back(g_tests_alloc, i).has_value());
    }
    destruction_count = 0u;
-   vector.truncate(3u);
+   vector.erase(3u, vector.size());
    cat::verify(destruction_count == 3u);
    cat::verify(destruction_order[0] == 5 && destruction_order[1] == 4);
    cat::verify(destruction_order[2] == 3);
@@ -2796,38 +2790,6 @@ $test(vec_make_filled_throwing_copy) {
    }));
    fragile::disarm();
    cat::verify(fragile::live == 1);
-}
-
-// Inserting copies of a value has the basic guarantee at every position.
-$test(vec_insert_repeated_basic_guarantee) {
-   fragile::live = 0;
-   fragile const value(100);
-   for (idx position = 0u; position <= 5u; ++position) {
-      for (iword failure = 1; failure <= 8; ++failure) {
-         cat::vec_big<fragile> vector;
-         fill_vec(vector, 5);
-         cat::verify(vector.reserve(g_tests_alloc, 16u).has_value());
-
-         fragile::arm(failure);
-         bool const threw = throws_injected_failure([&] {
-            auto _ = vector.insert_n(g_tests_alloc, position, 3u, value);
-         });
-         fragile::disarm();
-         cat::verify(fragile::live == iword(vector.size()) + 1);
-         if (!threw) {
-            cat::verify(vector.size() == 8u);
-            for (idx i; i < vector.size(); ++i) {
-               int4 const expected = i < position        ? int4(i.raw)
-                                     : i < position + 3u ? int4(100)
-                                                         : int4((i - 3u).raw);
-               cat::verify(vector[i].value == expected);
-            }
-         }
-
-         vector.free(g_tests_alloc);
-         cat::verify(fragile::live == 1);
-      }
-   }
 }
 
 // Swapping inline `vec`s leaks nothing if relocating an element throws.
