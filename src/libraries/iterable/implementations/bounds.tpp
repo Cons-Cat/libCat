@@ -20,9 +20,10 @@ namespace cat {
 template <typename T>
    requires(is_collection<T>)
 constexpr auto
-read_at(T& collection, position_type<T> const& position) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> decltype(read_at_unchecked(collection, position)) {
+read_at(
+   T& collection [[clang::lifetimebound]], position_type<T> const& position
+) noexcept(!__has_feature(cxx_exceptions))
+   -> decltype(read_at_unchecked(collection, position)) {
    cat::assert(!(position < begin_pos(collection)));
    cat::assert(position < end_pos(collection));
    return read_at_unchecked(collection, position);
@@ -34,8 +35,9 @@ read_at(T& collection, position_type<T> const& position) noexcept(
 template <typename T>
    requires(is_collection<T>)
 constexpr auto
-try_read_at(T& collection, position_type<T> const& position)
-   -> maybe<decltype(read_at_unchecked(collection, position))> {
+try_read_at(
+   T& collection [[clang::lifetimebound]], position_type<T> const& position
+) -> maybe<decltype(read_at_unchecked(collection, position))> {
    if (position < begin_pos(collection) || !(position < end_pos(collection))) {
       return nullopt;
    }
@@ -78,7 +80,7 @@ concept has_contiguous_storage = requires(T& collection) {
 template <typename T>
    requires(is_random_access_collection<T> && detail::has_contiguous_storage<T>)
 constexpr auto
-as_span(T& collection) {
+as_span(T& collection [[clang::lifetimebound]]) {
    using element = typeof(*collection.data());
    return span<element, dynamic_extent>{collection.data(), collection.size()};
 }

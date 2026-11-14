@@ -10,7 +10,7 @@ class scripted_simd_engine {
 
    template <cat::idx size>
    constexpr explicit scripted_simd_engine(
-      cat::array<result_type, size> const& words
+      cat::array<result_type, size> const& words [[clang::lifetimebound]]
    )
        : m_words(words.data(), words.size()) {
    }
@@ -49,7 +49,8 @@ class scripted_scalar_engine {
 
    template <cat::idx size>
    constexpr explicit scripted_scalar_engine(
-      cat::array<cat::uint4x4, size> const& words, cat::idx lane
+      cat::array<cat::uint4x4, size> const& words [[clang::lifetimebound]],
+      cat::idx lane
    )
        : m_words(words.data(), words.size()), m_lane(lane) {
    }

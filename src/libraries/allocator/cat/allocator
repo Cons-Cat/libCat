@@ -227,6 +227,11 @@ struct inline_memory_handle {
       }
    }
 
+   // Writing `storage_state` after destroying `inline_storage` does not use the
+   // destroyed object.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-experimental-invalidation"
+
    constexpr inline_memory_handle(inline_memory_handle&& other) noexcept(
       is_nothrow_move_constructible<Handle>
       && is_nothrow_move_constructible<value_type>
@@ -248,6 +253,8 @@ struct inline_memory_handle {
       }
       other.storage_state = 0u;
    }
+
+#pragma clang diagnostic pop
 
    constexpr auto
    operator=(inline_memory_handle const& other) noexcept(
@@ -277,6 +284,11 @@ struct inline_memory_handle {
       }
       return *this;
    }
+
+   // Writing `storage_state` after destroying `inline_storage` does not use the
+   // destroyed object.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-experimental-invalidation"
 
    constexpr auto
    operator=(inline_memory_handle&& other) noexcept(
@@ -309,6 +321,8 @@ struct inline_memory_handle {
       other.storage_state = 0u;
       return *this;
    }
+
+#pragma clang diagnostic pop
 
    constexpr ~inline_memory_handle() {
       if (storage_state == 1u) {
@@ -372,7 +386,7 @@ struct inline_memory_handle {
 
    // Intercept calls to `.get_inline()`.
    constexpr auto
-   get_inline() & noexcept -> value_type& {
+   get_inline() & noexcept [[clang::lifetimebound]] -> value_type& {
       return *get_inline_ptr();
    }
 
@@ -446,6 +460,11 @@ class allocator_interface {
    friend Derived;
    friend struct allocator_dyn_friend;
 
+   // Poisoning only uses the address of the freed storage, so use after free is
+   // expected.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-use-after-free"
+
    [[clang::ownership_takes(libcat, 2)]]
    static constexpr void
    release_storage(
@@ -475,6 +494,8 @@ class allocator_interface {
          poison_memory_region(p_storage, allocation_bytes);
       }
    }
+
+#pragma clang diagnostic pop
 
    friend constexpr void
    allocator_release(
@@ -663,6 +684,9 @@ class allocator_interface {
  public:
    // If this allocator has pointer stability, try to allocate a `T`, and
    // provide a pointer handle.
+   //
+   // TODO: Track this allocation's lifetime once Clang accepts
+   // `[[clang::ownership_returns]]` on functions returning non-pointer types.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -726,6 +750,9 @@ class allocator_interface {
 
    // If this allocator has pointer stability, try to allocate a `T` with an
    // alignment guarantee, and provide a pointer handle.
+   //
+   // TODO: Track this allocation's lifetime once Clang accepts
+   // `[[clang::ownership_returns]]` on functions returning non-pointer types.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -751,6 +778,9 @@ class allocator_interface {
 
    // If this allocator has pointer stability, try to allocate a `T` with no
    // alignment guarantee, and provide a pointer handle.
+   //
+   // TODO: Track this allocation's lifetime once Clang accepts
+   // `[[clang::ownership_returns]]` on functions returning non-pointer types.
    template <typename T, typename... Args>
       requires(is_constructible<T, Args...>)
    [[nodiscard]]
@@ -1482,9 +1512,10 @@ class allocator_interface {
    }
 
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat)]]
    constexpr auto
-   xalloc_uninit() {
+   xalloc_uninit() -> T* _Nonnull {
       if constexpr (alignof(T) > 1) {
          return align_xalloc_uninit<T>(alignof(T));
       } else {
@@ -1522,9 +1553,10 @@ class allocator_interface {
    }
 
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat)]]
    constexpr auto
-   align_xalloc_uninit(ualign alignment) {
+   align_xalloc_uninit(ualign alignment) -> T* _Nonnull {
       return meta_uninit_alloc<T, false, true, false, false>(alignment, 1u);
    }
 
@@ -1536,9 +1568,10 @@ class allocator_interface {
    }
 
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat)]]
    constexpr auto
-   unalign_xalloc_uninit() {
+   unalign_xalloc_uninit() -> T* _Nonnull {
       return meta_uninit_alloc<T, false, false, false, false>(1u, 1u);
    }
 
@@ -2486,9 +2519,10 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 3)]]
    constexpr auto
-   xrealloc_to(auto& allocator, T* _Nonnull p_handle) {
+   xrealloc_to(auto& allocator, T* _Nonnull p_handle) -> T* _Nonnull {
       return meta_realloc<
          &allocator_interface<Derived>::xalloc<T, T>, false, false>(
          allocator, p_handle
@@ -2497,9 +2531,10 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into itself.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 2)]]
    constexpr auto
-   xrealloc(T* _Nonnull p_handle) {
+   xrealloc(T* _Nonnull p_handle) -> T* _Nonnull {
       return xrealloc_to(this->self(), p_handle);
    }
 
@@ -2527,11 +2562,11 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another with an alignment
    // guarantee.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 3)]]
    constexpr auto
-   align_xrealloc_to(
-      auto& allocator, auto* _Nonnull p_handle, ualign alignment
-   ) {
+   align_xrealloc_to(auto& allocator, auto* _Nonnull p_handle, ualign alignment)
+      -> typeof(*p_handle)* _Nonnull {
       using T = typeof(this->get(p_handle));  // Decay reference.
       return meta_realloc<
          &allocator_interface<Derived>::align_xalloc<T, T>, false, false>(
@@ -2541,9 +2576,11 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into itself with an alignment
    // guarantee.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 2)]]
    auto
-   align_xrealloc(auto* _Nonnull p_handle, ualign alignment) {
+   align_xrealloc(auto* _Nonnull p_handle, ualign alignment)
+      -> typeof(*p_handle)* _Nonnull {
       return align_xrealloc_to(this->self(), p_handle, alignment);
    }
 
@@ -2569,9 +2606,11 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another with no alignment
    // guarantee.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 3)]]
    constexpr auto
-   unalign_xrealloc_to(auto& allocator, auto* _Nonnull p_handle) {
+   unalign_xrealloc_to(auto& allocator, auto* _Nonnull p_handle)
+      -> typeof(*p_handle)* _Nonnull {
       using T = typeof(this->get(p_handle));  // Decay reference.
       return meta_realloc<
          &allocator_interface<Derived>::unalign_xalloc<T, T>, false, false>(
@@ -2581,8 +2620,10 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into itself with no alignment
    // guarantee.
+   [[gnu::malloc, gnu::returns_nonnull, clang::ownership_returns(libcat),
+     clang::ownership_takes(libcat, 2)]]
    auto
-   unalign_xrealloc(auto* _Nonnull p_handle) {
+   unalign_xrealloc(auto* _Nonnull p_handle) -> typeof(*p_handle)* _Nonnull {
       return unalign_xrealloc_to(this->self(), p_handle);
    }
 
@@ -2607,9 +2648,10 @@ class allocator_interface {
 
    // Move an object into uninitialized storage from another allocator.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 3)]]
    constexpr auto
-   xrealloc_uninit_to(auto& allocator, T* _Nonnull p_handle) {
+   xrealloc_uninit_to(auto& allocator, T* _Nonnull p_handle) -> T* _Nonnull {
       return meta_realloc<
          &allocator_interface<Derived>::xalloc_uninit<T>, false, false, false>(
          allocator, p_handle
@@ -2618,9 +2660,10 @@ class allocator_interface {
 
    // Move an object into uninitialized storage.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 2)]]
    constexpr auto
-   xrealloc_uninit(T* _Nonnull p_handle) {
+   xrealloc_uninit(T* _Nonnull p_handle) -> T* _Nonnull {
       return xrealloc_uninit_to(this->self(), p_handle);
    }
 
@@ -2644,11 +2687,12 @@ class allocator_interface {
    }
 
    // Move an object into aligned uninitialized storage.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xrealloc_uninit_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment
-   ) {
+   ) -> typeof(*p_handle)* _Nonnull {
       using T = typeof(this->get(p_handle));
       return meta_realloc<
          &allocator_interface<Derived>::align_xalloc_uninit<T>, false, false,
@@ -2656,9 +2700,11 @@ class allocator_interface {
    }
 
    // Move an object into aligned uninitialized storage.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 2)]]
    auto
-   align_xrealloc_uninit(auto* _Nonnull p_handle, ualign alignment) {
+   align_xrealloc_uninit(auto* _Nonnull p_handle, ualign alignment)
+      -> typeof(*p_handle)* _Nonnull {
       return align_xrealloc_uninit_to(this->self(), p_handle, alignment);
    }
 
@@ -2680,9 +2726,11 @@ class allocator_interface {
    }
 
    // Move an object into unaligned uninitialized storage.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 3)]]
    constexpr auto
-   unalign_xrealloc_uninit_to(auto& allocator, auto* _Nonnull p_handle) {
+   unalign_xrealloc_uninit_to(auto& allocator, auto* _Nonnull p_handle)
+      -> typeof(*p_handle)* _Nonnull {
       using T = typeof(this->get(p_handle));
       return meta_realloc<
          &allocator_interface<Derived>::unalign_xalloc_uninit<T>, false, false,
@@ -2690,9 +2738,11 @@ class allocator_interface {
    }
 
    // Move an object into unaligned uninitialized storage.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 2)]]
    auto
-   unalign_xrealloc_uninit(auto* _Nonnull p_handle) {
+   unalign_xrealloc_uninit(auto* _Nonnull p_handle)
+      -> typeof(*p_handle)* _Nonnull {
       return unalign_xrealloc_uninit_to(this->self(), p_handle);
    }
 
@@ -2721,7 +2771,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into another.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    xrealloc_multi_to(
       auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
@@ -2734,7 +2784,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into itself.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    constexpr auto
    xrealloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
       return xrealloc_multi_to(this->self(), p_handle, old_count, new_count);
@@ -2769,7 +2819,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into another
    // with an alignment guarantee.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xrealloc_multi_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment, idx old_count,
@@ -2784,7 +2834,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into itself
    // with an alignment guarantee.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    align_xrealloc_multi(
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
@@ -2822,7 +2872,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into another
    // with no alignment guarantee.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    unalign_xrealloc_multi_to(
       auto& allocator, auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -2836,7 +2886,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into itself
    // with no alignment guarantee.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    unalign_xrealloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -2870,7 +2920,7 @@ class allocator_interface {
 
    // Resize an array with an uninitialized expanded range.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    xrealloc_multi_uninit_to(
       auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
@@ -2882,7 +2932,7 @@ class allocator_interface {
 
    // Resize an array with an uninitialized expanded range.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    constexpr auto
    xrealloc_multi_uninit(T* _Nonnull p_handle, idx old_count, idx new_count) {
       return xrealloc_multi_uninit_to(
@@ -2917,7 +2967,7 @@ class allocator_interface {
    }
 
    // Resize an array into aligned uninitialized storage.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xrealloc_multi_uninit_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment, idx old_count,
@@ -2932,7 +2982,7 @@ class allocator_interface {
    }
 
    // Resize an array into aligned uninitialized storage.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    align_xrealloc_multi_uninit(
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
@@ -2966,7 +3016,7 @@ class allocator_interface {
    }
 
    // Resize an array into unaligned uninitialized storage.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    unalign_xrealloc_multi_uninit_to(
       auto& allocator, auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -2978,7 +3028,7 @@ class allocator_interface {
    }
 
    // Resize an array into unaligned uninitialized storage.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    unalign_xrealloc_multi_uninit(
       auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -3012,9 +3062,10 @@ class allocator_interface {
    // Move a pointer handle from this allocator into another, and zero-out the
    // allocated memory.
    template <is_implicit_lifetime T>
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 3)]]
    constexpr auto
-   xrecalloc_to(auto& allocator, T* _Nonnull p_handle) {
+   xrecalloc_to(auto& allocator, T* _Nonnull p_handle) -> T* _Nonnull {
       return meta_realloc<
          &allocator_interface<Derived>::xcalloc<T>, false, false, false>(
          allocator, p_handle
@@ -3024,9 +3075,10 @@ class allocator_interface {
    // Move a pointer handle from this allocator into itself, and zero-out the
    // allocated memory.
    template <is_implicit_lifetime T>
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 2)]]
    constexpr auto
-   xrecalloc(T* _Nonnull p_handle) {
+   xrecalloc(T* _Nonnull p_handle) -> T* _Nonnull {
       return this->xrecalloc_to(this->self(), p_handle);
    }
 
@@ -3054,11 +3106,12 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another with an alignment
    // guarantee, and zero-out the allocated memory.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xrecalloc_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment
-   ) {
+   ) -> typeof(*p_handle)* _Nonnull {
       using T = typeof(this->get(p_handle));  // Decay reference.
       return meta_realloc<
          &allocator_interface<Derived>::align_xcalloc<T>, false, false, false>(
@@ -3068,9 +3121,11 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into itself with an alignment
    // guarantee, and zero-out the allocated memory.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 2)]]
    auto
-   align_xrecalloc(auto* _Nonnull p_handle, ualign alignment) {
+   align_xrecalloc(auto* _Nonnull p_handle, ualign alignment)
+      -> typeof(*p_handle)* _Nonnull {
       return align_xrecalloc_to(this->self(), p_handle, alignment);
    }
 
@@ -3096,9 +3151,11 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another with no alignment
    // guarantee, and zero-out the allocated memory.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 3)]]
    constexpr auto
-   unalign_xrecalloc_to(auto& allocator, auto* _Nonnull p_handle) {
+   unalign_xrecalloc_to(auto& allocator, auto* _Nonnull p_handle)
+      -> typeof(*p_handle)* _Nonnull {
       using T = typeof(this->get(p_handle));  // Decay reference.
       return meta_realloc<
          &allocator_interface<Derived>::unalign_xcalloc<T>, false, false,
@@ -3107,9 +3164,10 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into itself with no alignment
    // guarantee, and zero-out the allocated memory.
-   [[nodiscard]]
+   [[nodiscard, gnu::malloc, gnu::returns_nonnull,
+     clang::ownership_returns(libcat), clang::ownership_takes(libcat, 2)]]
    auto
-   unalign_xrecalloc(auto* _Nonnull p_handle) {
+   unalign_xrecalloc(auto* _Nonnull p_handle) -> typeof(*p_handle)* _Nonnull {
       return unalign_xrecalloc_to(this->self(), p_handle);
    }
 
@@ -3141,7 +3199,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into another,
    // and zero-out the allocated memory.
    template <is_implicit_lifetime T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    xrecalloc_multi_to(
       auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
@@ -3155,7 +3213,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into itself,
    // and zero-out the allocated memory.
    template <is_implicit_lifetime T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    constexpr auto
    xrecalloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
       return this->xrecalloc_multi_to(
@@ -3191,7 +3249,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into another
    // with an alignment guarantee, and zero-out the allocated memory.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xrecalloc_multi_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment, idx old_count,
@@ -3205,7 +3263,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into itself
    // with an alignment guarantee, and zero-out the allocated memory.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    align_xrecalloc_multi(
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
@@ -3242,7 +3300,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into another
    // with no alignment guarantee, and zero-out the allocated memory.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    unalign_xrecalloc_multi_to(
       auto& allocator, auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -3255,7 +3313,7 @@ class allocator_interface {
 
    // Move and resize an array pointer handle from this allocator into itself
    // with no alignment guarantee, and zero-out the allocated memory.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    unalign_xrecalloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -4060,7 +4118,7 @@ class allocator_interface {
    // Move a pointer handle from this allocator into another, and return the
    // number of bytes that were allocated.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    xresalloc_to(auto& allocator, T* _Nonnull p_handle) {
       return meta_realloc<
@@ -4072,7 +4130,7 @@ class allocator_interface {
    // Move a pointer handle from this allocator into itself, and return the
    // number of bytes that were allocated.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    constexpr auto
    xresalloc(T* _Nonnull p_handle) {
       return this->xresalloc_to(this->self(), p_handle);
@@ -4102,7 +4160,7 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another with an alignment
    // guarantee, and return the number of bytes that were allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xresalloc_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment
@@ -4116,7 +4174,7 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into itself with an alignment
    // guarantee, and return the number of bytes that were allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    align_xresalloc(auto* _Nonnull p_handle, ualign alignment) {
       return align_xresalloc_to(this->self(), p_handle, alignment);
@@ -4144,7 +4202,7 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into another with no alignment
    // guarantee, and return the number of bytes that were allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    unalign_xresalloc_to(auto& allocator, auto* _Nonnull p_handle) {
       using T = typeof(this->get(p_handle));  // Decay reference.
@@ -4156,7 +4214,7 @@ class allocator_interface {
 
    // Move a pointer handle from this allocator into itself with no alignment
    // guarantee, and return the number of bytes that were allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    unalign_xresalloc(auto* _Nonnull p_handle) {
       return unalign_xresalloc_to(this->self(), p_handle);
@@ -4190,7 +4248,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into another,
    // and return the number of bytes that were allocated.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    xresalloc_multi_to(
       auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
@@ -4204,7 +4262,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into itself,
    // and return the number of bytes that were allocated.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    constexpr auto
    xresalloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
       return this->xresalloc_multi_to(
@@ -4244,7 +4302,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into another
    // with an alignment guarantee, and return the number of bytes that were
    // allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xresalloc_multi_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment, idx old_count,
@@ -4260,7 +4318,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into itself
    // with an alignment guarantee, and return the number of bytes that were
    // allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    align_xresalloc_multi(
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
@@ -4301,7 +4359,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into another
    // with no alignment guarantee, and return the number of bytes that were
    // allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    unalign_xresalloc_multi_to(
       auto& allocator, auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -4316,7 +4374,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into itself
    // with no alignment guarantee, and return the number of bytes that were
    // allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    unalign_xresalloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -4347,7 +4405,7 @@ class allocator_interface {
 
    // Move an object into uninitialized storage and return its bytes.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    xresalloc_uninit_to(auto& allocator, T* _Nonnull p_handle) {
       return meta_realloc<
@@ -4358,7 +4416,7 @@ class allocator_interface {
 
    // Move an object into uninitialized storage and return its bytes.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    constexpr auto
    xresalloc_uninit(T* _Nonnull p_handle) {
       return xresalloc_uninit_to(this->self(), p_handle);
@@ -4384,7 +4442,7 @@ class allocator_interface {
    }
 
    // Move an object into aligned uninitialized storage and return its bytes.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xresalloc_uninit_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment
@@ -4396,7 +4454,7 @@ class allocator_interface {
    }
 
    // Move an object into aligned uninitialized storage and return its bytes.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    align_xresalloc_uninit(auto* _Nonnull p_handle, ualign alignment) {
       return align_xresalloc_uninit_to(this->self(), p_handle, alignment);
@@ -4420,7 +4478,7 @@ class allocator_interface {
    }
 
    // Move into unaligned uninitialized storage and return its bytes.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    unalign_xresalloc_uninit_to(auto& allocator, auto* _Nonnull p_handle) {
       using T = typeof(this->get(p_handle));
@@ -4430,7 +4488,7 @@ class allocator_interface {
    }
 
    // Move into unaligned uninitialized storage and return its bytes.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    unalign_xresalloc_uninit(auto* _Nonnull p_handle) {
       return unalign_xresalloc_uninit_to(this->self(), p_handle);
@@ -4460,7 +4518,7 @@ class allocator_interface {
 
    // Resize an uninitialized array and return its allocated bytes.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    xresalloc_multi_uninit_to(
       auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
@@ -4472,7 +4530,7 @@ class allocator_interface {
 
    // Resize an uninitialized array and return its allocated bytes.
    template <typename T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    constexpr auto
    xresalloc_multi_uninit(T* _Nonnull p_handle, idx old_count, idx new_count) {
       return xresalloc_multi_uninit_to(
@@ -4507,7 +4565,7 @@ class allocator_interface {
    }
 
    // Resize into aligned uninitialized storage and return its bytes.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xresalloc_multi_uninit_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment, idx old_count,
@@ -4522,7 +4580,7 @@ class allocator_interface {
    }
 
    // Resize into aligned uninitialized storage and return its bytes.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    align_xresalloc_multi_uninit(
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
@@ -4556,7 +4614,7 @@ class allocator_interface {
    }
 
    // Resize into unaligned uninitialized storage and return its bytes.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    unalign_xresalloc_multi_uninit_to(
       auto& allocator, auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -4568,7 +4626,7 @@ class allocator_interface {
    }
 
    // Resize into unaligned uninitialized storage and return its bytes.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    unalign_xresalloc_multi_uninit(
       auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -4602,7 +4660,7 @@ class allocator_interface {
    // Move a pointer handle from this allocator into another, zero-out the
    // allocated memory, and return the number of bytes that were allocated.
    template <is_implicit_lifetime T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    xrescalloc_to(auto& allocator, T* _Nonnull p_handle) {
       return meta_realloc<
@@ -4614,7 +4672,7 @@ class allocator_interface {
    // Move a pointer handle from this allocator into itself, zero-out the
    // allocated memory, and return the number of bytes that were allocated.
    template <is_implicit_lifetime T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    constexpr auto
    xrescalloc(T* _Nonnull p_handle) {
       return this->xrescalloc_to(this->self(), p_handle);
@@ -4647,7 +4705,7 @@ class allocator_interface {
    // Move a pointer handle from this allocator into another with an alignment
    // guarantee, zero-out the allocated memory, and return the number of bytes
    // that were allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xrescalloc_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment
@@ -4662,6 +4720,7 @@ class allocator_interface {
    // Move a pointer handle from this allocator into itself with an alignment
    // guarantee, zero-out the allocated memory, and return the number of bytes
    // that were allocated.
+   [[clang::ownership_takes(libcat, 2)]]
    auto
    align_xrescalloc(auto* _Nonnull p_handle, ualign alignment) {
       return align_xrescalloc_to(this->self(), p_handle, alignment);
@@ -4692,7 +4751,7 @@ class allocator_interface {
    // Move a pointer handle from this allocator into another with no alignment
    // guarantee, zero-out the allocated memory, and return the number of bytes
    // that were allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    unalign_xrescalloc_to(auto& allocator, auto* _Nonnull p_handle) {
       using T = typeof(this->get(p_handle));  // Decay reference.
@@ -4704,6 +4763,7 @@ class allocator_interface {
    // Move a pointer handle from this allocator into itself with no alignment
    // guarantee, zero-out the allocated memory, and return the number of bytes
    // that were allocated.
+   [[clang::ownership_takes(libcat, 2)]]
    auto
    unalign_xrescalloc(auto* _Nonnull p_handle) {
       return unalign_xrescalloc_to(this->self(), p_handle);
@@ -4740,7 +4800,7 @@ class allocator_interface {
    // zero-out the allocated memory, and return the number of bytes that were
    // allocated.
    template <is_implicit_lifetime T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    xrescalloc_multi_to(
       auto& allocator, T* _Nonnull p_handle, idx old_count, idx new_count
@@ -4755,7 +4815,7 @@ class allocator_interface {
    // zero-out the allocated memory, and return the number of bytes that were
    // allocated.
    template <is_implicit_lifetime T>
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    constexpr auto
    xrescalloc_multi(T* _Nonnull p_handle, idx old_count, idx new_count) {
       return this->xrescalloc_multi_to(
@@ -4794,7 +4854,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into another
    // with an alignment guarantee, zero-out the allocated memory, and return the
    // number of bytes that were allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    align_xrescalloc_multi_to(
       auto& allocator, auto* _Nonnull p_handle, ualign alignment, idx old_count,
@@ -4809,7 +4869,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into itself
    // with an alignment guarantee, zero-out the allocated memory, and return the
    // number of bytes that were allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    align_xrescalloc_multi(
       auto* _Nonnull p_handle, ualign alignment, idx old_count, idx new_count
@@ -4849,7 +4909,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into another
    // with no alignment guarantee, zero-out the allocated memory, and return the
    // number of bytes that were allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 3)]]
    constexpr auto
    unalign_xrescalloc_multi_to(
       auto& allocator, auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -4863,7 +4923,7 @@ class allocator_interface {
    // Move and resize an array pointer handle from this allocator into itself
    // with no alignment guarantee, zero-out the allocated memory, and return the
    // number of bytes that were allocated.
-   [[nodiscard]]
+   [[nodiscard, clang::ownership_takes(libcat, 2)]]
    auto
    unalign_xrescalloc_multi(
       auto* _Nonnull p_handle, idx old_count, idx new_count
@@ -5694,6 +5754,9 @@ class allocator_interface {
    constexpr void
    free(T const& handle);
 
+   // Releasing storage after destroying its elements only uses its address.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-experimental-invalidation"
    // TODO: This needs unit tests.
    // Invalidate a pointer handle to a `T`, and call its destructor.
    template <typename T>
@@ -5705,6 +5768,7 @@ class allocator_interface {
    template <typename T>
    constexpr void
    free_multi(span<T> handle);
+#pragma clang diagnostic pop
 
    template <typename T>
    constexpr void
@@ -5728,10 +5792,12 @@ class allocator_interface {
    cfree_multi_uninit(span<T> storage);
 
    template <typename T>
+   [[clang::ownership_takes(libcat, 2)]]
    constexpr void
    free_uninit(T* _Nonnull p_storage);
 
    template <typename T>
+   [[clang::ownership_takes(libcat, 2)]]
    constexpr void
    cfree_uninit(T* _Nonnull p_storage);
 
@@ -5781,7 +5847,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   get(T* _Nonnull p_handle) & -> T&;
+   get(T* _Nonnull p_handle [[clang::lifetimebound]]) & -> T&;
 
    // Get a `const` reference to the data in any pointer handle.
    template <typename T>
@@ -5793,7 +5859,7 @@ class allocator_interface {
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   get_ptr(T& memory) noexcept -> auto;
+   get_ptr(T& memory [[clang::lifetimebound]]) noexcept -> auto;
 
    // Get a `const` pointer to an allocated memory handle.
    template <typename T>
@@ -5883,7 +5949,7 @@ class allocator_interface {
    }
 
    constexpr auto
-   self() const noexcept -> Derived const& {
+   self() const noexcept [[clang::lifetimebound]] -> Derived const& {
       return static_cast<Derived const&>(*this);
    }
 
@@ -6004,6 +6070,12 @@ class allocator_interface {
 
    // Relocate `old_count` elements from `p_old_handle` into the uninitialized
    // `p_new_handle`. The old elements' lifetimes end.
+   //
+   // Each moved-from element is destroyed before the next one is reached
+   // through `p_old_handle`.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-experimental-invalidation"
+
    template <typename T>
    constexpr void
    relocate_ptr_handle(
@@ -6026,6 +6098,8 @@ class allocator_interface {
          p_old_handle[i].~T();
       }
    }
+
+#pragma clang diagnostic pop
 
    // Copy data from `p_old_handle` into `allocation`. This `span` overload
    // exists to simplify calling this with the output of both `_multi` and

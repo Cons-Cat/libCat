@@ -159,12 +159,14 @@ class basic_allocator_musl
    // it can share an address.
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wlifetime-safety-intra-tu-suggestions"
+   [[clang::ownership_returns(libcat)]]
    auto
    reallocate_memory(
       span<byte> allocation, idx new_bytes, uword* _Nullable p_feedback_bytes
    ) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nullable;
 #pragma clang diagnostic pop
 
+   [[clang::ownership_returns(libcat)]]
    auto
    reallocate(span<byte> allocation, idx new_bytes) noexcept(
       !__has_feature(cxx_exceptions)

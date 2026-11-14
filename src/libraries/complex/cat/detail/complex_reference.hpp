@@ -238,7 +238,7 @@ class complex_reference {
       )
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   operator=(U const& operand) noexcept -> Derived& {
+   operator=(U const& operand) noexcept [[clang::lifetimebound]] -> Derived& {
       *m_wrapped = wrapper_type(complex_reference_value(operand));
       return static_cast<Derived&>(*this);
    }

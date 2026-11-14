@@ -245,6 +245,7 @@ $test(format_classes) {
    allocator.reset();
    cat::variant<int, cat::str_view> active = cat::str_view("value");
    cat::variant<int, cat::str_view> empty;
+   empty.reset();
    cat::verify(
       cat::fmt(allocator, "{} {}", active, empty).verify() == "value <empty>"
    );

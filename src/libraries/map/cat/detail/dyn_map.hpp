@@ -103,21 +103,51 @@ class [[gsl::Pointer]] dyn_map {
       );
    }
 
+   template <typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   insert(allocator_dyn allocator, Key key, T value) const -> maybe<void> {
+   insert(
+      allocator_dyn allocator, Key const& key, Arguments&&... arguments
+   ) const -> maybe<void> {
+      // The erased call takes a constructed value, so unlike `cat::map`, `T` is
+      // constructed even if `key` is already present. TODO: Should we change
+      // this?
       return m_map.template invoke<detail::dyn_map_insert<Key, T>>(
-         allocator, move(key), move(value)
+         allocator, Key(key), T($fwd(arguments)...)
       );
    }
 
+   template <typename... Arguments>
+      requires(is_constructible<T, Arguments...>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   update(allocator_dyn allocator, Key key, T value) const -> maybe<void>
-      requires(is_move_assignable<T>)
-   {
+   insert(allocator_dyn allocator, Key&& key, Arguments&&... arguments) const
+      -> maybe<void> {
+      return m_map.template invoke<detail::dyn_map_insert<Key, T>>(
+         allocator, move(key), T($fwd(arguments)...)
+      );
+   }
+
+   template <typename Value>
+      requires(is_move_assignable<T> && is_constructible<T, Value>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   update(allocator_dyn allocator, Key const& key, Value&& value) const
+      -> maybe<void> {
       return m_map.template invoke<detail::dyn_map_update<Key, T>>(
-         allocator, move(key), move(value)
+         allocator, Key(key), T($fwd(value))
+      );
+   }
+
+   template <typename Value>
+      requires(is_move_assignable<T> && is_constructible<T, Value>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   update(allocator_dyn allocator, Key&& key, Value&& value) const
+      -> maybe<void> {
+      return m_map.template invoke<detail::dyn_map_update<Key, T>>(
+         allocator, move(key), T($fwd(value))
       );
    }
 

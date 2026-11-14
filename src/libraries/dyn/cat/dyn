@@ -125,7 +125,8 @@ template <typename T, typename Method, typename Return, typename... Args>
 struct dyn_invoker<T, Method, Return(Args...) const> {
    [[gnu::always_inline, gnu::nodebug]]
    static constexpr auto
-   call(void const* _Nonnull p_self, Args... arguments) -> Return {
+   call(void const* _Nonnull p_self [[clang::lifetimebound]], Args... arguments)
+      -> Return {
       return Method::template do_invoke<T>(
          *static_cast<T const*>(p_self), $fwd(arguments)...
       );
@@ -308,8 +309,9 @@ template <typename... Subset, typename... Superset>
    requires(is_subset_impl<type_list<Subset...>, type_list<Superset...>>)
 [[gnu::returns_nonnull]]
 constexpr auto
-narrow_vtable(vtable<Superset...> const* _Nonnull p_superset)
-   -> vtable<Subset...> const* _Nonnull {
+narrow_vtable(
+   vtable<Superset...> const* _Nonnull p_superset [[clang::lifetimebound]]
+) -> vtable<Subset...> const* _Nonnull {
    if constexpr (sizeof...(Subset) == 0u) {
       static constexpr vtable<> empty{};
       return &empty;
@@ -515,8 +517,9 @@ class [[gsl::Pointer]] const_dyn_ref {
    void const* _Nonnull m_p_value;
 
    constexpr const_dyn_ref(
-      vtable<Methods...> const* _Nonnull p_vt, dyn_type_id_ptr p_td,
-      void const* _Nonnull p_v
+      vtable<Methods...> const* _Nonnull p_vt [[clang::lifetimebound]],
+      dyn_type_id_ptr p_td [[clang::lifetimebound]],
+      void const* _Nonnull p_v [[clang::lifetimebound]]
    )
        : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
@@ -629,8 +632,9 @@ class [[gsl::Pointer]] dyn_ptr {
    void* _Nullable m_p_value = nullptr;
 
    constexpr dyn_ptr(
-      vtable<Methods...> const* _Nonnull p_vt, dyn_type_id_ptr p_td,
-      void* _Nullable p_v
+      vtable<Methods...> const* _Nonnull p_vt [[clang::lifetimebound]],
+      dyn_type_id_ptr p_td [[clang::lifetimebound]],
+      void* _Nullable p_v [[clang::lifetimebound]]
    )
        : m_p_vtable(p_vt), m_p_type_id(p_td), m_p_value(p_v) {
    }
@@ -754,8 +758,9 @@ class [[gsl::Pointer]] const_dyn_ptr {
    void const* _Nullable m_p_value = nullptr;
 
    constexpr const_dyn_ptr(
-      vtable<Methods...> const* _Nonnull p_vtable, dyn_type_id_ptr p_type_id,
-      void const* _Nullable p_value
+      vtable<Methods...> const* _Nonnull p_vtable [[clang::lifetimebound]],
+      dyn_type_id_ptr p_type_id [[clang::lifetimebound]],
+      void const* _Nullable p_value [[clang::lifetimebound]]
    )
        : m_p_vtable(p_vtable), m_p_type_id(p_type_id), m_p_value(p_value) {
    }
@@ -1449,7 +1454,7 @@ class [[gsl::Owner]] dyn_inplace {
    template <typename T, typename... Args>
       requires(can_hold<T> && is_constructible<T, Args...>)
    constexpr auto
-   emplace(Args&&... arguments) -> T& {
+   emplace(Args&&... arguments) [[clang::lifetimebound]] -> T& {
       static_assert(
          fits_inline<T>,
          "`T`'s size or alignment exceeds this `dyn_inplace`'s inline "

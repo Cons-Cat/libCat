@@ -40,7 +40,9 @@ bit_ptr : public plus_interface<bit_ptr<Storage>>,
    constexpr bit_ptr(decltype(nullptr)) noexcept {
    }
 
-   constexpr explicit bit_ptr(Storage* _Nullable p_storage) noexcept
+   constexpr explicit bit_ptr(
+      Storage* _Nullable p_storage [[clang::lifetimebound]]
+   ) noexcept
        : m_p_storage(p_storage) {
    }
 
@@ -65,14 +67,18 @@ bit_ptr : public plus_interface<bit_ptr<Storage>>,
 
    [[nodiscard]]
    constexpr auto
-   operator*() const noexcept -> reference {
-      return make_bit_reference_from_offset(*m_p_storage, m_bit_position);
+   operator*(this bit_ptr self [[clang::lifetimebound]]) noexcept -> reference {
+      return make_bit_reference_from_offset(
+         *self.m_p_storage, self.m_bit_position
+      );
    }
 
    [[nodiscard]]
    constexpr auto
-   operator[](difference_type offset) const noexcept -> reference {
-      return *(*this + offset);
+   operator[](
+      this bit_ptr self [[clang::lifetimebound]], difference_type offset
+   ) noexcept -> reference {
+      return *(self + offset);
    }
 
    constexpr auto
@@ -82,7 +88,7 @@ bit_ptr : public plus_interface<bit_ptr<Storage>>,
    }
 
    constexpr auto
-   operator--() noexcept -> bit_ptr& {
+   operator--() noexcept [[clang::lifetimebound]] -> bit_ptr& {
       *this -= 1;
       return *this;
    }

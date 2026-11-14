@@ -90,7 +90,13 @@ class
 
    [[nodiscard]]
    constexpr auto
-   insert(Key key) -> maybe<void> {
+   insert(Key const& key) -> maybe<void> {
+      return this->m_core.insert(this->m_allocator, key);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   insert(Key&& key) -> maybe<void> {
       return this->m_core.insert(this->m_allocator, move(key));
    }
 };

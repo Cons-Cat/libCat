@@ -534,8 +534,10 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Erase `[first, last)` and return `last`.
    template <is_allocator Allocator>
    constexpr auto
-   erase(allocator_ref<Allocator> allocator, iterator first, iterator last)
-      -> iterator {
+   erase(
+      allocator_ref<Allocator> allocator, iterator first,
+      iterator last [[clang::lifetimebound]]
+   ) -> iterator {
       while (first != last) {
          first = this->erase(allocator, first);
       }
@@ -868,42 +870,42 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Return iterator to the first node.
    [[nodiscard]]
    constexpr auto
-   begin() -> iterator {
+   begin() [[clang::lifetimebound]] -> iterator {
       return iterator(m_storage.m_p_head);
    }
 
    // Return iterator to the last node.
    [[nodiscard]]
    constexpr auto
-   end() -> iterator {
+   end() [[clang::lifetimebound]] -> iterator {
       return iterator(m_storage.m_p_tail);
    }
 
    // Return reverse iterator to the last node.
    [[nodiscard]]
    constexpr auto
-   rbegin() {
+   rbegin() [[clang::lifetimebound]] {
       return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_tail};
    }
 
    // Return reverse iterator to one before the first node.
    [[nodiscard]]
    constexpr auto
-   rend() {
+   rend() [[clang::lifetimebound]] {
       return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_head};
    }
 
    // Return const reverse iterator to the last node.
    [[nodiscard]]
    constexpr auto
-   rbegin() const {
+   rbegin() const [[clang::lifetimebound]] {
       return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_tail};
    }
 
    // Return const reverse iterator to one before the first node.
    [[nodiscard]]
    constexpr auto
-   rend() const {
+   rend() const [[clang::lifetimebound]] {
       return cat::reverse_proxy_stepanov_iterator<iterator>{m_storage.m_p_head};
    }
 
@@ -1125,7 +1127,7 @@ make_list_filled_random(
 namespace detail {
 
 template <typename T>
-class list_stepanov_iterator
+class [[gsl::Pointer(T)]] list_stepanov_iterator
     : public stepanov_iterator_interface<bidirectional_iterator_tag, T> {
  public:
    using value_type = T;

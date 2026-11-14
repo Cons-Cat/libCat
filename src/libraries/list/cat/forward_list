@@ -572,7 +572,7 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
    // Return iterator to the first node.
    [[nodiscard]]
    constexpr auto
-   begin() -> iterator {
+   begin() [[clang::lifetimebound]] -> iterator {
       return iterator(m_storage.m_p_head);
    }
 
@@ -749,7 +749,7 @@ make_forward_list_filled_random(
 namespace detail {
 
 template <typename T>
-class forward_list_stepanov_iterator
+class [[gsl::Pointer(T)]] forward_list_stepanov_iterator
     : public stepanov_iterator_interface<forward_iterator_tag, T> {
  public:
    using value_type = T;

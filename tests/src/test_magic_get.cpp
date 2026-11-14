@@ -74,3 +74,32 @@ $test(magic_get_not_cat_tuple) {
    static_assert(!cat::has_aggregate_get<decltype(t)>);
    cat::verify(t.first() == 4);
 }
+
+namespace {
+struct reference_fields {
+   int& lvalue;
+   int&& rvalue;
+   int value;
+};
+}  // namespace
+
+// Reference members are returned as declared, for any value category.
+$test(magic_get_reference_members) {
+   int i = 1;
+   int j = 2;
+   reference_fields s{.lvalue = i, .rvalue = cat::move(j), .value = 3};
+   reference_fields const& c = s;
+
+   static_assert(cat::is_same<decltype(cat::get<0>(s)), int&>);
+   static_assert(cat::is_same<decltype(cat::get<0>(c)), int&>);
+   static_assert(cat::is_same<decltype(cat::get<0>(cat::move(s))), int&>);
+   static_assert(cat::is_same<decltype(cat::get<1>(s)), int&&>);
+   static_assert(cat::is_same<decltype(cat::get<2>(s)), int&>);
+   static_assert(cat::is_same<decltype(cat::get<2>(c)), int const&>);
+   static_assert(cat::is_same<decltype(cat::get<2>(cat::move(s))), int&&>);
+
+   // Not dangling: `i` outlives the temporary aggregate.
+   int& r = cat::get<0>(reference_fields{.lvalue = i, .rvalue = 0, .value = 0});
+   r = 5;
+   cat::verify(i == 5);
+}

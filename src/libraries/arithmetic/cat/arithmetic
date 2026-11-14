@@ -1496,12 +1496,12 @@ class
    }
 
    constexpr auto
-   precise() & noexcept
-      -> precision_reference<basic_float, precision_policies::precise>;
+   precise() & noexcept [[clang::lifetimebound]]
+   -> precision_reference<basic_float, precision_policies::precise>;
 
    constexpr auto
-   precise() const& noexcept
-      -> precision_reference<basic_float const, precision_policies::precise>;
+   precise() const& noexcept [[clang::lifetimebound]]
+   -> precision_reference<basic_float const, precision_policies::precise>;
 
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
@@ -1511,8 +1511,8 @@ class
    }
 
    constexpr auto
-   fast() & noexcept
-      -> precision_reference<basic_float, precision_policies::fast>;
+   fast() & noexcept [[clang::lifetimebound]]
+   -> precision_reference<basic_float, precision_policies::fast>;
 
    constexpr auto
    fast() const& noexcept
@@ -2292,7 +2292,8 @@ class
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U* _Nullable p_operand) noexcept -> U* _Nullable {
+   subtract_from(U* _Nullable p_operand [[clang::lifetimebound]]) noexcept
+      -> U* _Nullable {
       return p_operand - raw;
    }
 
@@ -2745,7 +2746,7 @@ class
       basic_int<T, overflow_policy, quantity>, overflow_policies::wrap>;
 
    constexpr auto
-   wrap() const& noexcept -> overflow_reference<
+   wrap() const& noexcept [[clang::lifetimebound]] -> overflow_reference<
       basic_int<T, overflow_policy, quantity> const, overflow_policies::wrap>;
 
    [[gnu::always_inline, gnu::nodebug]]
@@ -2755,11 +2756,11 @@ class
    }
 
    constexpr auto
-   sat() & noexcept -> overflow_reference<
+   sat() & noexcept [[clang::lifetimebound]] -> overflow_reference<
       basic_int<T, overflow_policy, quantity>, overflow_policies::saturate>;
 
    constexpr auto
-   sat() const& noexcept -> overflow_reference<
+   sat() const& noexcept [[clang::lifetimebound]] -> overflow_reference<
       basic_int<T, overflow_policy, quantity> const,
       overflow_policies::saturate>;
 
@@ -3035,8 +3036,9 @@ class [[clang::preferred_name(ualign)]] basic_ualign {
    template <is_integral U>
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/=(basic_ualign& lhs, U rhs) noexcept(!__has_feature(cxx_exceptions))
-      -> basic_ualign& {
+   operator/=(basic_ualign& lhs [[clang::lifetimebound]], U rhs) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> basic_ualign& {
       lhs = lhs.divide_by(rhs);
       return lhs;
    }
@@ -3556,7 +3558,7 @@ basic_intptr :
    }
 
    constexpr auto
-   wrap() & noexcept -> overflow_reference<
+   wrap() & noexcept [[clang::lifetimebound]] -> overflow_reference<
       basic_intptr<T, Storage, overflow_policy>, overflow_policies::wrap>;
 
    constexpr auto
@@ -3571,7 +3573,7 @@ basic_intptr :
    }
 
    constexpr auto
-   sat() & noexcept -> overflow_reference<
+   sat() & noexcept [[clang::lifetimebound]] -> overflow_reference<
       basic_intptr<T, Storage, overflow_policy>, overflow_policies::saturate>;
 
    constexpr auto
@@ -3917,7 +3919,8 @@ basic_idx :
    template <typename T>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(T* _Nullable p_other) const noexcept -> T* _Nullable {
+   subtract_from(T* _Nullable p_other [[clang::lifetimebound]]) const noexcept
+      -> T* _Nullable {
       return p_other - raw;
    }
 
@@ -4158,8 +4161,8 @@ basic_idx :
    }
 
    constexpr auto
-   wrap() & noexcept -> overflow_reference<
-      basic_idx<overflow_policy>, overflow_policies::wrap>;
+   wrap() & noexcept [[clang::lifetimebound]]
+   -> overflow_reference<basic_idx<overflow_policy>, overflow_policies::wrap>;
 
    constexpr auto
    wrap() const& noexcept -> overflow_reference<
@@ -4172,7 +4175,7 @@ basic_idx :
    }
 
    constexpr auto
-   sat() & noexcept -> overflow_reference<
+   sat() & noexcept [[clang::lifetimebound]] -> overflow_reference<
       basic_idx<overflow_policy>, overflow_policies::saturate>;
 
    constexpr auto

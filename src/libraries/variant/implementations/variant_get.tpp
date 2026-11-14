@@ -6,22 +6,18 @@
 
 namespace cat {
 
-// Out-of-line definitions for the `get`/`get_if`/`get_ptr` member family
-// declared inside `variant<Alternatives...>`. Kept here so the class body
-// stays focused on the public surface while these bodies (which lean on
-// the shared `as_base` helper, the recursive `variant_node` storage, and
-// the per-alternative `maybe` wrappers) remain readable.
+namespace detail {
 
 template <typename... Alternatives>
-   requires(
-      type_list<Alternatives...>::is_all_references
-      || !type_list<Alternatives...>::is_any_reference
-   )
+   requires(is_valid_variant_alternatives<Alternatives...>)
 template <idx index>
 constexpr auto
-variant<Alternatives...>::get(this auto&& self) noexcept -> decltype(auto)
+variant_base<Alternatives...>::get(
+   this auto&& self [[clang::lifetimebound]]
+) noexcept(!__has_feature(cxx_exceptions)) -> decltype(auto)
    requires(index < sizeof...(Alternatives))
 {
+   cat::assert(self.index().value_or_niche() == index);
    if constexpr (is_reference_variant) {
       return *detail::variant_ref_slot<index>($fwd(self).m_storage);
    } else {
@@ -30,13 +26,12 @@ variant<Alternatives...>::get(this auto&& self) noexcept -> decltype(auto)
 }
 
 template <typename... Alternatives>
-   requires(
-      type_list<Alternatives...>::is_all_references
-      || !type_list<Alternatives...>::is_any_reference
-   )
+   requires(is_valid_variant_alternatives<Alternatives...>)
 template <typename T>
 constexpr auto
-variant<Alternatives...>::get(this auto&& self) noexcept -> decltype(auto)
+variant_base<Alternatives...>::get(
+   this auto&& self [[clang::lifetimebound]]
+) noexcept(!__has_feature(cxx_exceptions)) -> decltype(auto)
    requires(
       types::template is_unique<T>
       || (is_reference_variant && types::template is_unique<add_lvalue_reference<T>>)
@@ -52,13 +47,12 @@ variant<Alternatives...>::get(this auto&& self) noexcept -> decltype(auto)
 }
 
 template <typename... Alternatives>
-   requires(
-      type_list<Alternatives...>::is_all_references
-      || !type_list<Alternatives...>::is_any_reference
-   )
+   requires(is_valid_variant_alternatives<Alternatives...>)
 template <typename T>
 constexpr auto
-variant<Alternatives...>::get_ptr(this auto&& self)
+variant_base<Alternatives...>::get_ptr(
+   this auto&& self [[clang::lifetimebound]]
+)
    requires(
       types::template is_unique<T>
       || (is_reference_variant && types::template is_unique<add_lvalue_reference<T>>)
@@ -75,21 +69,20 @@ variant<Alternatives...>::get_ptr(this auto&& self)
 }
 
 template <typename... Alternatives>
-   requires(
-      type_list<Alternatives...>::is_all_references
-      || !type_list<Alternatives...>::is_any_reference
-   )
+   requires(is_valid_variant_alternatives<Alternatives...>)
 template <idx index>
 constexpr auto
-variant<Alternatives...>::get_ptr(this auto&& self)
+variant_base<Alternatives...>::get_ptr(
+   this auto&& self [[clang::lifetimebound]]
+)
    requires(index < sizeof...(Alternatives))
 {
    auto&& base = $fwd(self).as_base();
    using result_type =
       decltype(__builtin_addressof(base.template get<index>()));
-   // `.value_or_niche()` reads the raw discriminant bits including the
-   // niche when empty. The niche never matches a valid alternative
-   // index, so a single comparison handles both states.
+   // `.value_or_niche()` reads the raw discriminant bits. The niche cannot ever
+   // matche an alternative index, so a single comparison handles both
+   // states.
    if (base.index().value_or_niche() == index) {
       return __builtin_addressof(base.template get<index>());
    }
@@ -97,13 +90,10 @@ variant<Alternatives...>::get_ptr(this auto&& self)
 }
 
 template <typename... Alternatives>
-   requires(
-      type_list<Alternatives...>::is_all_references
-      || !type_list<Alternatives...>::is_any_reference
-   )
+   requires(is_valid_variant_alternatives<Alternatives...>)
 template <typename T>
 constexpr auto
-variant<Alternatives...>::get_if(this auto&& self)
+variant_base<Alternatives...>::get_if(this auto&& self [[clang::lifetimebound]])
    requires(types::template is_unique<T> && !is_reference<T>)
 {
    auto&& base = $fwd(self).as_base();
@@ -115,13 +105,10 @@ variant<Alternatives...>::get_if(this auto&& self)
 }
 
 template <typename... Alternatives>
-   requires(
-      type_list<Alternatives...>::is_all_references
-      || !type_list<Alternatives...>::is_any_reference
-   )
+   requires(is_valid_variant_alternatives<Alternatives...>)
 template <typename T>
 constexpr auto
-variant<Alternatives...>::get_if(this auto&& self)
+variant_base<Alternatives...>::get_if(this auto&& self [[clang::lifetimebound]])
    -> maybe<add_lvalue_reference<T>>
    requires(
       is_reference_variant && !types::template has_type<T>
@@ -137,20 +124,17 @@ variant<Alternatives...>::get_if(this auto&& self)
 }
 
 template <typename... Alternatives>
-   requires(
-      type_list<Alternatives...>::is_all_references
-      || !type_list<Alternatives...>::is_any_reference
-   )
+   requires(is_valid_variant_alternatives<Alternatives...>)
 template <idx index>
 constexpr auto
-variant<Alternatives...>::get_if(this auto&& self)
+variant_base<Alternatives...>::get_if(this auto&& self [[clang::lifetimebound]])
    requires(index < sizeof...(Alternatives))
 {
    using key = types::template get<index>;
    auto&& base = $fwd(self).as_base();
-   // `.value_or_niche()` reads the raw discriminant bits including the
-   // niche when empty. The niche never matches a valid alternative
-   // index, so the comparison handles both states.
+   // `.value_or_niche()` reads the raw discriminant bits. The niche cannot ever
+   // matche an alternative index, so a single comparison handles both
+   // states.
    if constexpr (is_reference<key>) {
       using maybe_type = maybe<key>;
       if (base.index().value_or_niche() == index) {
@@ -166,56 +150,128 @@ variant<Alternatives...>::get_if(this auto&& self)
    }
 }
 
+}  // namespace detail
+
 // Free function `cat::get<T>(variant)` mirrors `variant.template get<T>()`,
 // and accepts derived types via `is_variant_like` (P2162).
 template <typename T, is_variant_like Variant>
+   requires(!remove_cvref<Variant>::types::is_all_references)
 [[nodiscard]]
 constexpr auto
-get(Variant&& v) -> auto&& {
-   return $fwd(v).template get<T>();
-}
-
-template <idx index, is_variant_like Variant>
-[[nodiscard]]
-constexpr auto
-get(Variant&& v) -> auto&& {
-   return $fwd(v).template get<index>();
+get(Variant&& variant [[clang::lifetimebound]]) -> decltype(auto) {
+   return $fwd(variant).template get<T>();
 }
 
 template <typename T, is_variant_like Variant>
+   requires(
+      !is_reference<Variant> && remove_cvref<Variant>::types::is_all_references
+   )
 [[nodiscard]]
 constexpr auto
-get_if(Variant&& v) {
-   return $fwd(v).template get_if<T>();
+get(Variant variant [[clang::lifetimebound]]) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> decltype(auto) {
+   return variant.template get<T>();
 }
 
 template <idx index, is_variant_like Variant>
+   requires(!remove_cvref<Variant>::types::is_all_references)
 [[nodiscard]]
 constexpr auto
-get_if(Variant&& v) {
-   return $fwd(v).template get_if<index>();
+get(Variant&& variant [[clang::lifetimebound]]) -> decltype(auto) {
+   return $fwd(variant).template get<index>();
+}
+
+template <idx index, is_variant_like Variant>
+   requires(
+      !is_reference<Variant> && remove_cvref<Variant>::types::is_all_references
+   )
+[[nodiscard]]
+constexpr auto
+get(Variant variant [[clang::lifetimebound]]) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> decltype(auto) {
+   return variant.template get<index>();
+}
+
+template <typename T, is_variant_like Variant>
+   requires(!remove_cvref<Variant>::types::is_all_references)
+[[nodiscard]]
+constexpr auto
+get_if(Variant&& variant [[clang::lifetimebound]]) {
+   return $fwd(variant).template get_if<T>();
+}
+
+template <typename T, is_variant_like Variant>
+   requires(
+      !is_reference<Variant> && remove_cvref<Variant>::types::is_all_references
+   )
+[[nodiscard]]
+constexpr auto
+get_if(Variant variant [[clang::lifetimebound]]) noexcept {
+   return variant.template get_if<T>();
+}
+
+template <idx index, is_variant_like Variant>
+   requires(!remove_cvref<Variant>::types::is_all_references)
+[[nodiscard]]
+constexpr auto
+get_if(Variant&& variant [[clang::lifetimebound]]) {
+   return $fwd(variant).template get_if<index>();
+}
+
+template <idx index, is_variant_like Variant>
+   requires(
+      !is_reference<Variant> && remove_cvref<Variant>::types::is_all_references
+   )
+[[nodiscard]]
+constexpr auto
+get_if(Variant variant [[clang::lifetimebound]]) noexcept {
+   return variant.template get_if<index>();
 }
 
 // P4189 free function `cat::get_ptr<T>(variant)`.
 template <typename T, is_variant_like Variant>
+   requires(!remove_cvref<Variant>::types::is_all_references)
 [[nodiscard]]
 constexpr auto
-get_ptr(Variant&& v) {
-   return $fwd(v).template get_ptr<T>();
+get_ptr(Variant&& variant [[clang::lifetimebound]]) {
+   return $fwd(variant).template get_ptr<T>();
+}
+
+template <typename T, is_variant_like Variant>
+   requires(
+      !is_reference<Variant> && remove_cvref<Variant>::types::is_all_references
+   )
+[[nodiscard]]
+constexpr auto
+get_ptr(Variant variant [[clang::lifetimebound]]) noexcept {
+   return variant.template get_ptr<T>();
 }
 
 template <idx index, is_variant_like Variant>
+   requires(!remove_cvref<Variant>::types::is_all_references)
 [[nodiscard]]
 constexpr auto
-get_ptr(Variant&& v) {
-   return $fwd(v).template get_ptr<index>();
+get_ptr(Variant&& variant [[clang::lifetimebound]]) {
+   return $fwd(variant).template get_ptr<index>();
+}
+
+template <idx index, is_variant_like Variant>
+   requires(
+      !is_reference<Variant> && remove_cvref<Variant>::types::is_all_references
+   )
+[[nodiscard]]
+constexpr auto
+get_ptr(Variant variant [[clang::lifetimebound]]) noexcept {
+   return variant.template get_ptr<index>();
 }
 
 template <typename T, is_variant_like Variant>
 [[nodiscard]]
 constexpr auto
-holds_alternative(Variant const& v) -> bool {
-   return v.template holds_alternative<T>();
+holds_alternative(Variant const& variant) -> bool {
+   return variant.template holds_alternative<T>();
 }
 
 }  // namespace cat

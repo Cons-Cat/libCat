@@ -103,7 +103,7 @@ class time_point {
 
    // Stepping a `time_point` moves it by one tick of its own duration.
    constexpr auto
-   operator++() noexcept -> time_point& {
+   operator++() noexcept [[clang::lifetimebound]] -> time_point& {
       m_elapsed = m_elapsed + Duration(1);
       return *this;
    }
@@ -116,7 +116,7 @@ class time_point {
    }
 
    constexpr auto
-   operator--() noexcept -> time_point& {
+   operator--() noexcept [[clang::lifetimebound]] -> time_point& {
       m_elapsed = m_elapsed - Duration(1);
       return *this;
    }

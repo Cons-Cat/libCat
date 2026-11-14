@@ -1535,7 +1535,8 @@ class connection : detail::connection_state {
 
    [[nodiscard]]
    static auto
-   as_bytes(cat::str_view string) noexcept -> cat::span<cat::byte const> {
+   as_bytes(cat::str_view string [[clang::lifetimebound]]) noexcept
+      -> cat::span<cat::byte const> {
       return cat::as_bytes(cat::span(string.data(), string.size()));
    }
 

@@ -38,7 +38,7 @@ struct symbol_text {
 
    [[nodiscard]]
    constexpr auto
-   portable() const noexcept -> auto const& {
+   portable() const noexcept [[clang::lifetimebound]] -> auto const& {
       return m_ascii;
    }
 

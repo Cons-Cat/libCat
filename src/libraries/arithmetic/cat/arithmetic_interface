@@ -255,6 +255,11 @@ is_nothrow_reverse_add() -> bool {
    }
 }
 
+// The result is computed from the value of `other`, which is often a pr-value,
+// so `[[clang::lifetimebound]]` would flag valid code like `p = 1 + p`.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-intra-tu-suggestions"
+
 template <typename D, typename T>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
@@ -266,6 +271,8 @@ reverse_add(D&& self, T&& other) noexcept(is_nothrow_reverse_add<D, T>())
       return $fwd(self).add($fwd(other));
    }
 }
+
+#pragma clang diagnostic pop
 
 template <typename D, typename T>
 concept has_multiply_noncommutative =
@@ -588,7 +595,7 @@ struct plus_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+=(Self&& self, T&& other) noexcept(
+   operator+=(Self&& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.add($fwd(other)))
    ) -> Self&& {
       self = self.add($fwd(other));
@@ -632,7 +639,7 @@ struct plus_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+=(T& other, Derived&& self) noexcept(
+   operator+=(T& other [[clang::lifetimebound]], Derived&& self) noexcept(
       noexcept(other = detail::reverse_add(move(self), other))
    ) -> T& {
       other = detail::reverse_add(move(self), other);
@@ -736,9 +743,9 @@ struct minus_interface {
    // Same-type compound assignment when `subtract_by(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-=(Derived& self, decay_derived const& rhs) noexcept(
-      noexcept(self = self.subtract_by(rhs))
-   ) -> Derived&
+   operator-=(
+      Derived& self [[clang::lifetimebound]], decay_derived const& rhs
+   ) noexcept(noexcept(self = self.subtract_by(rhs))) -> Derived&
       requires(
          detail::has_minus_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -750,9 +757,9 @@ struct minus_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-=(Derived& self, decay_derived&& rhs) noexcept(
-      noexcept(self = self.subtract_by(move(rhs)))
-   ) -> Derived&
+   operator-=(
+      Derived& self [[clang::lifetimebound]], decay_derived&& rhs
+   ) noexcept(noexcept(self = self.subtract_by(move(rhs)))) -> Derived&
       requires(
          detail::has_minus_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived&&>
@@ -790,7 +797,7 @@ struct minus_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-=(Self&& self, T&& other) noexcept(
+   operator-=(Self&& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.subtract_by($fwd(other)))
    ) -> Self&& {
       self = self.subtract_by($fwd(other));
@@ -834,7 +841,7 @@ struct minus_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-=(T& other, Derived&& self) noexcept(
+   operator-=(T& other [[clang::lifetimebound]], Derived&& self) noexcept(
       noexcept(other = move(self).subtract_from(other))
    ) -> T& {
       other = move(self).subtract_from(other);
@@ -938,9 +945,9 @@ struct multiply_interface {
    // Same-type compound assignment when `multiply(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*=(Derived& self, decay_derived const& rhs) noexcept(
-      noexcept(self = self.multiply(rhs))
-   ) -> Derived&
+   operator*=(
+      Derived& self [[clang::lifetimebound]], decay_derived const& rhs
+   ) noexcept(noexcept(self = self.multiply(rhs))) -> Derived&
       requires(
          detail::has_multiply_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -952,9 +959,9 @@ struct multiply_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*=(Derived& self, decay_derived&& rhs) noexcept(
-      noexcept(self = self.multiply(move(rhs)))
-   ) -> Derived&
+   operator*=(
+      Derived& self [[clang::lifetimebound]], decay_derived&& rhs
+   ) noexcept(noexcept(self = self.multiply(move(rhs)))) -> Derived&
       requires(
          detail::has_multiply_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived&&>
@@ -972,7 +979,7 @@ struct multiply_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*=(Derived& self, T&& other) noexcept(
+   operator*=(Derived& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.multiply($fwd(other)))
    ) -> Derived& {
       self = self.multiply($fwd(other));
@@ -992,7 +999,7 @@ struct multiply_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*=(Self&& self, T&& other) noexcept(
+   operator*=(Self&& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.multiply($fwd(other)))
    ) -> Self&& {
       self = self.multiply($fwd(other));
@@ -1036,7 +1043,7 @@ struct multiply_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*=(T& other, Derived&& self) noexcept(
+   operator*=(T& other [[clang::lifetimebound]], Derived&& self) noexcept(
       noexcept(other = detail::reverse_multiply(move(self), other))
    ) -> T& {
       other = detail::reverse_multiply(move(self), other);
@@ -1140,9 +1147,9 @@ struct divide_interface {
    // Same-type compound assignment when `divide_by(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/=(Derived& self, decay_derived const& rhs) noexcept(
-      noexcept(self = self.divide_by(rhs))
-   ) -> Derived&
+   operator/=(
+      Derived& self [[clang::lifetimebound]], decay_derived const& rhs
+   ) noexcept(noexcept(self = self.divide_by(rhs))) -> Derived&
       requires(
          detail::has_divide_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -1154,9 +1161,9 @@ struct divide_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/=(Derived& self, decay_derived&& rhs) noexcept(
-      noexcept(self = self.divide_by(move(rhs)))
-   ) -> Derived&
+   operator/=(
+      Derived& self [[clang::lifetimebound]], decay_derived&& rhs
+   ) noexcept(noexcept(self = self.divide_by(move(rhs)))) -> Derived&
       requires(
          detail::has_divide_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived&&>
@@ -1174,7 +1181,7 @@ struct divide_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/=(Derived& self, T&& other) noexcept(
+   operator/=(Derived& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.divide_by($fwd(other)))
    ) -> Derived& {
       self = self.divide_by($fwd(other));
@@ -1194,7 +1201,7 @@ struct divide_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/=(Self&& self, T&& other) noexcept(
+   operator/=(Self&& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.divide_by($fwd(other)))
    ) -> Self&& {
       self = self.divide_by($fwd(other));
@@ -1238,7 +1245,7 @@ struct divide_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/=(T& other, Derived&& self) noexcept(
+   operator/=(T& other [[clang::lifetimebound]], Derived&& self) noexcept(
       noexcept(other = move(self).divide_into(other))
    ) -> T& {
       other = move(self).divide_into(other);
@@ -1376,7 +1383,7 @@ struct bit_and_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator&=(Derived& self, T&& other) noexcept(
+   operator&=(Derived& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.bit_and($fwd(other)))
    ) -> Derived& {
       self = self.bit_and($fwd(other));
@@ -1396,7 +1403,7 @@ struct bit_and_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator&=(Self&& self, T&& other) noexcept(
+   operator&=(Self&& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.bit_and($fwd(other)))
    ) -> Self&& {
       self = self.bit_and($fwd(other));
@@ -1440,7 +1447,7 @@ struct bit_and_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator&=(T& other, Derived&& self) noexcept(
+   operator&=(T& other [[clang::lifetimebound]], Derived&& self) noexcept(
       noexcept(other = detail::reverse_bit_and(move(self), other))
    ) -> T& {
       other = detail::reverse_bit_and(move(self), other);
@@ -1597,7 +1604,7 @@ struct bit_or_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator|=(Self&& self, T&& other) noexcept(
+   operator|=(Self&& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.bit_or($fwd(other)))
    ) -> Self&& {
       self = self.bit_or($fwd(other));
@@ -1641,7 +1648,7 @@ struct bit_or_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator|=(T& other, Derived&& self) noexcept(
+   operator|=(T& other [[clang::lifetimebound]], Derived&& self) noexcept(
       noexcept(other = detail::reverse_bit_or(move(self), other))
    ) -> T& {
       other = detail::reverse_bit_or(move(self), other);
@@ -1745,9 +1752,9 @@ struct bit_xor_interface {
    // Same-type compound assignment when `bit_xor(rhs)` preserves `Derived`.
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator^=(Derived& self, decay_derived const& rhs) noexcept(
-      noexcept(self = self.bit_xor(rhs))
-   ) -> Derived&
+   operator^=(
+      Derived& self [[clang::lifetimebound]], decay_derived const& rhs
+   ) noexcept(noexcept(self = self.bit_xor(rhs))) -> Derived&
       requires(
          detail::has_bit_xor_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived const&>
@@ -1759,9 +1766,9 @@ struct bit_xor_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator^=(Derived& self, decay_derived&& rhs) noexcept(
-      noexcept(self = self.bit_xor(move(rhs)))
-   ) -> Derived&
+   operator^=(
+      Derived& self [[clang::lifetimebound]], decay_derived&& rhs
+   ) noexcept(noexcept(self = self.bit_xor(move(rhs)))) -> Derived&
       requires(
          detail::has_bit_xor_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived&&>
@@ -1779,7 +1786,7 @@ struct bit_xor_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator^=(Derived& self, T&& other) noexcept(
+   operator^=(Derived& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.bit_xor($fwd(other)))
    ) -> Derived& {
       self = self.bit_xor($fwd(other));
@@ -1799,7 +1806,7 @@ struct bit_xor_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator^=(Self&& self, T&& other) noexcept(
+   operator^=(Self&& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.bit_xor($fwd(other)))
    ) -> Self&& {
       self = self.bit_xor($fwd(other));
@@ -1843,7 +1850,7 @@ struct bit_xor_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator^=(T& other, Derived&& self) noexcept(
+   operator^=(T& other [[clang::lifetimebound]], Derived&& self) noexcept(
       noexcept(other = detail::reverse_bit_xor(move(self), other))
    ) -> T& {
       other = detail::reverse_bit_xor(move(self), other);
@@ -1981,7 +1988,7 @@ struct modulo_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator%=(Derived& self, T&& other) noexcept(
+   operator%=(Derived& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.modulo_by($fwd(other)))
    ) -> Derived& {
       self = self.modulo_by($fwd(other));
@@ -2001,7 +2008,7 @@ struct modulo_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator%=(Self&& self, T&& other) noexcept(
+   operator%=(Self&& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.modulo_by($fwd(other)))
    ) -> Self&& {
       self = self.modulo_by($fwd(other));
@@ -2045,7 +2052,7 @@ struct modulo_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator%=(T& other, Derived&& self) noexcept(
+   operator%=(T& other [[clang::lifetimebound]], Derived&& self) noexcept(
       noexcept(other = move(self).modulo_into(other))
    ) -> T& {
       other = move(self).modulo_into(other);
@@ -2184,7 +2191,7 @@ struct shift_left_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<<=(Derived& self, T&& other) noexcept(
+   operator<<=(Derived& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.shift_left_by($fwd(other)))
    ) -> Derived& {
       self = self.shift_left_by($fwd(other));
@@ -2204,7 +2211,7 @@ struct shift_left_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<<=(Self&& self, T&& other) noexcept(
+   operator<<=(Self&& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.shift_left_by($fwd(other)))
    ) -> Self&& {
       self = self.shift_left_by($fwd(other));
@@ -2248,7 +2255,7 @@ struct shift_left_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<<=(T& other, Derived&& self) noexcept(
+   operator<<=(T& other [[clang::lifetimebound]], Derived&& self) noexcept(
       noexcept(other = move(self).shift_left_into(other))
    ) -> T& {
       other = move(self).shift_left_into(other);
@@ -2367,9 +2374,9 @@ struct shift_right_interface {
 
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator>>=(Derived& self, decay_derived&& rhs) noexcept(
-      noexcept(self = self.shift_right_by(move(rhs)))
-   ) -> Derived&
+   operator>>=(
+      Derived& self [[clang::lifetimebound]], decay_derived&& rhs
+   ) noexcept(noexcept(self = self.shift_right_by(move(rhs)))) -> Derived&
       requires(
          detail::has_shift_right_assign<decay_derived, decay_derived>
          && is_constructible<Derived, decay_derived&&>
@@ -2407,7 +2414,7 @@ struct shift_right_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator>>=(Self&& self, T&& other) noexcept(
+   operator>>=(Self&& self [[clang::lifetimebound]], T&& other) noexcept(
       noexcept(self = self.shift_right_by($fwd(other)))
    ) -> Self&& {
       self = self.shift_right_by($fwd(other));
@@ -2451,7 +2458,7 @@ struct shift_right_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator>>=(T& other, Derived&& self) noexcept(
+   operator>>=(T& other [[clang::lifetimebound]], Derived&& self) noexcept(
       noexcept(other = move(self).shift_right_into(other))
    ) -> T& {
       other = move(self).shift_right_into(other);

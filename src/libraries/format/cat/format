@@ -532,6 +532,7 @@ struct format_args {
    template <typename... Types>
    explicit constexpr format_args(
       format_args_compact_storage<Types...> const& storage
+      [[clang::lifetimebound]]
    )
        : m_p_args_indices(
             sizeof...(Types) > 0 ? &(storage.m_arguments_indices[0]) : nullptr

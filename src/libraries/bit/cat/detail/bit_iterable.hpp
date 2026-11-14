@@ -22,7 +22,7 @@ template <typename Iterator>
       && is_unsigned_integral<typename Iterator::value_type>
       /* || is_same<typename iterator::value_type, byte> */
    )
-class bit_stepanov_iterator
+class [[gsl::Pointer]] bit_stepanov_iterator
     : public proxy_stepanov_iterator_interface<
          random_access_iterator_tag, bit_value,
          bit_reference<typename Iterator::value_type>, iword> {
@@ -60,6 +60,14 @@ class bit_stepanov_iterator
       return make_bit_reference_from_offset(
          *m_internal_iterator, m_bit_position
       );
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator*(this bit_stepanov_iterator self
+             [[clang::lifetimebound]]) noexcept(!__has_feature(cxx_exceptions))
+      -> reference {
+      return self.dereference();
    }
 
    [[nodiscard]]
@@ -279,7 +287,9 @@ class bit_iteration_context {
  public:
    using element_type = decltype(declval<Bits&>()[idx{}]);
 
-   constexpr bit_iteration_context(Bits& bits, idx begin, idx end) noexcept
+   constexpr bit_iteration_context(
+      Bits& bits [[clang::lifetimebound]], idx begin, idx end
+   ) noexcept
        : m_p_bits(__builtin_addressof(bits)), m_position(begin), m_stop(end) {
    }
 
@@ -318,7 +328,7 @@ class bit_reverse_iteration_context {
    using element_type = decltype(declval<Bits&>()[idx{}]);
 
    constexpr bit_reverse_iteration_context(
-      Bits& bits, idx begin, idx end
+      Bits& bits [[clang::lifetimebound]], idx begin, idx end
    ) noexcept
        : m_p_bits(__builtin_addressof(bits)), m_position(begin), m_stop(end) {
    }
@@ -392,20 +402,21 @@ struct bit_collection_interface : iterable_interface<Derived> {
 
    [[nodiscard]]
    constexpr auto
-   read_at_unchecked(this auto& self, idx position) -> decltype(auto) {
+   read_at_unchecked(this auto& self [[clang::lifetimebound]], idx position)
+      -> decltype(auto) {
       using reference_type = __typeof_unqual(self[position]);
       static_assert(is_specialization<reference_type, bit_reference>);
       return self[position];
    }
 
    constexpr auto
-   iterate(this auto& self) noexcept {
+   iterate(this auto& self [[clang::lifetimebound]]) noexcept {
       using self_type = typeof(self);
       return detail::bit_iteration_context<self_type>{self, 0u, self.size()};
    }
 
    constexpr auto
-   reverse_iterate(this auto& self) noexcept {
+   reverse_iterate(this auto& self [[clang::lifetimebound]]) noexcept {
       using self_type = typeof(self);
       return detail::bit_reverse_iteration_context<self_type>{
          self,

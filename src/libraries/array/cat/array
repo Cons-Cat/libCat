@@ -44,8 +44,8 @@ array : public container_interface<array<T, length>, T>,
    operator==(array const& other) const -> bool
       requires(is_equality_comparable<T>)
    {
-      for (idx i; i < length; ++i) {
-         if (!(m_data[i.raw] == other.m_data[i.raw])) {
+      for (idx index; index < length; ++index) {
+         if (!(m_data[index] == other.m_data[index])) {
             return false;
          }
       }
@@ -80,10 +80,10 @@ array : public container_interface<array<T, length>, T>,
       return length;
    }
 
-   template <idx i>
+   template <idx index>
    constexpr auto
    get(this auto&& self [[clang::lifetimebound]]) -> decltype(auto) {
-      return $fwd(self).m_data[i.raw];
+      return $fwd(self).m_data[index];
    }
 
  private:
@@ -98,16 +98,16 @@ array(T, Args...) -> array<T, sizeof...(Args) + 1u>;
 template <typename... Ts, idx length = sizeof...(Ts)>
 [[nodiscard]]
 constexpr auto
-make_array(Ts&&... ts) -> array<common_type<Ts...>, length> {
-   return array{static_cast<common_type<Ts...>>(ts)...};
+make_array(Ts&&... values) -> array<common_type<Ts...>, length> {
+   return array{static_cast<common_type<Ts...>>(values)...};
 }
 
 // Make a `cat::array<T>`.
 template <typename T, typename... Ts, idx length = sizeof...(Ts)>
 [[nodiscard]]
 constexpr auto
-make_array(Ts&&... ts) -> array<T, length> {
-   return array{static_cast<T>(ts)...};
+make_array(Ts&&... values) -> array<T, length> {
+   return array{static_cast<T>(values)...};
 }
 
 // Make a `cat::array<T>` initialized with `value`.
@@ -116,8 +116,8 @@ template <idx length, typename T>
 constexpr auto
 make_array_filled(T const& value) -> array<T, length> {
    array<T, length> array;
-   for (idx i; i < length; ++i) {
-      array[i] = value;
+   for (idx index; index < length; ++index) {
+      array[index] = value;
    }
    return array;
 }
@@ -151,25 +151,28 @@ template <idx index, typename T, idx length>
    requires(index < length)
 [[nodiscard]]
 constexpr auto
-get(array<T, length>& a) noexcept(!__has_feature(cxx_exceptions)) -> T& {
-   return a[index];
+get(array<T, length>& array [[clang::lifetimebound]]) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> T& {
+   return array[index];
 }
 
 template <idx index, typename T, idx length>
    requires(index < length)
 [[nodiscard]]
 constexpr auto
-get(array<T, length> const& a) noexcept(!__has_feature(cxx_exceptions))
-   -> T const& {
-   return a[index];
+get(array<T, length> const& array [[clang::lifetimebound]]) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> T const& {
+   return array[index];
 }
 
 template <idx index, typename T, idx length>
    requires(index < length)
 [[nodiscard]]
 constexpr auto
-get(array<T, length>&& a) noexcept -> T&& {
-   return move(a[index]);
+get(array<T, length>&& array) noexcept -> T&& {
+   return move(array[index]);
 }
 
 }  // namespace cat

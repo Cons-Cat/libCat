@@ -310,7 +310,8 @@ simd_ctz(simd<T, Abi> x, simd<T, Abi> if_zero) noexcept -> simd<T, Abi> {
 template <is_simd Simd>
 constexpr auto
 simd_partial_load(
-   Simd& v, typename Simd::value_type const* _Nonnull p_source, idx n
+   Simd& v [[clang::lifetimebound]],
+   typename Simd::value_type const* _Nonnull p_source, idx n
 ) noexcept -> Simd& {
    return v.partial_load(p_source, n);
 }

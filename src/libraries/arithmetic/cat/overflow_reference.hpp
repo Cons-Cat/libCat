@@ -775,7 +775,8 @@ class overflow_reference
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   add(U* _Nullable p_operand) const noexcept -> U* _Nullable {
+   add(U* _Nullable p_operand [[clang::lifetimebound]]) const noexcept
+      -> U* _Nullable {
       return view().add(p_operand);
    }
 
@@ -853,7 +854,8 @@ class overflow_reference
    template <typename U>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   subtract_from(U* _Nullable p_operand) noexcept -> U* _Nullable {
+   subtract_from(U* _Nullable p_operand [[clang::lifetimebound]]) noexcept
+      -> U* _Nullable {
       return view().subtract_from(p_operand);
    }
 

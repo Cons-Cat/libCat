@@ -238,7 +238,7 @@ struct noisy_box : cat::iterable_interface<> {
 
    [[nodiscard]]
    constexpr auto
-   read_at_unchecked(cat::idx p) const -> int const& {
+   read_at_unchecked(cat::idx p) const [[clang::lifetimebound]] -> int const& {
       return cat::read_at_unchecked(data, p);
    }
 };

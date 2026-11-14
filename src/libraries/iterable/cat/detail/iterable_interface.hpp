@@ -46,6 +46,13 @@ constexpr auto
 distance(Collection const& collection, Position const& from, Position const& to)
    -> decltype(collection.distance(from, to));
 
+// To annotate `[[clang::lifetimebound]]`, we need to know whether a view binds
+// to an owned l-value reference or an r-value.
+template <typename Base>
+concept is_view_owned =
+   !is_reference<Base> && !is_reference_wrapper<Base>
+   && !requires { requires remove_cvref<Base>::is_borrowing_view; };
+
 // `cat::iterable_interface` is the mixin that turns the pipe-only surface
 // (`data | cat::filter(position) | cat::sum()`) into a fluent API surface
 // (`data.filter(position).sum()`). It is implemented on every adaptor in
@@ -61,86 +68,226 @@ struct iterable_interface {
    // These are implemented in
    // `<cat/iterable/implementations/iterable_interface.tpp>`.
    template <typename Self, typename Callback>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   transform(this Self self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   transform(this Self& self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    transform(this Self&& self, Callback callback);
 
    template <typename Self, typename Callback>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   filter(this Self self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   filter(this Self& self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    filter(this Self&& self, Callback callback);
 
    template <typename Self>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   take(this Self self [[clang::lifetimebound]], idx count);
+
+   template <typename Self>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   take(this Self& self [[clang::lifetimebound]], idx count);
+
+   template <typename Self>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    take(this Self&& self, idx count);
 
    template <typename Self>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   take_last(this Self self [[clang::lifetimebound]], idx count);
+
+   template <typename Self>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   take_last(this Self& self [[clang::lifetimebound]], idx count);
+
+   template <typename Self>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    take_last(this Self&& self, idx count);
 
    template <typename Self, typename Callback>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   take_while(this Self self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   take_while(this Self& self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    take_while(this Self&& self, Callback callback);
 
    template <typename Self, typename Callback>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   take_last_while(this Self self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   take_last_while(this Self& self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    take_last_while(this Self&& self, Callback callback);
 
    template <typename Self>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   drop(this Self self [[clang::lifetimebound]], idx count);
+
+   template <typename Self>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   drop(this Self& self [[clang::lifetimebound]], idx count);
+
+   template <typename Self>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    drop(this Self&& self, idx count);
 
    template <typename Self>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   drop_last(this Self self [[clang::lifetimebound]], idx count);
+
+   template <typename Self>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   drop_last(this Self& self [[clang::lifetimebound]], idx count);
+
+   template <typename Self>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    drop_last(this Self&& self, idx count);
 
    template <typename Self, typename Callback>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   drop_while(this Self self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   drop_while(this Self& self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    drop_while(this Self&& self, Callback callback);
 
    template <typename Self, typename Callback>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   drop_last_while(this Self self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   drop_last_while(this Self& self [[clang::lifetimebound]], Callback callback);
+
+   template <typename Self, typename Callback>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    drop_last_while(this Self&& self, Callback callback);
 
    template <typename Self>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   reverse(this Self self [[clang::lifetimebound]]);
+
+   template <typename Self>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   reverse(this Self& self [[clang::lifetimebound]]);
+
+   template <typename Self>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    reverse(this Self&& self);
 
    template <typename Self>
    constexpr auto
-   reverse_inplace(this Self&& self) -> decltype(auto);
+   reverse_inplace(this Self&& self [[clang::lifetimebound]]) -> decltype(auto);
 
    template <typename Self, typename Value>
    constexpr auto
-   fill(this Self&& self, Value value) -> decltype(auto);
+   fill(this Self&& self [[clang::lifetimebound]], Value value)
+      -> decltype(auto);
 
    template <typename Self, typename Generator>
    constexpr auto
-   fill_random(this Self&& self, Generator&& generator) -> decltype(auto);
+   fill_random(this Self&& self [[clang::lifetimebound]], Generator&& generator)
+      -> decltype(auto);
 
    template <typename Self, typename Generator, typename Distribution>
    constexpr auto
    fill_random(
-      this Self&& self, Generator&& generator, Distribution&& distribution
+      this Self&& self [[clang::lifetimebound]], Generator&& generator,
+      Distribution&& distribution
    ) -> decltype(auto);
 
    template <typename Self>
+      requires(!is_view_owned<Self>)
+   constexpr auto
+   as_rvalue(this Self self [[clang::lifetimebound]]);
+
+   template <typename Self>
+      requires(is_view_owned<Self>)
+   constexpr auto
+   as_rvalue(this Self& self [[clang::lifetimebound]]);
+
+   template <typename Self>
+      requires(!is_lvalue_reference<Self> && is_view_owned<Self>)
    constexpr auto
    as_rvalue(this Self&& self);
 
    template <typename Self, typename Position>
    constexpr auto
-   read_at(this Self& self, Position const& position) -> decltype(auto);
+   read_at(this Self& self [[clang::lifetimebound]], Position const& position)
+      -> decltype(auto);
 
    template <typename Self, typename Position>
    constexpr auto
-   try_read_at(this Self& self, Position const& position);
+   try_read_at(
+      this Self& self [[clang::lifetimebound]], Position const& position
+   );
 
    template <typename Self, typename Position>
    constexpr auto
-   slice(this Self& self, Position first, Position last);
+   slice(
+      this Self& self [[clang::lifetimebound]], Position first, Position last
+   );
 
    template <typename Self>
    constexpr auto
-   as_span(this Self& self);
+   as_span(this Self& self [[clang::lifetimebound]]);
 
    template <typename Self>
    constexpr auto
@@ -313,7 +460,8 @@ struct contiguous_position_interface {
 
    [[nodiscard]]
    constexpr auto
-   read_at_unchecked(this Derived& self, idx position) -> decltype(auto)
+   read_at_unchecked(this Derived& self [[clang::lifetimebound]], idx position)
+      -> decltype(auto)
       requires(requires(Derived& collection) { collection.data(); })
    {
       return self.data()[position];
@@ -321,7 +469,9 @@ struct contiguous_position_interface {
 
    [[nodiscard]]
    constexpr auto
-   read_at_unchecked(this Derived const& self, idx position) -> decltype(auto)
+   read_at_unchecked(
+      this Derived const& self [[clang::lifetimebound]], idx position
+   ) -> decltype(auto)
       requires(requires(Derived const& collection) { collection.data(); })
    {
       return self.data()[position];

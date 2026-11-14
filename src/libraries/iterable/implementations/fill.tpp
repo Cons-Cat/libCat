@@ -19,7 +19,8 @@ struct fill_impl {
    template <is_iterable Iterable>
       requires(!is_const<Iterable>)
    friend constexpr auto
-   operator|(Iterable&& incoming, fill_impl self) -> decltype(auto) {
+   operator|(Iterable&& incoming [[clang::lifetimebound]], fill_impl self)
+      -> decltype(auto) {
       auto&& range = unwrap_ref(incoming);
       if constexpr (has_fill_member<decltype(range)> && requires {
                                                            range.fill(

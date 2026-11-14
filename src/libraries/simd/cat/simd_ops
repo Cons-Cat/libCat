@@ -1198,7 +1198,7 @@ struct simd_elementwise_interface {
 
    [[nodiscard]]
    constexpr Derived const&
-   self() const noexcept {
+   self() const noexcept [[clang::lifetimebound]] {
       return static_cast<Derived const&>(*this);
    }
 };
@@ -1283,7 +1283,7 @@ struct simd_elementwise_binary_interface {
 
    [[nodiscard]]
    constexpr Derived const&
-   self() const noexcept {
+   self() const noexcept [[clang::lifetimebound]] {
       return static_cast<Derived const&>(*this);
    }
 };
@@ -1355,7 +1355,7 @@ struct simd_elementwise_ternary_interface {
 
    [[nodiscard]]
    constexpr Derived const&
-   self() const noexcept {
+   self() const noexcept [[clang::lifetimebound]] {
       return static_cast<Derived const&>(*this);
    }
 };
@@ -1412,7 +1412,7 @@ struct simd_elementwise_unary_int_interface {
 
    [[nodiscard]]
    constexpr Derived const&
-   self() const noexcept {
+   self() const noexcept [[clang::lifetimebound]] {
       return static_cast<Derived const&>(*this);
    }
 };

@@ -83,39 +83,50 @@ struct tuple_element {
 
    [[gnu::always_inline]]
    constexpr T&
-   operator[](idx subscript) & [[clang::lifetimebound]] __attribute__((
-      enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
-   )) {
+   operator[](
+      idx subscript
+   ) & [[clang::lifetimebound]] requires(!is_reference<T>)
+      __attribute__((enable_if(
+         subscript == index, "Index in `cat::tuple` is out of bounds!"
+      ))) {
       return this->storage;
    }
 
    [[gnu::always_inline]]
    constexpr T const&
-   operator[](idx subscript) const& [[clang::lifetimebound]] __attribute__((
-      enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
-   )) {
+   operator[](
+      idx subscript
+   ) const& [[clang::lifetimebound]] requires(!is_reference<T>)
+      __attribute__((enable_if(
+         subscript == index, "Index in `cat::tuple` is out of bounds!"
+      ))) {
       return this->storage;
    }
 
    constexpr maybe<T&>
-   at(idx subscript) & [[clang::lifetimebound]] __attribute__((
-      enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
-   )) {
+   at(idx subscript) & [[clang::lifetimebound]] requires(!is_reference<T>)
+      __attribute__((enable_if(
+         subscript == index, "Index in `cat::tuple` is out of bounds!"
+      ))) {
       return this->storage;
    }
 
    constexpr maybe<T const&>
-   at(idx subscript) const& [[clang::lifetimebound]] __attribute__((
-      enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
-   )) {
+   at(idx subscript) const& [[clang::lifetimebound]] requires(!is_reference<T>)
+      __attribute__((enable_if(
+         subscript == index, "Index in `cat::tuple` is out of bounds!"
+      ))) {
       return this->storage;
    }
 
    [[gnu::always_inline]]
    constexpr T&&
-   operator[](idx subscript) && [[clang::lifetimebound]] __attribute__((
-      enable_if(subscript == index, "index in `cat::tuple` is out of bounds!")
-   )) {
+   operator[](
+      idx subscript
+   ) && [[clang::lifetimebound]] requires(!is_reference<T>)
+      __attribute__((enable_if(
+         subscript == index, "index in `cat::tuple` is out of bounds!"
+      ))) {
       if constexpr (is_reference<T>) {
          return this->storage;
       } else {
@@ -125,14 +136,46 @@ struct tuple_element {
 
    [[gnu::always_inline]]
    constexpr subscript_const_rv_return<T>::type
-   operator[](idx subscript) const&& [[clang::lifetimebound]] __attribute__((
-      enable_if(subscript == index, "index in `cat::tuple` is out of bounds!")
-   )) {
+   operator[](
+      idx subscript
+   ) const&& [[clang::lifetimebound]] requires(!is_reference<T>)
+      __attribute__((enable_if(
+         subscript == index, "index in `cat::tuple` is out of bounds!"
+      ))) {
       if constexpr (is_reference<T>) {
          return this->storage;
       } else {
          return static_cast<subscript_const_rv_return<T>::type>(this->storage);
       }
+   }
+
+   [[gnu::always_inline]]
+   constexpr auto
+   operator[](idx subscript) const& -> T&
+      requires(is_reference<T>)
+   __attribute__((
+      enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
+   )) {
+      return this->storage;
+   }
+
+   [[gnu::always_inline]]
+   constexpr auto
+   operator[](idx subscript) const&& -> T&&
+      requires(is_reference<T>)
+   __attribute__((
+      enable_if(subscript == index, "index in `cat::tuple` is out of bounds!")
+   )) {
+      return this->storage;
+   }
+
+   constexpr auto
+   at(idx subscript) const -> maybe<T&>
+      requires(is_reference<T>)
+   __attribute__((
+      enable_if(subscript == index, "Index in `cat::tuple` is out of bounds!")
+   )) {
+      return this->storage;
    }
 
    [[no_unique_address]]
@@ -304,10 +347,24 @@ struct tuple : detail::tuple_storage<
 
    // Get the indexed stored variable.
    template <idx index>
-      requires(index < types::size())
+      requires(
+         index < types::size()
+         && !is_reference<typename types::template get<index>>
+      )
    [[gnu::always_inline]]
    constexpr auto
    get(this auto&& self [[clang::lifetimebound]]) -> decltype(auto) {
+      return $fwd(self)[index];
+   }
+
+   template <idx index>
+      requires(
+         index < types::size()
+         && is_reference<typename types::template get<index>>
+      )
+   [[gnu::always_inline]]
+   constexpr auto
+   get(this auto&& self) -> decltype(auto) {
       return $fwd(self)[index];
    }
 
@@ -323,8 +380,20 @@ struct tuple : detail::tuple_storage<
    // Get a reference to the first stored variable.
    [[nodiscard]]
    constexpr auto
+   first(this auto&& self [[clang::lifetimebound]]) -> decltype(auto)
+      requires(
+         types::size() >= 1 && !is_reference<typename types::template get<0u>>
+      )
+   {
+      return $fwd(self).template get<0u>();
+   }
+
+   [[nodiscard]]
+   constexpr auto
    first(this auto&& self) -> decltype(auto)
-      requires(types::size() >= 1)
+      requires(
+         types::size() >= 1 && is_reference<typename types::template get<0u>>
+      )
    {
       return $fwd(self).template get<0u>();
    }
@@ -332,8 +401,20 @@ struct tuple : detail::tuple_storage<
    // Get a reference to the second stored variable.
    [[nodiscard]]
    constexpr auto
+   second(this auto&& self [[clang::lifetimebound]]) -> decltype(auto)
+      requires(
+         types::size() >= 2 && !is_reference<typename types::template get<1u>>
+      )
+   {
+      return $fwd(self).template get<1u>();
+   }
+
+   [[nodiscard]]
+   constexpr auto
    second(this auto&& self) -> decltype(auto)
-      requires(types::size() >= 2)
+      requires(
+         types::size() >= 2 && is_reference<typename types::template get<1u>>
+      )
    {
       return $fwd(self).template get<1u>();
    }
@@ -341,8 +422,20 @@ struct tuple : detail::tuple_storage<
    // Get a reference to the third stored variable.
    [[nodiscard]]
    constexpr auto
+   third(this auto&& self [[clang::lifetimebound]]) -> decltype(auto)
+      requires(
+         types::size() >= 3 && !is_reference<typename types::template get<2u>>
+      )
+   {
+      return $fwd(self).template get<2u>();
+   }
+
+   [[nodiscard]]
+   constexpr auto
    third(this auto&& self) -> decltype(auto)
-      requires(types::size() >= 3)
+      requires(
+         types::size() >= 3 && is_reference<typename types::template get<2u>>
+      )
    {
       return $fwd(self).template get<2u>();
    }
@@ -350,8 +443,20 @@ struct tuple : detail::tuple_storage<
    // Get a reference to the fourth stored variable.
    [[nodiscard]]
    constexpr auto
+   fourth(this auto&& self [[clang::lifetimebound]]) -> decltype(auto)
+      requires(
+         types::size() >= 4 && !is_reference<typename types::template get<3u>>
+      )
+   {
+      return $fwd(self).template get<3u>();
+   }
+
+   [[nodiscard]]
+   constexpr auto
    fourth(this auto&& self) -> decltype(auto)
-      requires(types::size() >= 4)
+      requires(
+         types::size() >= 4 && is_reference<typename types::template get<3u>>
+      )
    {
       return $fwd(self).template get<3u>();
    }
@@ -359,8 +464,20 @@ struct tuple : detail::tuple_storage<
    // Get a reference to the fifth stored variable.
    [[nodiscard]]
    constexpr auto
+   fifth(this auto&& self [[clang::lifetimebound]]) -> decltype(auto)
+      requires(
+         types::size() >= 5 && !is_reference<typename types::template get<4u>>
+      )
+   {
+      return $fwd(self).template get<4u>();
+   }
+
+   [[nodiscard]]
+   constexpr auto
    fifth(this auto&& self) -> decltype(auto)
-      requires(types::size() >= 5)
+      requires(
+         types::size() >= 5 && is_reference<typename types::template get<4u>>
+      )
    {
       return $fwd(self).template get<4u>();
    }
@@ -430,7 +547,21 @@ concept is_tuple = detail::is_tuple_impl<decay<Tuple>>::value;
 
 // Analogous to the proposed `std::aggr::get` in the P2141 paper.
 template <idx index, typename Tuple>
-   requires(is_tuple<Tuple>)
+   requires(
+      is_tuple<Tuple>
+      && !is_reference<typename remove_cvref<Tuple>::types::template get<index>>
+   )
+[[nodiscard, gnu::always_inline]]
+constexpr auto
+get(Tuple&& tuple [[clang::lifetimebound]]) -> decltype(auto) {
+   return $fwd(tuple).template get<index>();
+}
+
+template <idx index, typename Tuple>
+   requires(
+      is_tuple<Tuple>
+      && is_reference<typename remove_cvref<Tuple>::types::template get<index>>
+   )
 [[nodiscard, gnu::always_inline]]
 constexpr auto
 get(Tuple&& tuple) -> decltype(auto) {

@@ -11,6 +11,9 @@ struct drop_last_view_impl : iterable_interface<> {
    Base m_base;
    idx m_count;
 
+   // This works around limitation in recursive `concept`s.
+   static constexpr bool is_borrowing_view = !is_view_owned<Base>;
+
    template <typename BaseContext>
    struct context_type {
       BaseContext incoming_context;
@@ -67,54 +70,47 @@ struct drop_last_view_impl : iterable_interface<> {
       }
    }
 
- public:
-   constexpr auto
-   iterate() {
-      auto& collection = unwrap_ref(m_base);
+   template <typename Collection>
+   static constexpr auto
+   make_context(
+      Collection& collection [[clang::lifetimebound]], idx requested_count
+   ) {
       if constexpr (is_collection<decltype(collection)>) {
          using collection_type = typeof(collection);
          return collection_iteration_context<collection_type>{
             __builtin_addressof(collection),
             begin_pos(collection),
-            suffix_begin(collection, m_count),
+            suffix_begin(collection, requested_count),
          };
       } else {
          idx const count = collection.size();
-         idx const limit = count > m_count ? idx(count - m_count) : 0u;
-         using incoming_context = iterable_iteration_context_type<Base>;
+         idx const limit =
+            count > requested_count ? idx(count - requested_count) : 0u;
+         using incoming_context = decltype(cat::iterate(collection));
          return context_type<incoming_context>{
-            cat::iterate(m_base),
+            cat::iterate(collection),
             limit,
             0u,
          };
       }
    }
 
+ public:
    constexpr auto
-   iterate() const
+   iterate(this auto&& self [[clang::lifetimebound]])
       requires(
-         is_collection<decltype(unwrap_ref(m_base))>
-         || has_size<decltype(unwrap_ref(m_base))>
+         is_view_owned<Base>
+         && (is_collection<decltype(unwrap_ref(self.m_base))> || has_size<decltype(unwrap_ref(self.m_base))>)
       )
    {
-      auto& collection = unwrap_ref(m_base);
-      if constexpr (is_collection<decltype(collection)>) {
-         using collection_type = typeof(collection);
-         return collection_iteration_context<collection_type>{
-            __builtin_addressof(collection),
-            begin_pos(collection),
-            suffix_begin(collection, m_count),
-         };
-      } else {
-         idx const count = collection.size();
-         idx const limit = count > m_count ? idx(count - m_count) : 0u;
-         using incoming_context = iterable_iteration_context_type<Base const>;
-         return context_type<incoming_context>{
-            cat::iterate(m_base),
-            limit,
-            0u,
-         };
-      }
+      return make_context(unwrap_ref(self.m_base), self.m_count);
+   }
+
+   constexpr auto
+   iterate(this drop_last_view_impl self [[clang::lifetimebound]])
+      requires(!is_view_owned<Base>)
+   {
+      return make_context(unwrap_ref(self.m_base), self.m_count);
    }
 };
 

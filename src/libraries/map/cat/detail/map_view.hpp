@@ -95,7 +95,8 @@ struct dyn_map_ref {
 template <typename T>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
-dyn_map_unconst(maybe<remove_const<T> const&> found) -> maybe<T&> {
+dyn_map_unconst(maybe<remove_const<T> const&> found [[clang::lifetimebound]])
+   -> maybe<T&> {
    if constexpr (is_const<T>) {
       return found;
    } else {

@@ -25,7 +25,9 @@ class simd_overflow_reference
    friend struct ::cat::formatter;
 
  public:
-   constexpr explicit simd_overflow_reference(wrapper_type& w) noexcept
+   constexpr explicit simd_overflow_reference(
+      wrapper_type& w [[clang::lifetimebound]]
+   ) noexcept
        : m_wrapped(addressof(w)) {
    }
 

@@ -11,6 +11,9 @@ struct take_view_impl : iterable_interface<> {
    Base m_base;
    idx m_count;
 
+   // This works around limitation in recursive `concept`s.
+   static constexpr bool is_borrowing_view = !is_view_owned<Base>;
+
    template <typename BaseContext>
    struct context_type {
       BaseContext incoming_context;
@@ -45,25 +48,23 @@ struct take_view_impl : iterable_interface<> {
    };
 
    constexpr auto
-   iterate() {
-      using incoming_iteration_context_type =
-         iterable_iteration_context_type<Base>;
-      return context_type<incoming_iteration_context_type>{
-         cat::iterate(m_base),
-         m_count,
+   iterate(this auto&& self [[clang::lifetimebound]])
+      requires(is_view_owned<Base> && is_iterable<decltype((self.m_base))>)
+   {
+      return context_type<decltype(cat::iterate(self.m_base))>{
+         cat::iterate(self.m_base),
+         self.m_count,
          0u,
       };
    }
 
    constexpr auto
-   iterate() const
-      requires(is_iterable<Base const>)
+   iterate(this take_view_impl self [[clang::lifetimebound]])
+      requires(!is_view_owned<Base>)
    {
-      using incoming_iteration_context_type =
-         iterable_iteration_context_type<Base const>;
-      return context_type<incoming_iteration_context_type>{
-         cat::iterate(m_base),
-         m_count,
+      return context_type<decltype(cat::iterate(self.m_base))>{
+         cat::iterate(self.m_base),
+         self.m_count,
          0u,
       };
    }

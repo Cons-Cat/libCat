@@ -177,8 +177,8 @@ constexpr auto index_sequence = integer_sequence<idx, count>;
 template <idx count>
 using make_index_sequence = make_integer_sequence<idx, count>;
 
-template <typename... types>
-using index_sequence_over_types = make_index_sequence<sizeof...(types)>;
+template <typename... Types>
+using index_sequence_over_types = make_index_sequence<sizeof...(Types)>;
 
 template <auto... values>
 using index_sequence_over_values = make_index_sequence<sizeof...(values)>;
@@ -193,7 +193,7 @@ to_underlying(T any_enum) noexcept {
 template <typename T>
 [[nodiscard, gnu::nodebug]]
 constexpr auto
-as_const(T& value) noexcept -> cat::add_const<T>& {
+as_const(T& value [[clang::lifetimebound]]) noexcept -> T const& {
    return value;
 }
 

@@ -1171,7 +1171,7 @@ namespace detail {
 // algorithms.
 template <typename T>
 constexpr auto
-reference_wrapper_bind(T& target) noexcept -> T& {
+reference_wrapper_bind(T& target [[clang::lifetimebound]]) noexcept -> T& {
    return target;
 }
 
@@ -1304,7 +1304,7 @@ using unwrap_ref_decay = unwrap_reference<decay<T>>;
 
 template <typename T>
 constexpr auto
-unwrap_ref(T& reference) -> T& {
+unwrap_ref(T& reference [[clang::lifetimebound]]) -> T& {
    return reference;
 }
 

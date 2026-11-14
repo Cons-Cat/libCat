@@ -240,19 +240,25 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
 
    [[nodiscard]]
    constexpr auto
-   operator[](idx bit_index) const noexcept(!__has_feature(cxx_exceptions))
-      [[clang::lifetimebound]] -> reference {
-      assert(bit_index < m_bit_size);
-      return *make_bit_ptr_from_offset(m_p_storage, m_bit_offset + bit_index);
+   operator[](
+      this bit_span self [[clang::lifetimebound]], idx bit_index
+   ) noexcept(!__has_feature(cxx_exceptions)) -> reference {
+      assert(bit_index < self.m_bit_size);
+      return *make_bit_ptr_from_offset(
+         self.m_p_storage, self.m_bit_offset + bit_index
+      );
    }
 
    [[nodiscard]]
    constexpr auto
-   slice(idx first, idx last) const noexcept(!__has_feature(cxx_exceptions))
-      -> bit_span {
+   slice(
+      this bit_span self [[clang::lifetimebound]], idx first, idx last
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bit_span {
       assert(first <= last);
-      assert(last <= m_bit_size);
-      return bit_span(m_p_storage, m_bit_offset + first, idx(last - first));
+      assert(last <= self.m_bit_size);
+      return bit_span(
+         self.m_p_storage, self.m_bit_offset + first, idx(last - first)
+      );
    }
 
    // Count set bits in this bit span.

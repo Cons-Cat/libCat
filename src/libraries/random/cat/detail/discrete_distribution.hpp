@@ -63,7 +63,8 @@ class discrete_distribution {
 
       [[nodiscard]]
       constexpr auto
-      probabilities() const noexcept -> span<float8 const> {
+      probabilities() const noexcept [[clang::lifetimebound]]
+      -> span<float8 const> {
          return {m_probabilities.data(), m_size};
       }
 
@@ -184,7 +185,8 @@ class discrete_distribution {
 
    [[nodiscard]]
    constexpr auto
-   probabilities() const noexcept -> span<float8 const> {
+   probabilities() const noexcept [[clang::lifetimebound]]
+   -> span<float8 const> {
       return m_parameters.probabilities();
    }
 

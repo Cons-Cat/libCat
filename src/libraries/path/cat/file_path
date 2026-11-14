@@ -279,7 +279,7 @@ template <typename Segment>
 concept is_path_segment =
    requires(Segment const& segment) { detail::path_segment_view(segment); };
 
-class path_component_stepanov_iterator
+class [[gsl::Pointer(char const)]] path_component_stepanov_iterator
     : public proxy_stepanov_iterator_interface<
          forward_iterator_tag, str_view, str_view> {
  public:
@@ -350,8 +350,8 @@ class path_component_iteration_context {
    using element_type = str_view;
 
    constexpr path_component_iteration_context(
-      path_component_stepanov_iterator current,
-      path_component_stepanov_iterator end
+      path_component_stepanov_iterator current [[clang::lifetimebound]],
+      path_component_stepanov_iterator end [[clang::lifetimebound]]
    ) noexcept
        : m_current(current), m_end(end) {
    }

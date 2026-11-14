@@ -737,15 +737,29 @@ struct maybe_storage_selector<T, false, false> {
 };
 }  // namespace detail
 
+namespace detail {
+// Evaluate the type that `.value()` would return from `Maybe`.
+template <
+   typename Maybe,
+   bool = is_reference<typename remove_cvref<Maybe>::value_type>>
+struct maybe_value_cvref_trait {
+   using type = decltype(declval<Maybe>().value());
+};
+
+template <typename Maybe>
+struct maybe_value_cvref_trait<Maybe, true> {
+   using type = remove_cvref<Maybe>::value_type;
+};
+
+// `maybe_base<T>` implements `cat::maybe<T>`.
 template <typename T>
-class
-   [[nodiscard, clang::annotate(
-                   "clang-tidy", "bugprone-use-after-move", "null_after_move"
-                )]] maybe
+class maybe_base
     // Inherit the random-access position protocol so `cat::iterate(maybe)`
-    // auto-derives a `collection_iteration_context`. The mixin holds no
-    // storage, so `sizeof(maybe<T&>)` stays pointer-sized.
-    : public detail::contiguous_position_interface<maybe<T>> {
+    // auto-derives a `collection_iteration_context`.
+    : public contiguous_position_interface<maybe<T>> {
+   // `maybe<T&>` reads the storage directly from its own accessors.
+   friend class cat::maybe<T>;
+
  private:
    using storage_type = detail::maybe_storage_selector<T>::type;
    using stored_value_type = storage_type::value_type;
@@ -754,16 +768,16 @@ class
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
    as_base(this Self&& self [[clang::lifetimebound]])
-      -> copy_cvref_from<Self&&, maybe> {
+      -> copy_cvref_from<Self&&, maybe_base> {
       // C-cast preserves cvref while upcasting through the inheritance
       // chain, so callers reach `maybe`'s overload set instead of a
       // derived class's shadowing overloads.
       // NOLINTNEXTLINE
-      return (copy_cvref_from<Self&&, maybe>)$fwd(self);
+      return (copy_cvref_from<Self&&, maybe_base>)$fwd(self);
    }
 
    template <typename Maybe>
-   using maybe_value_cvref = decltype(declval<Maybe>().value());
+   using maybe_value_cvref = maybe_value_cvref_trait<Maybe>::type;
 
    template <typename Maybe>
    static constexpr bool can_assign_maybe =
@@ -812,7 +826,7 @@ class
    using value_type = storage_type::value_type;
 
    // All `maybe`s are default-constructed as empty.
-   constexpr maybe() noexcept : m_storage(nullopt) {
+   constexpr maybe_base() noexcept : m_storage(nullopt) {
    }
 
    // `maybe`s can be constructed with `in_place` to have their storage
@@ -822,7 +836,7 @@ class
       requires(
          !is_reference<value_type> && is_constructible<value_type, Args&&...>
       )
-   constexpr maybe(
+   constexpr maybe_base(
       in_place_type /*in_place*/, Args&&... arguments
    ) noexcept(is_nothrow_constructible<value_type, Args&&...>)
        : m_storage(in_place, $fwd(arguments)...) {
@@ -833,10 +847,11 @@ class
    template <typename U = value_type>
       requires(
          !is_reference<value_type> && is_constructible<value_type, U&&>
+         && !(is_pointer<value_type> && is_convertible<U&&, value_type>)
          && !is_same<remove_cvref<U>, in_place_type>
-         && !is_same<remove_cvref<U>, maybe>
+         && !is_same<remove_cvref<U>, maybe<T>>
       )
-   constexpr explicit(!is_convertible<U&&, value_type>) maybe(
+   constexpr explicit(!is_convertible<U&&, value_type>) maybe_base(
       U&& input
    ) noexcept(is_nothrow_constructible<value_type, U&&>)
        : m_storage(in_place, $fwd(input)) {
@@ -854,7 +869,7 @@ class
          && is_implicitly_convertible<add_lvalue_reference<U>, value_type>
          && !__reference_constructs_from_temporary(value_type, U&)
       )
-   constexpr explicit(!__is_convertible(U&, value_type)) maybe(
+   constexpr explicit(!__is_convertible(U&, value_type)) maybe_base(
       U& input [[clang::lifetimebound]]
    ) noexcept
        : m_storage(static_cast<value_type>(input)) {
@@ -868,7 +883,7 @@ class
    template <typename U>
       requires(is_reference<value_type>
                && __reference_constructs_from_temporary(value_type, U))
-   constexpr maybe(U&&) = delete;
+   constexpr maybe_base(U&&) = delete;
 
    // `maybe` can be constructed by another `maybe`. The
    // `maybe_converts_from_any_cvref` guard prevents these converting overloads
@@ -880,7 +895,7 @@ class
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
          && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, maybe_value_cvref<maybe<U>&>)))
       )
-   constexpr explicit(!is_convertible<maybe_value_cvref<maybe<U>&>, value_type>) maybe(
+   constexpr explicit(!is_convertible<maybe_value_cvref<maybe<U>&>, value_type>) maybe_base(
       maybe<U>& input
    ) noexcept(is_nothrow_constructible<value_type, maybe_value_cvref<maybe<U>&>> && !__has_feature(cxx_exceptions))
        : m_storage(nullopt) {
@@ -895,7 +910,7 @@ class
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
          && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, maybe_value_cvref<maybe<U> const&>)))
       )
-   constexpr explicit(!is_convertible<maybe_value_cvref<maybe<U> const&>, value_type>) maybe(
+   constexpr explicit(!is_convertible<maybe_value_cvref<maybe<U> const&>, value_type>) maybe_base(
       maybe<U> const& input
    ) noexcept(is_nothrow_constructible<value_type, maybe_value_cvref<maybe<U> const&>>)
        : m_storage(nullopt) {
@@ -910,7 +925,7 @@ class
          && !detail::maybe_converts_from_any_cvref<value_type, maybe<U>>
          && (!is_reference<value_type> || (is_reference<U> && !__reference_constructs_from_temporary(value_type, maybe_value_cvref<maybe<U>&&>)))
       )
-   constexpr explicit(!is_convertible<maybe_value_cvref<maybe<U>&&>, value_type>) maybe(
+   constexpr explicit(!is_convertible<maybe_value_cvref<maybe<U>&&>, value_type>) maybe_base(
       maybe<U>&& input
    ) noexcept(is_nothrow_constructible<value_type, maybe_value_cvref<maybe<U>&&>> && !__has_feature(cxx_exceptions))
        : m_storage(nullopt) {
@@ -920,12 +935,12 @@ class
    }
 
    // Consuming `nullopt` is forwarded to `storage`.
-   constexpr maybe(detail::nullopt_type /*nullopt*/) noexcept
+   constexpr maybe_base(detail::nullopt_type /*nullopt*/) noexcept
        : m_storage(nullopt) {
    }
 
    // Consuming `monostate` default-initializes the `maybe`.
-   constexpr maybe(monostate_type /*monostate*/) noexcept
+   constexpr maybe_base(monostate_type /*monostate*/) noexcept
       requires(is_void<value_type>)
        : m_storage(value_type()) {
    }
@@ -936,20 +951,20 @@ class
          !is_reference<value_type> && is_constructible<value_type, U&&>
          && is_assignable<value_type&, U&&>
          && !is_same<remove_cvref<U>, in_place_type>
-         && !is_same<remove_cvref<U>, maybe>
+         && !is_same<remove_cvref<U>, maybe<T>>
       )
    [[clang::reinitializes]]
    constexpr auto
    operator=(U&& value) noexcept(
       is_nothrow_constructible<value_type, U&&>
       && is_nothrow_assignable<value_type&, U&&>
-   ) -> class maybe& {
+   ) [[clang::lifetimebound]] -> maybe<T>& {
       if (this->has_value()) {
          m_storage.value() = $fwd(value);
       } else {
          m_storage.construct($fwd(value));
       }
-      return *this;
+      return static_cast<maybe<T>&>(*this);
    }
 
    // Rebinding converting reference assignment operator.
@@ -960,9 +975,9 @@ class
       )
    [[clang::reinitializes]]
    constexpr auto
-   operator=(U& value) -> class maybe& {
+   operator=(U& value) -> maybe<T>& {
       m_storage = static_cast<value_type&>(value);
-      return *this;
+      return static_cast<maybe<T>&>(*this);
    }
 
    // Converting `maybe` assignment operators.
@@ -974,9 +989,9 @@ class
       )
    [[clang::reinitializes]]
    constexpr auto
-   operator=(maybe<U> const& maybe) -> class maybe& {
-      assign_maybe(maybe);
-      return *this;
+   operator=(maybe<U> const& other) [[clang::lifetimebound]] -> maybe<T>& {
+      assign_maybe(other);
+      return static_cast<maybe<T>&>(*this);
    }
 
    template <typename U>
@@ -987,9 +1002,9 @@ class
       )
    [[clang::reinitializes]]
    constexpr auto
-   operator=(maybe<U>&& maybe) -> class maybe& {
-      assign_maybe(move(maybe));
-      return *this;
+   operator=(maybe<U>&& other) [[clang::lifetimebound]] -> maybe<T>& {
+      assign_maybe(move(other));
+      return static_cast<maybe<T>&>(*this);
    }
 
    template <typename U>
@@ -1000,19 +1015,20 @@ class
       )
    [[clang::reinitializes]]
    constexpr auto
-   operator=(maybe<U>& maybe) -> class maybe& {
-      assign_maybe(maybe);
-      return *this;
+   operator=(maybe<U>& other) [[clang::lifetimebound]] -> maybe<T>& {
+      assign_maybe(other);
+      return static_cast<maybe<T>&>(*this);
    }
 
    // Assigning `nullopt` destroys any value.
    [[clang::reinitializes]]
    constexpr auto
-   operator=(detail::nullopt_type /*nullopt*/) -> class maybe& {
+   operator=(detail::nullopt_type /*nullopt*/) [[clang::lifetimebound]]
+   -> maybe<T>& {
       if (this->has_value()) {
          m_storage.hard_reset();
       }
-      return *this;
+      return static_cast<maybe<T>&>(*this);
    }
 
    // `maybe<T>` <=> `maybe<U>`. The return type follows the held-value ordering
@@ -1021,24 +1037,25 @@ class
       requires(!is_void<T> && !is_void<U>)
    [[nodiscard]]
    constexpr auto
-   operator<=>(maybe<U> const& other) const
+   operator<=>(this maybe<T> const& self, maybe<U> const& other)
       -> decltype(declval<value_type const&>() <=> declval<U const&>()) {
       using result_type =
          decltype(declval<value_type const&>() <=> declval<U const&>());
-      if (this->has_value() && other.has_value()) {
-         return m_storage.value() <=> other.value();
+      if (self.has_value() && other.has_value()) {
+         return self.m_storage.value() <=> other.value();
       }
-      return static_cast<result_type>(this->has_value() <=> other.has_value());
+      return static_cast<result_type>(self.has_value() <=> other.has_value());
    }
 
    // `maybe<void>` <=> `maybe<void>`. Ordering only compares engagement.
    // This is morally equivalent to `bool <=> bool`.
    [[nodiscard]]
    constexpr auto
-   operator<=>(maybe<void> const& other) const -> std::strong_ordering
+   operator<=>(this maybe<T> const& self, maybe<T> const& other)
+      -> std::strong_ordering
       requires(is_void<T>)
    {
-      return this->has_value() <=> other.has_value();
+      return self.has_value() <=> other.has_value();
    }
 
    // `maybe<T>` <=> `U`. `nullopt` is the least element, so a disengaged maybe
@@ -1050,11 +1067,11 @@ class
       )
    [[nodiscard]]
    constexpr auto
-   operator<=>(U const& value) const
+   operator<=>(this maybe<T> const& self, U const& value)
       -> decltype(declval<value_type const&>() <=> value) {
       using result_type = decltype(declval<value_type const&>() <=> value);
-      if (this->has_value()) {
-         return m_storage.value() <=> value;
+      if (self.has_value()) {
+         return self.m_storage.value() <=> value;
       }
       return static_cast<result_type>(std::strong_ordering::less);
    }
@@ -1063,8 +1080,10 @@ class
    // disengaged maybe is equivalent and an engaged maybe is greater.
    [[nodiscard]]
    constexpr auto
-   operator<=>(detail::nullopt_type /*nullopt*/) const -> std::strong_ordering {
-      return this->has_value() <=> false;
+   operator<=>(
+      this maybe<T> const& self, detail::nullopt_type /*nullopt*/
+   ) -> std::strong_ordering {
+      return self.has_value() <=> false;
    }
 
    // Two `maybe`s are equal iff they agree on engagement and (when both are
@@ -1099,20 +1118,20 @@ class
       )
    [[nodiscard]]
    constexpr auto
-   operator==(maybe<U> const& other) const -> bool {
-      if (this->has_value() != other.has_value()) {
+   operator==(this maybe<T> const& self, maybe<U> const& other) -> bool {
+      if (self.has_value() != other.has_value()) {
          return false;
       }
-      return this->is_empty() || m_storage.value() == other.value();
+      return self.is_empty() || self.m_storage.value() == other.value();
    }
 
    // Engagement-only equality for `maybe<void>` pairs.
    [[nodiscard]]
    constexpr auto
-   operator==(maybe<void> const& other) const -> bool
+   operator==(this maybe<T> const& self, maybe<T> const& other) -> bool
       requires(is_void<T>)
    {
-      return this->has_value() == other.has_value();
+      return self.has_value() == other.has_value();
    }
 
    // `maybe<T>` == `U`. The `!is_maybe<U>` and
@@ -1129,15 +1148,16 @@ class
       )
    [[nodiscard]]
    constexpr auto
-   operator==(U const& value) const -> bool {
-      return this->has_value() && m_storage.value() == value;
+   operator==(this maybe<T> const& self, U const& value) -> bool {
+      return self.has_value() && self.m_storage.value() == value;
    }
 
    // Maybe-vs-nullopt equality.
    [[nodiscard]]
    constexpr auto
-   operator==(detail::nullopt_type /*nullopt*/) const -> bool {
-      return this->is_empty();
+   operator==(this maybe<T> const& self, detail::nullopt_type /*nullopt*/)
+      -> bool {
+      return self.is_empty();
    }
 
    [[nodiscard]]
@@ -1166,7 +1186,7 @@ class
       requires(is_specialization<Patterns, detail::pattern_invocable> && ...)
    constexpr void
    match(Patterns&&... patterns) {
-      cat::match (*this)($fwd(patterns)...);
+      cat::match(static_cast<maybe<T>&>(*this))($fwd(patterns)...);
    }
 
    // Holds true if this `maybe` currently has some value convertible and
@@ -1190,10 +1210,12 @@ class
       return this->is_empty();
    }
 
-   // Get the stored value. Asserts engagement.
+   // Get the stored value. Asserts engagement. `maybe<T&>` shadows this.
    [[nodiscard]]
    constexpr auto
-   value(this auto&& self) noexcept(false) -> decltype(auto)
+   value(this auto&& self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> decltype(auto)
       requires(!is_void<T> && !is_nonnull)
    {
       auto&& base = $fwd(self).as_base();
@@ -1221,7 +1243,8 @@ class
 
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
-   constexpr auto value() const -> monostate_type
+   constexpr auto value() const noexcept(!__has_feature(cxx_exceptions))
+      -> monostate_type
       requires(is_void<T>)
    {
       cat::assert(this->has_value());
@@ -1282,9 +1305,11 @@ class
    //
    // P4189R0 `.get_ptr()` on optional.
    // https://open-std.org/jtc1/sc22/wg21/docs/papers/2026/p4189r0.html
+   //
+   // `maybe<T&>` shadows this.
    [[nodiscard]]
    constexpr auto
-   get_ptr(this auto&& self)
+   get_ptr(this auto&& self [[clang::lifetimebound]])
       requires(!is_void<value_type>)
    {
       auto&& base = $fwd(self).as_base();
@@ -1310,10 +1335,10 @@ class
    // value.
    auto
    assert(
-      this auto&& self,
+      this auto&& self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
-   ) noexcept(false) -> decltype(auto)
-      requires(!is_void<value_type>)
+   ) noexcept(!__has_feature(cxx_exceptions)) -> decltype(auto)
+      requires(!is_void<T>)
    {
       auto&& base = $fwd(self).as_base();
       cat::assert(base.has_value(), callsite);
@@ -1322,11 +1347,11 @@ class
 
    auto
    assert(
-      this auto&& self,
+      this auto&& self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
-   ) noexcept(false) -> decltype(auto)
-      requires(!is_void<value_type>)
+   ) noexcept(!__has_feature(cxx_exceptions)) -> decltype(auto)
+      requires(!is_void<T>)
    {
       auto&& base = $fwd(self).as_base();
       cat::assert(base.has_value(), p_assert_handler, callsite);
@@ -1339,7 +1364,7 @@ class
    assert(
       source_location const& callsite = source_location::current()
    ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
-      requires(is_void<value_type>)
+      requires(is_void<T>)
    {
       cat::assert(has_value(), callsite);
       return monostate;
@@ -1351,7 +1376,7 @@ class
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
    ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
-      requires(is_void<value_type>)
+      requires(is_void<T>)
    {
       cat::assert(has_value(), p_assert_handler, callsite);
       return monostate;
@@ -1361,10 +1386,10 @@ class
    // value.
    auto
    verify(
-      this auto&& self,
+      this auto&& self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
-   ) noexcept(false) -> decltype(auto)
-      requires(!is_void<value_type>)
+   ) noexcept(!__has_feature(cxx_exceptions)) -> decltype(auto)
+      requires(!is_void<T>)
    {
       auto&& base = $fwd(self).as_base();
       cat::verify(base.has_value(), callsite);
@@ -1373,11 +1398,11 @@ class
 
    auto
    verify(
-      this auto&& self,
+      this auto&& self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
-   ) noexcept(false) -> decltype(auto)
-      requires(!is_void<value_type>)
+   ) noexcept(!__has_feature(cxx_exceptions)) -> decltype(auto)
+      requires(!is_void<T>)
    {
       auto&& base = $fwd(self).as_base();
       cat::verify(base.has_value(), p_assert_handler, callsite);
@@ -1389,7 +1414,7 @@ class
    verify(
       source_location const& callsite = source_location::current()
    ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
-      requires(is_void<value_type>)
+      requires(is_void<T>)
    {
       cat::verify(has_value(), callsite);
       return monostate;
@@ -1400,7 +1425,7 @@ class
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
    ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
-      requires(is_void<value_type>)
+      requires(is_void<T>)
    {
       cat::verify(has_value(), p_assert_handler, callsite);
       return monostate;
@@ -1426,9 +1451,9 @@ class
          if constexpr (is_void<U>) {
             if (base.has_value()) {
                $fwd(callback)();
-               return maybe<void>{monostate};
+               return maybe<U>{monostate};
             }
-            return maybe<void>{nullopt};
+            return maybe<U>{nullopt};
          } else {
             if (base.has_value()) {
                return maybe<U>{$fwd(callback)()};
@@ -1442,9 +1467,9 @@ class
          if constexpr (is_void<U>) {
             if (base.has_value()) {
                $fwd(callback)($fwd(base).value());
-               return maybe<void>{monostate};
+               return maybe<U>{monostate};
             }
-            return maybe<void>{nullopt};
+            return maybe<U>{nullopt};
          } else {
             if (base.has_value()) {
                return maybe<U>{$fwd(callback)($fwd(base).value())};
@@ -1466,7 +1491,7 @@ class
          static_assert(
             is_specialization<ret, maybe>,
             "The callback parameter of `.and_then()` must return a "
-            "specialization of `cat::maybe`."
+            "specialization of `cat::maybe`!"
          );
          if (base.has_value()) {
             return $fwd(callback)();
@@ -1477,7 +1502,7 @@ class
          static_assert(
             is_specialization<ret, maybe>,
             "The callback parameter of `.and_then()` must return a "
-            "specialization of `cat::maybe`."
+            "specialization of `cat::maybe`!"
          );
          if (base.has_value()) {
             return $fwd(callback)($fwd(base).value());
@@ -1499,7 +1524,7 @@ class
       static_assert(
          is_void<return_type> || is_maybe<return_type>,
          "The callback parameter of `.or_else()` must return either "
-         "`void` or a specialization of `cat::maybe`."
+         "`void` or a specialization of `cat::maybe`!"
       );
 
       auto&& base = $fwd(self).as_base();
@@ -1510,7 +1535,7 @@ class
          return;
       } else {
          if (base.has_value()) {
-            return return_type{$fwd(base)};
+            return return_type{$fwd(self)};
          }
          return $fwd(callback)();
       }
@@ -1566,7 +1591,7 @@ class
       requires(!is_void<T>)
    [[clang::reinitializes]]
    constexpr auto
-   emplace(Args&&... arguments) -> value_type& {
+   emplace(Args&&... arguments) [[clang::lifetimebound]] -> value_type& {
       *this = nullopt;
       m_storage.construct($fwd(arguments)...);
       return m_storage.value();
@@ -1591,7 +1616,7 @@ class
    // P2988R12 `optional<T&>`. Swap rebinds pointers.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
    constexpr void
-   swap(maybe& other)
+   swap(maybe<T>& other)
       requires(!is_void<value_type>)
    {
       if constexpr (is_reference<value_type>) {
@@ -1631,9 +1656,10 @@ class
    // P3168R1 Give `std::optional` range support.
    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p3168r1.html
 
+   // `maybe<T&>` shadows this.
    [[nodiscard]]
    constexpr auto
-   data(this auto&& self) noexcept
+   data(this auto&& self [[clang::lifetimebound]]) noexcept
       requires(!is_void<T>)
    {
       auto&& base = $fwd(self).as_base();
@@ -1662,7 +1688,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   begin(this auto&& self)
+   begin(this auto&& self [[clang::lifetimebound]])
       requires(!is_void<T>)
    {
       return $fwd(self).data();
@@ -1670,7 +1696,7 @@ class
 
    [[nodiscard]]
    constexpr auto
-   end(this auto&& self)
+   end(this auto&& self [[clang::lifetimebound]])
       requires(!is_void<T>)
    {
       return $fwd(self).data() + self.size().raw;
@@ -1678,6 +1704,264 @@ class
 
  private:
    storage_type m_storage;
+};
+}  // namespace detail
+
+template <typename T>
+class
+   [[nodiscard, clang::annotate(
+                   "clang-tidy", "bugprone-use-after-move", "null_after_move"
+                )]] maybe : public detail::maybe_base<T> {
+   using base = detail::maybe_base<T>;
+
+ public:
+   using base::base;
+   using base::operator=;
+
+   constexpr maybe() = default;
+
+   // `maybe_base`'s storage cannot copy or move a value that is not trivially
+   // copyable, so `maybe_base`'s converting constructors do that instead.
+   // Inherited constructors are never used to copy or move a `maybe`, so these
+   // call them explicitly.
+   maybe(maybe const&)
+      requires(__is_constructible(base, base const&))
+   = default;
+
+   constexpr maybe(maybe const& other) noexcept(
+      __is_nothrow_constructible(base, maybe const&)
+   )
+      requires(!__is_constructible(base, base const&))
+       : base(other) {
+   }
+
+   maybe(maybe&&)
+      requires(__is_constructible(base, base &&))
+   = default;
+
+   constexpr maybe(maybe&& other) noexcept(
+      __is_nothrow_constructible(base, maybe&&)
+   )
+      requires(!__is_constructible(base, base &&))
+       : base(move(other)) {
+   }
+
+   auto
+   operator=(maybe const&) -> maybe& = default;
+   auto
+   operator=(maybe&&) -> maybe& = default;
+};
+
+template <typename T>
+class
+   [[nodiscard,
+     clang::annotate(
+        "clang-tidy", "bugprone-use-after-move", "null_after_move"
+     ),
+     gsl::Pointer(T)]] maybe<T&> : public detail::maybe_base<T&> {
+ public:
+   using detail::maybe_base<T&>::maybe_base;
+   using detail::maybe_base<T&>::operator=;
+
+   // Get the referent. Asserts engagement.
+   [[nodiscard]]
+   constexpr auto
+   value(this maybe self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> T& {
+      cat::assert(self.has_value());
+      return self.m_storage.value();
+   }
+
+   // Returns a pointer or `nullptr` when disengaged.
+   [[nodiscard]]
+   constexpr auto
+   get_ptr(this maybe self [[clang::lifetimebound]]) noexcept -> T* _Nullable {
+      return self.m_storage.p_storage;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data(this maybe self [[clang::lifetimebound]]) noexcept -> T* _Nullable {
+      return self.get_ptr();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   begin(this maybe self [[clang::lifetimebound]]) noexcept -> T* _Nullable {
+      return self.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end(this maybe self [[clang::lifetimebound]]) noexcept -> T* _Nullable {
+      return self.data() + self.size().raw;
+   }
+
+   // Fail a `cat::assert` check if this `maybe` is empty, otherwise return its
+   // referent.
+   auto
+   assert(
+      this maybe self [[clang::lifetimebound]],
+      source_location const& callsite = source_location::current()
+   ) noexcept(!__has_feature(cxx_exceptions)) -> T& {
+      cat::assert(self.has_value(), callsite);
+      return self.m_storage.value();
+   }
+
+   auto
+   assert(
+      this maybe self [[clang::lifetimebound]],
+      void (*_Nonnull p_assert_handler)(source_location const&),
+      source_location const& callsite = source_location::current()
+   ) noexcept(!__has_feature(cxx_exceptions)) -> T& {
+      cat::assert(self.has_value(), p_assert_handler, callsite);
+      return self.m_storage.value();
+   }
+
+   // Fail a `cat::verify` check if this `maybe` is empty, otherwise return its
+   // referent.
+   auto
+   verify(
+      this maybe self [[clang::lifetimebound]],
+      source_location const& callsite = source_location::current()
+   ) noexcept(!__has_feature(cxx_exceptions)) -> T& {
+      cat::verify(self.has_value(), callsite);
+      return self.m_storage.value();
+   }
+
+   auto
+   verify(
+      this maybe self [[clang::lifetimebound]],
+      void (*_Nonnull p_assert_handler)(source_location const&),
+      source_location const& callsite = source_location::current()
+   ) noexcept(!__has_feature(cxx_exceptions)) -> T& {
+      cat::verify(self.has_value(), p_assert_handler, callsite);
+      return self.m_storage.value();
+   }
+};
+
+namespace detail {
+// A `maybe` whose stored value is a pointer, such as `maybe<T*>` or
+// `maybe_ptr<T>`.
+template <typename T>
+concept is_pointer_maybe =
+   is_pointer<T>
+   || (has_default_compact<T> && is_pointer<typename default_compact_trait<T>::type::value_type>);
+}  // namespace detail
+
+template <typename T>
+   requires(detail::is_pointer_maybe<T>)
+class
+   [[nodiscard,
+     clang::annotate(
+        "clang-tidy", "bugprone-use-after-move", "null_after_move"
+     ),
+     gsl::Pointer]] maybe<T> : public detail::maybe_base<T> {
+   using base = detail::maybe_base<T>;
+
+ public:
+   using base::base;
+   using base::operator=;
+
+   // Taking the pointer by value lets Clang's lifetime analysis tie this
+   // `maybe` to the pointee. `maybe_base`'s forwarding constructor would tie it
+   // to the variable holding the pointer.
+   constexpr maybe(base::value_type pointer [[clang::lifetimebound]]) noexcept
+       : base(in_place, pointer) {
+   }
+
+   // Get the stored pointer. Asserts engagement.
+   [[nodiscard]]
+   constexpr auto
+   value(this maybe self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> base::value_type
+      requires(!base::is_nonnull)
+   {
+      cat::assert(self.has_value());
+      return self.m_storage.value();
+   }
+
+   // Engagement implies non-null, so the pointer is `_Nonnull`.
+   [[nodiscard, gnu::returns_nonnull]]
+   constexpr auto
+   value(this maybe self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   )
+      -> remove_pointer<
+         typename base::value_type>* _Nonnull requires(base::is_nonnull) {
+                                                 cat::assert(self.has_value());
+                                                 return self.m_storage.value();
+                                              }
+
+   // Returns the stored pointer, or `nullptr` when disengaged.
+   [[nodiscard]] constexpr auto get_ptr(
+      this maybe self [[clang::lifetimebound]]
+   ) noexcept -> base::value_type {
+      if constexpr (base::is_nonnull) {
+         return self.m_storage.value_or_niche();
+      } else {
+         if (self.has_value()) {
+            return self.m_storage.value();
+         }
+         return nullptr;
+      }
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   value_or(
+      this maybe self [[clang::lifetimebound]],
+      base::value_type fallback [[clang::lifetimebound]]
+   ) noexcept -> base::value_type {
+      if (self.has_value()) {
+         return self.m_storage.value();
+      }
+      return fallback;
+   }
+
+   // Fail a `cat::assert` check if this `maybe` is empty, otherwise return its
+   // pointer.
+   auto
+   assert(
+      this maybe self [[clang::lifetimebound]],
+      source_location const& callsite = source_location::current()
+   ) noexcept(!__has_feature(cxx_exceptions)) -> decltype(auto) {
+      cat::assert(self.has_value(), callsite);
+      return self.value();
+   }
+
+   auto
+   assert(
+      this maybe self [[clang::lifetimebound]],
+      void (*_Nonnull p_assert_handler)(source_location const&),
+      source_location const& callsite = source_location::current()
+   ) noexcept(!__has_feature(cxx_exceptions)) -> decltype(auto) {
+      cat::assert(self.has_value(), p_assert_handler, callsite);
+      return self.value();
+   }
+
+   // Fail a `cat::verify` check if this `maybe` is empty, otherwise return its
+   // pointer.
+   auto
+   verify(
+      this maybe self [[clang::lifetimebound]],
+      source_location const& callsite = source_location::current()
+   ) noexcept(!__has_feature(cxx_exceptions)) -> decltype(auto) {
+      cat::verify(self.has_value(), callsite);
+      return self.value();
+   }
+
+   auto
+   verify(
+      this maybe self [[clang::lifetimebound]],
+      void (*_Nonnull p_assert_handler)(source_location const&),
+      source_location const& callsite = source_location::current()
+   ) noexcept(!__has_feature(cxx_exceptions)) -> decltype(auto) {
+      cat::verify(self.has_value(), p_assert_handler, callsite);
+      return self.value();
+   }
 };
 
 // This deduction guide is required for deducing references.
@@ -1693,19 +1977,12 @@ static_assert(__is_trivially_copyable(maybe<int&>));
 static_assert(__is_trivially_copyable(maybe<int const&>));
 static_assert(sizeof(maybe<int&>) == sizeof(int*));
 
-// `make_maybe(value)` deduces the value type, like `std::make_optional`.
-// `make_maybe<T>(arguments).` constructs `maybe<T>` in place. There is no
-// `make_maybe<T&>().` overload because constructing a `maybe<T&>` from a
-// temporary is forbidden, and partial-order ranking makes the argument-deducing
-// form pick up l-values unambiguously, so callers should just write
-// `maybe<T&>{lvalue}` directly.
-//
-// P2988R12 `optional<T&>`. No reference factories.
-// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
 template <typename T>
 [[nodiscard]]
 constexpr auto
 make_maybe(T&& value) -> maybe<remove_cvref<T>> {
+   // P2988R12 `optional<T&>`. No reference factories.
+   // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2988r12.pdf
    return maybe<remove_cvref<T>>{$fwd(value)};
 }
 

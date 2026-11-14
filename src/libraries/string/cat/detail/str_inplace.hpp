@@ -387,7 +387,7 @@ class
    [[nodiscard]]
    constexpr auto
    push_back(CharT value) noexcept(!__has_feature(cxx_exceptions))
-      -> maybe<CharT&>
+      [[clang::lifetimebound]] -> maybe<CharT&>
       requires(!flags.vec.is_fixed_size)
    {
       if (size() == inline_capacity) {
@@ -398,7 +398,7 @@ class
 
    constexpr auto
    unchecked_push_back(CharT value) noexcept(!__has_feature(cxx_exceptions))
-      -> CharT&
+      [[clang::lifetimebound]] -> CharT&
       requires(!flags.vec.is_fixed_size)
    {
       cat::assert(size() < inline_capacity);
