@@ -730,10 +730,9 @@ class scaredy_base {
       }
    }
 
-   // TODO: Make the `.assert()` and `.verify()` getters `constexpr`.
    // TODO: Add overloads which take a `str_view` for an error message.
 
-   auto
+   constexpr auto
    assert(
       this auto&& self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
@@ -745,7 +744,7 @@ class scaredy_base {
       return $fwd(base).value();
    }
 
-   auto
+   constexpr auto
    assert(
       this auto&& self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
@@ -760,7 +759,7 @@ class scaredy_base {
 
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
-   auto
+   constexpr auto
    assert(
       source_location const& callsite = source_location::current()
    ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
@@ -771,7 +770,7 @@ class scaredy_base {
    }
 
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
-   auto
+   constexpr auto
    assert(
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
@@ -782,7 +781,7 @@ class scaredy_base {
       return monostate;
    }
 
-   auto
+   constexpr auto
    verify(
       this auto&& self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
@@ -794,7 +793,7 @@ class scaredy_base {
       return $fwd(base).value();
    }
 
-   auto
+   constexpr auto
    verify(
       this auto&& self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
@@ -809,7 +808,7 @@ class scaredy_base {
 
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
-   auto
+   constexpr auto
    verify(
       source_location const& callsite = source_location::current()
    ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
@@ -819,7 +818,7 @@ class scaredy_base {
       return monostate;
    }
 
-   auto
+   constexpr auto
    verify(
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
@@ -1069,7 +1068,7 @@ class
       return fallback;
    }
 
-   auto
+   constexpr auto
    assert(
       this scaredy self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
@@ -1078,7 +1077,7 @@ class
       return self.value();
    }
 
-   auto
+   constexpr auto
    assert(
       this scaredy self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
@@ -1088,7 +1087,7 @@ class
       return self.value();
    }
 
-   auto
+   constexpr auto
    verify(
       this scaredy self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
@@ -1097,7 +1096,7 @@ class
       return self.value();
    }
 
-   auto
+   constexpr auto
    verify(
       this scaredy self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),

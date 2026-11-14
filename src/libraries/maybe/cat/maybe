@@ -1333,12 +1333,11 @@ class maybe_base
       }
    }
 
-   // TODO: Make the `.assert()` and `.verify()` getters `constexpr`.
    // TODO: Add overloads which take a `str_view` for an error message.
 
    // Fail a `cat::assert` check if this `maybe` is empty, otherwise return its
    // value.
-   auto
+   constexpr auto
    assert(
       this auto&& self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
@@ -1350,7 +1349,7 @@ class maybe_base
       return $fwd(base).value();
    }
 
-   auto
+   constexpr auto
    assert(
       this auto&& self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
@@ -1365,7 +1364,7 @@ class maybe_base
 
    // Special discard-able overload for `maybe<void>`.
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
-   auto
+   constexpr auto
    assert(
       source_location const& callsite = source_location::current()
    ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
@@ -1376,7 +1375,7 @@ class maybe_base
    }
 
    // NOLINTNEXTLINE This should not be `[[nodiscard]]`.
-   auto
+   constexpr auto
    assert(
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
@@ -1389,7 +1388,7 @@ class maybe_base
 
    // Fail a `cat::verify` check if this `maybe` is empty, otherwise return its
    // value.
-   auto
+   constexpr auto
    verify(
       this auto&& self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
@@ -1401,7 +1400,7 @@ class maybe_base
       return $fwd(base).value();
    }
 
-   auto
+   constexpr auto
    verify(
       this auto&& self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
@@ -1415,7 +1414,7 @@ class maybe_base
    }
 
    // Special discard-able overload for `maybe<void>`.
-   auto
+   constexpr auto
    verify(
       source_location const& callsite = source_location::current()
    ) const noexcept(!__has_feature(cxx_exceptions)) -> monostate_type
@@ -1425,7 +1424,7 @@ class maybe_base
       return monostate;
    }
 
-   auto
+   constexpr auto
    verify(
       void (*_Nonnull p_assert_handler)(source_location const&),
       source_location const& callsite = source_location::current()
@@ -1823,7 +1822,7 @@ class
 
    // Fail a `cat::assert` check if this `maybe` is empty, otherwise return its
    // referent.
-   auto
+   constexpr auto
    assert(
       this maybe self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
@@ -1832,7 +1831,7 @@ class
       return self.m_storage.value();
    }
 
-   auto
+   constexpr auto
    assert(
       this maybe self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
@@ -1844,7 +1843,7 @@ class
 
    // Fail a `cat::verify` check if this `maybe` is empty, otherwise return its
    // referent.
-   auto
+   constexpr auto
    verify(
       this maybe self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
@@ -1853,7 +1852,7 @@ class
       return self.m_storage.value();
    }
 
-   auto
+   constexpr auto
    verify(
       this maybe self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
@@ -1946,7 +1945,7 @@ class
 
    // Fail a `cat::assert` check if this `maybe` is empty, otherwise return its
    // pointer.
-   auto
+   constexpr auto
    assert(
       this maybe self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
@@ -1955,7 +1954,7 @@ class
       return self.value();
    }
 
-   auto
+   constexpr auto
    assert(
       this maybe self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
@@ -1967,7 +1966,7 @@ class
 
    // Fail a `cat::verify` check if this `maybe` is empty, otherwise return its
    // pointer.
-   auto
+   constexpr auto
    verify(
       this maybe self [[clang::lifetimebound]],
       source_location const& callsite = source_location::current()
@@ -1976,7 +1975,7 @@ class
       return self.value();
    }
 
-   auto
+   constexpr auto
    verify(
       this maybe self [[clang::lifetimebound]],
       void (*_Nonnull p_assert_handler)(source_location const&),
