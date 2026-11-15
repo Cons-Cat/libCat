@@ -51,7 +51,7 @@ runs:
 
     - name: Install ELFkickers
       # Stages `.cache/cat-elfkickers/bin/{sstrip,elfls,objres,...}`, which the
-      # arithmetic-negative job (and any other job that exercises the
+      # targeted-tests job (and any other job that exercises the
       # ELF-kickers-backed test machinery) needs on PATH.
       shell: bash
       run: mise run install-elfkickers
