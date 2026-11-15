@@ -335,11 +335,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       }
 
       guard.commit();
-      if constexpr (!is_trivially_destructible<T>) {
-         for (idx i; i < count; ++i) {
-            p_source[i].~T();
-         }
-      }
+      destroy_n_elements(p_source, count);
    }
 
 #pragma clang diagnostic pop
