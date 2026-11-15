@@ -1,9 +1,11 @@
+#include <cat/allocator_null>
 #include <cat/allocator_page>
 #include <cat/bitset>
 #include <cat/bitvec>
 #include <cat/iterable>
 #include <cat/raii_bitvec>
 
+#include "../allocator_failing.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -669,4 +671,55 @@ $test(bitvec_clear_and_reset) {
    cat::verify(raii_bits.size() == 1u && !raii_bits[0u]);
    raii_bits.clear();
    cat::verify(raii_bits.size() == 0u);
+}
+
+$test(bitvec_allocation_failure) {
+   cat::allocator_null null_alloc;
+   cat::bitvec_big<> bits;
+   cat::verify(!bits.push_back(null_alloc, true).has_value());
+   cat::verify(!bits.reserve(null_alloc, 1u).has_value());
+   cat::verify(bits.size() == 0u);
+
+   allocator_failing allocator;
+   auto pattern = [](idx i) -> bool {
+      return i % 3u == 0u;
+   };
+   for (idx i; i < 200u; ++i) {
+      bits.push_back(allocator, pattern(i)).verify();
+   }
+
+   // Pushing fits in the last word, until the bits must grow and fail.
+   allocator.fail_after(0u);
+   while (bits.push_back(allocator, pattern(bits.size())).has_value()) {
+      cat::verify(bits.size() < 1'000u);
+   }
+
+   idx const size = bits.size();
+   cat::verify(!bits.reserve(allocator, idx(bits.capacity() * 2u)).has_value());
+   cat::verify(!bits.clone(allocator).has_value());
+   allocator.never_fail();
+   cat::verify(bits.size() == size);
+   for (idx i; i < size; ++i) {
+      cat::verify(bits[i] == pattern(i));
+   }
+
+   bits.free(allocator);
+   cat::verify(allocator.live_allocations == 0u);
+
+   {
+      cat::raii::bitvec_big<allocator_failing> managed(allocator);
+      for (idx i; i < 100u; ++i) {
+         managed.push_back(pattern(i)).verify();
+      }
+
+      allocator.fail_after(0u);
+      cat::verify(!managed.clone().has_value());
+      allocator.never_fail();
+      cat::verify(managed.size() == 100u && managed[99u] == pattern(99u));
+      cat::raii::bitvec_big<allocator_failing> copy = managed.clone().verify();
+      cat::verify(copy == managed && allocator.live_allocations == 2u);
+   }
+
+   // The destructors freed everything.
+   cat::verify(allocator.live_allocations == 0u);
 }

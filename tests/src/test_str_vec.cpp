@@ -6,6 +6,7 @@
 #include <cat/string>
 #include <cat/vec>
 
+#include "../allocator_failing.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -571,4 +572,54 @@ $test(str_vec_collection) {
 
    cat::verify((wide_string | cat::count()) == 3u);
    cat::verify(cat::read_at(wide_string, 2u) == L't');
+}
+
+$test(str_vec_allocation_failure) {
+   allocator_failing allocator;
+   cat::str_vec_big<> text;
+   cat::zstr_vec_big<> terminated;
+   text.append(allocator, cat::str_view("libCat")).verify();
+   terminated.append(allocator, cat::str_view("libCat")).verify();
+   text.shrink_to_fit(allocator).verify();
+   terminated.shrink_to_fit(allocator).verify();
+
+   // Failing to grow keeps the characters, and the null terminator.
+   allocator.fail_after(0u);
+   cat::verify(!text.push_back(allocator, 'x').has_value());
+   cat::verify(!text.append(allocator, cat::str_view("more")).has_value());
+   cat::verify(!text.reserve(allocator, idx(text.capacity() + 1u)).has_value());
+   cat::verify(!text.resize(allocator, idx(text.size() + 1u)).has_value());
+   cat::verify(!text.clone(allocator).has_value());
+   cat::verify(!terminated.push_back(allocator, 'x').has_value());
+   cat::verify(
+      !terminated.append(allocator, cat::str_view("more")).has_value()
+   );
+   cat::verify(!terminated.clone(allocator).has_value());
+   allocator.never_fail();
+   cat::verify(text == cat::str_view("libCat"));
+   cat::verify(terminated == cat::str_view("libCat"));
+   cat::verify(terminated.data()[terminated.size()] == '\0');
+
+   text.free(allocator);
+   terminated.free(allocator);
+   cat::verify(allocator.live_allocations == 0u);
+
+   {
+      cat::raii::str_vec_big<allocator_failing> managed(allocator);
+      managed.append(cat::str_view("managed")).verify();
+      managed.shrink_to_fit().verify();
+      allocator.fail_after(0u);
+      cat::verify(!managed.clone().has_value());
+      cat::verify(!managed.push_back('!').has_value());
+      allocator.never_fail();
+      cat::verify(managed == cat::str_view("managed"));
+
+      cat::raii::str_vec_big<> dynamic_copy =
+         managed.clone(g_tests_alloc).verify();
+      cat::verify(dynamic_copy == cat::str_view("managed"));
+      cat::verify(allocator.live_allocations == 1u);
+   }
+
+   // The destructor freed everything.
+   cat::verify(allocator.live_allocations == 0u);
 }

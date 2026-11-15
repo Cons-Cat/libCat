@@ -7,6 +7,7 @@
 #include <cat/utility>
 #include <cat/vec>
 
+#include "../allocator_failing.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -1075,15 +1076,6 @@ $test(vec_container_algorithms) {
    relocated[5] = 0;
    origin.relocate_to(relocated);
    cat::verify(relocated[5] == 1);
-}
-
-$test(vec_allocator_null_failure) {
-   cat::allocator_null null_alloc;
-   cat::vec_big<int4> v;
-   $defer {
-      v.free(null_alloc);
-   };
-   cat::verify(v.reserve(null_alloc, 1).is_empty());
 }
 
 $test(vec_noncontiguous_replace_failure_preserves_values) {
@@ -2812,3 +2804,193 @@ $test(vec_swap_inline_throwing_relocation) {
    cat::verify(fragile::live == 0);
 }
 #endif
+
+$test(vec_allocation_failure) {
+   cat::allocator_null null_alloc;
+   cat::vec_big<int4> values;
+   cat::verify(!values.push_back(null_alloc, 1_i4).has_value());
+   cat::verify(!values.emplace_back(null_alloc, 1).has_value());
+   cat::verify(!values.insert(null_alloc, 0u, 1_i4).has_value());
+   cat::verify(!values.reserve(null_alloc, 1u).has_value());
+   cat::verify(!values.resize(null_alloc, 1u).has_value());
+   cat::verify(values.capacity() == 0u);
+
+   // Requests beyond `max_size()` fail without allocating.
+   allocator_failing allocator;
+   cat::verify(!values.reserve(allocator, idx::max()).has_value());
+   cat::verify(
+      !values.reserve(allocator, idx(values.max_size() + 1u)).has_value()
+   );
+   cat::verify(allocator.allocation_count == 0u);
+
+   // Failing to grow leaves the elements intact.
+   for (idx i; i < 16u; ++i) {
+      values.push_back(allocator, int4(i)).verify();
+   }
+
+   values.shrink_to_fit(allocator).verify();
+   cat::array<int4, 4u> const range = {90_i4, 91_i4, 92_i4, 93_i4};
+   allocator.fail_after(0u);
+   cat::verify(!values.push_back(allocator, 99_i4).has_value());
+   cat::verify(!values.emplace_back(allocator, 99).has_value());
+   cat::verify(!values.insert(allocator, 3u, 99_i4).has_value());
+   cat::verify(!values.emplace(allocator, 13u, 99).has_value());
+   cat::verify(!values.reserve(allocator, 17u).has_value());
+   cat::verify(!values.resize(allocator, 17u).has_value());
+   cat::verify(!values.append_range(allocator, range).has_value());
+   cat::verify(!values.insert_range(allocator, 2u, range).has_value());
+   cat::verify(
+      !values.replace_with_range(allocator, 1u, 2u, range).has_value()
+   );
+   cat::verify(!values.clone(allocator).has_value());
+   cat::verify(values.size() == 16u);
+   for (idx i; i < 16u; ++i) {
+      cat::verify(values[i] == int4(i));
+   }
+
+   allocator.never_fail();
+   values.free(allocator);
+   cat::verify(allocator.live_allocations == 0u);
+}
+
+$test(vec_allocation_failure_sweeps) {
+   allocator_failing allocator;
+   cat::vec_big<counted> source;
+   for (idx i; i < 40u; ++i) {
+      source.emplace_back(allocator, int4(i)).verify();
+   }
+
+   auto verify_source = [&] {
+      cat::verify(source.size() == 40u);
+      for (idx i; i < 40u; ++i) {
+         cat::verify(source[i].value == int4(i));
+      }
+   };
+
+   // Cloning either makes a full copy or leaks nothing.
+   iword const live_before = counted::live;
+   idx const allocations_before = allocator.live_allocations;
+   sweep_allocation_failures(
+      allocator,
+      [&] {
+         cat::maybe<cat::vec_big<counted>> copy = source.clone(allocator);
+         if (!copy.has_value()) {
+            return false;
+         }
+
+         cat::verify(copy.value() == source);
+         copy.value().free(allocator);
+         return true;
+      },
+      [&] {
+         verify_source();
+         cat::verify(counted::live == live_before);
+         cat::verify(allocator.live_allocations == allocations_before);
+      }
+   );
+
+   {
+      // A single-pass range regrows several times. Whatever fit is kept, in
+      // order, after the original elements.
+      cat::array<counted, 200u> range;
+      for (idx i; i < range.size(); ++i) {
+         range[i].value = int4(1'000 + i.raw);
+      }
+
+      auto single_pass = cat::ref(range).filter([](counted const&) -> bool {
+         return true;
+      });
+      cat::vec_big<counted> values;
+      auto refill = [&] {
+         values.free(allocator);
+         for (idx i; i < 4u; ++i) {
+            values.emplace_back(allocator, int4(i)).verify();
+         }
+      };
+
+      refill();
+      sweep_allocation_failures(
+         allocator,
+         [&] {
+            return values.append_range(allocator, single_pass).has_value();
+         },
+         [&] {
+            cat::verify(values.size() >= 4u);
+            for (idx i; i < values.size(); ++i) {
+               cat::verify(
+                  values[i].value == (i < 4u ? int4(i) : int4(996 + i.raw))
+               );
+            }
+
+            refill();
+         }
+      );
+
+      cat::verify(values.size() == 204u);
+      values.free(allocator);
+   }
+
+   // A small vector fails to leave its inline storage, and keeps its
+   // elements.
+   cat::vec_small<counted, 4u> small;
+   for (idx i; i < 4u; ++i) {
+      small.emplace_back(allocator, int4(i)).verify();
+   }
+
+   allocator.fail_after(0u);
+   cat::verify(!small.emplace_back(allocator, 4).has_value());
+   allocator.never_fail();
+   cat::verify(small.size() == 4u && small[3u].value == 3_i4);
+   small.emplace_back(allocator, 4).verify();
+   cat::verify(small.size() == 5u && small[0u].value == 0_i4);
+   small.free(allocator);
+
+   source.free(allocator);
+   cat::verify(allocator.live_allocations == 0u);
+   cat::verify(counted::live == 0);
+}
+
+$test(raii_vec_allocation_failure) {
+   allocator_failing allocator;
+   {
+      cat::raii::vec_big<counted, allocator_failing> values(allocator);
+      for (idx i; i < 20u; ++i) {
+         values.emplace_back(int4(i)).verify();
+      }
+
+      // A failed clone leaks nothing.
+      values.shrink_to_fit().verify();
+      allocator.fail_after(0u);
+      cat::verify(!values.clone().has_value());
+      cat::verify(counted::live == 20);
+      cat::verify(!values.push_back(counted(99)).has_value());
+      allocator.never_fail();
+      cat::verify(counted::live == 20);
+
+      cat::raii::vec_big<counted, allocator_failing> copy =
+         values.clone().verify();
+      cat::raii::vec_big<counted> dynamic_copy =
+         values.clone(g_tests_alloc).verify();
+      cat::verify(copy.size() == 20u && dynamic_copy.size() == 20u);
+      cat::verify(allocator.live_allocations == 2u);
+
+      cat::vec_big<counted> released = copy.release();
+      cat::verify(allocator.live_allocations == 2u);
+      released.free(allocator);
+      cat::verify(allocator.live_allocations == 1u);
+   }
+
+   // The destructors freed everything.
+   cat::verify(allocator.live_allocations == 0u);
+   cat::verify(counted::live == 0);
+
+   // `vec_big` has no inline storage, so making one must allocate.
+   allocator.fail_after(0u);
+   cat::verify(!cat::raii::make_vec<
+                   int4, allocator_failing, cat::vec_flags::initial_growth(4u)>(
+                   allocator, {1_i4}
+   )
+                   .has_value());
+   allocator.never_fail();
+   cat::verify(allocator.live_allocations == 0u);
+}
