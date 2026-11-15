@@ -294,10 +294,22 @@ basic_forward_list
       return m_core.begin();
    }
 
+   [[nodiscard]]
+   constexpr auto
+   begin() const [[clang::lifetimebound]] -> const_iterator {
+      return m_core.begin();
+   }
+
    // Return iterator past the last node.
    [[nodiscard]]
    constexpr auto
    end() [[clang::lifetimebound]] -> iterator {
+      return m_core.end();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end() const [[clang::lifetimebound]] -> const_iterator {
       return m_core.end();
    }
 

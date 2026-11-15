@@ -415,10 +415,22 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
       return m_core.begin();
    }
 
+   [[nodiscard]]
+   constexpr auto
+   begin() const [[clang::lifetimebound]] -> const_iterator {
+      return m_core.begin();
+   }
+
    // Return iterator to one past the last element.
    [[nodiscard]]
    constexpr auto
    end() [[clang::lifetimebound]] -> iterator {
+      return m_core.end();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end() const [[clang::lifetimebound]] -> const_iterator {
       return m_core.end();
    }
 

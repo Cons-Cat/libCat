@@ -401,6 +401,14 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       return result;
    }
 
+   // Append every element of `range` using `cat::allocator_dyn`.
+   template <is_iterable Iterable>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   append_range(allocator_dyn allocator, Iterable&& range) -> maybe<void> {
+      return append_range<allocator_dyn>(allocator, $fwd(range));
+   }
+
    // Insert a copy of value at front and return its iterator.
    template <is_allocator Allocator, typename U>
       requires(is_implicitly_convertible<U, T>)
@@ -416,6 +424,15 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       return iterator(p_node);
    }
 
+   // Insert a copy of value at the front using `cat::allocator_dyn`.
+   template <typename U>
+      requires(is_implicitly_convertible<U, T>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_front(allocator_dyn allocator, U const& value) -> maybe<iterator> {
+      return push_front<allocator_dyn>(allocator, value);
+   }
+
    // Insert a moved value at front and return its iterator.
    template <is_allocator Allocator>
       requires(is_move_constructible<T>)
@@ -428,6 +445,15 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       this->place_node_front(node);
 
       return iterator(p_node);
+   }
+
+   // Insert a moved value at the front using `cat::allocator_dyn`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_front(allocator_dyn allocator, T&& value) -> maybe<iterator>
+      requires(is_move_constructible<T>)
+   {
+      return push_front<allocator_dyn>(allocator, move(value));
    }
 
    template <
@@ -455,6 +481,15 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       return iterator(p_node);
    }
 
+   // Construct an element at the front using `cat::allocator_dyn`.
+   template <typename... Args>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   emplace_front(allocator_dyn allocator, Args&&... arguments)
+      -> maybe<iterator> {
+      return emplace_front<allocator_dyn>(allocator, $fwd(arguments)...);
+   }
+
    // Remove the first element and free its node via allocator.
    template <is_allocator Allocator>
    constexpr void
@@ -466,6 +501,13 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
          node.storage.~T();
          allocator.free(&node);
       }
+   }
+
+   // Remove the first element using `cat::allocator_dyn`.
+   [[gnu::always_inline, gnu::nodebug]]
+   constexpr void
+   pop_front(allocator_dyn allocator) {
+      pop_front<allocator_dyn>(allocator);
    }
 
    constexpr void
@@ -491,11 +533,23 @@ class [[clang::preferred_name(forward_list<T>), gsl::Owner]] basic_forward_list
       return iterator(m_storage.m_p_head);
    }
 
+   [[nodiscard]]
+   constexpr auto
+   begin() const [[clang::lifetimebound]] -> const_iterator {
+      return const_iterator(m_storage.m_p_head);
+   }
+
    // Return iterator past the last node.
    [[nodiscard]]
    constexpr auto
    end() [[clang::lifetimebound]] -> iterator {
       return iterator(nullptr);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   end() const [[clang::lifetimebound]] -> const_iterator {
+      return const_iterator(nullptr);
    }
 
    template <typename Node, typename Element>
@@ -679,12 +733,22 @@ class [[gsl::Pointer(T)]] forward_list_stepanov_iterator
    using reference = T&;
    using const_reference = T const&;
 
-   using node_type = forward_list_node<T>;
+   // A `const` iterator walks the same nodes as a mutable one.
+   using node_type = forward_list_node<remove_const<T>>;
 
    constexpr forward_list_stepanov_iterator(
       node_type* _Nullable p_range [[clang::lifetimebound]]
    )
        : m_p_node(p_range) {
+   }
+
+   // A mutable iterator converts to a `const` one.
+   template <typename U>
+      requires(is_const<T> && is_same<U, remove_const<T>>)
+   constexpr forward_list_stepanov_iterator(
+      forward_list_stepanov_iterator<U> const& other
+   )
+       : m_p_node(other.m_p_node) {
    }
 
    // Advance iterator to the next node.
