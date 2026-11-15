@@ -1,8 +1,12 @@
 #include <cat/allocator_linear>
+#include <cat/allocator_null>
 #include <cat/allocator_page>
 #include <cat/map>
 #include <cat/raii_map>
+#include <cat/raii_set>
+#include <cat/set>
 
+#include "../allocator_failing.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -1194,4 +1198,260 @@ $test(map_alignment) {
    cat::verify(map.insert<cat::allocator_page>(pager, 1, 2).has_value());
    cat::verify(map[1].value() == 2);
    map.free<cat::allocator_page>(pager);
+}
+
+namespace {
+
+// Whether `map` holds exactly the keys `[0, count)`, each mapped to `value_of`
+// that key.
+template <typename Map, typename ValueOf>
+auto
+map_holds(Map& map, int4 count, ValueOf&& value_of) -> bool {
+   if (map.size() != idx(count)) {
+      return false;
+   }
+
+   for (int4 key = 0; key < count; ++key) {
+      if (!map[key].has_value() || map[key].value().value != value_of(key)) {
+         return false;
+      }
+   }
+
+   return true;
+}
+
+}  // namespace
+
+$test(map_allocation_failure) {
+   cat::allocator_null null_alloc;
+   cat::map_big<int4, counted> values;
+   cat::verify(!values.insert(null_alloc, 1, 1_i4).has_value());
+   cat::verify(!values.update(null_alloc, 1, counted(1)).has_value());
+   cat::verify(!values.reserve(null_alloc, 1u).has_value());
+   cat::verify(values.size() == 0u && counted::live == 0);
+
+   allocator_failing allocator;
+   for (int4 key = 0; key < 100; ++key) {
+      values.insert(allocator, key, key).verify();
+   }
+
+   // Inserting fits in the free slots, until the map must grow and fails.
+   allocator.fail_after(0u);
+   int4 key = 100;
+   while (values.insert(allocator, key, key).has_value()) {
+      ++key;
+      cat::verify(key < 1'000);
+   }
+
+   cat::verify(!values.contains(key));
+   cat::verify(map_holds(values, key, [](int4 entry) {
+      return entry;
+   }));
+
+   // Growing fails and keeps the entries.
+   idx const capacity = values.capacity();
+   cat::verify(!values.reserve(allocator, idx(capacity * 2u)).has_value());
+   cat::verify(!values.rehash(allocator, idx(capacity * 4u)).has_value());
+   cat::verify(!values.update(allocator, key, counted(key)).has_value());
+   cat::verify(values.capacity() == capacity);
+
+   // Updating an existing key needs no allocation.
+   values.update(allocator, 5, counted(50)).verify();
+   cat::verify(values.remove(6).has_value());
+   allocator.never_fail();
+   cat::verify(values[5].value().value == 50_i4 && !values.contains(6));
+   cat::verify(counted::live == iword(values.size()));
+
+   values.free(allocator);
+   cat::verify(allocator.live_allocations == 0u && counted::live == 0);
+}
+
+$test(map_allocation_failure_sweeps) {
+   allocator_failing allocator;
+   cat::map_big<int4, counted> values;
+   auto refill = [&] {
+      values.free(allocator);
+      for (int4 key = 0; key < 50; ++key) {
+         values.insert(allocator, key, key).verify();
+      }
+   };
+   auto identity = [](int4 key) {
+      return key;
+   };
+
+   // Growing many times keeps every entry inserted before a failure.
+   refill();
+   int4 inserted = 50;
+   sweep_allocation_failures(
+      allocator,
+      [&] {
+         for (inserted = 50; inserted < 2'000; ++inserted) {
+            if (!values.insert(allocator, inserted, inserted).has_value()) {
+               return false;
+            }
+         }
+
+         return true;
+      },
+      [&] {
+         cat::verify(map_holds(values, inserted, identity));
+         cat::verify(allocator.live_allocations == 1u);
+         cat::verify(counted::live == iword(values.size()));
+         refill();
+      }
+   );
+
+   cat::verify(map_holds(values, 2'000, identity));
+
+   // A failed rehash keeps the old table.
+   refill();
+   sweep_allocation_failures(
+      allocator,
+      [&] {
+         return values.rehash(allocator, 4'096u).has_value();
+      },
+      [&] {
+         cat::verify(map_holds(values, 50, identity));
+         cat::verify(allocator.live_allocations == 1u);
+      }
+   );
+
+   cat::verify(values.capacity() >= 4'096u && map_holds(values, 50, identity));
+
+   // A failed clone frees the copy, including the entries it copied.
+   refill();
+   sweep_allocation_failures(
+      allocator,
+      [&] {
+         cat::maybe<cat::map_big<int4, counted>> copy = values.clone(allocator);
+         if (!copy.has_value()) {
+            return false;
+         }
+
+         cat::verify(map_holds(copy.value(), 50, identity));
+         cat::verify(copy.value().capacity() == values.capacity());
+         copy.value().free(allocator);
+         return true;
+      },
+      [&] {
+         cat::verify(map_holds(values, 50, identity));
+         cat::verify(allocator.live_allocations == 1u && counted::live == 50);
+      }
+   );
+
+   values.free(allocator);
+   cat::verify(allocator.live_allocations == 0u && counted::live == 0);
+}
+
+$test(map_clone) {
+   // Removed entries and probe overflows are copied with the layout, so the
+   // copy finds the same keys.
+   cat::map_big<int4, int4> values;
+   for (int4 key = 0; key < 1'000; ++key) {
+      values.insert(g_tests_alloc, key, key * 2).verify();
+   }
+
+   for (int4 key = 0; key < 1'000; key += 3) {
+      values.remove(key).verify();
+   }
+
+   cat::map_big<int4, int4> copy = values.clone(g_tests_alloc).verify();
+   cat::verify(copy.size() == values.size());
+   cat::verify(copy.capacity() == values.capacity());
+   for (int4 key = 0; key < 1'000; ++key) {
+      cat::verify(copy.contains(key) == (key % 3 != 0));
+      if (key % 3 != 0) {
+         cat::verify(copy[key].value() == key * 2);
+      }
+   }
+
+   // The copy is independent, and can grow.
+   copy[1].value() = -1;
+   copy.remove(2).verify();
+   for (int4 key = 1'000; key < 2'000; ++key) {
+      copy.insert(g_tests_alloc, key, key).verify();
+   }
+
+   cat::verify(values[1].value() == 2 && values.contains(2));
+   cat::verify(!values.contains(1'500) && copy[1'500].value() == 1'500);
+
+   // An empty map and a map in inline storage clone too.
+   cat::map_big<int4, int4> empty;
+   cat::map_big<int4, int4> empty_copy = empty.clone(g_tests_alloc).verify();
+   cat::verify(empty_copy.is_empty() && empty_copy.capacity() == 0u);
+
+   cat::map<int4, int4> small;
+   small.insert(g_tests_alloc, 7, 49).verify();
+   cat::map<int4, int4> small_copy = small.clone(g_tests_alloc).verify();
+   cat::verify(small_copy.size() == 1u && small_copy[7].value() == 49);
+
+   values.free(g_tests_alloc);
+   copy.free(g_tests_alloc);
+   small.free(g_tests_alloc);
+   small_copy.free(g_tests_alloc);
+}
+
+$test(raii_map_allocation_failure) {
+   allocator_failing allocator;
+   {
+      cat::raii::map_small<int4, counted, allocator_failing, 0u> values(
+         allocator
+      );
+      for (int4 key = 0; key < 100; ++key) {
+         values.insert(key, key).verify();
+      }
+
+      allocator.fail_after(0u);
+      cat::verify(!values.reserve(idx(values.capacity() * 2u)).has_value());
+      allocator.never_fail();
+      cat::verify(values.size() == 100u && counted::live == 100);
+      cat::verify(values.allocator() == values.allocator());
+
+      cat::raii::map_small<int4, counted, allocator_failing, 0u> other(
+         allocator
+      );
+      other.insert(1, 1).verify();
+      cat::verify(allocator.live_allocations == 2u);
+
+      // A failed clone leaks nothing.
+      allocator.fail_after(0u);
+      cat::verify(!values.clone().has_value());
+      allocator.never_fail();
+      cat::verify(allocator.live_allocations == 2u && counted::live == 101);
+
+      cat::raii::map_small<int4, counted, allocator_failing, 0u> copy =
+         values.clone().verify();
+      auto dynamic_copy = values.clone(g_tests_alloc).verify();
+      cat::verify(copy.size() == 100u && dynamic_copy.size() == 100u);
+      cat::verify(copy[42].value().value == 42_i4);
+      cat::verify(dynamic_copy[42].value().value == 42_i4);
+      cat::verify(allocator.live_allocations == 3u && counted::live == 301);
+      copy.free();
+      dynamic_copy.free();
+
+      // Move-assigning frees the destination's table.
+      other = move(values);
+      cat::verify(allocator.live_allocations == 1u && other.size() == 100u);
+      cat::verify(counted::live == 100);
+   }
+
+   // The destructors freed everything.
+   cat::verify(allocator.live_allocations == 0u && counted::live == 0);
+}
+
+$test(map_observers) {
+   // Like `std::unordered_map`, maps and sets expose their hash and key
+   // equality functions.
+   cat::map_big<int4, int4> map;
+   cat::set_big<int4> set;
+   cat::allocator_dyn allocator(g_tests_alloc);
+   cat::raii::map_big<int4, int4> managed_map(allocator);
+   cat::raii::set_big<int4> managed_set(allocator);
+   cat::verify(map.hash_function()(7) == cat::hash(7));
+   cat::verify(set.hash_function()(7) == cat::hash(7));
+   cat::verify(managed_map.hash_function()(7) == cat::hash(7));
+   cat::verify(managed_set.hash_function()(7) == cat::hash(7));
+   cat::verify(map.key_eq()(1, 1) && !map.key_eq()(1, 2));
+   cat::verify(set.key_eq()(1, 1) && !managed_set.key_eq()(1, 2));
+   cat::verify(managed_map.key_eq()(3, 3));
 }

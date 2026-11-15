@@ -83,6 +83,9 @@ class [[gsl::Owner]] set_base
     : private map_base<Key, monostate_type, Hash, KeyEqual, Container> {
    using base = map_base<Key, monostate_type, Hash, KeyEqual, Container>;
 
+   // `map_base::clone()` converts the cloned set to its private `map_base`.
+   friend base;
+
  public:
    template <is_allocator Allocator>
    [[nodiscard]]
@@ -113,9 +116,12 @@ class [[gsl::Owner]] set_base
    using base::capacity;
    using base::cfree;
    using base::clear;
+   using base::clone;
    using base::contains;
    using base::free;
+   using base::hash_function;
    using base::is_empty;
+   using base::key_eq;
    using base::rehash;
    using base::remove;
    using base::reserve;

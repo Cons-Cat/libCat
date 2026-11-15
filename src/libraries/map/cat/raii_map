@@ -118,6 +118,20 @@ raii_map_base {
       m_core.cfree(m_allocator);
    }
 
+   // The function which hashes keys, like `std::unordered_map`'s.
+   [[nodiscard]]
+   constexpr auto
+   hash_function() const noexcept [[clang::lifetimebound]] -> auto const& {
+      return m_core.hash_function();
+   }
+
+   // The function which compares keys, like `std::unordered_map`'s.
+   [[nodiscard]]
+   constexpr auto
+   key_eq() const noexcept [[clang::lifetimebound]] -> auto const& {
+      return m_core.key_eq();
+   }
+
    [[nodiscard]]
    constexpr auto
    allocator(this auto&& self) -> allocator_ref<Allocator> {
@@ -258,6 +272,44 @@ class
    update(Key&& key, Value&& value) -> maybe<void> {
       return this->m_core.update(this->m_allocator, move(key), $fwd(value));
    }
+
+   // Deep-copy this `map` with its bound allocator.
+   [[nodiscard]]
+   constexpr auto
+   clone() const& -> maybe<basic_map>
+      requires(is_copy_constructible<Key> && is_copy_constructible<T>)
+   {
+      return clone<Allocator>(this->m_allocator);
+   }
+
+   // Deep-copy this `map` with another allocator.
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(allocator_ref<NewAllocator> allocator) const& -> maybe<
+      basic_map<Key, T, Hash, KeyEqual, Container, NewAllocator, flags>>
+      requires(is_copy_constructible<Key> && is_copy_constructible<T>)
+   {
+      basic_map<Key, T, Hash, KeyEqual, Container, NewAllocator, flags> copy(
+         allocator
+      );
+      copy.m_core = $prop(this->m_core.clone(allocator));
+      return copy;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(allocator_dyn allocator) const& -> maybe<
+      basic_map<Key, T, Hash, KeyEqual, Container, allocator_dyn, flags>>
+      requires(is_copy_constructible<Key> && is_copy_constructible<T>)
+   {
+      return clone<allocator_dyn>(allocator);
+   }
+
+ private:
+   template <
+      typename, typename, typename, typename, typename, is_allocator, map_flags>
+   friend class basic_map;
 };
 
 }  // namespace cat::raii

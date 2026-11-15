@@ -314,6 +314,76 @@ class [[gsl::Owner]] map_base {
  public:
    [[nodiscard]]
    constexpr auto
+   hash_function() const noexcept [[clang::lifetimebound]] -> Hash const& {
+      return m_hash;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   key_eq() const noexcept [[clang::lifetimebound]] -> KeyEqual const& {
+      return m_key_equal;
+   }
+
+   // Deep-copy this map or set, with the same capacity and layout, so that
+   // nothing is rehashed. If allocating or copying an entry fails, the copy is
+   // freed.
+   template <typename Self, is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(this Self const& self, allocator_ref<Allocator> allocator)
+      -> maybe<Self>
+      requires(is_copy_constructible<Key> && is_copy_constructible<T>)
+   {
+      map_base const& source = self;
+      Self copy(source.m_hash, source.m_key_equal);
+      if (source.m_groups.is_empty()) {
+         return copy;
+      }
+
+      map_base& destination = copy;
+      $prop(
+         make_groups(allocator, destination.m_groups, source.m_groups.size())
+      );
+      detail::exception_defer guard([&] {
+         destination.free(allocator);
+      });
+
+      for (idx group; group < source.m_groups.size(); ++group) {
+         group_type const& from = source.m_groups[group];
+         group_type& to = destination.m_groups[group];
+         for (idx i; i < group_slots; ++i) {
+            if (from.is_occupied(i)) {
+               new (&to.map_slots[i].value)
+                  tuple<Key, T>(from.map_slots[i].value);
+               // A slot is marked occupied only once it is constructed, so
+               // that a throwing copy never destroys an empty slot.
+               to.metadata.set_lane(i, from.metadata[i]);
+            }
+         }
+
+         // This also copies the overflow markers and the sentinel.
+         to.metadata = from.metadata;
+      }
+
+      guard.commit();
+      destination.m_size = source.m_size;
+      destination.m_max_load = source.m_max_load;
+      destination.m_groups_size_index = source.m_groups_size_index;
+      destination.m_groups_size_mask = source.m_groups_size_mask;
+      return copy;
+   }
+
+   template <typename Self>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(this Self const& self, allocator_dyn allocator) -> maybe<Self>
+      requires(is_copy_constructible<Key> && is_copy_constructible<T>)
+   {
+      return self.clone(allocator_ref<allocator_dyn>(allocator));
+   }
+
+   [[nodiscard]]
+   constexpr auto
    operator[](Key const& key) [[clang::lifetimebound]] -> maybe<T&> {
       auto const found = find(key, m_hash(key));
       if (!found.is_found()) {
@@ -800,7 +870,7 @@ class [[gsl::Owner]] map_base {
 
    template <is_allocator Allocator>
    [[nodiscard]]
-   constexpr auto
+   static constexpr auto
    make_groups(
       allocator_ref<Allocator> allocator, Container& groups, idx group_count
    ) -> maybe<void> {
@@ -846,6 +916,7 @@ class [[gsl::Owner]] map_base {
             }
          }
       }
+
       guard.commit();
       old_groups.free(allocator);
    }
@@ -868,11 +939,13 @@ class [[gsl::Owner]] map_base {
          allocator, groups,
          group_count_for(slots_for(m_size + m_size / 61u + 1u))
       ));
+
       Container old_groups = swap_groups(move(groups));
       // If moving the new entry throws, restore the old groups.
       detail::exception_defer guard([&] {
          swap_groups(move(old_groups)).free(allocator);
       });
+
       place(hash, $fwd(key), $fwd(arguments)...);
       guard.commit();
       move_entries_from(allocator, move(old_groups));

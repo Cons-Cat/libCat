@@ -99,6 +99,43 @@ class
    insert(Key&& key) -> maybe<void> {
       return this->m_core.insert(this->m_allocator, move(key));
    }
+
+   // Deep-copy this `set` with its bound allocator.
+   [[nodiscard]]
+   constexpr auto
+   clone() const& -> maybe<basic_set>
+      requires(is_copy_constructible<Key>)
+   {
+      return clone<Allocator>(this->m_allocator);
+   }
+
+   // Deep-copy this `set` with another allocator.
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(allocator_ref<NewAllocator> allocator) const& -> maybe<
+      basic_set<Key, Hash, KeyEqual, Container, NewAllocator, flags>>
+      requires(is_copy_constructible<Key>)
+   {
+      basic_set<Key, Hash, KeyEqual, Container, NewAllocator, flags> copy(
+         allocator
+      );
+      copy.m_core = $prop(this->m_core.clone(allocator));
+      return copy;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(allocator_dyn allocator) const& -> maybe<
+      basic_set<Key, Hash, KeyEqual, Container, allocator_dyn, flags>>
+      requires(is_copy_constructible<Key>)
+   {
+      return clone<allocator_dyn>(allocator);
+   }
+
+ private:
+   template <typename, typename, typename, typename, is_allocator, map_flags>
+   friend class basic_set;
 };
 
 }  // namespace cat::raii
