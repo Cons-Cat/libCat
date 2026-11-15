@@ -87,7 +87,8 @@ basic_forward_list
    template <
       typename U, is_allocator A, is_random_generator Generator,
       typename Distribution>
-   friend constexpr auto make_forward_list_filled_random(
+   friend constexpr auto
+   make_forward_list_filled_random(
       allocator_ref<A>, idx, Generator&&, Distribution&&
    ) -> maybe<basic_forward_list<U, A>>;
 
