@@ -1514,8 +1514,8 @@ $test(raii_devec) {
       // The bound allocator is the one given at construction.
       idx const allocation_count = allocator.allocation_count;
       cat::span<int4> const borrowed =
-         values.allocator().alloc_multi_uninit<int4>(1u).verify();
-      values.allocator().free_multi_uninit(borrowed);
+         values.get_allocator().alloc_multi_uninit<int4>(1u).verify();
+      values.get_allocator().free_multi_uninit(borrowed);
       cat::verify(allocator.allocation_count == allocation_count + 1u);
 
       cat::devec<int4> released = values.release();

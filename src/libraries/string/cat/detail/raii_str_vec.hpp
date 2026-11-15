@@ -930,9 +930,10 @@ class
       return new_string;
    }
 
+   // Get the allocator backing this `cat::raii::basic_str_vec`.
    [[nodiscard]]
    constexpr auto
-   allocator(this auto&& self) noexcept -> allocator_ref<Allocator> {
+   get_allocator(this auto&& self) noexcept -> allocator_ref<Allocator> {
       return self.m_allocator;
    }
 

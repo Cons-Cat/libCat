@@ -80,6 +80,13 @@ class basic_process {
       return m_core.is_empty();
    }
 
+   // Get the allocator backing this `nix::raii::basic_process`.
+   [[nodiscard]]
+   constexpr auto
+   get_allocator(this auto&& self) noexcept -> cat::allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
    [[clang::reinitializes]]
    void
    free() noexcept(!__has_feature(cxx_exceptions)) {

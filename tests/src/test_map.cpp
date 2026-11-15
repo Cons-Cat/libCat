@@ -1405,7 +1405,7 @@ $test(raii_map_allocation_failure) {
       cat::verify(!values.reserve(idx(values.capacity() * 2u)).has_value());
       allocator.never_fail();
       cat::verify(values.size() == 100u && counted::live == 100);
-      cat::verify(values.allocator() == values.allocator());
+      cat::verify(values.get_allocator() == values.get_allocator());
 
       cat::raii::map_small<int4, counted, allocator_failing, 0u> other(
          allocator

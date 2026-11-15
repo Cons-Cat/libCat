@@ -47,6 +47,13 @@ io_uring : public manual::io_uring {
       return *this;
    }
 
+   // Get the allocator backing this `nix::raii::io_uring`.
+   [[nodiscard]]
+   constexpr auto
+   get_allocator(this auto&& self) noexcept -> cat::allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
    // See `manual::io_uring::free()`.
    [[clang::reinitializes]]
    void

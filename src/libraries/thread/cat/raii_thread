@@ -70,6 +70,13 @@ class basic_thread {
       return m_core.get_id();
    }
 
+   // Get the allocator backing this `cat::raii::basic_thread`.
+   [[nodiscard]]
+   constexpr auto
+   get_allocator(this auto&& self) noexcept -> allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
    [[clang::reinitializes]]
    void
    free() noexcept(!__has_feature(cxx_exceptions)) {

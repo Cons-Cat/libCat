@@ -128,6 +128,13 @@ class [[gsl::Owner]] basic_bitvec
       delete ("Implicit copying of `cat::raii::basic_bitvec` "
               "is forbidden. Call `.clone()` or move instead!");
 
+   // Get the allocator backing this `cat::raii::basic_bitvec`.
+   [[nodiscard]]
+   constexpr auto
+   get_allocator(this auto&& self) noexcept -> allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
    // Deep-copy the contents of this bit vector.
    [[nodiscard]]
    constexpr auto

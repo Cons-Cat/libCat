@@ -165,7 +165,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
       return manual::basic_list<T>::max_size();
    }
 
-   // Get the allocator associated with this object.
+   // Get the allocator backing this `cat::raii::basic_list`.
    [[nodiscard]]
    constexpr auto
    get_allocator(this auto&& self) -> allocator_ref<Allocator> {
@@ -488,13 +488,6 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    constexpr auto
    reverse_iterate() const {
       return m_core.reverse_iterate();
-   }
-
-   // Access the allocator used by this `cat::raii::basic_list`.
-   [[nodiscard]]
-   constexpr auto
-   allocator(this auto&& self) -> allocator_ref<Allocator> {
-      return self.m_allocator;
    }
 
    // Release ownership of the underlying `cat::basic_list`.

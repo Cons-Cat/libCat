@@ -188,7 +188,7 @@ basic_forward_list
       return manual::basic_forward_list<T>::max_size();
    }
 
-   // Get the allocator associated with this object.
+   // Get the allocator backing this `cat::raii::basic_forward_list`.
    [[nodiscard]]
    constexpr auto
    get_allocator(this auto&& self) -> allocator_ref<Allocator> {
@@ -338,13 +338,6 @@ basic_forward_list
    constexpr auto
    iterate() const {
       return m_core.iterate();
-   }
-
-   // Access the allocator used by this `cat::raii::basic_forward_list`.
-   [[nodiscard]]
-   constexpr auto
-   allocator(this auto&& self) -> allocator_ref<Allocator> {
-      return self.m_allocator;
    }
 
    // Release ownership of the underlying `cat::basic_forward_list`.

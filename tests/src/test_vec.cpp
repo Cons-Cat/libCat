@@ -1263,7 +1263,7 @@ $test(raii_vec_make_and_push_back) {
    linear_arena arena;
    cat::raii::vec v = cat::raii::make_vec<int4>(arena.alloc).verify();
    cat::verify(v.is_empty());
-   cat::verify(v.allocator() == v.allocator());
+   cat::verify(v.get_allocator() == v.get_allocator());
 
    v.push_back(1_i4).verify();
    v.push_back(2_i4).verify();

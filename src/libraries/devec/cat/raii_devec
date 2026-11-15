@@ -382,9 +382,10 @@ devec : public container_interface<devec<T, Allocator>, T>,
       return clone<allocator_dyn>(allocator);
    }
 
+   // Get the allocator backing this `cat::raii::devec`.
    [[nodiscard]]
    constexpr auto
-   allocator(this auto&& self) noexcept -> allocator_ref<Allocator> {
+   get_allocator(this auto&& self) noexcept -> allocator_ref<Allocator> {
       return self.m_allocator;
    }
 

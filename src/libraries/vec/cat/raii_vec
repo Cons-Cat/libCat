@@ -454,9 +454,10 @@ basic_vec : public container_interface<basic_vec<T, Allocator, flags>, T>,
       return new_vector;
    }
 
+   // Get the allocator backing this `cat::raii::basic_vec`.
    [[nodiscard]]
    constexpr auto
-   allocator(this auto&& self) -> allocator_ref<Allocator> {
+   get_allocator(this auto&& self) -> allocator_ref<Allocator> {
       return self.m_allocator;
    }
 

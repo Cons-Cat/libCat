@@ -287,15 +287,15 @@ class [[gsl::Owner]] connection {
       return m_core.failure();
    }
 
-   // The allocator which owns this connection's buffers.
+   // Get the allocator backing this `x11::raii::connection`.
    [[nodiscard]]
    auto
-   allocator() const noexcept -> cat::allocator_dyn {
+   get_allocator() const noexcept -> cat::allocator_dyn {
       return m_allocator;
    }
 
    // Release ownership of the underlying `x11::manual::connection`, whose
-   // buffers `.allocator()` must then free.
+   // allocator must then free manually.
    [[nodiscard, clang::reinitializes]]
    auto
    release() noexcept -> manual::connection {

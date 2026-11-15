@@ -132,9 +132,11 @@ raii_map_base {
       return m_core.key_eq();
    }
 
+   // Get the allocator backing this `cat::raii::basic_map` or
+   // `cat::raii::basic_set`.
    [[nodiscard]]
    constexpr auto
-   allocator(this auto&& self) -> allocator_ref<Allocator> {
+   get_allocator(this auto&& self) -> allocator_ref<Allocator> {
       return self.m_allocator;
    }
 
