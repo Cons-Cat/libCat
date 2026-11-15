@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cat/detail/simd_fwd.hpp>
+
 #include <cat/meta>
 
 namespace cat {

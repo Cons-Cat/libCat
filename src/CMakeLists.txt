@@ -552,6 +552,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/random/cat/detail/geometric_distribution.hpp
   ${CATLIB}/random/cat/detail/independent_bits_engine.hpp
   ${CATLIB}/random/cat/detail/integer_distribution_helpers.hpp
+  ${CATLIB}/random/cat/detail/is_random_generator.hpp
   ${CATLIB}/random/cat/detail/linux_random.hpp
   ${CATLIB}/random/cat/detail/lognormal_distribution.hpp
   ${CATLIB}/random/cat/detail/negative_binomial_distribution.hpp
@@ -587,6 +588,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_precision_reference.hpp
   ${CATLIB}/simd/cat/detail/simd_abi_hooks.hpp
   ${CATLIB}/simd/cat/detail/simd_extras.hpp
+  ${CATLIB}/simd/cat/detail/simd_fwd.hpp
   ${CATLIB}/simd/cat/detail/simd_impl.hpp
   ${CATLIB}/simd/cat/detail/simd_limits.hpp
   ${CATLIB}/simd/cat/simd_ops

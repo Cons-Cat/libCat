@@ -16,7 +16,7 @@
 //    SplitMix64 in `./detail/splitmix.hpp`.
 
 #include <cat/detail/bounded_random.hpp>
-#include <cat/detail/random_generator.hpp>
+#include <cat/detail/is_random_generator.hpp>
 #include <cat/detail/random_seed.hpp>
 #include <cat/detail/rdrand.hpp>
 #include <cat/detail/rdseed.hpp>

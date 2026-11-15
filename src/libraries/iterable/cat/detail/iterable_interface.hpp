@@ -2,7 +2,7 @@
 // vim: set ft=cpp:
 #pragma once
 
-#include <cat/detail/random_generator.hpp>
+#include <cat/detail/is_random_generator.hpp>
 
 #include <cat/arithmetic>
 #include <cat/meta>
