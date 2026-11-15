@@ -30,8 +30,8 @@ class [[gsl::Pointer(T)]] back_insert_stepanov_iterator
 
    template <typename U>
    constexpr auto
-   insert(/* allocator */ auto& allocator, U& value)
-      -> maybe<back_insert_stepanov_iterator<T>&> {
+   insert(/* allocator */ auto& allocator, U& value) [[clang::lifetimebound]]
+   -> maybe<back_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_back(allocator, value);
       if (result.is_empty()) {
          return nullopt;
@@ -41,7 +41,8 @@ class [[gsl::Pointer(T)]] back_insert_stepanov_iterator
 
    template <typename U>
    constexpr auto
-   insert(U& value) -> back_insert_stepanov_iterator<T>& {
+   insert(U& value) [[clang::lifetimebound]]
+   -> back_insert_stepanov_iterator<T>& {
       m_iterable.push_back(value);
       return *this;
    }
@@ -49,7 +50,7 @@ class [[gsl::Pointer(T)]] back_insert_stepanov_iterator
    template <typename U>
    constexpr auto
    insert(/* allocator */ auto& allocator, U const& value)
-      -> maybe<back_insert_stepanov_iterator<T>&> {
+      [[clang::lifetimebound]] -> maybe<back_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_back(allocator, value);
       if (result.is_empty()) {
          return nullopt;
@@ -59,22 +60,24 @@ class [[gsl::Pointer(T)]] back_insert_stepanov_iterator
 
    template <typename U>
    constexpr auto
-   insert(U const& value) -> back_insert_stepanov_iterator<T>& {
+   insert(U const& value) [[clang::lifetimebound]]
+   -> back_insert_stepanov_iterator<T>& {
       m_iterable.push_back(value);
       return *this;
    }
 
    template <typename U>
    constexpr auto
-   operator=(U const& value) -> back_insert_stepanov_iterator<T>& {
+   operator=(U const& value) [[clang::lifetimebound]]
+   -> back_insert_stepanov_iterator<T>& {
       m_iterable.push_back(value);
       return *this;
    }
 
    template <typename U>
    constexpr auto
-   insert(/* allocator */ auto& allocator, U&& value)
-      -> maybe<back_insert_stepanov_iterator<T>&> {
+   insert(/* allocator */ auto& allocator, U&& value) [[clang::lifetimebound]]
+   -> maybe<back_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_back(allocator, $fwd(value));
       if (result.is_empty()) {
          return nullopt;
@@ -92,20 +95,21 @@ class [[gsl::Pointer(T)]] back_insert_stepanov_iterator
 
    template <typename U>
    constexpr auto
-   operator=(U&& value) -> back_insert_stepanov_iterator<T>& {
+   operator=(U&& value) [[clang::lifetimebound]]
+   -> back_insert_stepanov_iterator<T>& {
       m_iterable.push_back($fwd(value));
       return *this;
    }
 
    // Dereference operator is no-op.
    constexpr auto
-   dereference() -> back_insert_stepanov_iterator<T>& {
+   dereference() [[clang::lifetimebound]] -> back_insert_stepanov_iterator<T>& {
       return *this;
    }
 
    // Increment operators are no-op.
    constexpr auto
-   increment() -> back_insert_stepanov_iterator<T>& {
+   increment() [[clang::lifetimebound]] -> back_insert_stepanov_iterator<T>& {
       return *this;
    }
 
@@ -156,8 +160,8 @@ front_insert_stepanov_iterator
 
    template <typename U>
    constexpr auto
-   insert(/* allocator */ auto& allocator, U& value)
-      -> maybe<front_insert_stepanov_iterator<T>&> {
+   insert(/* allocator */ auto& allocator, U& value) [[clang::lifetimebound]]
+   -> maybe<front_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_front(allocator, value);
       if (result.is_empty()) {
          return nullopt;
@@ -167,7 +171,8 @@ front_insert_stepanov_iterator
 
    template <typename U>
    constexpr auto
-   insert(U& value) -> front_insert_stepanov_iterator<T>& {
+   insert(U& value) [[clang::lifetimebound]]
+   -> front_insert_stepanov_iterator<T>& {
       m_iterable.push_front(value);
       return *this;
    }
@@ -175,7 +180,7 @@ front_insert_stepanov_iterator
    template <typename U>
    constexpr auto
    insert(/* allocator */ auto& allocator, U const& value)
-      -> maybe<front_insert_stepanov_iterator<T>&> {
+      [[clang::lifetimebound]] -> maybe<front_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_front(allocator, value);
       if (result.is_empty()) {
          return nullopt;
@@ -185,22 +190,24 @@ front_insert_stepanov_iterator
 
    template <typename U>
    constexpr auto
-   insert(U const& value) -> front_insert_stepanov_iterator<T>& {
+   insert(U const& value) [[clang::lifetimebound]]
+   -> front_insert_stepanov_iterator<T>& {
       m_iterable.push_front(value);
       return *this;
    }
 
    template <typename U>
    constexpr auto
-   operator=(U const& value) -> front_insert_stepanov_iterator<T>& {
+   operator=(U const& value) [[clang::lifetimebound]]
+   -> front_insert_stepanov_iterator<T>& {
       m_iterable.push_front(value);
       return *this;
    }
 
    template <typename U>
    constexpr auto
-   insert(/* allocator */ auto& allocator, U&& value)
-      -> maybe<front_insert_stepanov_iterator<T>&> {
+   insert(/* allocator */ auto& allocator, U&& value) [[clang::lifetimebound]]
+   -> maybe<front_insert_stepanov_iterator<T>&> {
       maybe result = m_iterable.push_front(allocator, $fwd(value));
       if (result.is_empty()) {
          return nullopt;
@@ -218,20 +225,22 @@ front_insert_stepanov_iterator
 
    template <typename U>
    constexpr auto
-   operator=(U&& value) -> front_insert_stepanov_iterator<T>& {
+   operator=(U&& value) [[clang::lifetimebound]]
+   -> front_insert_stepanov_iterator<T>& {
       m_iterable.push_front($fwd(value));
       return *this;
    }
 
    // Dereference operator is no-op.
    constexpr auto
-   dereference() -> front_insert_stepanov_iterator<T>& {
+   dereference() [[clang::lifetimebound]]
+   -> front_insert_stepanov_iterator<T>& {
       return *this;
    }
 
    // Increment operators are no-op.
    constexpr auto
-   increment() -> front_insert_stepanov_iterator<T>& {
+   increment() [[clang::lifetimebound]] -> front_insert_stepanov_iterator<T>& {
       return *this;
    }
 

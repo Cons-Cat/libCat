@@ -59,7 +59,7 @@ list(
   ${_cat_arith_verify_incs})
 foreach(_container IN ITEMS
     allocator array bit bitset bitvec file_path iterable list map maybe ring
-    scaredy span string tuple variant vec)
+    scaredy span stepanov string tuple variant vec)
   set(_source "${CMAKE_SOURCE_DIR}/tests/src/test_${_container}_verify.cpp")
   add_test(
     NAME SafetyTypeCheck_${_container}

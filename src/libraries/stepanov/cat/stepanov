@@ -305,18 +305,21 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    }
 
    constexpr auto
-   operator*(this auto&& self) -> decltype(auto) {
-      if constexpr (requires {
-                       stepanov_iterator_interface_access::base(self);
-                    }) {
-         return *stepanov_iterator_interface_access::base(self);
-      } else {
-         return self.dereference();
-      }
+   operator*(this auto self [[clang::lifetimebound]]) -> decltype(auto)
+      requires(!is_same<IteratorConceptTag, output_iterator_tag>)
+   {
+      return dereference_iterator(self);
    }
 
    constexpr auto
-   operator->(this auto const& self) -> pointer
+   operator*(this auto&& self) -> decltype(auto)
+      requires(is_same<IteratorConceptTag, output_iterator_tag>)
+   {
+      return dereference_iterator(self);
+   }
+
+   constexpr auto
+   operator->(this auto self [[clang::lifetimebound]]) -> pointer
       requires(!is_same<pointer, void>)
    {
       decltype(auto) ref = *self;
@@ -347,7 +350,8 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    }
 
    constexpr auto
-   operator+(this auto const& self, auto offset) -> __typeof_unqual(self)
+   operator+(this auto self [[clang::lifetimebound]], auto offset)
+      -> __typeof_unqual(self)
       requires(
          detail::is_difference_type<decltype(offset), __typeof_unqual(self)>
       )
@@ -365,7 +369,8 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    }
 
    constexpr auto
-   operator-(this auto const& self, auto offset) -> __typeof_unqual(self)
+   operator-(this auto self [[clang::lifetimebound]], auto offset)
+      -> __typeof_unqual(self)
       requires(
          detail::is_difference_type<decltype(offset), __typeof_unqual(self)>
       )
@@ -425,7 +430,7 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
    }
 
    constexpr auto
-   operator[](this auto const& self [[clang::lifetimebound]], auto offset)
+   operator[](this auto self [[clang::lifetimebound]], auto offset)
       -> decltype(auto)
       requires(
          detail::has_advance<__typeof_unqual(self)>
@@ -433,6 +438,18 @@ class stepanov_iterator_interface : public stepanov_iterator_interface_base {
       )
    {
       return *(self + offset);
+   }
+
+ private:
+   static constexpr auto
+   dereference_iterator(auto& self) -> decltype(auto) {
+      if constexpr (requires {
+                       stepanov_iterator_interface_access::base(self);
+                    }) {
+         return *stepanov_iterator_interface_access::base(self);
+      } else {
+         return self.dereference();
+      }
    }
 };
 
@@ -508,7 +525,8 @@ operator+(auto offset, Derived right [[clang::lifetimebound]]) -> Derived
 template <typename Derived>
    requires(is_base_of<stepanov_iterator_interface_base, remove_cvref<Derived>>)
 constexpr auto
-operator-=(Derived& left, auto offset) -> remove_cvref<Derived>&
+operator-=(Derived& left [[clang::lifetimebound]], auto offset)
+   -> remove_cvref<Derived>&
    requires(detail::is_difference_type<decltype(offset), remove_cvref<Derived>>)
 {
    using iter = remove_cvref<Derived>;

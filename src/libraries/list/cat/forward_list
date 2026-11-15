@@ -3,7 +3,7 @@
 #pragma once
 
 // `cat::basic_forward_list` is a singly-linked owning container inspired by
-// `std::forward_list`. Upon construction, the `forward_list` is empty.
+// `std::forward_list`.
 //
 // As this is a `manual` namespace container, its `.clear()` and destructor do
 // not deallocate nodes, they only call its elements' destructors. To

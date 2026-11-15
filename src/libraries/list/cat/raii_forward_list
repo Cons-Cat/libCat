@@ -4,8 +4,7 @@
 
 // `cat::raii::basic_forward_list` is a singly-linked owning container inspired
 // by `std::forward_list`. It wraps a `cat::manual::basic_forward_list` and
-// binds an allocator for the lifetime of the container. Upon construction, the
-// `forward_list` is empty.
+// binds an allocator for the lifetime of the container.
 //
 // As this is an `raii` namespace container, its destructor deallocates nodes
 // automatically through the bound allocator.

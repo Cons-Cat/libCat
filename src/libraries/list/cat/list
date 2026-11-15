@@ -3,7 +3,7 @@
 #pragma once
 
 // `cat::basic_list` is a doubly-linked owning container inspired by
-// `std::list`. Upon construction, the `list` is empty.
+// `std::list`.
 //
 // As this is a `manual` namespace container, its `.clear()` and destructor do
 // not deallocate nodes, they only call its elements' destructors. To
