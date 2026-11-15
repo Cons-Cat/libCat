@@ -4,8 +4,10 @@
 // Clang stops its `-Wlifetime-safety` pass after the first error in a
 // translation unit. Run with `just test safety`.
 
+#include <cat/allocator_linear>
 #include <cat/allocator_page>
 #include <cat/raii_vec>
+#include <cat/random>
 #include <cat/vec>
 #include <cat/vec_inplace>
 
@@ -307,4 +309,193 @@ use_after_scope_raii_vec() {
       p_escaped = local.data();
    }
    *p_escaped = 2;
+}
+
+// Negative cases: a `raii` vec from a factory or `.clone()`
+// outlives its allocator.
+
+auto
+dangling_raii_vec_allocator_empty(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec<cat::uint8, cat::allocator_linear>(linear);
+}
+
+auto
+dangling_raii_vec_allocator_list(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec<cat::uint8, cat::allocator_linear>(
+      linear, {cat::uint8(1u)}
+   );
+}
+
+auto
+dangling_raii_vec_allocator_reserved(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_reserved<cat::uint8, cat::allocator_linear>(
+      linear, 4u
+   );
+}
+
+auto
+dangling_raii_vec_allocator_dyn(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_filled<cat::uint8>(
+      cat::allocator_dyn(linear), 3u, cat::uint8(1u)
+   );
+}
+
+auto
+dangling_raii_vec_allocator_filled(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_filled<cat::uint8, cat::allocator_linear>(
+      linear, 3u, cat::uint8(1u)
+   );
+}
+
+auto
+dangling_raii_vec_allocator_filled_random(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   cat::xoshiro_engine<cat::uint8> engine(1u);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_filled_random<cat::uint8, cat::allocator_linear>(
+      linear, 3u, engine
+   );
+}
+
+auto
+dangling_raii_vec_allocator_small_filled(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_small_filled<
+      cat::uint8, 4u, cat::allocator_linear>(linear, 3u, cat::uint8(1u));
+}
+
+auto
+dangling_raii_vec_allocator_small_filled_random(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   cat::xoshiro_engine<cat::uint8> engine(1u);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_small_filled_random<
+      cat::uint8, 4u, cat::allocator_linear>(linear, 3u, engine);
+}
+
+auto
+dangling_raii_vec_allocator_big_filled(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_big_filled<cat::uint8, cat::allocator_linear>(
+      linear, 3u, cat::uint8(1u)
+   );
+}
+
+auto
+dangling_raii_vec_allocator_big_filled_random(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   cat::xoshiro_engine<cat::uint8> engine(1u);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_big_filled_random<
+      cat::uint8, cat::allocator_linear>(linear, 3u, engine);
+}
+
+auto
+dangling_raii_vec_allocator_fixed_filled(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_fixed_filled<cat::uint8, cat::allocator_linear>(
+      linear, 3u, cat::uint8(1u)
+   );
+}
+
+auto
+dangling_raii_vec_allocator_fixed_filled_random(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   cat::xoshiro_engine<cat::uint8> engine(1u);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_fixed_filled_random<
+      cat::uint8, cat::allocator_linear>(linear, 3u, engine);
+}
+
+auto
+dangling_raii_vec_allocator_small_fixed_filled(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_small_fixed_filled<
+      cat::uint8, 4u, cat::allocator_linear>(linear, 3u, cat::uint8(1u));
+}
+
+auto
+dangling_raii_vec_allocator_small_fixed_filled_random(
+   cat::span<cat::byte> arena
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   cat::xoshiro_engine<cat::uint8> engine(1u);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_small_fixed_filled_random<
+      cat::uint8, 4u, cat::allocator_linear>(linear, 3u, engine);
+}
+
+auto
+dangling_raii_vec_allocator_big_fixed_filled(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_big_fixed_filled<
+      cat::uint8, cat::allocator_linear>(linear, 3u, cat::uint8(1u));
+}
+
+auto
+dangling_raii_vec_allocator_big_fixed_filled_random(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   cat::xoshiro_engine<cat::uint8> engine(1u);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_big_fixed_filled_random<
+      cat::uint8, cat::allocator_linear>(linear, 3u, engine);
+}
+
+auto
+dangling_raii_vec_allocator_filled_random_distribution(
+   cat::span<cat::byte> arena
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   cat::xoshiro_engine<cat::uint8> engine(1u);
+   cat::uniform_int_distribution<cat::uint8> distribution(0u, 7u);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_vec_filled_random<cat::uint8, cat::allocator_linear>(
+      linear, 3u, engine, distribution
+   );
+}
+
+using linear_raii_vec = __typeof_unqual(
+   cat::raii::make_vec_reserved<cat::uint8, cat::allocator_linear>(
+      cat::declval<cat::allocator_linear&>(), 1u
+   )
+      .value()
+);
+
+auto
+dangling_raii_vec_allocator_clone(
+   cat::span<cat::byte> arena, linear_raii_vec const& source
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return source.clone(cat::allocator_ref<cat::allocator_linear>(linear));
+}
+
+auto
+dangling_raii_vec_allocator_clone_dyn(
+   cat::span<cat::byte> arena, linear_raii_vec const& source
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return source.clone(cat::allocator_dyn(linear));
 }

@@ -217,7 +217,7 @@ basic_file_path
    [[nodiscard]]
    constexpr auto
    clone(
-      allocator_ref<NewAllocator> allocator
+      allocator_ref<NewAllocator> allocator [[clang::lifetimebound]]
    ) const& -> maybe<basic_file_path<NewAllocator, flags>> {
       auto path = m_path.clone(allocator);
       if (path.is_empty()) {
@@ -230,7 +230,7 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   clone(allocator_dyn allocator) const& noexcept
+   clone(allocator_dyn allocator [[clang::lifetimebound]]) const& noexcept
       -> maybe<basic_file_path<allocator_dyn, flags>> {
       return clone<allocator_dyn>(allocator);
    }
@@ -432,7 +432,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_file_path(
-   allocator_ref<Allocator> allocator, Segment const& segment
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Segment const& segment
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<basic_file_path<Allocator, flags>> {
    basic_file_path<Allocator, flags> result(allocator);
@@ -449,8 +450,9 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_dyn allocator, Segment const& segment) noexcept
-   -> maybe<basic_file_path<allocator_dyn, flags>> {
+make_file_path(
+   allocator_dyn allocator [[clang::lifetimebound]], Segment const& segment
+) noexcept -> maybe<basic_file_path<allocator_dyn, flags>> {
    return raii::make_file_path<allocator_dyn, flags>(allocator, segment);
 }
 
@@ -458,15 +460,16 @@ template <
    is_allocator Allocator, str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_ref<Allocator> allocator) noexcept
-   -> maybe<basic_file_path<Allocator, flags>> {
+make_file_path(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+) noexcept -> maybe<basic_file_path<Allocator, flags>> {
    return raii::make_file_path<Allocator, flags>(allocator, str_view{});
 }
 
 template <str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_dyn allocator) noexcept
+make_file_path(allocator_dyn allocator [[clang::lifetimebound]]) noexcept
    -> maybe<basic_file_path<allocator_dyn, flags>> {
    return raii::make_file_path<allocator_dyn, flags>(allocator);
 }

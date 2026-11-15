@@ -79,6 +79,18 @@ basic_forward_list
    make_forward_list_filled(allocator_ref<A>, idx, U const&)
       -> maybe<basic_forward_list<U, A>>;
 
+   template <typename U, is_allocator A, is_random_generator Generator>
+   friend constexpr auto
+   make_forward_list_filled_random(allocator_ref<A>, idx, Generator&&)
+      -> maybe<basic_forward_list<U, A>>;
+
+   template <
+      typename U, is_allocator A, is_random_generator Generator,
+      typename Distribution>
+   friend constexpr auto make_forward_list_filled_random(
+      allocator_ref<A>, idx, Generator&&, Distribution&&
+   ) -> maybe<basic_forward_list<U, A>>;
+
  public:
    using value_type = T;
    using allocator_type = allocator_ref<Allocator>;
@@ -216,7 +228,7 @@ basic_forward_list
    [[nodiscard]]
    constexpr auto
    clone(
-      allocator_ref<NewAllocator> allocator
+      allocator_ref<NewAllocator> allocator [[clang::lifetimebound]]
    ) const& -> maybe<basic_forward_list<T, NewAllocator>> {
       basic_forward_list<T, NewAllocator> new_list(allocator);
       new_list.m_core = $prop(m_core.clone(allocator));
@@ -227,7 +239,7 @@ basic_forward_list
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    clone(
-      allocator_dyn allocator
+      allocator_dyn allocator [[clang::lifetimebound]]
    ) const& -> maybe<basic_forward_list<T, allocator_dyn>> {
       basic_forward_list<T, allocator_dyn> new_list(allocator);
       new_list.m_core = $prop(m_core.clone(allocator));
@@ -361,7 +373,7 @@ basic_forward_list
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_forward_list(allocator_ref<Allocator> allocator)
+make_forward_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]])
    -> maybe<raii::basic_forward_list<T, Allocator>> {
    return raii::basic_forward_list<T, Allocator>(allocator);
 }
@@ -370,7 +382,7 @@ make_forward_list(allocator_ref<Allocator> allocator)
 template <typename T>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_forward_list(allocator_dyn allocator)
+make_forward_list(allocator_dyn allocator [[clang::lifetimebound]])
    -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
    return raii::basic_forward_list<T, allocator_dyn>(allocator);
 }
@@ -424,7 +436,9 @@ make_forward_list(
 template <typename... Args>
 [[nodiscard]]
 constexpr auto
-make_forward_list(allocator_dyn allocator, Args&&... arguments) {
+make_forward_list(
+   allocator_dyn allocator [[clang::lifetimebound]], Args&&... arguments
+) {
    using common = common_type<Args...>;
    return cat::raii::make_forward_list<common>(
       allocator_ref<allocator_dyn>(allocator),
@@ -437,7 +451,8 @@ template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
 make_forward_list_filled(
-   allocator_ref<Allocator> allocator, idx count, T const& value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   T const& value
 ) -> maybe<raii::basic_forward_list<T, Allocator>> {
    raii::basic_forward_list<T, Allocator> new_list(allocator);
    detail::forward_list_node<T>* p_tail = nullptr;
@@ -451,8 +466,9 @@ make_forward_list_filled(
 template <typename T>
 [[nodiscard]]
 constexpr auto
-make_forward_list_filled(allocator_dyn allocator, idx count, T const& value)
-   -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
+make_forward_list_filled(
+   allocator_dyn allocator [[clang::lifetimebound]], idx count, T const& value
+) -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
    return cat::raii::make_forward_list_filled<T, allocator_dyn>(
       allocator_ref<allocator_dyn>(allocator), count, value
    );
@@ -462,7 +478,8 @@ template <typename T, is_allocator Allocator, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_forward_list_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::basic_forward_list<T, Allocator>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
@@ -481,8 +498,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_forward_list_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::basic_forward_list<T, Allocator>> {
    static_assert(is_default_constructible<T>);
    static_assert(
@@ -502,7 +519,8 @@ template <typename T, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_forward_list_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
@@ -515,8 +533,8 @@ template <typename T, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_forward_list_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::basic_forward_list<T, allocator_dyn>> {
    static_assert(is_default_constructible<T>);
    static_assert(

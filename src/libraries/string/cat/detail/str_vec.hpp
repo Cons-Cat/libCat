@@ -1695,6 +1695,7 @@ make_wzstr_vec_filled(
    return make_wzstr_vec_filled<allocator_dyn, flags>(allocator, count, value);
 }
 
+// TODO: Improve char-type support in random engines.
 template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
    is_random_generator Generator>

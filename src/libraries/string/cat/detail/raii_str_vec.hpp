@@ -912,8 +912,9 @@ class
    template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<NewAllocator> allocator) const& noexcept
-      -> maybe<basic_str_vec<CharT, flags, NewAllocator>> {
+   clone(
+      allocator_ref<NewAllocator> allocator [[clang::lifetimebound]]
+   ) const& noexcept -> maybe<basic_str_vec<CharT, flags, NewAllocator>> {
       basic_str_vec<CharT, flags, NewAllocator> new_string(allocator);
       new_string.m_core = $prop(m_core.clone(allocator));
       return new_string;
@@ -921,7 +922,7 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(allocator_dyn allocator) const& noexcept(
+   clone(allocator_dyn allocator [[clang::lifetimebound]]) const& noexcept(
       !__has_feature(cxx_exceptions)
    ) -> maybe<basic_str_vec<CharT, flags, allocator_dyn>> {
       basic_str_vec<CharT, flags, allocator_dyn> new_string(allocator);
@@ -995,7 +996,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_raii_str_vec(
-   allocator_ref<Allocator> allocator, Strings const&... strings
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Strings const&... strings
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<raii::basic_str_vec<CharT, flags, Allocator>> {
    raii::basic_str_vec<CharT, flags, Allocator> new_string(allocator);
@@ -1055,15 +1057,16 @@ template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard]]
 constexpr auto
-make_str_vec(allocator_ref<Allocator> allocator) noexcept
-   -> maybe<raii::str_vec<Allocator, flags>> {
+make_str_vec(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+) noexcept -> maybe<raii::str_vec<Allocator, flags>> {
    return raii::str_vec<Allocator, flags>(allocator);
 }
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec(allocator_dyn allocator) noexcept
+make_str_vec(allocator_dyn allocator [[clang::lifetimebound]]) noexcept
    -> maybe<raii::str_vec<allocator_dyn, flags>> {
    return raii::make_str_vec<allocator_dyn, flags>(allocator);
 }
@@ -1072,9 +1075,10 @@ template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard]]
 constexpr auto
-make_zstr_vec(allocator_ref<Allocator> allocator) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<raii::zstr_vec<Allocator, flags>> {
+make_zstr_vec(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::zstr_vec<Allocator, flags>> {
    raii::zstr_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.resize(0u));
    return new_string;
@@ -1083,7 +1087,7 @@ make_zstr_vec(allocator_ref<Allocator> allocator) noexcept(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec(allocator_dyn allocator) noexcept
+make_zstr_vec(allocator_dyn allocator [[clang::lifetimebound]]) noexcept
    -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
    return raii::make_zstr_vec<allocator_dyn, flags>(allocator);
 }
@@ -1092,15 +1096,16 @@ template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard]]
 constexpr auto
-make_wstr_vec(allocator_ref<Allocator> allocator) noexcept
-   -> maybe<raii::wstr_vec<Allocator, flags>> {
+make_wstr_vec(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+) noexcept -> maybe<raii::wstr_vec<Allocator, flags>> {
    return raii::wstr_vec<Allocator, flags>(allocator);
 }
 
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec(allocator_dyn allocator) noexcept
+make_wstr_vec(allocator_dyn allocator [[clang::lifetimebound]]) noexcept
    -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
    return raii::make_wstr_vec<allocator_dyn, flags>(allocator);
 }
@@ -1109,9 +1114,10 @@ template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard]]
 constexpr auto
-make_wzstr_vec(allocator_ref<Allocator> allocator) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<raii::wzstr_vec<Allocator, flags>> {
+make_wzstr_vec(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::wzstr_vec<Allocator, flags>> {
    raii::wzstr_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.resize(0u));
    return new_string;
@@ -1120,7 +1126,7 @@ make_wzstr_vec(allocator_ref<Allocator> allocator) noexcept(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec(allocator_dyn allocator) noexcept
+make_wzstr_vec(allocator_dyn allocator [[clang::lifetimebound]]) noexcept
    -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
    return raii::make_wzstr_vec<allocator_dyn, flags>(allocator);
 }
@@ -1129,9 +1135,10 @@ template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard]]
 constexpr auto
-make_str_vec(allocator_ref<Allocator> allocator, str_view string) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<raii::str_vec<Allocator, flags>> {
+make_str_vec(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], str_view string
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::str_vec<Allocator, flags>> {
    raii::str_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.reserve(
       max(string.size(), new_string.flags.vec.initial_growth_count)
@@ -1143,8 +1150,9 @@ make_str_vec(allocator_ref<Allocator> allocator, str_view string) noexcept(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec(allocator_dyn allocator, str_view string) noexcept
-   -> maybe<raii::str_vec<allocator_dyn, flags>> {
+make_str_vec(
+   allocator_dyn allocator [[clang::lifetimebound]], str_view string
+) noexcept -> maybe<raii::str_vec<allocator_dyn, flags>> {
    return raii::make_str_vec<allocator_dyn, flags>(allocator, string);
 }
 
@@ -1152,9 +1160,10 @@ template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard]]
 constexpr auto
-make_zstr_vec(allocator_ref<Allocator> allocator, str_view string) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<raii::zstr_vec<Allocator, flags>> {
+make_zstr_vec(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], str_view string
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::zstr_vec<Allocator, flags>> {
    raii::zstr_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.reserve(
       max(string.size(), new_string.flags.vec.initial_growth_count)
@@ -1166,8 +1175,9 @@ make_zstr_vec(allocator_ref<Allocator> allocator, str_view string) noexcept(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec(allocator_dyn allocator, str_view string) noexcept
-   -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
+make_zstr_vec(
+   allocator_dyn allocator [[clang::lifetimebound]], str_view string
+) noexcept -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
    return raii::make_zstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
@@ -1175,9 +1185,10 @@ template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard]]
 constexpr auto
-make_wstr_vec(allocator_ref<Allocator> allocator, wstr_view string) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<raii::wstr_vec<Allocator, flags>> {
+make_wstr_vec(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], wstr_view string
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::wstr_vec<Allocator, flags>> {
    raii::wstr_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.reserve(
       max(string.size(), new_string.flags.vec.initial_growth_count)
@@ -1189,8 +1200,9 @@ make_wstr_vec(allocator_ref<Allocator> allocator, wstr_view string) noexcept(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec(allocator_dyn allocator, wstr_view string) noexcept
-   -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
+make_wstr_vec(
+   allocator_dyn allocator [[clang::lifetimebound]], wstr_view string
+) noexcept -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
    return raii::make_wstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
@@ -1198,9 +1210,10 @@ template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard]]
 constexpr auto
-make_wzstr_vec(allocator_ref<Allocator> allocator, wstr_view string) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<raii::wzstr_vec<Allocator, flags>> {
+make_wzstr_vec(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], wstr_view string
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::wzstr_vec<Allocator, flags>> {
    raii::wzstr_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.reserve(
       max(string.size(), new_string.flags.vec.initial_growth_count)
@@ -1212,8 +1225,9 @@ make_wzstr_vec(allocator_ref<Allocator> allocator, wstr_view string) noexcept(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec(allocator_dyn allocator, wstr_view string) noexcept
-   -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
+make_wzstr_vec(
+   allocator_dyn allocator [[clang::lifetimebound]], wstr_view string
+) noexcept -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
    return raii::make_wzstr_vec<allocator_dyn, flags>(allocator, string);
 }
 
@@ -1223,8 +1237,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_str_vec(
-   allocator_ref<Allocator> allocator, First const& first, Second const& second,
-   Strings const&... strings
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   First const& first, Second const& second, Strings const&... strings
 ) noexcept -> maybe<raii::str_vec<Allocator, flags>> {
    return detail::make_raii_str_vec<
       char, container_flags::inline_storage(22u) | flags, Allocator>(
@@ -1238,8 +1252,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec(
-   allocator_dyn allocator, First const& first, Second const& second,
-   Strings const&... strings
+   allocator_dyn allocator [[clang::lifetimebound]], First const& first,
+   Second const& second, Strings const&... strings
 ) noexcept -> maybe<raii::str_vec<allocator_dyn, flags>> {
    return raii::make_str_vec<allocator_dyn, flags>(
       allocator, first, second, strings...
@@ -1252,8 +1266,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_zstr_vec(
-   allocator_ref<Allocator> allocator, First const& first, Second const& second,
-   Strings const&... strings
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   First const& first, Second const& second, Strings const&... strings
 ) noexcept -> maybe<raii::zstr_vec<Allocator, flags>> {
    return detail::make_raii_str_vec<
       char,
@@ -1267,8 +1281,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec(
-   allocator_dyn allocator, First const& first, Second const& second,
-   Strings const&... strings
+   allocator_dyn allocator [[clang::lifetimebound]], First const& first,
+   Second const& second, Strings const&... strings
 ) noexcept -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
    return raii::make_zstr_vec<allocator_dyn, flags>(
       allocator, first, second, strings...
@@ -1281,8 +1295,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wstr_vec(
-   allocator_ref<Allocator> allocator, First const& first, Second const& second,
-   Strings const&... strings
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   First const& first, Second const& second, Strings const&... strings
 ) noexcept -> maybe<raii::wstr_vec<Allocator, flags>> {
    return detail::make_raii_str_vec<
       wchar_t, container_flags::inline_storage(22u) | flags, Allocator>(
@@ -1296,8 +1310,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec(
-   allocator_dyn allocator, First const& first, Second const& second,
-   Strings const&... strings
+   allocator_dyn allocator [[clang::lifetimebound]], First const& first,
+   Second const& second, Strings const&... strings
 ) noexcept -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
    return raii::make_wstr_vec<allocator_dyn, flags>(
       allocator, first, second, strings...
@@ -1310,8 +1324,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wzstr_vec(
-   allocator_ref<Allocator> allocator, First const& first, Second const& second,
-   Strings const&... strings
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   First const& first, Second const& second, Strings const&... strings
 ) noexcept -> maybe<raii::wzstr_vec<Allocator, flags>> {
    return detail::make_raii_str_vec<
       wchar_t,
@@ -1325,8 +1339,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec(
-   allocator_dyn allocator, First const& first, Second const& second,
-   Strings const&... strings
+   allocator_dyn allocator [[clang::lifetimebound]], First const& first,
+   Second const& second, Strings const&... strings
 ) noexcept -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
    return raii::make_wzstr_vec<allocator_dyn, flags>(
       allocator, first, second, strings...
@@ -1338,7 +1352,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_str_vec(
-   allocator_ref<Allocator> allocator, initializer_list<char> values
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   initializer_list<char> values
 ) noexcept -> maybe<raii::str_vec<Allocator, flags>> {
    raii::str_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.reserve(
@@ -1351,8 +1366,10 @@ make_str_vec(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec(allocator_dyn allocator, initializer_list<char> values) noexcept
-   -> maybe<raii::str_vec<allocator_dyn, flags>> {
+make_str_vec(
+   allocator_dyn allocator [[clang::lifetimebound]],
+   initializer_list<char> values
+) noexcept -> maybe<raii::str_vec<allocator_dyn, flags>> {
    return raii::make_str_vec<allocator_dyn, flags>(allocator, values);
 }
 
@@ -1361,7 +1378,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_zstr_vec(
-   allocator_ref<Allocator> allocator, initializer_list<char> values
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   initializer_list<char> values
 ) noexcept -> maybe<raii::zstr_vec<Allocator, flags>> {
    raii::zstr_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.reserve(
@@ -1374,8 +1392,10 @@ make_zstr_vec(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec(allocator_dyn allocator, initializer_list<char> values) noexcept
-   -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
+make_zstr_vec(
+   allocator_dyn allocator [[clang::lifetimebound]],
+   initializer_list<char> values
+) noexcept -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
    return raii::make_zstr_vec<allocator_dyn, flags>(allocator, values);
 }
 
@@ -1384,7 +1404,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wstr_vec(
-   allocator_ref<Allocator> allocator, initializer_list<wchar_t> values
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   initializer_list<wchar_t> values
 ) noexcept -> maybe<raii::wstr_vec<Allocator, flags>> {
    raii::wstr_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.reserve(
@@ -1398,7 +1419,8 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec(
-   allocator_dyn allocator, initializer_list<wchar_t> values
+   allocator_dyn allocator [[clang::lifetimebound]],
+   initializer_list<wchar_t> values
 ) noexcept -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
    return raii::make_wstr_vec<allocator_dyn, flags>(allocator, values);
 }
@@ -1408,7 +1430,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wzstr_vec(
-   allocator_ref<Allocator> allocator, initializer_list<wchar_t> values
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   initializer_list<wchar_t> values
 ) noexcept -> maybe<raii::wzstr_vec<Allocator, flags>> {
    raii::wzstr_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.reserve(
@@ -1422,7 +1445,8 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec(
-   allocator_dyn allocator, initializer_list<wchar_t> values
+   allocator_dyn allocator [[clang::lifetimebound]],
+   initializer_list<wchar_t> values
 ) noexcept -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
    return raii::make_wzstr_vec<allocator_dyn, flags>(allocator, values);
 }
@@ -1432,7 +1456,7 @@ template <
 [[nodiscard]]
 constexpr auto
 make_str_vec_reserved(
-   allocator_ref<Allocator> allocator, idx capacity
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx capacity
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<raii::str_vec<Allocator, flags>> {
    raii::str_vec<Allocator, flags> new_string(allocator);
@@ -1445,8 +1469,9 @@ make_str_vec_reserved(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec_reserved(allocator_dyn allocator, idx capacity) noexcept
-   -> maybe<raii::str_vec<allocator_dyn, flags>> {
+make_str_vec_reserved(
+   allocator_dyn allocator [[clang::lifetimebound]], idx capacity
+) noexcept -> maybe<raii::str_vec<allocator_dyn, flags>> {
    return raii::make_str_vec_reserved<allocator_dyn, flags>(
       allocator, capacity
    );
@@ -1457,7 +1482,7 @@ template <
 [[nodiscard]]
 constexpr auto
 make_zstr_vec_reserved(
-   allocator_ref<Allocator> allocator, idx capacity
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx capacity
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<raii::zstr_vec<Allocator, flags>> {
    raii::zstr_vec<Allocator, flags> new_string(allocator);
@@ -1471,8 +1496,9 @@ make_zstr_vec_reserved(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec_reserved(allocator_dyn allocator, idx capacity) noexcept
-   -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
+make_zstr_vec_reserved(
+   allocator_dyn allocator [[clang::lifetimebound]], idx capacity
+) noexcept -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
    return raii::make_zstr_vec_reserved<allocator_dyn, flags>(
       allocator, capacity
    );
@@ -1483,7 +1509,7 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wstr_vec_reserved(
-   allocator_ref<Allocator> allocator, idx capacity
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx capacity
 ) noexcept -> maybe<raii::wstr_vec<Allocator, flags>> {
    raii::wstr_vec<Allocator, flags> new_string(allocator);
    $prop(new_string.reserve(
@@ -1495,8 +1521,9 @@ make_wstr_vec_reserved(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec_reserved(allocator_dyn allocator, idx capacity) noexcept
-   -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
+make_wstr_vec_reserved(
+   allocator_dyn allocator [[clang::lifetimebound]], idx capacity
+) noexcept -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
    return raii::make_wstr_vec_reserved<allocator_dyn, flags>(
       allocator, capacity
    );
@@ -1507,7 +1534,7 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wzstr_vec_reserved(
-   allocator_ref<Allocator> allocator, idx capacity
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx capacity
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<raii::wzstr_vec<Allocator, flags>> {
    raii::wzstr_vec<Allocator, flags> new_string(allocator);
@@ -1521,8 +1548,9 @@ make_wzstr_vec_reserved(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wzstr_vec_reserved(allocator_dyn allocator, idx capacity) noexcept
-   -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
+make_wzstr_vec_reserved(
+   allocator_dyn allocator [[clang::lifetimebound]], idx capacity
+) noexcept -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
    return raii::make_wzstr_vec_reserved<allocator_dyn, flags>(
       allocator, capacity
    );
@@ -1533,7 +1561,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_str_vec_filled(
-   allocator_ref<Allocator> allocator, idx count, char value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   char value
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<raii::str_vec<Allocator, flags>> {
    raii::str_vec<Allocator, flags> new_string =
@@ -1547,8 +1576,9 @@ make_str_vec_filled(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_str_vec_filled(allocator_dyn allocator, idx count, char value) noexcept
-   -> maybe<raii::str_vec<allocator_dyn, flags>> {
+make_str_vec_filled(
+   allocator_dyn allocator [[clang::lifetimebound]], idx count, char value
+) noexcept -> maybe<raii::str_vec<allocator_dyn, flags>> {
    return raii::make_str_vec_filled<allocator_dyn, flags>(
       allocator, count, value
    );
@@ -1559,7 +1589,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_zstr_vec_filled(
-   allocator_ref<Allocator> allocator, idx count, char value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   char value
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<raii::zstr_vec<Allocator, flags>> {
    raii::zstr_vec<Allocator, flags> new_string =
@@ -1571,8 +1602,9 @@ make_zstr_vec_filled(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_zstr_vec_filled(allocator_dyn allocator, idx count, char value) noexcept
-   -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
+make_zstr_vec_filled(
+   allocator_dyn allocator [[clang::lifetimebound]], idx count, char value
+) noexcept -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
    return raii::make_zstr_vec_filled<allocator_dyn, flags>(
       allocator, count, value
    );
@@ -1583,7 +1615,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wstr_vec_filled(
-   allocator_ref<Allocator> allocator, idx count, wchar_t value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   wchar_t value
 ) noexcept -> maybe<raii::wstr_vec<Allocator, flags>> {
    raii::wstr_vec<Allocator, flags> new_string =
       $prop((raii::make_wstr_vec_reserved<Allocator, flags>(allocator, count)));
@@ -1596,8 +1629,9 @@ make_wstr_vec_filled(
 template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_wstr_vec_filled(allocator_dyn allocator, idx count, wchar_t value) noexcept
-   -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
+make_wstr_vec_filled(
+   allocator_dyn allocator [[clang::lifetimebound]], idx count, wchar_t value
+) noexcept -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
    return raii::make_wstr_vec_filled<allocator_dyn, flags>(
       allocator, count, value
    );
@@ -1608,7 +1642,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wzstr_vec_filled(
-   allocator_ref<Allocator> allocator, idx count, wchar_t value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   wchar_t value
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<raii::wzstr_vec<Allocator, flags>> {
    raii::wzstr_vec<Allocator, flags> new_string = $prop(
@@ -1622,20 +1657,22 @@ template <str_vec_flags flags = vec_flags::pointer_size_layout>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec_filled(
-   allocator_dyn allocator, idx count, wchar_t value
+   allocator_dyn allocator [[clang::lifetimebound]], idx count, wchar_t value
 ) noexcept -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
    return raii::make_wzstr_vec_filled<allocator_dyn, flags>(
       allocator, count, value
    );
 }
 
+// TODO: Improve char-type support in random engines.
 template <
    is_allocator Allocator, str_vec_flags flags = vec_flags::pointer_size_layout,
    is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_str_vec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::str_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
@@ -1652,7 +1689,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::str_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
@@ -1667,8 +1705,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_str_vec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::str_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
@@ -1688,8 +1726,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_str_vec_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::str_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
@@ -1707,7 +1745,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_zstr_vec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::zstr_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
@@ -1724,7 +1763,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<char&, decltype(declval<Generator&>()())>);
@@ -1739,8 +1779,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_zstr_vec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::zstr_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
@@ -1760,8 +1800,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_zstr_vec_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::zstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
@@ -1779,7 +1819,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wstr_vec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::wstr_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
@@ -1796,7 +1837,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
@@ -1811,8 +1853,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wstr_vec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::wstr_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
@@ -1832,8 +1874,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wstr_vec_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::wstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
@@ -1851,7 +1893,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wzstr_vec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::wzstr_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
@@ -1869,7 +1912,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(is_assignable<wchar_t&, decltype(declval<Generator&>()())>);
@@ -1884,8 +1928,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_wzstr_vec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::wzstr_vec<Allocator, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(
@@ -1906,8 +1950,8 @@ template <
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_wzstr_vec_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::wzstr_vec<allocator_dyn, flags>> {
    static_assert(!flags.vec.is_fixed_size);
    static_assert(

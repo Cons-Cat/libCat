@@ -5,6 +5,7 @@
 // `-Wlifetime-safety` pass after the first error in a translation unit. Run
 // with `just test safety`.
 
+#include <cat/allocator_linear>
 #include <cat/allocator_page>
 #include <cat/map>
 #include <cat/raii_map>
@@ -328,3 +329,116 @@ use_after_scope_raii_map() {
 //    (void)ref[1];
 // }
 // clang-format on
+
+// Negative cases: a `raii` map from a factory or `.clone()`
+// outlives its allocator.
+
+auto
+dangling_raii_map_allocator_empty(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_map<cat::uint8, cat::uint8, cat::allocator_linear>(
+      linear
+   );
+}
+
+auto
+dangling_raii_map_allocator_reserved(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_map_reserved<
+      cat::uint8, cat::uint8, cat::allocator_linear>(linear, 4u);
+}
+
+auto
+dangling_raii_map_allocator_dyn(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_map<cat::uint8, cat::uint8>(
+      cat::allocator_dyn(linear)
+   );
+}
+
+using linear_raii_map = __typeof_unqual(
+   cat::raii::make_map<cat::uint8, cat::uint8, cat::allocator_linear>(
+      cat::declval<cat::allocator_linear&>()
+   )
+      .value()
+);
+
+auto
+dangling_raii_map_allocator_clone(
+   cat::span<cat::byte> arena, linear_raii_map const& source
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return source.clone(cat::allocator_ref<cat::allocator_linear>(linear));
+}
+
+auto
+dangling_raii_map_allocator_clone_dyn(
+   cat::span<cat::byte> arena, linear_raii_map const& source
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return source.clone(cat::allocator_dyn(linear));
+}
+
+// Negative cases: a `raii` set from a factory or `.clone()`
+// outlives its allocator.
+
+auto
+dangling_raii_set_allocator_empty(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_set<cat::uint8, cat::allocator_linear>(linear);
+}
+
+auto
+dangling_raii_set_allocator_list(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_set<cat::uint8, cat::allocator_linear>(
+      linear, {cat::uint8(1u)}
+   );
+}
+
+auto
+dangling_raii_set_allocator_reserved(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_set_reserved<cat::uint8, cat::allocator_linear>(
+      linear, 4u
+   );
+}
+
+auto
+dangling_raii_set_allocator_dyn(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_set<cat::uint8>(cat::allocator_dyn(linear));
+}
+
+using linear_raii_set =
+   __typeof_unqual(cat::raii::make_set<cat::uint8, cat::allocator_linear>(
+                      cat::declval<cat::allocator_linear&>()
+   )
+                      .value());
+
+auto
+dangling_raii_set_allocator_clone(
+   cat::span<cat::byte> arena, linear_raii_set const& source
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return source.clone(cat::allocator_ref<cat::allocator_linear>(linear));
+}
+
+auto
+dangling_raii_set_allocator_clone_dyn(
+   cat::span<cat::byte> arena, linear_raii_set const& source
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return source.clone(cat::allocator_dyn(linear));
+}

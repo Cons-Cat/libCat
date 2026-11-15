@@ -212,7 +212,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    [[nodiscard]]
    constexpr auto
    clone(
-      allocator_ref<NewAllocator> allocator
+      allocator_ref<NewAllocator> allocator [[clang::lifetimebound]]
    ) const& -> maybe<basic_list<T, NewAllocator>> {
       basic_list<T, NewAllocator> new_list(allocator);
       new_list.m_core = $prop(m_core.clone(allocator));
@@ -223,7 +223,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    clone(
-      allocator_dyn allocator
+      allocator_dyn allocator [[clang::lifetimebound]]
    ) const& -> maybe<basic_list<T, allocator_dyn>> {
       basic_list<T, allocator_dyn> new_list(allocator);
       new_list.m_core = $prop(m_core.clone(allocator));
@@ -522,7 +522,7 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_list(allocator_ref<Allocator> allocator)
+make_list(allocator_ref<Allocator> allocator [[clang::lifetimebound]])
    -> maybe<raii::basic_list<T, Allocator>> {
    return raii::basic_list<T, Allocator>(allocator);
 }
@@ -531,7 +531,7 @@ make_list(allocator_ref<Allocator> allocator)
 template <typename T>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_list(allocator_dyn allocator)
+make_list(allocator_dyn allocator [[clang::lifetimebound]])
    -> maybe<raii::basic_list<T, allocator_dyn>> {
    return raii::basic_list<T, allocator_dyn>(allocator);
 }
@@ -584,7 +584,9 @@ make_list(
 template <typename... Args>
 [[nodiscard]]
 constexpr auto
-make_list(allocator_dyn allocator, Args&&... arguments) {
+make_list(
+   allocator_dyn allocator [[clang::lifetimebound]], Args&&... arguments
+) {
    using common = common_type<Args...>;
    return cat::raii::make_list<common, allocator_dyn>(
       allocator_ref<allocator_dyn>(allocator),
@@ -596,8 +598,10 @@ make_list(allocator_dyn allocator, Args&&... arguments) {
 template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_list_filled(allocator_ref<Allocator> allocator, idx count, T const& value)
-   -> maybe<raii::basic_list<T, Allocator>> {
+make_list_filled(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   T const& value
+) -> maybe<raii::basic_list<T, Allocator>> {
    raii::basic_list<T, Allocator> new_list(allocator);
    detail::list_node<T>* p_tail = nullptr;
    for (idx i = 0u; i < count; ++i) {
@@ -610,8 +614,9 @@ make_list_filled(allocator_ref<Allocator> allocator, idx count, T const& value)
 template <typename T>
 [[nodiscard]]
 constexpr auto
-make_list_filled(allocator_dyn allocator, idx count, T const& value)
-   -> maybe<raii::basic_list<T, allocator_dyn>> {
+make_list_filled(
+   allocator_dyn allocator [[clang::lifetimebound]], idx count, T const& value
+) -> maybe<raii::basic_list<T, allocator_dyn>> {
    return cat::raii::make_list_filled<T, allocator_dyn>(
       allocator_ref<allocator_dyn>(allocator), count, value
    );
@@ -621,7 +626,8 @@ template <typename T, is_allocator Allocator, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_list_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::basic_list<T, Allocator>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
@@ -637,8 +643,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_list_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::basic_list<T, Allocator>> {
    static_assert(is_default_constructible<T>);
    static_assert(
@@ -655,7 +661,8 @@ template <typename T, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_list_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::basic_list<T, allocator_dyn>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
@@ -668,8 +675,8 @@ template <typename T, is_random_generator Generator, typename Distribution>
 [[nodiscard]]
 constexpr auto
 make_list_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::basic_list<T, allocator_dyn>> {
    static_assert(is_default_constructible<T>);
    static_assert(

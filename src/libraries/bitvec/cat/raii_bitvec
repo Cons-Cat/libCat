@@ -97,14 +97,17 @@ class [[gsl::Owner]] basic_bitvec
    }
 
    // Create an owning bit vector over a type-erased allocator.
-   constexpr explicit basic_bitvec(allocator_dyn allocator) noexcept
+   constexpr explicit basic_bitvec(
+      allocator_dyn allocator [[clang::lifetimebound]]
+   ) noexcept
       requires(is_same<Allocator, allocator_dyn>)
        : basic_bitvec(allocator_ref<allocator_dyn>(allocator)) {
    }
 
    // Create an owning bit vector with an initial size.
    constexpr basic_bitvec(
-      allocator_dyn allocator, idx bit_count, bit_value value = false
+      allocator_dyn allocator [[clang::lifetimebound]], idx bit_count,
+      bit_value value = false
    ) noexcept(!__has_feature(cxx_exceptions))
       requires(is_same<Allocator, allocator_dyn>)
        : basic_bitvec(allocator) {
@@ -136,9 +139,10 @@ class [[gsl::Owner]] basic_bitvec
    template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<NewAllocator> allocator) const& noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> maybe<basic_bitvec<NewAllocator, flags>> {
+   clone(
+      allocator_ref<NewAllocator> allocator [[clang::lifetimebound]]
+   ) const& noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<basic_bitvec<NewAllocator, flags>> {
       basic_bitvec<NewAllocator, flags> result(allocator);
       result.m_core = $prop(m_core.clone(allocator));
       return result;
@@ -147,7 +151,7 @@ class [[gsl::Owner]] basic_bitvec
    // Deep-copy the contents of this bit vector.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(allocator_dyn allocator) const& noexcept
+   clone(allocator_dyn allocator [[clang::lifetimebound]]) const& noexcept
       -> maybe<basic_bitvec<allocator_dyn, flags>> {
       return clone<allocator_dyn>(allocator);
    }
@@ -742,7 +746,8 @@ using bitvec_big_fixed = basic_bitvec<
 
 template <is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_bitvec_filled(
-   allocator_ref<Allocator> allocator, idx count, bit_value value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   bit_value value
 ) -> maybe<bitvec<Allocator, flags>> {
    bitvec<Allocator, flags> result(allocator);
    if constexpr (flags.is_fixed_size) {
@@ -756,7 +761,8 @@ template <is_allocator Allocator, vec_flags flags = {}>
 template <vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_filled(
-      allocator_dyn allocator, idx count, bit_value value
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      bit_value value
    ) noexcept(!__has_feature(cxx_exceptions))
       -> maybe<bitvec<allocator_dyn, flags>> {
    return raii::make_bitvec_filled<allocator_dyn, flags>(
@@ -766,7 +772,8 @@ template <vec_flags flags = {}>
 
 template <idx inline_count, is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_bitvec_small_filled(
-   allocator_ref<Allocator> allocator, idx count, bit_value value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   bit_value value
 ) -> maybe<bitvec_small<Allocator, inline_count, flags>> {
    return raii::make_bitvec_filled<
       Allocator,
@@ -777,7 +784,8 @@ template <idx inline_count, is_allocator Allocator, vec_flags flags = {}>
 template <idx inline_count, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_filled(
-      allocator_dyn allocator, idx count, bit_value value
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      bit_value value
    ) noexcept -> maybe<bitvec_small<allocator_dyn, inline_count, flags>> {
    return raii::make_bitvec_small_filled<inline_count, allocator_dyn, flags>(
       allocator, count, value
@@ -786,7 +794,8 @@ template <idx inline_count, vec_flags flags = {}>
 
 template <is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_bitvec_big_filled(
-   allocator_ref<Allocator> allocator, idx count, bit_value value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   bit_value value
 ) -> maybe<bitvec_big<Allocator, flags>> {
    return raii::make_bitvec_filled<
       Allocator, vec_flags::initial_growth(4u) | flags>(
@@ -797,7 +806,8 @@ template <is_allocator Allocator, vec_flags flags = {}>
 template <vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_filled(
-      allocator_dyn allocator, idx count, bit_value value
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      bit_value value
    ) noexcept -> maybe<bitvec_big<allocator_dyn, flags>> {
    return raii::make_bitvec_big_filled<allocator_dyn, flags>(
       allocator, count, value
@@ -806,7 +816,8 @@ template <vec_flags flags = {}>
 
 template <is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_bitvec_fixed_filled(
-   allocator_ref<Allocator> allocator, idx count, bit_value value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   bit_value value
 ) -> maybe<bitvec_fixed<Allocator, flags>> {
    return raii::make_bitvec_filled<Allocator, vec_flags::fixed_size | flags>(
       allocator, count, value
@@ -816,7 +827,8 @@ template <is_allocator Allocator, vec_flags flags = {}>
 template <vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_fixed_filled(
-      allocator_dyn allocator, idx count, bit_value value
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      bit_value value
    ) noexcept(!__has_feature(cxx_exceptions))
       -> maybe<bitvec_fixed<allocator_dyn, flags>> {
    return raii::make_bitvec_fixed_filled<allocator_dyn, flags>(
@@ -826,7 +838,8 @@ template <vec_flags flags = {}>
 
 template <idx inline_count, is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_bitvec_small_fixed_filled(
-   allocator_ref<Allocator> allocator, idx count, bit_value value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   bit_value value
 ) -> maybe<bitvec_small_fixed<Allocator, inline_count, flags>> {
    return raii::make_bitvec_small_filled<
       inline_count, Allocator, vec_flags::fixed_size | flags>(
@@ -837,7 +850,8 @@ template <idx inline_count, is_allocator Allocator, vec_flags flags = {}>
 template <idx inline_count, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_fixed_filled(
-      allocator_dyn allocator, idx count, bit_value value
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      bit_value value
    ) noexcept -> maybe<bitvec_small_fixed<allocator_dyn, inline_count, flags>> {
    return raii::make_bitvec_small_fixed_filled<
       inline_count, allocator_dyn, flags>(allocator, count, value);
@@ -845,7 +859,8 @@ template <idx inline_count, vec_flags flags = {}>
 
 template <is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto make_bitvec_big_fixed_filled(
-   allocator_ref<Allocator> allocator, idx count, bit_value value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   bit_value value
 ) -> maybe<bitvec_big_fixed<Allocator, flags>> {
    return raii::make_bitvec_big_filled<
       Allocator, vec_flags::fixed_size | flags>(allocator, count, value);
@@ -854,7 +869,8 @@ template <is_allocator Allocator, vec_flags flags = {}>
 template <vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_fixed_filled(
-      allocator_dyn allocator, idx count, bit_value value
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      bit_value value
    ) noexcept -> maybe<bitvec_big_fixed<allocator_dyn, flags>> {
    return raii::make_bitvec_big_fixed_filled<allocator_dyn, flags>(
       allocator, count, value
@@ -864,7 +880,8 @@ template <vec_flags flags = {}>
 template <
    is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::bitvec<Allocator, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    raii::bitvec<Allocator, flags> result(allocator);
@@ -881,8 +898,8 @@ template <
    is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator,
    typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::bitvec<Allocator, flags>> {
    static_assert(
       is_assignable<
@@ -901,7 +918,8 @@ template <
 template <vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator
    ) -> maybe<raii::bitvec<allocator_dyn, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_filled_random<allocator_dyn, flags>(
@@ -913,8 +931,8 @@ template <
    vec_flags flags = {}, is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator,
-      Distribution&& distribution
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator, Distribution&& distribution
    ) -> maybe<raii::bitvec<allocator_dyn, flags>> {
    static_assert(
       is_assignable<
@@ -929,7 +947,8 @@ template <
    idx inline_count, is_allocator Allocator, vec_flags flags = {},
    is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_small_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<bitvec_small<Allocator, inline_count, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_filled_random<
@@ -942,8 +961,8 @@ template <
    idx inline_count, is_allocator Allocator, vec_flags flags = {},
    is_random_generator Generator, typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_small_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<bitvec_small<Allocator, inline_count, flags>> {
    static_assert(
       is_assignable<
@@ -958,7 +977,8 @@ template <
 template <idx inline_count, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator
    ) -> maybe<bitvec_small<allocator_dyn, inline_count, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_small_filled_random<
@@ -970,8 +990,8 @@ template <
    typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator,
-      Distribution&& distribution
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator, Distribution&& distribution
    ) -> maybe<bitvec_small<allocator_dyn, inline_count, flags>> {
    static_assert(
       is_assignable<
@@ -986,7 +1006,8 @@ template <
 template <
    is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_big_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<bitvec_big<Allocator, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_filled_random<
@@ -999,8 +1020,8 @@ template <
    is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator,
    typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_big_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<bitvec_big<Allocator, flags>> {
    static_assert(
       is_assignable<
@@ -1014,7 +1035,8 @@ template <
 template <vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator
    ) -> maybe<bitvec_big<allocator_dyn, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_big_filled_random<allocator_dyn, flags>(
@@ -1026,8 +1048,8 @@ template <
    vec_flags flags = {}, is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator,
-      Distribution&& distribution
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator, Distribution&& distribution
    ) -> maybe<bitvec_big<allocator_dyn, flags>> {
    static_assert(
       is_assignable<
@@ -1041,7 +1063,8 @@ template <
 template <
    is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_fixed_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<raii::bitvec_fixed<Allocator, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_filled_random<
@@ -1054,8 +1077,8 @@ template <
    is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator,
    typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_fixed_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<raii::bitvec_fixed<Allocator, flags>> {
    static_assert(
       is_assignable<
@@ -1069,7 +1092,8 @@ template <
 template <vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_fixed_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator
    ) -> maybe<raii::bitvec_fixed<allocator_dyn, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_fixed_filled_random<allocator_dyn, flags>(
@@ -1081,8 +1105,8 @@ template <
    vec_flags flags = {}, is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_fixed_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator,
-      Distribution&& distribution
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator, Distribution&& distribution
    ) -> maybe<raii::bitvec_fixed<allocator_dyn, flags>> {
    static_assert(
       is_assignable<
@@ -1097,7 +1121,8 @@ template <
    idx inline_count, is_allocator Allocator, vec_flags flags = {},
    is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_small_fixed_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<bitvec_small_fixed<Allocator, inline_count, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_small_filled_random<
@@ -1110,8 +1135,8 @@ template <
    idx inline_count, is_allocator Allocator, vec_flags flags = {},
    is_random_generator Generator, typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_small_fixed_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<bitvec_small_fixed<Allocator, inline_count, flags>> {
    static_assert(
       is_assignable<
@@ -1126,7 +1151,8 @@ template <
 template <idx inline_count, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_fixed_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator
    ) -> maybe<bitvec_small_fixed<allocator_dyn, inline_count, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_small_fixed_filled_random<
@@ -1138,8 +1164,8 @@ template <
    typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_small_fixed_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator,
-      Distribution&& distribution
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator, Distribution&& distribution
    ) -> maybe<bitvec_small_fixed<allocator_dyn, inline_count, flags>> {
    static_assert(
       is_assignable<
@@ -1154,7 +1180,8 @@ template <
 template <
    is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard]] constexpr auto make_bitvec_big_fixed_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<bitvec_big_fixed<Allocator, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_big_filled_random<
@@ -1167,8 +1194,8 @@ template <
    is_allocator Allocator, vec_flags flags = {}, is_random_generator Generator,
    typename Distribution>
 [[nodiscard]] constexpr auto make_bitvec_big_fixed_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<bitvec_big_fixed<Allocator, flags>> {
    static_assert(
       is_assignable<
@@ -1182,7 +1209,8 @@ template <
 template <vec_flags flags = {}, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_fixed_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator
    ) -> maybe<bitvec_big_fixed<allocator_dyn, flags>> {
    static_assert(is_assignable<bool&, decltype(declval<Generator&>()())>);
    return raii::make_bitvec_big_fixed_filled_random<allocator_dyn, flags>(
@@ -1194,8 +1222,8 @@ template <
    vec_flags flags = {}, is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
    make_bitvec_big_fixed_filled_random(
-      allocator_dyn allocator, idx count, Generator&& generator,
-      Distribution&& distribution
+      allocator_dyn allocator [[clang::lifetimebound]], idx count,
+      Generator&& generator, Distribution&& distribution
    ) -> maybe<bitvec_big_fixed<allocator_dyn, flags>> {
    static_assert(
       is_assignable<

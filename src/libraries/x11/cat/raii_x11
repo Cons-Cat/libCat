@@ -52,7 +52,7 @@ class [[gsl::Owner]] connection {
    [[nodiscard]]
    static auto
    open(
-      cat::allocator_dyn allocator,
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
       nix::manual::io_uring& ring [[clang::lifetimebound]],
       char const* _Nullable const* _Nonnull p_environment
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection> {
@@ -65,7 +65,7 @@ class [[gsl::Owner]] connection {
    [[nodiscard]]
    static auto
    open(
-      cat::allocator_dyn allocator,
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
       nix::manual::io_uring& ring [[clang::lifetimebound]],
       cat::str_view display, cat::zstr_view authority_path
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection> {

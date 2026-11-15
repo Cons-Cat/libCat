@@ -113,8 +113,9 @@ class
    template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<NewAllocator> allocator) const& -> maybe<
-      basic_set<Key, Hash, KeyEqual, Container, NewAllocator, flags>>
+   clone(
+      allocator_ref<NewAllocator> allocator [[clang::lifetimebound]]
+   ) const& -> maybe<basic_set<Key, Hash, KeyEqual, Container, NewAllocator, flags>>
       requires(is_copy_constructible<Key>)
    {
       basic_set<Key, Hash, KeyEqual, Container, NewAllocator, flags> copy(
@@ -126,7 +127,7 @@ class
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(allocator_dyn allocator) const& -> maybe<
+   clone(allocator_dyn allocator [[clang::lifetimebound]]) const& -> maybe<
       basic_set<Key, Hash, KeyEqual, Container, allocator_dyn, flags>>
       requires(is_copy_constructible<Key>)
    {

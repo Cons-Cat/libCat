@@ -4,7 +4,9 @@
 // `-Wlifetime-safety` pass after the first error in a translation unit. Run
 // with `just test safety`.
 
+#include <cat/allocator_linear>
 #include <cat/allocator_page>
+#include <cat/random>
 #include <cat/string>
 
 using namespace cat::arithmetic;
@@ -148,4 +150,294 @@ use_after_scope_raii_str_vec() {
       p_escaped = local.data();
    }
    auto _ = *p_escaped;
+}
+
+// A generator of letters, because the engines and distributions produce
+// integers rather than characters. `wchar_t` is not integral, so wide strings
+// take a `letter_generator<unsigned int>`.
+template <typename CharT>
+struct letter_generator {
+   using result_type = CharT;
+
+   static constexpr auto
+   min() -> CharT {
+      return CharT('a');
+   }
+
+   static constexpr auto
+   max() -> CharT {
+      return CharT('z');
+   }
+
+   constexpr auto
+   operator()() -> CharT {
+      return CharT('a');
+   }
+};
+
+// Negative cases: a `raii` str vec from a factory or `.clone()`
+// outlives its allocator.
+
+auto
+dangling_raii_str_vec_allocator_str_vec_empty(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_str_vec<cat::allocator_linear>(linear);
+}
+
+auto
+dangling_raii_str_vec_allocator_str_vec_string(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_str_vec<cat::allocator_linear>(
+      linear, cat::str_view("a")
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_str_vec_strings(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_str_vec<cat::allocator_linear>(
+      linear, cat::str_view("a"), cat::str_view("a")
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_str_vec_reserved(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_str_vec_reserved<cat::allocator_linear>(linear, 4u);
+}
+
+auto
+dangling_raii_str_vec_allocator_str_vec_filled(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_str_vec_filled<cat::allocator_linear>(
+      linear, 3u, 'a'
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_str_vec_filled_random(
+   cat::span<cat::byte> arena
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   letter_generator<char> generator;
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_str_vec_filled_random<cat::allocator_linear>(
+      linear, 3u, generator
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_zstr_vec_empty(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_zstr_vec<cat::allocator_linear>(linear);
+}
+
+auto
+dangling_raii_str_vec_allocator_zstr_vec_string(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_zstr_vec<cat::allocator_linear>(
+      linear, cat::str_view("a")
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_zstr_vec_strings(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_zstr_vec<cat::allocator_linear>(
+      linear, cat::str_view("a"), cat::str_view("a")
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_zstr_vec_reserved(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_zstr_vec_reserved<cat::allocator_linear>(linear, 4u);
+}
+
+auto
+dangling_raii_str_vec_allocator_zstr_vec_filled(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_zstr_vec_filled<cat::allocator_linear>(
+      linear, 3u, 'a'
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_zstr_vec_filled_random(
+   cat::span<cat::byte> arena
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   letter_generator<char> generator;
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_zstr_vec_filled_random<cat::allocator_linear>(
+      linear, 3u, generator
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_wstr_vec_empty(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_wstr_vec<cat::allocator_linear>(linear);
+}
+
+auto
+dangling_raii_str_vec_allocator_wstr_vec_string(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_wstr_vec<cat::allocator_linear>(
+      linear, cat::wstr_view(L"a")
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_wstr_vec_strings(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_wstr_vec<cat::allocator_linear>(
+      linear, cat::wstr_view(L"a"), cat::wstr_view(L"a")
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_wstr_vec_reserved(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_wstr_vec_reserved<cat::allocator_linear>(linear, 4u);
+}
+
+auto
+dangling_raii_str_vec_allocator_wstr_vec_filled(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_wstr_vec_filled<cat::allocator_linear>(
+      linear, 3u, L'a'
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_wstr_vec_filled_random(
+   cat::span<cat::byte> arena
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   letter_generator<unsigned int> generator;
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_wstr_vec_filled_random<cat::allocator_linear>(
+      linear, 3u, generator
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_wzstr_vec_empty(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_wzstr_vec<cat::allocator_linear>(linear);
+}
+
+auto
+dangling_raii_str_vec_allocator_wzstr_vec_string(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_wzstr_vec<cat::allocator_linear>(
+      linear, cat::wstr_view(L"a")
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_wzstr_vec_strings(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_wzstr_vec<cat::allocator_linear>(
+      linear, cat::wstr_view(L"a"), cat::wstr_view(L"a")
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_wzstr_vec_reserved(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_wzstr_vec_reserved<cat::allocator_linear>(linear, 4u);
+}
+
+auto
+dangling_raii_str_vec_allocator_wzstr_vec_filled(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_wzstr_vec_filled<cat::allocator_linear>(
+      linear, 3u, L'a'
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_wzstr_vec_filled_random(
+   cat::span<cat::byte> arena
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   letter_generator<unsigned int> generator;
+   // expected-warning@+2 1+ {{local variable 'linear'}}
+   return cat::raii::make_wzstr_vec_filled_random<cat::allocator_linear>(
+      linear, 3u, generator
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_str_vec_dyn(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::raii::make_str_vec_filled(cat::allocator_dyn(linear), 3u, 'a');
+}
+
+using linear_raii_str_vec =
+   __typeof_unqual(cat::raii::make_str_vec<cat::allocator_linear>(
+                      cat::declval<cat::allocator_linear&>()
+   )
+                      .value());
+
+auto
+dangling_raii_str_vec_allocator_clone(
+   cat::span<cat::byte> arena, linear_raii_str_vec const& source
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return source.clone(cat::allocator_ref<cat::allocator_linear>(linear));
+}
+
+auto
+dangling_raii_str_vec_allocator_clone_dyn(
+   cat::span<cat::byte> arena, linear_raii_str_vec const& source
+) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return source.clone(cat::allocator_dyn(linear));
 }
