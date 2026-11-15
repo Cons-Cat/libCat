@@ -766,23 +766,23 @@ pcg_output(State state) noexcept -> Result {
    if constexpr (permutation == pcg_permutation::double_xorshift_multiply) {
       static_assert(sizeof(State) == sizeof(Result) * 2u);
       if constexpr (sizeof(Result) == 4u) {
-         uint4::raw_type hi = uint4::raw_type(raw_state >> 32u);
-         uint4::raw_type lo = uint4::raw_type(raw_state) | 1u;
-         hi ^= hi >> 16u;
-         hi *= uint4::raw_type(
+         uint4::raw_type high = uint4::raw_type(raw_state >> 32u);
+         uint4::raw_type low = uint4::raw_type(raw_state) | 1u;
+         high ^= high >> 16u;
+         high *= uint4::raw_type(
             make_raw_arithmetic(pcg_constants<State>::cheap_multiplier)
          );
-         hi ^= hi >> 24u;
-         hi *= lo;
-         return uint4(hi);
+         high ^= high >> 24u;
+         high *= low;
+         return uint4(high);
       } else {
-         uint8 hi = uint8(state >> 64u);
-         uint8 lo = uint8(state) | 1u;
-         hi ^= hi >> 32u;
-         hi *= uint8(pcg_constants<State>::cheap_multiplier);
-         hi ^= hi >> 48u;
-         hi *= lo;
-         return hi;
+         uint8 high = uint8(state >> 64u);
+         uint8 low = uint8(state) | 1u;
+         high ^= high >> 32u;
+         high *= uint8(pcg_constants<State>::cheap_multiplier);
+         high ^= high >> 48u;
+         high *= low;
+         return high;
       }
    }
 }

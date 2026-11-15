@@ -109,8 +109,8 @@ def _is_private_anonymous_map(header):
         return False
     if any(tag.startswith(prefix) for prefix in _SKIP_ANON_PREFIXES):
         return False
-    lo, hi = (int(address, 16) for address in parts[0].split('-'))
-    if hi <= lo:
+    low, high = (int(address, 16) for address in parts[0].split('-'))
+    if high <= low:
         return False
     return True
 
@@ -119,8 +119,8 @@ def _region_span_valid(header, size_kb, max_region_kb):
     parts = header.split()
     if len(parts) < 2:
         return False
-    lo, hi = (int(address, 16) for address in parts[0].split('-'))
-    if hi <= lo:
+    low, high = (int(address, 16) for address in parts[0].split('-'))
+    if high <= low:
         return False
     if size_kb > max_region_kb:
         return False

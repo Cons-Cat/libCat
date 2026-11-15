@@ -29,15 +29,15 @@ emulated_exp(Float argument) noexcept -> Float {
 
    constexpr Float inverse_ln_two =
       is_same<Float, float> ? 0x1.715476p+0f : 0x1.71547652b82fep+0;
-   constexpr Float ln_two_hi =
+   constexpr Float ln_two_high =
       is_same<Float, float> ? 0x1.62e4p-1f : 0x1.62e42fefa0000p-1;
-   constexpr Float ln_two_lo =
+   constexpr Float ln_two_low =
       is_same<Float, float> ? 0x1.7f7d1cp-20f : 0x1.cf79abc9e3b3ap-40;
    Float const scaled = argument * inverse_ln_two;
    int const exponent = static_cast<int>(scaled + (scaled < 0 ? -0.5 : 0.5));
    Float const exponent_float = exponent;
    Float const reduced =
-      (argument - exponent_float * ln_two_hi) - exponent_float * ln_two_lo;
+      (argument - exponent_float * ln_two_high) - exponent_float * ln_two_low;
 
    Float term = 1;
    Float sum = 1;

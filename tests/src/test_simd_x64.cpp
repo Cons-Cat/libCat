@@ -476,12 +476,12 @@ $test(simd_avx_abi_hooks_mask_reductions_and_bitset) {
    cat::verify(one.find_last_if_true() == one_ref.find_last_if_true());
 
    cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 4u>> const
-      sparse_lo{sparse[0u], sparse[1u], sparse[2u], sparse[3u]};
+      sparse_low{sparse[0u], sparse[1u], sparse[2u], sparse[3u]};
    cat::simd_mask<float4, cat::simd_abi::fixed_size<float4, 4u>> const
-      sparse_hi{sparse[4u], sparse[5u], sparse[6u], sparse[7u]};
+      sparse_high{sparse[4u], sparse[5u], sparse[6u], sparse[7u]};
    cat::verify(
       sparse.count_if_true()
-      == sparse_lo.count_if_true() + sparse_hi.count_if_true()
+      == sparse_low.count_if_true() + sparse_high.count_if_true()
    );
 
    cat::bitset<8u> const b = sparse.to_bitset();

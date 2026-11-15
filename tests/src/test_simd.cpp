@@ -1927,12 +1927,12 @@ $test(simd_select_matches_if_else) {
 $test(simd_min_max) {
    int4x4 a = {1, 5, 3, 8};
    int4x4 b = {4, 2, 7, 6};
-   int4x4 lo = cat::simd_min(a, b);
-   cat::verify(lo[0] == 1);
-   cat::verify(lo[1] == 2);
-   int4x4 hi = cat::simd_max(a, b);
-   cat::verify(hi[0] == 4);
-   cat::verify(hi[2] == 7);
+   int4x4 low = cat::simd_min(a, b);
+   cat::verify(low[0] == 1);
+   cat::verify(low[1] == 2);
+   int4x4 high = cat::simd_max(a, b);
+   cat::verify(high[0] == 4);
+   cat::verify(high[2] == 7);
 
    float4x4 x = {1_f4, 5_f4, 3_f4, 8_f4};
    float4x4 y = {4_f4, 2_f4, 7_f4, 6_f4};
@@ -2874,16 +2874,16 @@ $test(simd_eve_mask_subscript_min_max_popcount_rotate_left_rotate_right) {
    int4x4 a = {1, 5, 3, 8};
    int4x4 b = {4, 2, 7, 6};
    auto m = cat::make_simd_mask_from_count<int4x4>(2u);
-   int4x4 lo = cat::simd_min[m](a, b);
-   cat::verify(lo[0] == 1);
-   cat::verify(lo[1] == 2);
-   cat::verify(lo[2] == 3);
-   cat::verify(lo[3] == 8);
-   int4x4 hi = cat::simd_max[m](a, b);
-   cat::verify(hi[0] == 4);
-   cat::verify(hi[1] == 5);
-   cat::verify(hi[2] == 3);
-   cat::verify(hi[3] == 8);
+   int4x4 low = cat::simd_min[m](a, b);
+   cat::verify(low[0] == 1);
+   cat::verify(low[1] == 2);
+   cat::verify(low[2] == 3);
+   cat::verify(low[3] == 8);
+   int4x4 high = cat::simd_max[m](a, b);
+   cat::verify(high[0] == 4);
+   cat::verify(high[1] == 5);
+   cat::verify(high[2] == 3);
+   cat::verify(high[3] == 8);
 
    using u32x4 = cat::simd<uint_lane, cat::simd_abi::fixed_size<uint_lane, 4u>>;
    u32x4 w{0u, 3u, 15u, 0xffffffffu};
@@ -2929,18 +2929,18 @@ $test(simd_eve_predicate_subscript) {
    // Binary: `simd_min[is_odd]` only computes min on odd-left lanes.
    int4x4 a = {1, 2, 3, 4};
    int4x4 b = {9, 9, 9, 9};
-   int4x4 lo = cat::simd_min[cat::is_odd](a, b);
-   cat::verify(lo[0] == 1);
-   cat::verify(lo[1] == 2);
-   cat::verify(lo[2] == 3);
-   cat::verify(lo[3] == 4);
+   int4x4 low = cat::simd_min[cat::is_odd](a, b);
+   cat::verify(low[0] == 1);
+   cat::verify(low[1] == 2);
+   cat::verify(low[2] == 3);
+   cat::verify(low[3] == 4);
 
    // Binary `simd_max` exercises the predicate-vs-mask overload coexistence.
-   int4x4 hi = cat::simd_max[cat::is_even](a, b);
-   cat::verify(hi[0] == 1);
-   cat::verify(hi[1] == 9);
-   cat::verify(hi[2] == 3);
-   cat::verify(hi[3] == 9);
+   int4x4 high = cat::simd_max[cat::is_even](a, b);
+   cat::verify(high[0] == 1);
+   cat::verify(high[1] == 9);
+   cat::verify(high[2] == 3);
+   cat::verify(high[3] == 9);
 
    // Ternary: `simd_fma[cat::is_less(0_f4)]` computes `x*y + z` only on
    // positive-x lanes. `cat::is_less(0_f4)` curries to
@@ -3152,20 +3152,20 @@ $test(simd_as_vectorized_random_access_and_mutation) {
    cat::verify(next == b);
    cat::verify(sum4(*next) == sum4(*b));
 
-   float_lane ref_hi = float_lane(128.f);
-   for (auto cur = b; cur != e; ++cur, ref_hi -= float_lane(4.f)) {
+   float_lane ref_high = float_lane(128.f);
+   for (auto cur = b; cur != e; ++cur, ref_high -= float_lane(4.f)) {
       float4x4 x = *cur;
-      float4x4 const ref = float4x4(ref_hi) - cat::iota<float4x4>(0_f4);
+      float4x4 const ref = float4x4(ref_high) - cat::iota<float4x4>(0_f4);
       cat::verify(sum4(x) == sum4(ref));
       cat::verify(sum4(*cur) == sum4(ref));
       *cur = x + 1_f4;
       cat::verify(sum4(*cur) == sum4(ref + 1_f4));
    }
 
-   ref_hi = float_lane(128.f) + 1.f;
-   for (auto cur = b; cur != e; ++cur, ref_hi -= float_lane(4.f)) {
+   ref_high = float_lane(128.f) + 1.f;
+   for (auto cur = b; cur != e; ++cur, ref_high -= float_lane(4.f)) {
       float4x4 x = *cur;
-      float4x4 const ref = float4x4(ref_hi) - cat::iota<float4x4>(0_f4);
+      float4x4 const ref = float4x4(ref_high) - cat::iota<float4x4>(0_f4);
       cat::verify(sum4(x) == sum4(ref));
       cat::verify(sum4(*cur) == sum4(ref));
    }
