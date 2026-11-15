@@ -173,7 +173,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       cat::assert(
          m_storage.m_p_head == nullptr && m_storage.m_p_spare == nullptr
             && m_size == 0u,
-         "basic_list move-assigned over while still owning nodes. "
+         "basic_list move-assigned over while still owning nodes! "
          "Call .free(allocator) first."
       );
       m_storage = other_list.m_storage;

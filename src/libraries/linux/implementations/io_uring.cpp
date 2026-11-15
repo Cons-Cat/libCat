@@ -30,7 +30,7 @@ nix::manual::io_uring::operator=(io_uring&& other) noexcept -> io_uring& {
 
    cat::assert(
       m_ring.value == invalid_file_descriptor.value,
-      "nix::manual::io_uring move-assigned over while still owning a ring. "
+      "nix::manual::io_uring move-assigned over while still owning a ring! "
       "Call .free(allocator) first."
    );
    swap(other);

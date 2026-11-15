@@ -172,7 +172,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
       assert(
          data() == nullptr,
-         "basic_vec move-assigned over while still owning storage. "
+         "basic_vec move-assigned over while still owning storage! "
          "Call .free(allocator) first."
       );
       other.annotate_size_change(other.size(), other.capacity());
@@ -183,8 +183,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
    // The manual `basic_vec` does not own its storage, so its destructor
    // only invokes element destructors via `.clear()`. To deallocate
-   // immediately, call `.free(allocator)`. This is strongly encouraged for
-   // non-trivially-destructible `T`.
+   // immediately, call `.free(allocator)`.
    constexpr ~basic_vec() noexcept {
       idx const old_size = size();
       destroy_n_elements(data(), size());

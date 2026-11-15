@@ -276,7 +276,7 @@ x11::manual::connection::operator=(connection&& other) noexcept -> connection& {
          m_p_send == nullptr && m_p_receive == nullptr && m_p_events == nullptr
             && m_p_parked == nullptr && m_p_pending == nullptr,
          "x11::manual::connection move-assigned over while still owning "
-         "buffers. Call .free(allocator) first."
+         "buffers! Call .free(allocator) first."
       );
       this->~connection();
       new (this) connection(cat::move(other));
