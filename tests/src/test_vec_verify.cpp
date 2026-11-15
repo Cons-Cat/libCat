@@ -28,9 +28,8 @@ valid_vec_borrow(cat::vec<int4>& caller_vec [[clang::lifetimebound]]) -> int4& {
 }
 
 auto
-valid_vec_iterator_offset(
-   cat::vec<int4>& caller_vec [[clang::lifetimebound]]
-) -> cat::vec<int4>::iterator {
+valid_vec_iterator_offset(cat::vec<int4>& caller_vec [[clang::lifetimebound]])
+   -> cat::vec<int4>::iterator {
    // An iterator offset from a temporary iterator still refers to the
    // caller's elements.
    return caller_vec.begin() + 1 - 1;
@@ -59,7 +58,6 @@ dangling_iterator_minus_assign(cat::vec<int4>& caller_vec)
    // expected-warning@+1 1+ {{local variable 'iterator'}}
    return iterator -= 1;
 }
-
 
 auto
 dangling_vec_begin() -> auto {
