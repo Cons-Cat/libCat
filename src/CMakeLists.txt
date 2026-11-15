@@ -240,6 +240,15 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/linux/implementations/sys_futex.cpp
   ${CATLIB}/linux/implementations/sys_sched_setaffinity.cpp
   ${CATLIB}/linux/implementations/sys_sched_getaffinity.cpp
+  ${CATLIB}/linux/implementations/sys_sched_setparam.cpp
+  ${CATLIB}/linux/implementations/sys_sched_getparam.cpp
+  ${CATLIB}/linux/implementations/sys_sched_setscheduler.cpp
+  ${CATLIB}/linux/implementations/sys_sched_getscheduler.cpp
+  ${CATLIB}/linux/implementations/sys_sched_get_priority_max.cpp
+  ${CATLIB}/linux/implementations/sys_sched_get_priority_min.cpp
+  ${CATLIB}/linux/implementations/sys_sched_rr_get_interval.cpp
+  ${CATLIB}/linux/implementations/sys_sched_setattr.cpp
+  ${CATLIB}/linux/implementations/sys_sched_getattr.cpp
   ${CATLIB}/linux/implementations/sys_getdents64.cpp
   ${CATLIB}/linux/implementations/sys_set_tid_address.cpp
   ${CATLIB}/linux/implementations/sys_clock_gettime.cpp

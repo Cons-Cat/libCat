@@ -650,6 +650,64 @@ struct open_how {
    cat::uint8 resolve;
 };
 
+// `policy` argument to `sys_sched_setscheduler()`, and the result of
+// `sys_sched_getscheduler()`. `reset_on_fork` may be bit-or'd onto any policy
+// so that children revert to `normal` with default parameters.
+enum class [[clang::enum_extensibility(
+   open
+)]] scheduling_policy : unsigned int {
+   normal = 0,                  // SCHED_OTHER
+   first_in_first_out = 1,      // SCHED_FIFO
+   round_robin = 2,             // SCHED_RR
+   batch = 3,                   // SCHED_BATCH
+   idle = 5,                    // SCHED_IDLE
+   deadline = 6,                // SCHED_DEADLINE
+   extensible = 7,              // SCHED_EXT (Linux 6.12)
+   reset_on_fork = 0x40000000,  // SCHED_RESET_ON_FORK
+};
+
+// `scheduling_attributes::flags` for `sys_sched_setattr()`.
+enum class [[clang::flag_enum]] scheduling_attribute_flags : cat::uint8::
+   raw_type {
+   none = 0,
+   reset_on_fork = 0x01,          // SCHED_FLAG_RESET_ON_FORK
+   reclaim = 0x02,                // SCHED_FLAG_RECLAIM
+   deadline_overrun = 0x04,       // SCHED_FLAG_DL_OVERRUN
+   keep_policy = 0x08,            // SCHED_FLAG_KEEP_POLICY
+   keep_parameters = 0x10,        // SCHED_FLAG_KEEP_PARAMS
+   utilization_clamp_min = 0x20,  // SCHED_FLAG_UTIL_CLAMP_MIN
+   utilization_clamp_max = 0x40,  // SCHED_FLAG_UTIL_CLAMP_MAX
+};
+
+// `scheduling_parameters` is the kernel ABI for `sys_sched_setparam()` and
+// `sys_sched_setscheduler()` (`struct sched_param`). `priority` must be 0 for
+// the non-realtime policies.
+struct scheduling_parameters {
+   cat::int4 priority;
+};
+
+// `scheduling_attributes` is the kernel ABI for `sys_sched_setattr()` and
+// `sys_sched_getattr()` (`struct sched_attr`, version 1). `size` lets the
+// kernel tell which version of this struct userspace was compiled against.
+struct scheduling_attributes {
+   cat::uint4 size = sizeof(scheduling_attributes);
+   scheduling_policy policy;
+   scheduling_attribute_flags flags;
+   // Used by `normal` and `batch`.
+   cat::int4 nice;
+   // Used by `first_in_first_out` and `round_robin`.
+   cat::uint4 priority;
+   // Used by `deadline`.
+   cat::units::nanosecond_uint8 runtime;
+   cat::units::nanosecond_uint8 deadline;
+   cat::units::nanosecond_uint8 period;
+   // Utilization clamps, in [0, 1024].
+   cat::uint4 utilization_min;
+   cat::uint4 utilization_max;
+};
+
+static_assert(sizeof(scheduling_attributes) == 56);
+
 // `statx_timestamp` and `statx_data` together match the kernel ABI for
 // `sys_statx()` (`struct statx`). Total size is 256 bytes.
 struct statx_timestamp {
@@ -1235,6 +1293,13 @@ struct cat::enum_flag_trait<nix::mlockall_flags> : cat::true_trait {};
 
 template <>
 struct cat::enum_flag_trait<nix::mlock2_flags> : cat::true_trait {};
+
+template <>
+struct cat::enum_flag_trait<nix::scheduling_policy> : cat::true_trait {};
+
+template <>
+struct cat::enum_flag_trait<nix::scheduling_attribute_flags> : cat::true_trait {
+};
 
 template <>
 struct cat::enum_flag_trait<nix::message_flags> : cat::true_trait {};
@@ -2254,6 +2319,47 @@ auto
 sys_fstatfs(file_descriptor file_descriptor, statfs_data& out) noexcept
    -> scaredy_nix<void>;
 
+// Syscall 142. Set the realtime priority of thread `pid` (or the caller when
+// `pid` is `process_id{0}`) without changing its policy.
+auto
+sys_sched_setparam(
+   process_id pid, scheduling_parameters const& parameters
+) noexcept -> scaredy_nix<void>;
+
+// Syscall 143.
+auto
+sys_sched_getparam(process_id pid, scheduling_parameters& out) noexcept
+   -> scaredy_nix<void>;
+
+// Syscall 144. `policy` cannot be `deadline`. Use `sys_sched_setattr()` for
+// that.
+auto
+sys_sched_setscheduler(
+   process_id pid, scheduling_policy policy,
+   scheduling_parameters const& parameters
+) noexcept -> scaredy_nix<void>;
+
+// Syscall 145. The result includes `scheduling_policy::reset_on_fork` if it is
+// set.
+auto
+sys_sched_getscheduler(process_id pid) noexcept
+   -> scaredy_nix<scheduling_policy>;
+
+// Syscall 146.
+auto
+sys_sched_get_priority_max(scheduling_policy policy) noexcept
+   -> scaredy_nix<cat::int4>;
+
+// Syscall 147.
+auto
+sys_sched_get_priority_min(scheduling_policy policy) noexcept
+   -> scaredy_nix<cat::int4>;
+
+// Syscall 148. Fill `out` with the `round_robin` time quantum of thread `pid`.
+auto
+sys_sched_rr_get_interval(process_id pid, timespec& out) noexcept
+   -> scaredy_nix<void>;
+
 // Syscall 149. Lock the page-aligned range
 // [`p_address`, `p_address + length`) into RAM so the kernel may not page
 // it out.
@@ -2609,6 +2715,18 @@ auto
 sys_rt_tgsigqueueinfo(
    process_id tgid, process_id tid, signal s, signal_info const& info
 ) noexcept -> scaredy_nix<void>;
+
+// Syscall 314 (Linux 3.14). Set the policy and parameters of thread `pid` (or
+// the caller when `pid` is `process_id{0}`).
+auto
+sys_sched_setattr(
+   process_id pid, scheduling_attributes const& attributes
+) noexcept -> scaredy_nix<void>;
+
+// Syscall 315 (Linux 3.14).
+auto
+sys_sched_getattr(process_id pid, scheduling_attributes& out) noexcept
+   -> scaredy_nix<void>;
 
 // Syscall 316. `sys_renameat()` plus `renameat2_flags`.
 // libC implements POSIX `rename()` via this when `rename`/`renameat` are

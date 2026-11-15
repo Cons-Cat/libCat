@@ -909,6 +909,40 @@ $test(syscall_resource) {
       .verify();
 }
 
+$test(syscall_scheduling) {
+   nix::scheduling_policy const policy =
+      nix::sys_sched_getscheduler(nix::process_id{0}).verify();
+   cat::verify(policy == nix::scheduling_policy::normal);
+
+   nix::scheduling_parameters parameters{};
+   nix::sys_sched_getparam(nix::process_id{0}, parameters).verify();
+   cat::verify(parameters.priority == 0);
+
+   // Re-applying the current policy and parameters is always permitted.
+   nix::sys_sched_setparam(nix::process_id{0}, parameters).verify();
+   nix::sys_sched_setscheduler(nix::process_id{0}, policy, parameters).verify();
+
+   cat::verify(
+      nix::sys_sched_get_priority_max(nix::scheduling_policy::round_robin)
+         .verify()
+      == 99
+   );
+   cat::verify(
+      nix::sys_sched_get_priority_min(nix::scheduling_policy::round_robin)
+         .verify()
+      == 1
+   );
+
+   nix::timespec interval{};
+   nix::sys_sched_rr_get_interval(nix::process_id{0}, interval).verify();
+
+   nix::scheduling_attributes attributes{};
+   nix::sys_sched_getattr(nix::process_id{0}, attributes).verify();
+   cat::verify(attributes.size == sizeof(nix::scheduling_attributes));
+   cat::verify(attributes.policy == nix::scheduling_policy::normal);
+   nix::sys_sched_setattr(nix::process_id{0}, attributes).verify();
+}
+
 // Signals.
 
 $test(syscall_signals_state) {
