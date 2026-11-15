@@ -10,7 +10,7 @@ set(CAT_INCLUDE_SUBDIRS
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
   tuple vec map ring enum iterable dyn random timer chrono mutex quantity
-  stacktrace demangle exception coroutine complex)
+  stacktrace demangle exception coroutine complex devec)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -669,6 +669,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/utility/cat/propagate
   ${CATLIB}/utility/cat/utility
   ${CATLIB}/variant/cat/variant
+  ${CATLIB}/devec/cat/devec
+  ${CATLIB}/devec/cat/raii_devec
   ${CATLIB}/vec/cat/vec
   ${CATLIB}/vec/cat/vec_inplace
   ${CATLIB}/vec/cat/raii_vec

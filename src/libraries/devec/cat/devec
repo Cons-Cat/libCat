@@ -1,0 +1,1714 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::devec` is a contiguous owning container optimized for insertion and
+// deletion at both its front and back. This is essentially a random-access
+// optimized implementation of `std::deque`, inspired by
+// `boost::container::devector`.
+//
+// As this is a `manual` namespace container, its `.clear()` and destructor do
+// not deallocate storage, they only call its elements' destructors. To
+// deallocate storage, call `.free(allocator)` or `.cfree(allocator)`.
+//
+// The `cat::raii::devec` deallocates its own memory automatically.
+
+// TODO: Container policies and a `devec_inplace`.
+
+#include <cat/algorithm>
+#include <cat/allocator>
+#include <cat/allocator_parameters>
+#include <cat/container>
+#include <cat/iterable>
+#include <cat/math>
+#include <cat/memory>
+#include <cat/propagate>
+#include <cat/sanitizer>
+#include <cat/utility>
+
+namespace cat::inline manual {
+
+template <typename T>
+class [[gsl::Owner]] devec
+    : public container_interface<devec<T>, T>,
+      public random_access_stepanov_iterable_interface<T> {
+   static_assert(
+      is_same<remove_cvref<T>, T>, "`T` must not be cvref-qualified!"
+   );
+
+ public:
+   constexpr devec() = default;
+
+   constexpr devec(devec&& other) noexcept
+       : m_p_data(other.m_p_data),
+         m_size(other.m_size),
+         m_front_capacity(other.m_front_capacity),
+         m_back_capacity(other.m_back_capacity) {
+      other.set_empty_layout();
+   }
+
+   constexpr devec(devec const&) =
+      delete ("Implicit copying of `cat::devec` is forbidden! Call "
+              "`.clone()` or move instead!");
+
+   auto
+   operator=(devec const&) -> devec& = delete (
+      "Implicit copying of `cat::devec` is forbidden! Call `.clone()` or "
+      "move instead!"
+   );
+
+   [[clang::reinitializes]]
+   constexpr auto
+   operator=(devec&& other) noexcept(!__has_feature(cxx_exceptions)) -> devec& {
+      if (this == &other) {
+         return *this;
+      }
+
+      assert(
+         m_p_data == nullptr,
+         "`cat::devec` was move-assigned over while still owning storage! "
+         "Call `.free(allocator)` first."
+      );
+
+      m_p_data = other.m_p_data;
+      m_size = other.m_size;
+      m_front_capacity = other.m_front_capacity;
+      m_back_capacity = other.m_back_capacity;
+      other.set_empty_layout();
+      return *this;
+   }
+
+   // The manual `devec` does not own its storage, so its destructor only
+   // invokes element destructors. To deallocate, call `.free(allocator)`.
+   constexpr ~devec() noexcept {
+      destroy_n_elements(m_p_data, m_size);
+      if consteval {
+         if (m_p_data != nullptr) {
+            std::allocator<T> allocator;
+            allocator.deallocate(storage(), capacity());
+         }
+      } else {
+         annotate_double_ended_contiguous_container(
+            storage(), storage() + capacity(), m_p_data, m_p_data + m_size,
+            storage(), storage() + capacity()
+         );
+      }
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(devec const& rhs) const noexcept(!__has_feature(cxx_exceptions))
+      -> bool
+      requires(is_equality_comparable<T>)
+   {
+      return span<T const>(*this) == span<T const>(rhs);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(devec const& rhs) const noexcept(!__has_feature(cxx_exceptions))
+      requires(requires(T const& left, T const& right) {
+                  { left < right } -> is_convertible<bool>;
+                  { right < left } -> is_convertible<bool>;
+               })
+   {
+      return span<T const>(*this) <=> span<T const>(rhs);
+   }
+
+   constexpr void
+   swap(devec& other) noexcept {
+      cat::swap(m_p_data, other.m_p_data);
+      cat::swap(m_size, other.m_size);
+      cat::swap(m_front_capacity, other.m_front_capacity);
+      cat::swap(m_back_capacity, other.m_back_capacity);
+   }
+
+   // Returns `nullptr` when this `devec` has no storage.
+   [[nodiscard]]
+   constexpr auto
+   data() noexcept [[clang::lifetimebound]] -> T* _Nullable {
+      return m_p_data;
+   }
+
+   // Returns `nullptr` when this `devec` has no storage.
+   [[nodiscard]]
+   constexpr auto
+   data() const noexcept [[clang::lifetimebound]] -> T const* _Nullable {
+      return m_p_data;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const noexcept -> idx {
+      return m_size;
+   }
+
+   // The number of elements this `devec`'s storage holds.
+   [[nodiscard]]
+   constexpr auto
+   capacity() const noexcept -> idx {
+      return m_front_capacity + m_size + m_back_capacity;
+   }
+
+   // The number of free slots before the first element.
+   [[nodiscard]]
+   constexpr auto
+   front_capacity() const noexcept -> idx {
+      return m_front_capacity;
+   }
+
+   // The number of free slots after the last element.
+   [[nodiscard]]
+   constexpr auto
+   back_capacity() const noexcept -> idx {
+      return m_back_capacity;
+   }
+
+   // Maximum number of elements a `devec` can theoretically hold.
+   [[nodiscard]]
+   static constexpr auto
+   max_size() noexcept -> idx {
+      return idx::max() / sizeof(T);
+   }
+
+   // Deallocate this `devec`'s storage from `allocator`.
+   template <is_allocator Allocator>
+   [[clang::reinitializes]]
+   constexpr void
+   free(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
+      destroy_n_elements(m_p_data, m_size);
+      if (m_p_data != nullptr) {
+         annotate_double_ended_contiguous_container(
+            storage(), storage() + capacity(), m_p_data, m_p_data + m_size,
+            storage(), storage() + capacity()
+         );
+         allocator.free_multi_uninit(span<T>(storage(), capacity()));
+      }
+
+      set_empty_layout();
+   }
+
+   // Deallocate this `devec`'s storage from `allocator`.
+   [[clang::reinitializes, gnu::always_inline, gnu::nodebug]]
+   constexpr void
+   free(allocator_dyn allocator) noexcept(!__has_feature(cxx_exceptions)) {
+      return free<allocator_dyn>(allocator);
+   }
+
+   // Ensure at least `front_count` free slots before the first element and
+   // `back_count` free slots after the last.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   reserve(
+      allocator_ref<Allocator> allocator, idx front_count, idx back_count
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
+      if (front_count <= m_front_capacity && back_count <= m_back_capacity) {
+         return monostate;
+      }
+
+      idx const new_front_capacity = max(front_count, m_front_capacity);
+      idx const new_back_capacity = max(back_count, m_back_capacity);
+      if (
+         new_front_capacity > max_size()
+         || new_back_capacity > max_size() - new_front_capacity
+         || m_size > max_size() - new_front_capacity - new_back_capacity
+      ) {
+         return nullopt;
+      }
+
+      auto fill = [](T* _Nonnull) {
+      };
+
+      return reallocate(
+         allocator, new_front_capacity + m_size + new_back_capacity,
+         new_front_capacity, m_size, 0u, fill
+      );
+   }
+
+   // Ensure at least `front_count` free slots before the first element and
+   // `back_count` free slots after the last.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   reserve(allocator_dyn allocator, idx front_count, idx back_count) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      return reserve<allocator_dyn>(allocator, front_count, back_count);
+   }
+
+   // Small trivially copyable elements are passed by value
+   static constexpr bool takes_value_parameter =
+      is_trivially_copyable<T> && sizeof(T) <= 2u * sizeof(void*);
+
+   // Construct an element after the last.
+   template <is_allocator Allocator, typename... Args>
+      requires(is_constructible<T, Args...>)
+   [[nodiscard]]
+   constexpr auto
+   emplace_back(
+      allocator_ref<Allocator> allocator, Args&&... arguments
+   ) noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> maybe<T&> {
+      if (m_back_capacity == 0u) [[unlikely]] {
+         return grow_and_emplace<false>(allocator, $fwd(arguments)...);
+      }
+
+      return construct_back($fwd(arguments)...);
+   }
+
+   // Construct an element after the last.
+   template <typename... Args>
+      requires(is_constructible<T, Args...>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   emplace_back(allocator_dyn allocator, Args&&... arguments) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) [[clang::lifetimebound]] -> maybe<T&> {
+      return emplace_back<allocator_dyn>(allocator, $fwd(arguments)...);
+   }
+
+   // Construct an element before the first.
+   template <is_allocator Allocator, typename... Args>
+      requires(is_constructible<T, Args...>)
+   [[nodiscard]]
+   constexpr auto
+   emplace_front(
+      allocator_ref<Allocator> allocator, Args&&... arguments
+   ) noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> maybe<T&> {
+      if (m_front_capacity == 0u) [[unlikely]] {
+         return grow_and_emplace<true>(allocator, $fwd(arguments)...);
+      }
+
+      return construct_front($fwd(arguments)...);
+   }
+
+   // Construct an element before the first.
+   template <typename... Args>
+      requires(is_constructible<T, Args...>)
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   emplace_front(allocator_dyn allocator, Args&&... arguments) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) [[clang::lifetimebound]] -> maybe<T&> {
+      return emplace_front<allocator_dyn>(allocator, $fwd(arguments)...);
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   push_back(allocator_ref<Allocator> allocator, T value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(takes_value_parameter)
+   {
+      return discard_reference(emplace_back(allocator, value));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_back(allocator_dyn allocator, T value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(takes_value_parameter)
+   {
+      return push_back<allocator_dyn>(allocator, value);
+   }
+
+   template <is_allocator Allocator>
+      requires(is_copy_constructible<T>)
+   [[nodiscard]]
+   constexpr auto
+   push_back(allocator_ref<Allocator> allocator, T const& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(!takes_value_parameter)
+   {
+      return discard_reference(emplace_back(allocator, value));
+   }
+
+   template <is_allocator Allocator>
+      requires(is_move_constructible<T>)
+   [[nodiscard]]
+   constexpr auto
+   push_back(allocator_ref<Allocator> allocator, T&& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(!takes_value_parameter)
+   {
+      return discard_reference(emplace_back(allocator, move(value)));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_back(allocator_dyn allocator, T const& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(!takes_value_parameter && is_copy_constructible<T>)
+   {
+      return push_back<allocator_dyn>(allocator, value);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_back(allocator_dyn allocator, T&& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(!takes_value_parameter && is_move_constructible<T>)
+   {
+      return push_back<allocator_dyn>(allocator, move(value));
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   push_front(allocator_ref<Allocator> allocator, T value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(takes_value_parameter)
+   {
+      return discard_reference(emplace_front(allocator, value));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_front(allocator_dyn allocator, T value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(takes_value_parameter)
+   {
+      return push_front<allocator_dyn>(allocator, value);
+   }
+
+   template <is_allocator Allocator>
+      requires(is_copy_constructible<T>)
+   [[nodiscard]]
+   constexpr auto
+   push_front(allocator_ref<Allocator> allocator, T const& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(!takes_value_parameter)
+   {
+      return discard_reference(emplace_front(allocator, value));
+   }
+
+   template <is_allocator Allocator>
+      requires(is_move_constructible<T>)
+   [[nodiscard]]
+   constexpr auto
+   push_front(allocator_ref<Allocator> allocator, T&& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(!takes_value_parameter)
+   {
+      return discard_reference(emplace_front(allocator, move(value)));
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_front(allocator_dyn allocator, T const& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(!takes_value_parameter && is_copy_constructible<T>)
+   {
+      return push_front<allocator_dyn>(allocator, value);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   push_front(allocator_dyn allocator, T&& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(!takes_value_parameter && is_move_constructible<T>)
+   {
+      return push_front<allocator_dyn>(allocator, move(value));
+   }
+
+   // Remove and return the last element. Returns `nullopt` when this `devec`
+   // is empty.
+   [[nodiscard]]
+   constexpr auto
+   pop_back() noexcept(!__has_feature(cxx_exceptions)) -> maybe<T>
+      requires(is_move_constructible<T>)
+   {
+      if (m_size == 0u) {
+         return nullopt;
+      }
+
+      T* _Nonnull const p_last = m_p_data + idx(m_size - 1u);
+      T result = move(*p_last);
+      destroy_n_elements(p_last, 1u);
+      m_size = idx(m_size - 1u);
+      ++m_back_capacity;
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), m_p_data, p_last + 1u, m_p_data,
+         m_p_data + m_size
+      );
+      return result;
+   }
+
+   // Remove and return the first element. Returns `nullopt` when this `devec`
+   // is empty.
+   [[nodiscard]]
+   constexpr auto
+   pop_front() noexcept(!__has_feature(cxx_exceptions)) -> maybe<T>
+      requires(is_move_constructible<T>)
+   {
+      if (m_size == 0u) {
+         return nullopt;
+      }
+
+      T* _Nonnull const p_first = m_p_data;
+      T result = move(*p_first);
+      destroy_n_elements(p_first, 1u);
+      ++m_p_data;
+      m_size = idx(m_size - 1u);
+      ++m_front_capacity;
+
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), p_first, m_p_data + m_size,
+         m_p_data, m_p_data + m_size
+      );
+
+      return result;
+   }
+
+   // Construct an element before `position`, shifting whichever side of it
+   // holds fewer elements.
+   template <is_allocator Allocator, typename... Args>
+      requires(
+         is_constructible<T, Args...> && is_move_constructible<T>
+         && is_assignable<T&, T&&>
+      )
+   [[nodiscard]]
+   constexpr auto
+   emplace(
+      allocator_ref<Allocator> allocator, idx position, Args&&... arguments
+   ) noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> maybe<T&> {
+      assert(position <= m_size);
+      if (position == m_size) {
+         return emplace_back(allocator, $fwd(arguments)...);
+      }
+
+      if (position == 0u) {
+         return emplace_front(allocator, $fwd(arguments)...);
+      }
+
+      // Build the element first, because shifting may move what `arguments`
+      // refer to.
+      T value($fwd(arguments)...);
+      if (position < m_size - position) {
+         // Shift the `position` elements before the gap one slot forwards.
+         if (emplace_front(allocator, move(m_p_data[0u])).is_empty()) {
+            return nullopt;
+         }
+
+         shift_down(1u, 2u, idx(position - 1u));
+      } else {
+         // Shift the elements from `position` one slot backwards.
+         idx const old_size = m_size;
+         if (
+            emplace_back(allocator, move(m_p_data[idx(old_size - 1u)]))
+               .is_empty()
+         ) {
+            return nullopt;
+         }
+
+         shift_up(position, idx(position + 1u), idx(old_size - 1u - position));
+      }
+
+      m_p_data[position] = move(value);
+      return m_p_data[position];
+   }
+
+   // Construct an element before `position`.
+   template <typename... Args>
+      requires(
+         is_constructible<T, Args...> && is_move_constructible<T>
+         && is_assignable<T&, T&&>
+      )
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   emplace(allocator_dyn allocator, idx position, Args&&... arguments) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) [[clang::lifetimebound]] -> maybe<T&> {
+      return emplace<allocator_dyn>(allocator, position, $fwd(arguments)...);
+   }
+
+   // Insert `value` before `position`.
+   template <is_allocator Allocator>
+      requires(is_copy_constructible<T> && is_assignable<T&, T&&>)
+   [[nodiscard]]
+   constexpr auto
+   insert(
+      allocator_ref<Allocator> allocator, idx position, T const& value
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
+      return discard_reference(emplace(allocator, position, value));
+   }
+
+   // Insert `value` before `position`.
+   template <is_allocator Allocator>
+      requires(is_move_constructible<T> && is_assignable<T&, T&&>)
+   [[nodiscard]]
+   constexpr auto
+   insert(allocator_ref<Allocator> allocator, idx position, T&& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      return discard_reference(emplace(allocator, position, move(value)));
+   }
+
+   // Insert `value` before `position`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(allocator_dyn allocator, idx position, T const& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(is_copy_constructible<T> && is_assignable<T&, T&&>)
+   {
+      return insert<allocator_dyn>(allocator, position, value);
+   }
+
+   // Insert `value` before `position`.
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert(allocator_dyn allocator, idx position, T&& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(is_move_constructible<T> && is_assignable<T&, T&&>)
+   {
+      return insert<allocator_dyn>(allocator, position, move(value));
+   }
+
+   // Destroy every element.
+   [[clang::reinitializes]]
+   constexpr void
+   clear() noexcept {
+      if (m_p_data == nullptr) {
+         return;
+      }
+
+      destroy_n_elements(m_p_data, m_size);
+      T* _Nonnull const p_old_begin = m_p_data;
+      T* _Nonnull const p_old_end = m_p_data + m_size;
+      idx const free = capacity();
+      m_p_data = storage() + free / 2u;
+      m_front_capacity = free / 2u;
+      m_back_capacity = idx(free - free / 2u);
+      m_size = 0u;
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), p_old_begin, p_old_end, m_p_data,
+         m_p_data + m_size
+      );
+   }
+
+   // Remove the element at `index`.
+   constexpr void
+   erase(idx index) noexcept(false)
+      requires(is_assignable<T&, T&&>)
+   {
+      assert(index < m_size);
+      erase(index, index + 1u);
+   }
+
+   // Remove the elements in `[start, end)`, shifting whichever side of them
+   // holds fewer elements. Erasing a prefix or suffix shifts nothing.
+   constexpr void
+   erase(idx start, idx end) noexcept(false)
+      requires(is_assignable<T&, T&&>)
+   {
+      assert(start <= end);
+      assert(end <= m_size);
+      idx const gap = idx(end - start);
+      if (gap == 0u) {
+         return;
+      }
+
+      T* _Nonnull const p_old_begin = m_p_data;
+      T* _Nonnull const p_old_end = m_p_data + m_size;
+      idx const after = idx(m_size - end);
+      if (start < after) {
+         // Shift the prefix backwards over the gap.
+         shift_up(0u, gap, start);
+         destroy_n_elements(m_p_data, gap);
+         m_p_data = m_p_data + gap;
+         m_front_capacity += gap;
+      } else {
+         // Shift the suffix forwards over the gap.
+         shift_down(start, end, after);
+         destroy_n_elements(m_p_data + idx(m_size - gap), gap);
+         m_back_capacity += gap;
+      }
+
+      m_size = idx(m_size - gap);
+
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), p_old_begin, p_old_end, m_p_data,
+         m_p_data + m_size
+      );
+   }
+
+   // Change the size to `new_size` at the back.
+   template <is_allocator Allocator>
+      requires(is_default_constructible<T>)
+   [[nodiscard]]
+   constexpr auto
+   resize(allocator_ref<Allocator> allocator, idx new_size) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      if (new_size <= m_size) {
+         destroy_back(idx(m_size - new_size));
+         return monostate;
+      }
+
+      idx const count = idx(new_size - m_size);
+      return append_with(allocator, count, false, [&](T* _Nonnull p_first) {
+         construct_n_elements(p_first, count, [](idx) {
+            return T();
+         });
+      });
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   resize(allocator_dyn allocator, idx new_size) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(is_default_constructible<T>)
+   {
+      return resize<allocator_dyn>(allocator, new_size);
+   }
+
+   // Change the size to `new_size` at the back.
+   template <is_allocator Allocator>
+      requires(is_copy_constructible<T>)
+   [[nodiscard]]
+   constexpr auto
+   resize(
+      allocator_ref<Allocator> allocator, idx new_size, T const& value
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
+      if (new_size <= m_size) {
+         destroy_back(idx(m_size - new_size));
+         return monostate;
+      }
+
+      idx const count = idx(new_size - m_size);
+      return append_with(allocator, count, true, [&](T* _Nonnull p_first) {
+         construct_n_elements(p_first, count, [&](idx) -> T const& {
+            return value;
+         });
+      });
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   resize(allocator_dyn allocator, idx new_size, T const& value) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void>
+      requires(is_copy_constructible<T>)
+   {
+      return resize<allocator_dyn>(allocator, new_size, value);
+   }
+
+   // Append every element of a contiguous `range`.
+   template <is_allocator Allocator, typename Range>
+      requires(
+         is_contiguous_iterable<Range>
+         && is_same<__typeof_unqual(*declval<Range&>().data()), T>
+      )
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator, Range&& range) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      idx const count = idx(range.size());
+      if (count == 0u) {
+         return monostate;
+      }
+
+      return append_with(
+         allocator, count, aliases(range.data()), [&](T* _Nonnull p_first) {
+            construct_from<is_move_range<Range>>(p_first, range.data(), count);
+         }
+      );
+   }
+
+   // Append every element of `range`.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(
+         !is_contiguous_iterable<Iterable>
+         || !is_same<__typeof_unqual(*declval<Iterable&>().data()), T>
+      )
+   [[nodiscard]]
+   constexpr auto
+   append_range(allocator_ref<Allocator> allocator, Iterable&& range) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      if constexpr (has_size<Iterable>) {
+         // Grow geometrically, so that appending ranges repeatedly is
+         // amortized.
+         idx const count = idx(range.size());
+         if (count > m_back_capacity) {
+            $prop(reserve(allocator, 0u, max(count, m_size)));
+         }
+      }
+
+      // Append each element, stopping at the first failure.
+      maybe<void> result = monostate;
+      cat::iterate(range).run_while([&](auto&& value) -> bool {
+         result = discard_reference(emplace_back(allocator, $fwd(value)));
+         return result.has_value();
+      });
+
+      return result;
+   }
+
+   // Append every element of `range`.
+   template <is_iterable Iterable>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   append_range(allocator_dyn allocator, Iterable&& range) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      return append_range<allocator_dyn>(allocator, $fwd(range));
+   }
+
+   // Prepend every element of a contiguous `range`.
+   template <is_allocator Allocator, typename Range>
+      requires(
+         is_contiguous_iterable<Range>
+         && is_same<__typeof_unqual(*declval<Range&>().data()), T>
+      )
+   [[nodiscard]]
+   constexpr auto
+   prepend_range(allocator_ref<Allocator> allocator, Range&& range) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      idx const count = idx(range.size());
+      if (count == 0u) {
+         return monostate;
+      }
+
+      auto fill = [&](T* _Nonnull p_first) {
+         construct_from<is_move_range<Range>>(p_first, range.data(), count);
+      };
+
+      if (count <= m_front_capacity) {
+         return construct_front_n(count, fill);
+      }
+
+      if (!aliases(range.data())) {
+         if (
+            maybe<idx> const front = plan_slide<true>(count); front.has_value()
+         ) {
+            slide(front.value());
+            return construct_front_n(count, fill);
+         }
+      }
+
+      return grow_with<true>(allocator, count, fill);
+   }
+
+   // Prepend every element of `range`.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(
+         (!is_contiguous_iterable<Iterable>
+          || !is_same<__typeof_unqual(*declval<Iterable&>().data()), T>)
+         && is_move_constructible<T> && is_move_assignable<T>
+      )
+   [[nodiscard]]
+   constexpr auto
+   prepend_range(allocator_ref<Allocator> allocator, Iterable&& range) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      if constexpr (has_size<Iterable>) {
+         idx const count = idx(range.size());
+         if (count > m_front_capacity) {
+            $prop(reserve(allocator, max(count, m_size), 0u));
+         }
+      }
+
+      // Prepend each element, which reverses them, and then restore their
+      // order.
+      idx const old_size = m_size;
+      maybe<void> result = monostate;
+      cat::iterate(range).run_while([&](auto&& value) -> bool {
+         result = discard_reference(emplace_front(allocator, $fwd(value)));
+         return result.has_value();
+      });
+
+      reverse_range(0u, idx(m_size - old_size));
+      return result;
+   }
+
+   // Prepend every element of `range`.
+   template <is_iterable Iterable>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   prepend_range(allocator_dyn allocator, Iterable&& range) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      return prepend_range<allocator_dyn>(allocator, $fwd(range));
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_allocator Allocator, is_iterable Iterable>
+      requires(is_move_constructible<T> && is_move_assignable<T>)
+   [[nodiscard]]
+   constexpr auto
+   insert_range(
+      allocator_ref<Allocator> allocator, idx position, Iterable&& range
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
+      assert(position <= m_size);
+      idx const old_size = m_size;
+      if (position < idx(old_size - position)) {
+         maybe<void> const result = prepend_range(allocator, $fwd(range));
+
+         // The first `position` old elements move in front of the new ones.
+         idx const count = idx(m_size - old_size);
+         rotate(0u, count, idx(count + position));
+         return result;
+      }
+
+      maybe<void> const result = append_range(allocator, $fwd(range));
+      rotate(position, old_size, m_size);
+      return result;
+   }
+
+   // Insert every element of `range` before `position`.
+   template <is_iterable Iterable>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   insert_range(
+      allocator_dyn allocator, idx position, Iterable&& range
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void>
+      requires(is_move_constructible<T> && is_move_assignable<T>)
+   {
+      return insert_range<allocator_dyn>(allocator, position, $fwd(range));
+   }
+
+   // Move the elements into storage that holds exactly them.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   shrink_to_fit(allocator_ref<Allocator> allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      if (m_front_capacity == 0u && m_back_capacity == 0u) {
+         return monostate;
+      }
+
+      if (m_size == 0u) {
+         free(allocator);
+         return monostate;
+      }
+
+      auto fill = [](T* _Nonnull) {
+      };
+
+      return reallocate(allocator, m_size, 0u, m_size, 0u, fill);
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   shrink_to_fit(allocator_dyn allocator) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      return shrink_to_fit<allocator_dyn>(allocator);
+   }
+
+   // Deep-copy this `devec`, with the same front and back capacities.
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(allocator_ref<Allocator> allocator) const& noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<devec>
+      requires(is_copy_constructible<T>)
+   {
+      devec copy;
+      if (m_p_data == nullptr) {
+         return copy;
+      }
+
+      auto fill = [&](T* _Nonnull p_first) {
+         construct_from<false>(p_first, m_p_data, m_size);
+      };
+
+      $prop(copy.reallocate(
+         allocator, capacity(), m_front_capacity, 0u, m_size, fill
+      ));
+      return copy;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(allocator_dyn allocator) const& noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<devec>
+      requires(is_copy_constructible<T>)
+   {
+      return clone<allocator_dyn>(allocator);
+   }
+
+ private:
+   // TODO: False positives.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-experimental-invalidation"
+
+   // Destroy `count` elements from `p_first` in reverse order.
+   static constexpr void
+   destroy_n_elements(T* _Nullable p_first, idx count) noexcept {
+      if constexpr (!is_trivially_destructible<T>) {
+         while (count > 0u) {
+            count = idx(count - 1u);
+            p_first[count].~T();
+         }
+      }
+   }
+
+#pragma clang diagnostic pop
+
+   // Construct `count` elements at `p_first`, the `i`th from `make(i)`. If a
+   // constructor throws, the elements already built are destroyed.
+   template <typename Make>
+   static constexpr void
+   construct_n_elements(T* _Nonnull p_first, idx count, Make&& make) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
+      idx constructed;
+      detail::exception_defer guard([&] {
+         destroy_n_elements(p_first, constructed);
+      });
+
+      for (; constructed < count; ++constructed) {
+         new (p_first + constructed) T(make(constructed));
+      }
+
+      guard.commit();
+   }
+
+   // Whether a contiguous `Range` yields r-values to move from.
+   template <typename Range>
+   static constexpr bool is_move_range =
+      is_rvalue_reference<iterable_element_type<Range>>;
+
+   template <bool is_move, typename Source>
+   static constexpr void
+   construct_from(
+      T* _Nonnull p_destination, Source* _Nonnull p_source, idx count
+   ) noexcept(!__has_feature(cxx_exceptions)) {
+      if !consteval {
+         if constexpr (is_trivially_copyable<T>) {
+            copy_memory(p_source, p_destination, count * sizeof(T));
+            return;
+         }
+      }
+
+      construct_n_elements(p_destination, count, [&](idx i) -> decltype(auto) {
+         if constexpr (is_move) {
+            return move(p_source[i]);
+         } else {
+            return p_source[i];
+         }
+      });
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   discard_reference(maybe<T&> const& result) noexcept -> maybe<void> {
+      if (result.has_value()) {
+         return monostate;
+      }
+
+      return nullopt;
+   }
+
+   constexpr void
+   set_empty_layout() noexcept {
+      m_p_data = nullptr;
+      m_size = 0u;
+      m_front_capacity = 0u;
+      m_back_capacity = 0u;
+   }
+
+   // The beginning of this `devec`'s storage.
+   [[nodiscard]]
+   constexpr auto
+   storage() const noexcept -> T* _Nullable {
+      return m_p_data == nullptr ? nullptr : m_p_data - m_front_capacity;
+   }
+
+   // Whether `p_element` points into this `devec`'s elements.
+   [[nodiscard]]
+   constexpr auto
+   aliases(T const* _Nullable p_element) const noexcept -> bool {
+      return is_pointer_in_range(p_element, span<T const>(*this));
+   }
+
+   // Construct one element at the end, which has a free slot.
+   template <typename... Args>
+   constexpr auto
+   construct_back(Args&&... arguments) noexcept(!__has_feature(cxx_exceptions))
+      -> T& {
+      T* _Nonnull const p_slot = m_p_data + m_size;
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), m_p_data, p_slot, m_p_data,
+         p_slot + 1u
+      );
+      detail::exception_defer guard([&] {
+         annotate_double_ended_contiguous_container(
+            storage(), storage() + capacity(), m_p_data, p_slot + 1u, m_p_data,
+            p_slot
+         );
+      });
+
+      new (p_slot) T($fwd(arguments)...);
+      guard.commit();
+      ++m_size;
+      m_back_capacity = idx(m_back_capacity - 1u);
+      return *p_slot;
+   }
+
+   // Construct one element at the front.
+   template <typename... Args>
+   constexpr auto
+   construct_front(Args&&... arguments) noexcept(!__has_feature(cxx_exceptions))
+      -> T& {
+      T* _Nonnull const p_slot = m_p_data - 1u;
+      T* _Nonnull const p_end = m_p_data + m_size;
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), m_p_data, p_end, p_slot, p_end
+      );
+      detail::exception_defer guard([&] {
+         annotate_double_ended_contiguous_container(
+            storage(), storage() + capacity(), p_slot, p_end, m_p_data, p_end
+         );
+      });
+
+      new (p_slot) T($fwd(arguments)...);
+      guard.commit();
+      m_p_data = p_slot;
+      ++m_size;
+      m_front_capacity = idx(m_front_capacity - 1u);
+      return *p_slot;
+   }
+
+   // Construct `count` elements at the end, which has as many free slots, with
+   // `fill(p_first)`. If that throws, this `devec` is unchanged.
+   template <typename Fill>
+   constexpr auto
+   construct_back_n(idx count, Fill& fill) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      T* _Nonnull const p_first = m_p_data + m_size;
+
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), m_p_data, p_first, m_p_data,
+         p_first + count
+      );
+
+      detail::exception_defer guard([&] {
+         annotate_double_ended_contiguous_container(
+            storage(), storage() + capacity(), m_p_data, p_first + count,
+            m_p_data, p_first
+         );
+      });
+
+      fill(p_first);
+      guard.commit();
+      m_size += count;
+      m_back_capacity = idx(m_back_capacity - count);
+      return monostate;
+   }
+
+   // Construct `count` elements at the front, which has as many free slots,
+   // with `fill(p_first)`. If that throws, this `devec` is unchanged.
+   template <typename Fill>
+   constexpr auto
+   construct_front_n(idx count, Fill& fill) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      T* _Nonnull const p_first = m_p_data - count;
+      T* _Nonnull const p_end = m_p_data + m_size;
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), m_p_data, p_end, p_first, p_end
+      );
+      detail::exception_defer guard([&] {
+         annotate_double_ended_contiguous_container(
+            storage(), storage() + capacity(), p_first, p_end, p_first + count,
+            p_end
+         );
+      });
+
+      fill(p_first);
+      guard.commit();
+      m_p_data = p_first;
+      m_size += count;
+      m_front_capacity = idx(m_front_capacity - count);
+      return monostate;
+   }
+
+   // Reverse `[first, last)` in place.
+   constexpr void
+   reverse_range(idx first, idx last) noexcept(!__has_feature(cxx_exceptions)) {
+      while (first < last) {
+         last = idx(last - 1u);
+         if (first == last) {
+            break;
+         }
+
+         cat::swap(m_p_data[first], m_p_data[last]);
+         ++first;
+      }
+   }
+
+   // Rotate `[first, last)` so that the elements from `middle` come first.
+   constexpr void
+   rotate(idx first, idx middle, idx last) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
+      reverse_range(first, middle);
+      reverse_range(middle, last);
+      reverse_range(first, last);
+   }
+
+   // Destroy the last `count` elements.
+   constexpr void
+   destroy_back(idx count) noexcept {
+      T* _Nonnull const p_old_end = m_p_data + m_size;
+      destroy_n_elements(p_old_end - count, count);
+      m_size = idx(m_size - count);
+      m_back_capacity += count;
+
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), m_p_data, p_old_end, m_p_data,
+         m_p_data + m_size
+      );
+   }
+
+   // Move-assign `count` elements from index `source` to the lower index
+   // `destination`, front to back.
+   constexpr void
+   shift_down(idx destination, idx source, idx count) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
+      if !consteval {
+         if constexpr (is_trivially_copyable<T>) {
+            copy_memory_backward(
+               m_p_data + source, m_p_data + destination, count * sizeof(T)
+            );
+            return;
+         }
+      }
+
+      for (idx i; i < count; ++i) {
+         m_p_data[destination + i] = move(m_p_data[source + i]);
+      }
+   }
+
+   // Move-assign `count` elements from index `source` to the higher index
+   // `destination`, back to front.
+   constexpr void
+   shift_up(idx source, idx destination, idx count) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) {
+      if !consteval {
+         if constexpr (is_trivially_copyable<T>) {
+            copy_memory_backward(
+               m_p_data + source, m_p_data + destination, count * sizeof(T)
+            );
+            return;
+         }
+      }
+
+      while (count > 0u) {
+         count = idx(count - 1u);
+         m_p_data[destination + count] = move(m_p_data[source + count]);
+      }
+   }
+
+   // Sliding elements within their storage must not fail halfway, because
+   // the slots they slide over hold no element to restore.
+   [[nodiscard]]
+   static constexpr auto
+   is_slidable() noexcept -> bool {
+      if consteval {
+         return is_nothrow_move_constructible<T>
+                && is_nothrow_move_assignable<T>;
+      } else {
+         return is_trivially_relocatable<T>
+                || (is_nothrow_move_constructible<T> && is_nothrow_move_assignable<T>);
+      }
+   }
+
+   // If the elements should slide to give the front (or back) at least `count`
+   // free slots, return the front capacity that they slide to.
+   template <bool at_front>
+   [[nodiscard]]
+   constexpr auto
+   plan_slide(idx count) const noexcept -> maybe<idx> {
+      if (!is_slidable()) {
+         return nullopt;
+      }
+
+      idx const free = m_front_capacity + m_back_capacity;
+      idx const opposite = at_front ? m_back_capacity : m_front_capacity;
+      if (free < count || opposite < m_size) {
+         return nullopt;
+      }
+
+      // The end that ran out keeps 2/3 of the slots left over.
+      idx const remaining = idx(free - count);
+
+      if constexpr (at_front) {
+         return idx(remaining - remaining / 3u + count);
+      } else {
+         return idx(remaining / 3u);
+      }
+   }
+
+   // Slide the elements so that `front_capacity` slots precede them.
+   constexpr void
+   slide(idx front_capacity) noexcept(!__has_feature(cxx_exceptions)) {
+      T* _Nonnull const p_destination = storage() + front_capacity;
+      // `plan_slide()` always moves the elements.
+      assert(m_p_data != p_destination);
+
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), m_p_data, m_p_data + m_size,
+         storage(), storage() + capacity()
+      );
+      slide_elements(m_p_data, p_destination, m_size);
+      // Sliding trades free slots between the ends.
+      m_back_capacity =
+         idx(m_front_capacity + m_back_capacity - front_capacity);
+      m_front_capacity = front_capacity;
+      m_p_data = p_destination;
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), storage(), storage() + capacity(),
+         m_p_data, m_p_data + m_size
+      );
+   }
+
+   // Move `count` elements from `p_source` to `p_destination`.
+   static constexpr void
+   slide_elements(
+      T* _Nonnull p_source, T* _Nonnull p_destination, idx count
+   ) noexcept {
+      if !consteval {
+         if constexpr (is_trivially_relocatable<T>) {
+            copy_memory_backward(p_source, p_destination, count * sizeof(T));
+            return;
+         }
+      }
+
+      if constexpr (
+         is_nothrow_move_constructible<T> && is_nothrow_move_assignable<T>
+      ) {
+         if (p_destination < p_source) {
+            // Front to back, the slots before `p_source` are constructed.
+            idx const constructed = min(count, idx(p_source - p_destination));
+            for (idx i; i < constructed; ++i) {
+               new (p_destination + i) T(move(p_source[i]));
+            }
+
+            for (idx i = constructed; i < count; ++i) {
+               p_destination[i] = move(p_source[i]);
+            }
+
+            // The last `constructed` source elements were not assigned over.
+            destroy_n_elements(
+               p_source + idx(count - constructed), constructed
+            );
+         } else {
+            // Back to front, the slots past the source's end are constructed.
+            idx const constructed = min(count, idx(p_destination - p_source));
+            idx const assigned = idx(count - constructed);
+            idx i = count;
+            while (i > assigned) {
+               i = idx(i - 1u);
+               new (p_destination + i) T(move(p_source[i]));
+            }
+
+            while (i > 0u) {
+               i = idx(i - 1u);
+               p_destination[i] = move(p_source[i]);
+            }
+
+            // The first `constructed` source elements were not assigned over.
+            destroy_n_elements(p_source, constructed);
+         }
+      } else {
+         // `is_slidable()` rejects every other type.
+         __builtin_unreachable();
+      }
+   }
+
+   // Initial capacity is at least one cache line.
+   static constexpr idx initial_capacity = max(4u, 64u / sizeof(T));
+
+   // Move the elements into new storage of at least `minimum_capacity` with
+   // `front_capacity` free slots before the first element.
+   template <is_allocator Allocator, typename Fill>
+   constexpr auto
+   reallocate(
+      allocator_ref<Allocator> allocator, idx minimum_capacity,
+      idx front_capacity, idx gap_position, idx gap_count, Fill& fill
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
+      // Every caller bounds the capacity first.
+      assert(minimum_capacity <= max_size());
+
+      span<T> const allocation =
+         $prop(allocator.template alloc_multi_uninit<T>(minimum_capacity));
+      idx const new_capacity = minimum_capacity;
+      T* _Nonnull const p_new_storage = allocation.data();
+      T* _Nonnull const p_new_data = p_new_storage + front_capacity;
+
+      // This is declared first so that it runs last.
+      detail::exception_defer release_guard([&] {
+         allocator.free_multi_uninit(span<T>(p_new_storage, new_capacity));
+      });
+
+      fill(p_new_data + gap_position);
+
+      idx const old_size = m_size;
+      idx const suffix_size = idx(old_size - gap_position);
+      T* _Nonnull const p_new_suffix = p_new_data + gap_position + gap_count;
+      idx relocated_suffix = 0u;
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), m_p_data, m_p_data + m_size,
+         storage(), storage() + capacity()
+      );
+      detail::exception_defer guard([&] {
+         // If the prefix fails to relocate, the suffix already moved into
+         // the new storage is lost.
+         destroy_n_elements(p_new_suffix, relocated_suffix);
+         destroy_n_elements(p_new_data + gap_position, gap_count);
+         m_back_capacity += relocated_suffix;
+         m_size = idx(old_size - relocated_suffix);
+         annotate_double_ended_contiguous_container(
+            storage(), storage() + capacity(), storage(),
+            storage() + capacity(), m_p_data, m_p_data + m_size
+         );
+      });
+
+      // Move `count` elements into the disjoint `p_destination`.
+      auto move_elements = [](T* _Nonnull p_source, idx count,
+                              T* _Nonnull p_destination) {
+         construct_n_elements(
+            p_destination, count, [&](idx i) -> decltype(auto) {
+               if constexpr (__has_feature(cxx_exceptions)) {
+                  return move_if_noexcept(p_source[i]);
+               } else if constexpr (is_move_constructible<T>) {
+                  return move(p_source[i]);
+               } else {
+                  return as_const(p_source[i]);
+               }
+            }
+         );
+
+         destroy_n_elements(p_source, count);
+      };
+
+      if (m_p_data != nullptr) {
+         move_elements(m_p_data + gap_position, suffix_size, p_new_suffix);
+         relocated_suffix = suffix_size;
+         move_elements(m_p_data, gap_position, p_new_data);
+      }
+
+      guard.commit();
+      release_guard.commit();
+
+      if (m_p_data != nullptr) {
+         allocator.free_multi_uninit(span<T>(storage(), capacity()));
+      }
+
+      m_p_data = p_new_data;
+      m_size = old_size + gap_count;
+      m_front_capacity = front_capacity;
+      m_back_capacity = idx(new_capacity - front_capacity - m_size);
+      annotate_double_ended_contiguous_container(
+         storage(), storage() + capacity(), storage(), storage() + capacity(),
+         m_p_data, m_p_data + m_size
+      );
+      return monostate;
+   }
+
+   // Try to extend the storage in place to at least `minimum_capacity`, giving
+   // the new slots to the back.
+   template <is_allocator Allocator>
+   constexpr auto
+   grow_back_in_place(
+      allocator_ref<Allocator> allocator, idx minimum_capacity
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
+      if consteval {
+         return false;
+      } else {
+         if (m_p_data == nullptr) {
+            return false;
+         }
+
+         T* _Nonnull const p_storage = storage();
+         idx const old_capacity = capacity();
+         span<byte> const allocation(
+            __builtin_bit_cast(byte*, p_storage), old_capacity * sizeof(T)
+         );
+         if (!allocator.alloc_grow(allocation, minimum_capacity * sizeof(T))
+                 .has_value()) {
+            return false;
+         }
+
+         annotate_double_ended_contiguous_container(
+            p_storage, p_storage + old_capacity, m_p_data, m_p_data + m_size,
+            p_storage, p_storage + old_capacity
+         );
+         m_back_capacity += idx(minimum_capacity - old_capacity);
+         annotate_double_ended_contiguous_container(
+            p_storage, p_storage + capacity(), p_storage,
+            p_storage + capacity(), m_p_data, m_p_data + m_size
+         );
+         return true;
+      }
+   }
+
+   // Make more `count` free slots at the front or back of a `devec` with too
+   // few, by sliding or growing.
+   template <bool at_front, is_allocator Allocator, typename Fill>
+   [[gnu::noinline]]
+   constexpr auto
+   grow_with(
+      allocator_ref<Allocator> allocator, idx count, Fill& fill
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
+      if (count > max_size() - m_size) {
+         return nullopt;
+      }
+
+      idx const needed = m_size + count;
+      // Doubling must not overflow `max_size()`.
+      idx const doubled = m_size > max_size() / 2u ? max_size() : m_size * 2u;
+      idx const new_capacity = max(max(doubled, needed), initial_capacity);
+      idx const free = idx(new_capacity - needed);
+      idx const opposite = at_front ? m_back_capacity : m_front_capacity;
+      // The opposite end keeps at most a third of the new free slots, and no
+      // more than it already had.
+      idx const opposite_kept = min(opposite, free / 3u);
+
+      if constexpr (at_front) {
+         return reallocate(
+            allocator, new_capacity, idx(free - opposite_kept), 0u, count, fill
+         );
+      } else {
+         if (
+            opposite_kept == m_front_capacity
+            && grow_back_in_place(allocator, new_capacity)
+         ) {
+            return construct_back_n(count, fill);
+         }
+
+         return reallocate(
+            allocator, new_capacity, opposite_kept, m_size, count, fill
+         );
+      }
+   }
+
+   // Construct `count` elements at the back with `fill(p_first)`. If
+   // `is_aliasing`, then `fill` may read elements of this `devec`, so they
+   // must not slide before it runs.
+   template <is_allocator Allocator, typename Fill>
+   constexpr auto
+   append_with(
+      allocator_ref<Allocator> allocator, idx count, bool is_aliasing,
+      Fill&& fill
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
+      if (count <= m_back_capacity) {
+         return construct_back_n(count, fill);
+      }
+
+      if (!is_aliasing) {
+         if (
+            maybe<idx> const front = plan_slide<false>(count); front.has_value()
+         ) {
+            slide(front.value());
+            return construct_back_n(count, fill);
+         }
+      }
+
+      return grow_with<false>(allocator, count, fill);
+   }
+
+   // Construct one element at a full front (or back).
+   template <bool at_front, is_allocator Allocator, typename... Args>
+   [[gnu::noinline]]
+   constexpr auto
+   grow_and_emplace(
+      allocator_ref<Allocator> allocator, Args&&... arguments
+   ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<T&> {
+      if constexpr (is_move_constructible<T>) {
+         if (
+            maybe<idx> const front = plan_slide<at_front>(1u); front.has_value()
+         ) {
+            // `arguments` may refer to an element, which sliding would move.
+            T value($fwd(arguments)...);
+            slide(front.value());
+            if constexpr (at_front) {
+               return construct_front(move(value));
+            } else {
+               return construct_back(move(value));
+            }
+         }
+      }
+
+      auto fill = [&](T* _Nonnull p_gap) {
+         new (p_gap) T($fwd(arguments)...);
+      };
+
+      $prop(grow_with<at_front>(allocator, 1u, fill));
+      if constexpr (at_front) {
+         return m_p_data[0u];
+      } else {
+         return m_p_data[idx(m_size - 1u)];
+      }
+   }
+
+   T* _Nullable m_p_data = nullptr;
+   idx m_size;
+   idx m_front_capacity;
+   idx m_back_capacity;
+};
+
+template <typename T>
+[[nodiscard]]
+constexpr auto
+make_devec() noexcept -> devec<T> {
+   return {};
+}
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_devec(
+   allocator_ref<Allocator> allocator, initializer_list<T> values
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
+   devec<T> new_devec;
+   $prop(new_devec.append_range(
+      allocator, span<T const>(values.begin(), values.size())
+   ));
+   return new_devec;
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec(allocator_dyn allocator, initializer_list<T> values) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<devec<T>> {
+   return manual::make_devec<T, allocator_dyn>(allocator, values);
+}
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_devec_reserved(
+   allocator_ref<Allocator> allocator, idx front_count, idx back_count
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
+   devec<T> new_devec;
+   $prop(new_devec.reserve(allocator, front_count, back_count));
+   return new_devec;
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec_reserved(
+   allocator_dyn allocator, idx front_count, idx back_count
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
+   return manual::make_devec_reserved<T, allocator_dyn>(
+      allocator, front_count, back_count
+   );
+}
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_devec_filled(
+   allocator_ref<Allocator> allocator, idx count, T const& value
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
+   devec<T> new_devec;
+   $prop(new_devec.resize(allocator, count, value));
+   return new_devec;
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec_filled(allocator_dyn allocator, idx count, T const& value) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<devec<T>> {
+   return manual::make_devec_filled<T, allocator_dyn>(allocator, count, value);
+}
+
+template <typename T, is_allocator Allocator, is_random_generator Generator>
+[[nodiscard]]
+constexpr auto
+make_devec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   devec<T> new_devec;
+   $prop(new_devec.resize(allocator, count));
+   new_devec.fill_random($fwd(generator));
+   return new_devec;
+}
+
+template <
+   typename T, is_allocator Allocator, is_random_generator Generator,
+   typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_devec_filled_random(
+   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   devec<T> new_devec;
+   $prop(new_devec.resize(allocator, count));
+   new_devec.fill_random($fwd(generator), $fwd(distribution));
+   return new_devec;
+}
+
+template <typename T, is_random_generator Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec_filled_random(
+   allocator_dyn allocator, idx count, Generator&& generator
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
+   return manual::make_devec_filled_random<T, allocator_dyn>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <typename T, is_random_generator Generator, typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec_filled_random(
+   allocator_dyn allocator, idx count, Generator&& generator,
+   Distribution&& distribution
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
+   return manual::make_devec_filled_random<T, allocator_dyn>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+}  // namespace cat::inline manual
+
+// `raii::devec` lives in a sister header but is bundled here so `<cat/devec>`
+// remains the umbrella for both the manual and managed `devec`s.
+#include <cat/raii_devec>

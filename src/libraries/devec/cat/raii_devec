@@ -1,0 +1,551 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::raii::devec` is a contiguous owning container optimized for insertion
+// and deletion at both its front and back. It wraps a `cat::manual::devec` and
+// binds an allocator for the lifetime of the container.
+//
+// As this is an `raii` namespace container, its destructor deallocates storage
+// automatically through the bound allocator.
+
+#include <cat/devec>
+#include <cat/propagate>
+
+namespace cat::raii {
+
+template <typename T, is_allocator Allocator = allocator_dyn>
+class [[gsl::Owner]]
+devec : public container_interface<devec<T, Allocator>, T>,
+        public random_access_stepanov_iterable_interface<T> {
+   static_assert(
+      is_same<remove_cvref<T>, T>, "`T` must not be cvref-qualified!"
+   );
+
+   template <typename U, is_allocator OtherAllocator>
+   friend class devec;
+
+ public:
+   constexpr devec() = delete ("`cat::raii::devec` cannot be created without "
+                               "an allocator!");
+
+   constexpr devec(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   ) noexcept
+       : m_core(), m_allocator(allocator) {
+   }
+
+   constexpr devec(devec&&) = default;
+
+   constexpr devec(devec const&) =
+      delete ("Implicit copying of `cat::raii::devec` is forbidden! Call "
+              "`.clone()` or move instead.");
+
+   auto
+   operator=(devec const&) -> devec& = delete (
+      "Implicit copying of `cat::raii::devec` is forbidden! Call `.clone()` "
+      "or move instead."
+   );
+
+   [[clang::reinitializes]]
+   constexpr auto
+   operator=(devec&& other) noexcept(false) -> devec& {
+      if (this == __builtin_addressof(other)) {
+         return *this;
+      }
+
+      assert(
+         m_allocator == other.m_allocator,
+         "`cat::raii::devec` cannot move-assign across non-equal allocators!"
+      );
+      m_core.free(m_allocator);
+      m_core = move(other.m_core);
+      return *this;
+   }
+
+   constexpr ~devec() noexcept {
+      free();
+   }
+
+   constexpr void
+   swap(devec& other) noexcept(!__has_feature(cxx_exceptions)) {
+      assert(m_allocator == other.m_allocator);
+      m_core.swap(other.m_core);
+   }
+
+   template <is_allocator OtherAllocator>
+   [[nodiscard]]
+   constexpr auto
+   operator==(devec<T, OtherAllocator> const& other) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool
+      requires(is_equality_comparable<T>)
+   {
+      return m_core == other.m_core;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(manual::devec<T> const& other) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool
+      requires(is_equality_comparable<T>)
+   {
+      return m_core == other;
+   }
+
+   template <is_allocator OtherAllocator>
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(devec<T, OtherAllocator> const& other) const noexcept(
+      !__has_feature(cxx_exceptions)
+   )
+      requires(requires(T const& left, T const& right) {
+                  { left < right } -> is_convertible<bool>;
+                  { right < left } -> is_convertible<bool>;
+               })
+   {
+      return m_core <=> other.m_core;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(manual::devec<T> const& other) const noexcept(
+      !__has_feature(cxx_exceptions)
+   )
+      requires(requires(T const& left, T const& right) {
+                  { left < right } -> is_convertible<bool>;
+                  { right < left } -> is_convertible<bool>;
+               })
+   {
+      return m_core <=> other;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() noexcept [[clang::lifetimebound]] -> T* _Nullable {
+      return m_core.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() const noexcept [[clang::lifetimebound]] -> T const* _Nullable {
+      return m_core.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const noexcept -> idx {
+      return m_core.size();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   capacity() const noexcept -> idx {
+      return m_core.capacity();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   front_capacity() const noexcept -> idx {
+      return m_core.front_capacity();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   back_capacity() const noexcept -> idx {
+      return m_core.back_capacity();
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   max_size() noexcept -> idx {
+      return manual::devec<T>::max_size();
+   }
+
+   // Deallocate this `devec`'s storage through its bound allocator.
+   [[clang::reinitializes]]
+   constexpr void
+   free() noexcept(!__has_feature(cxx_exceptions)) {
+      m_core.free(m_allocator);
+   }
+
+   // Ensure at least `front_count` free slots before the first element and
+   // `back_count` free slots after the last.
+   [[nodiscard]]
+   constexpr auto
+   reserve(idx front_count, idx back_count) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      return m_core.reserve(m_allocator, front_count, back_count);
+   }
+
+   template <typename... Args>
+      requires(is_constructible<T, Args...>)
+   [[nodiscard]]
+   constexpr auto
+   emplace_back(Args&&... arguments) noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> maybe<T&> {
+      return m_core.emplace_back(m_allocator, $fwd(arguments)...);
+   }
+
+   template <typename... Args>
+      requires(is_constructible<T, Args...>)
+   [[nodiscard]]
+   constexpr auto
+   emplace_front(Args&&... arguments) noexcept(!__has_feature(cxx_exceptions))
+      [[clang::lifetimebound]] -> maybe<T&> {
+      return m_core.emplace_front(m_allocator, $fwd(arguments)...);
+   }
+
+   template <typename... Args>
+      requires(
+         is_constructible<T, Args...> && is_move_constructible<T>
+         && is_assignable<T&, T&&>
+      )
+   [[nodiscard]]
+   constexpr auto
+   emplace(idx position, Args&&... arguments) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) [[clang::lifetimebound]] -> maybe<T&> {
+      return m_core.emplace(m_allocator, position, $fwd(arguments)...);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   push_back(T const& value) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void>
+      requires(is_copy_constructible<T>)
+   {
+      return m_core.push_back(m_allocator, value);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   push_back(T&& value) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void>
+      requires(is_move_constructible<T>)
+   {
+      return m_core.push_back(m_allocator, move(value));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   push_front(T const& value) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void>
+      requires(is_copy_constructible<T>)
+   {
+      return m_core.push_front(m_allocator, value);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   push_front(T&& value) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void>
+      requires(is_move_constructible<T>)
+   {
+      return m_core.push_front(m_allocator, move(value));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   insert(idx position, T const& value) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void>
+      requires(is_copy_constructible<T> && is_assignable<T&, T&&>)
+   {
+      return m_core.insert(m_allocator, position, value);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   insert(idx position, T&& value) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void>
+      requires(is_move_constructible<T> && is_assignable<T&, T&&>)
+   {
+      return m_core.insert(m_allocator, position, move(value));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   pop_back() noexcept(!__has_feature(cxx_exceptions)) -> maybe<T>
+      requires(is_move_constructible<T>)
+   {
+      return m_core.pop_back();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   pop_front() noexcept(!__has_feature(cxx_exceptions)) -> maybe<T>
+      requires(is_move_constructible<T>)
+   {
+      return m_core.pop_front();
+   }
+
+   // Destroy every element. The storage is kept.
+   [[clang::reinitializes]]
+   constexpr void
+   clear() noexcept {
+      m_core.clear();
+   }
+
+   constexpr void
+   erase(idx index) noexcept(false)
+      requires(is_assignable<T&, T&&>)
+   {
+      m_core.erase(index);
+   }
+
+   constexpr void
+   erase(idx start, idx end) noexcept(false)
+      requires(is_assignable<T&, T&&>)
+   {
+      m_core.erase(start, end);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   resize(idx size) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void>
+      requires(is_default_constructible<T>)
+   {
+      return m_core.resize(m_allocator, size);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   resize(idx size, T const& value) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void>
+      requires(is_copy_constructible<T>)
+   {
+      return m_core.resize(m_allocator, size, value);
+   }
+
+   template <is_iterable Range>
+   [[nodiscard]]
+   constexpr auto
+   append_range(Range&& range) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void> {
+      return m_core.append_range(m_allocator, $fwd(range));
+   }
+
+   template <is_iterable Range>
+   [[nodiscard]]
+   constexpr auto
+   insert_range(idx position, Range&& range) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<void> {
+      return m_core.insert_range(m_allocator, position, $fwd(range));
+   }
+
+   template <is_iterable Range>
+   [[nodiscard]]
+   constexpr auto
+   prepend_range(Range&& range) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void> {
+      return m_core.prepend_range(m_allocator, $fwd(range));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   shrink_to_fit() noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
+      return m_core.shrink_to_fit(m_allocator);
+   }
+
+   // Deep-copy this `devec` with its bound allocator.
+   [[nodiscard]]
+   constexpr auto
+   clone() const& noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec>
+      requires(is_copy_constructible<T>)
+   {
+      return clone<Allocator>(m_allocator);
+   }
+
+   // Deep-copy this `devec` with another allocator.
+   template <is_allocator NewAllocator>
+   [[nodiscard]]
+   constexpr auto
+   clone(
+      allocator_ref<NewAllocator> allocator [[clang::lifetimebound]]
+   ) const& noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<devec<T, NewAllocator>>
+      requires(is_copy_constructible<T>)
+   {
+      devec<T, NewAllocator> copy(allocator);
+      copy.m_core = $prop(m_core.clone(allocator));
+      return copy;
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   clone(allocator_dyn allocator [[clang::lifetimebound]]) const& noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<devec<T, allocator_dyn>>
+      requires(is_copy_constructible<T>)
+   {
+      return clone<allocator_dyn>(allocator);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   allocator(this auto&& self) noexcept -> allocator_ref<Allocator> {
+      return self.m_allocator;
+   }
+
+   // Move ownership of this `devec`'s storage. The returned manual `devec`
+   // must be `.free()`'d elsewhere.
+   [[nodiscard, clang::reinitializes]]
+   constexpr auto
+   release() noexcept -> manual::devec<T> {
+      return move(m_core);
+   }
+
+ private:
+   manual::devec<T> m_core;
+   [[no_unique_address]]
+   allocator_ref<Allocator> m_allocator;
+};
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_devec(allocator_ref<Allocator> allocator [[clang::lifetimebound]]) noexcept
+   -> raii::devec<T, Allocator> {
+   return raii::devec<T, Allocator>(allocator);
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec(allocator_dyn allocator [[clang::lifetimebound]]) noexcept
+   -> raii::devec<T, allocator_dyn> {
+   return raii::devec<T, allocator_dyn>(allocator);
+}
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_devec(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   initializer_list<T> values
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<raii::devec<T, Allocator>> {
+   raii::devec<T, Allocator> new_devec(allocator);
+   $prop(new_devec.append_range(span<T const>(values.begin(), values.size())));
+   return new_devec;
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec(
+   allocator_dyn allocator [[clang::lifetimebound]], initializer_list<T> values
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::devec<T, allocator_dyn>> {
+   return raii::make_devec<T, allocator_dyn>(allocator, values);
+}
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_devec_reserved(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx front_count,
+   idx back_count
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<raii::devec<T, Allocator>> {
+   raii::devec<T, Allocator> new_devec(allocator);
+   $prop(new_devec.reserve(front_count, back_count));
+   return new_devec;
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec_reserved(
+   allocator_dyn allocator [[clang::lifetimebound]], idx front_count,
+   idx back_count
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::devec<T, allocator_dyn>> {
+   return raii::make_devec_reserved<T, allocator_dyn>(
+      allocator, front_count, back_count
+   );
+}
+
+template <typename T, is_allocator Allocator>
+[[nodiscard]]
+constexpr auto
+make_devec_filled(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   T const& value
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<raii::devec<T, Allocator>> {
+   raii::devec<T, Allocator> new_devec(allocator);
+   $prop(new_devec.resize(count, value));
+   return new_devec;
+}
+
+template <typename T>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec_filled(
+   allocator_dyn allocator [[clang::lifetimebound]], idx count, T const& value
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::devec<T, allocator_dyn>> {
+   return raii::make_devec_filled<T, allocator_dyn>(allocator, count, value);
+}
+
+template <typename T, is_allocator Allocator, is_random_generator Generator>
+[[nodiscard]]
+constexpr auto
+make_devec_filled_random(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<raii::devec<T, Allocator>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
+   raii::devec<T, Allocator> new_devec(allocator);
+   $prop(new_devec.resize(count));
+   new_devec.fill_random($fwd(generator));
+   return new_devec;
+}
+
+template <
+   typename T, is_allocator Allocator, is_random_generator Generator,
+   typename Distribution>
+[[nodiscard]]
+constexpr auto
+make_devec_filled_random(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<raii::devec<T, Allocator>> {
+   static_assert(is_default_constructible<T>);
+   static_assert(
+      is_assignable<
+         T&, decltype(declval<Distribution&>()(declval<Generator&>()))>
+   );
+   raii::devec<T, Allocator> new_devec(allocator);
+   $prop(new_devec.resize(count));
+   new_devec.fill_random($fwd(generator), $fwd(distribution));
+   return new_devec;
+}
+
+template <typename T, is_random_generator Generator>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec_filled_random(
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::devec<T, allocator_dyn>> {
+   return raii::make_devec_filled_random<T, allocator_dyn>(
+      allocator, count, $fwd(generator)
+   );
+}
+
+template <typename T, is_random_generator Generator, typename Distribution>
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+make_devec_filled_random(
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<raii::devec<T, allocator_dyn>> {
+   return raii::make_devec_filled_random<T, allocator_dyn>(
+      allocator, count, $fwd(generator), $fwd(distribution)
+   );
+}
+
+}  // namespace cat::raii

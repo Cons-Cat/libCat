@@ -58,7 +58,7 @@ list(
   -Xclang -verify-ignore-unexpected=note
   ${_cat_arith_verify_incs})
 foreach(_container IN ITEMS
-    allocator array bit bitset bitvec deque devec file_path iterable list map
+    allocator array bit bitset bitvec devec file_path iterable list map
     maybe ring scaredy span stepanov string tuple variant vec)
   set(_source "${CMAKE_SOURCE_DIR}/tests/src/test_${_container}_verify.cpp")
   add_test(
@@ -167,7 +167,6 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_hash.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_map.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_set.cpp
-    ${CMAKE_SOURCE_DIR}/tests/src/test_deque.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_devec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_vec_inplace.cpp
