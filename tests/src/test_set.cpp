@@ -1,7 +1,9 @@
+#include <cat/allocator_null>
 #include <cat/allocator_page>
 #include <cat/raii_set>
 #include <cat/set>
 
+#include "../allocator_failing.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -235,4 +237,102 @@ $test(set_alignment) {
    cat::verify(set.insert<cat::allocator_page>(pager, 1).has_value());
    cat::verify(set.contains(1));
    set.free<cat::allocator_page>(pager);
+}
+
+$test(set_allocation_failure) {
+   cat::allocator_null null_alloc;
+   cat::set_big<int4> values;
+   cat::verify(!values.insert(null_alloc, 1).has_value());
+   cat::verify(!values.reserve(null_alloc, 1u).has_value());
+   cat::verify(values.size() == 0u);
+
+   allocator_failing allocator;
+   int4 inserted = 0;
+   auto holds_inserted = [&] {
+      if (values.size() != idx(inserted)) {
+         return false;
+      }
+
+      for (int4 key = 0; key < inserted; ++key) {
+         if (!values.contains(key)) {
+            return false;
+         }
+      }
+
+      return !values.contains(inserted);
+   };
+
+   // Growing many times keeps every key inserted before a failure.
+   sweep_allocation_failures(
+      allocator,
+      [&] {
+         for (; inserted < 2'000; ++inserted) {
+            if (!values.insert(allocator, inserted).has_value()) {
+               return false;
+            }
+         }
+
+         return true;
+      },
+      [&] {
+         cat::verify(holds_inserted());
+         cat::verify(allocator.live_allocations <= 1u);
+      }
+   );
+
+   cat::verify(holds_inserted());
+   allocator.fail_after(0u);
+   cat::verify(
+      !values.reserve(allocator, idx(values.capacity() * 2u)).has_value()
+   );
+   allocator.never_fail();
+   cat::verify(holds_inserted());
+
+   // A set clones with its layout, or frees the copy.
+   sweep_allocation_failures(
+      allocator,
+      [&] {
+         cat::maybe<cat::set_big<int4>> copy = values.clone(allocator);
+         if (!copy.has_value()) {
+            return false;
+         }
+
+         cat::verify(copy.value().size() == values.size());
+         cat::verify(copy.value().contains(0) && copy.value().contains(1'999));
+         copy.value().remove(0).verify();
+         cat::verify(values.contains(0));
+         copy.value().free(allocator);
+         return true;
+      },
+      [&] {
+         cat::verify(holds_inserted() && allocator.live_allocations == 1u);
+      }
+   );
+
+   values.free(allocator);
+   cat::verify(allocator.live_allocations == 0u);
+
+   // The destructor of a `raii::set` frees its table.
+   {
+      cat::raii::set_small<int4, allocator_failing, 0u> managed(allocator);
+      for (int4 key = 0; key < 100; ++key) {
+         managed.insert(key).verify();
+      }
+
+      allocator.fail_after(0u);
+      cat::verify(!managed.reserve(idx(managed.capacity() * 2u)).has_value());
+      allocator.never_fail();
+      cat::verify(managed.size() == 100u && managed.contains(99));
+
+      allocator.fail_after(0u);
+      cat::verify(!managed.clone().has_value());
+      allocator.never_fail();
+      cat::raii::set_small<int4, allocator_failing, 0u> copy =
+         managed.clone().verify();
+      auto dynamic_copy = managed.clone(g_tests_alloc).verify();
+      cat::verify(copy.contains(99) && dynamic_copy.contains(99));
+      cat::verify(allocator.live_allocations == 2u);
+   }
+
+   cat::verify(allocator.live_allocations == 0u);
 }

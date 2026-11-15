@@ -7,6 +7,7 @@
 #include <cat/iterable>
 #include <cat/list>
 
+#include "../allocator_failing.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -712,4 +713,315 @@ $test(list_reverse_iteration) {
    }
    cat::verify(count == 3u);
    cat::verify(reversed[0u] == 3 && reversed[1u] == 2 && reversed[2u] == 1);
+}
+
+namespace {
+
+// Whether `values` holds exactly `count` elements, the `i`th equal to
+// `value_at(i)`.
+template <typename List, typename ValueAt>
+auto
+list_holds(List const& values, idx count, ValueAt&& value_at) -> bool {
+   if (values.size() != count) {
+      return false;
+   }
+
+   idx i;
+   for (counted const& element : values) {
+      if (element.value != value_at(i)) {
+         return false;
+      }
+
+      ++i;
+   }
+
+   return i == count;
+}
+
+template <typename List>
+void
+fill_counted(List& values, allocator_failing& allocator, idx count) {
+   values.free(allocator);
+   for (idx i; i < count; ++i) {
+      values.push_back(allocator, counted(int4(i))).verify();
+   }
+}
+
+}  // namespace
+
+$test(list_allocation_failure) {
+   cat::allocator_null null_alloc;
+   cat::list<counted> values;
+   cat::verify(!values.push_back(null_alloc, counted(1)).has_value());
+   cat::verify(!values.push_front(null_alloc, counted(1)).has_value());
+   cat::verify(!values.emplace_back(null_alloc, 1).has_value());
+   cat::verify(!values.emplace_front(null_alloc, 1).has_value());
+   cat::verify(!values.resize(null_alloc, 1u).has_value());
+   cat::verify(values.size() == 0u && counted::live == 0);
+
+   // Failing to allocate a node leaves the elements intact.
+   allocator_failing allocator;
+   fill_counted(values, allocator, 10u);
+   allocator.fail_after(0u);
+   cat::verify(!values.push_back(allocator, counted(99)).has_value());
+   cat::verify(!values.push_front(allocator, counted(99)).has_value());
+   cat::verify(!values.emplace_back(allocator, 99).has_value());
+   cat::verify(!values.emplace_front(allocator, 99).has_value());
+   cat::verify(!values.clone(allocator).has_value());
+   allocator.never_fail();
+   cat::verify(list_holds(values, 10u, [](idx i) {
+      return int4(i);
+   }));
+   cat::verify(counted::live == 10);
+   values.free(allocator);
+   cat::verify(allocator.live_allocations == 0u && counted::live == 0);
+}
+
+$test(list_allocation_failure_sweeps) {
+   allocator_failing allocator;
+   cat::list<counted> values;
+   fill_counted(values, allocator, 10u);
+   auto original = [](idx i) {
+      return int4(i);
+   };
+
+   // A failed clone frees the nodes it already copied.
+   sweep_allocation_failures(
+      allocator,
+      [&] {
+         cat::maybe<cat::list<counted>> copy = values.clone(allocator);
+         if (!copy.has_value()) {
+            return false;
+         }
+
+         cat::verify(list_holds(copy.value(), 10u, original));
+         copy.value().free(allocator);
+         return true;
+      },
+      [&] {
+         cat::verify(list_holds(values, 10u, original));
+         cat::verify(allocator.live_allocations == 10u && counted::live == 10);
+      }
+   );
+
+   {
+      cat::array<counted, 20u> range;
+      for (idx i; i < range.size(); ++i) {
+         range[i].value = int4(100 + i.raw);
+      }
+
+      // A failed append keeps what it appended, in order.
+      sweep_allocation_failures(
+         allocator,
+         [&] {
+            return values.append_range(allocator, range).has_value();
+         },
+         [&] {
+            idx const appended = idx(values.size() - 10u);
+            cat::verify(appended < 20u);
+            cat::verify(list_holds(values, values.size(), [&](idx i) {
+               return i < 10u ? int4(i) : int4(90 + i.raw);
+            }));
+            cat::verify(
+               allocator.live_allocations == values.size()
+               && counted::live == iword(values.size() + 20u)
+            );
+            fill_counted(values, allocator, 10u);
+         }
+      );
+
+      cat::verify(values.size() == 30u);
+
+      // A failed prepend keeps what it prepended, in order, before the
+      // original elements.
+      fill_counted(values, allocator, 10u);
+      sweep_allocation_failures(
+         allocator,
+         [&] {
+            return values.prepend_range(allocator, range).has_value();
+         },
+         [&] {
+            idx const prepended = idx(values.size() - 10u);
+            cat::verify(list_holds(values, values.size(), [&](idx i) {
+               return i < prepended ? int4(100 + i.raw)
+                                    : int4((i - prepended).raw);
+            }));
+            fill_counted(values, allocator, 10u);
+         }
+      );
+
+      cat::verify(list_holds(values, 30u, [](idx i) {
+         return i < 20u ? int4(100 + i.raw) : int4((i - 20u).raw);
+      }));
+   }
+
+   // A failed resize leaves the list unchanged.
+   fill_counted(values, allocator, 10u);
+   sweep_allocation_failures(
+      allocator,
+      [&] {
+         return values.resize(allocator, 30u, counted(7)).has_value();
+      },
+      [&] {
+         cat::verify(list_holds(values, 10u, original));
+         cat::verify(allocator.live_allocations == 10u && counted::live == 10);
+      }
+   );
+
+   cat::verify(list_holds(values, 30u, [](idx i) {
+      return i < 10u ? int4(i) : 7_i4;
+   }));
+
+   values.free(allocator);
+   cat::verify(allocator.live_allocations == 0u && counted::live == 0);
+}
+
+$test(forward_list_allocation_failure_sweeps) {
+   cat::allocator_null null_alloc;
+   cat::forward_list<counted> values;
+   cat::verify(!values.push_front(null_alloc, counted(1)).has_value());
+   cat::verify(!values.emplace_front(null_alloc, 1).has_value());
+   cat::verify(values.size() == 0u && counted::live == 0);
+
+   allocator_failing allocator;
+   auto refill = [&] {
+      values.free(allocator);
+      for (idx i = 10u; i > 0u;) {
+         i = idx(i - 1u);
+         values.push_front(allocator, counted(int4(i))).verify();
+      }
+   };
+   auto original = [](idx i) {
+      return int4(i);
+   };
+
+   refill();
+   allocator.fail_after(0u);
+   cat::verify(!values.push_front(allocator, counted(99)).has_value());
+   cat::verify(!values.emplace_front(allocator, 99).has_value());
+   allocator.never_fail();
+   cat::verify(list_holds(values, 10u, original));
+
+   sweep_allocation_failures(
+      allocator,
+      [&] {
+         cat::maybe<cat::forward_list<counted>> copy = values.clone(allocator);
+         if (!copy.has_value()) {
+            return false;
+         }
+
+         cat::verify(list_holds(copy.value(), 10u, original));
+         copy.value().free(allocator);
+         return true;
+      },
+      [&] {
+         cat::verify(list_holds(values, 10u, original));
+         cat::verify(allocator.live_allocations == 10u && counted::live == 10);
+      }
+   );
+
+   {
+      cat::array<counted, 20u> range;
+      for (idx i; i < range.size(); ++i) {
+         range[i].value = int4(100 + i.raw);
+      }
+
+      sweep_allocation_failures(
+         allocator,
+         [&] {
+            return values.append_range(allocator, range).has_value();
+         },
+         [&] {
+            cat::verify(values.size() < 30u);
+            cat::verify(list_holds(values, values.size(), [](idx i) {
+               return i < 10u ? int4(i) : int4(90 + i.raw);
+            }));
+            refill();
+         }
+      );
+
+      cat::verify(values.size() == 30u);
+   }
+
+   values.free(allocator);
+   cat::verify(allocator.live_allocations == 0u && counted::live == 0);
+}
+
+$test(raii_list_allocation_failure) {
+   allocator_failing allocator;
+   {
+      cat::raii::list<counted, allocator_failing> values(allocator);
+      cat::raii::forward_list<counted, allocator_failing> forward(allocator);
+      for (idx i; i < 10u; ++i) {
+         values.push_back(counted(int4(i))).verify();
+         forward.push_front(counted(int4(i))).verify();
+      }
+
+      // A failed clone leaks nothing.
+      allocator.fail_after(3u);
+      cat::verify(!values.clone().has_value());
+      allocator.fail_after(3u);
+      cat::verify(!forward.clone().has_value());
+      allocator.never_fail();
+      cat::verify(allocator.live_allocations == 20u && counted::live == 20);
+
+      cat::raii::list<counted, allocator_failing> copy =
+         values.clone().verify();
+      cat::raii::list<counted> dynamic_copy =
+         values.clone(g_tests_alloc).verify();
+      cat::verify(copy.size() == 10u && dynamic_copy.size() == 10u);
+      cat::verify(allocator.live_allocations == 30u);
+
+      cat::list<counted> released = copy.release();
+      released.free(allocator);
+      cat::verify(allocator.live_allocations == 20u);
+   }
+
+   // The destructors freed everything.
+   cat::verify(allocator.live_allocations == 0u && counted::live == 0);
+
+   allocator.fail_after(1u);
+   cat::verify(!cat::raii::make_list<int, allocator_failing>(allocator, 1, 2, 3)
+                   .has_value());
+   allocator.fail_after(1u);
+   cat::verify(
+      !cat::raii::make_forward_list<int, allocator_failing>(allocator, 1, 2, 3)
+          .has_value()
+   );
+   allocator.never_fail();
+   cat::verify(allocator.live_allocations == 0u);
+}
+
+$test(list_const_iteration) {
+   cat::list<int4> values;
+   cat::forward_list<int4> forward;
+   for (int4 i = 0; i < 4; ++i) {
+      values.push_back(g_tests_alloc, i).verify();
+      forward.push_front(g_tests_alloc, i).verify();
+   }
+
+   cat::list<int4> const& constant = values;
+   cat::forward_list<int4> const& forward_constant = forward;
+   static_assert(cat::is_same<decltype(*constant.begin()), int4 const&>);
+   static_assert(cat::is_same<decltype(*constant.rbegin()), int4 const&>);
+   static_assert(
+      cat::is_same<decltype(*forward_constant.begin()), int4 const&>
+   );
+
+   int4 total = 0;
+   for (int4 const& value : constant) {
+      total += value;
+   }
+
+   int4 reverse_first = *constant.rbegin();
+   for (int4 const& value : forward_constant) {
+      total += value;
+   }
+
+   // A mutable iterator converts to a `const` one.
+   cat::list<int4>::const_iterator const first = values.begin();
+   cat::verify(total == 12 && reverse_first == 3 && *first == 0);
+
+   values.free(g_tests_alloc);
+   forward.free(g_tests_alloc);
 }
