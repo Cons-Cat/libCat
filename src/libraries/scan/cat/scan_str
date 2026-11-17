@@ -1,0 +1,146 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `scan_str<T>()` is a general-purpose text parser. It reads a string and
+// outputs a `maybe` which holds `T` iff the string was convertible, and is
+// empty otherwise. It's loosely based on `boost::lexical_cast()` and the
+// proposed `std::scan()` described in P1729.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p1729r5.html
+
+#include <cat/allocator_parameters>
+#include <cat/arithmetic>
+#include <cat/from_chars>
+#include <cat/maybe>
+#include <cat/propagate>
+#include <cat/string>
+
+// TODO: Take a format string, like `fmt()`/`std::scan()`, to control how values
+// are scanned and make this variadic.
+// TODO: Scan floating point values, `bool`, and non-`char` strings.
+// TODO: Input encoding and locale.
+
+namespace cat {
+
+// `cat::scanner` is a customization point object like `cat::formatter`.
+// We make partial template specializations for supported and rejected data
+// types.
+template <typename T>
+struct scanner;
+
+namespace detail {
+template <typename T>
+concept is_raii_allocated = requires(T const& value) { value.get_allocator(); };
+}  // namespace detail
+
+// Decimal integers.
+template <detail::is_parseable_integral T>
+struct scanner<T> {
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   scan(
+      [[maybe_unused]] allocator_ref<Allocator> /*allocator*/, str_view input
+   ) const -> maybe<T> {
+      auto const [value, consumed] = $prop(from_chars<T>(input));
+      if (consumed != input.size()) {
+         return nullopt;
+      }
+      return value;
+   }
+};
+
+template <idx inline_capacity, str_vec_flags flags>
+   requires(!flags.vec.is_fixed_size)
+struct scanner<basic_str_inplace<char, inline_capacity, flags>> {
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   scan(allocator_ref<Allocator>, str_view input) const
+      -> maybe<basic_str_inplace<char, inline_capacity, flags>> {
+      basic_str_inplace<char, inline_capacity, flags> result;
+      for (char const character : input) {
+         if (result.push_back(character).is_empty()) {
+            return nullopt;
+         }
+      }
+      return result;
+   }
+};
+
+template <str_vec_flags flags>
+struct scanner<basic_str_vec<char, flags>> {
+   template <is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   scan(allocator_ref<Allocator> allocator, str_view input) const
+      -> maybe<basic_str_vec<char, flags>> {
+      basic_str_vec<char, flags> result;
+      if (result.append(allocator, input).is_empty()) {
+         result.free(allocator);
+         return nullopt;
+      }
+      return result;
+   }
+};
+
+template <str_vec_flags flags, is_allocator Allocator>
+struct scanner<raii::basic_str_vec<char, flags, Allocator>> {
+   [[nodiscard]]
+   constexpr auto
+   scan(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      str_view input
+   ) const -> maybe<raii::basic_str_vec<char, flags, Allocator>> {
+      raii::basic_str_vec<char, flags, Allocator> result(allocator);
+      $prop(result.append(input));
+      return result;
+   }
+};
+
+template <typename CharT, str_flags flags>
+struct scanner<basic_str_span<CharT, flags>> {
+   auto
+   scan(auto&&...) const -> maybe<basic_str_span<CharT, flags>> =
+      delete ("`cat::scan_str()` cannot output a non-owning string! That would "
+              "immediately dangle. Scan into `cat::str_vec` or "
+              "`cat::str_inplace` instead.");
+};
+
+template <typename T, is_allocator Allocator>
+   requires(!detail::is_raii_allocated<T>)
+[[nodiscard]]
+constexpr auto
+scan_str(allocator_ref<Allocator> allocator, str_view input) -> maybe<T> {
+   return scanner<T>{}.scan(allocator, input);
+}
+
+template <typename T>
+   requires(!detail::is_raii_allocated<T>)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+scan_str(allocator_dyn allocator, str_view input) -> maybe<T> {
+   return scan_str<T, allocator_dyn>(allocator, input);
+}
+
+// A `raii` result holds onto `allocator`, so it must not outlive it.
+template <typename T, is_allocator Allocator>
+   requires(detail::is_raii_allocated<T>)
+[[nodiscard]]
+constexpr auto
+scan_str(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], str_view input
+) -> maybe<T> {
+   return scanner<T>{}.scan(allocator, input);
+}
+
+template <typename T>
+   requires(detail::is_raii_allocated<T>)
+[[nodiscard, gnu::always_inline, gnu::nodebug]]
+constexpr auto
+scan_str(allocator_dyn allocator [[clang::lifetimebound]], str_view input)
+   -> maybe<T> {
+   return scan_str<T, allocator_dyn>(allocator, input);
+}
+
+}  // namespace cat

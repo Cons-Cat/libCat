@@ -626,6 +626,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/simd/cat/detail/simd_avx2_compress.hpp
   ${CATLIB}/simd/cat/detail/simd_switch_priority.hpp
   ${CATLIB}/simd/cat/simd_switch
+  ${CATLIB}/scan/cat/scan_str
   ${CATLIB}/scan/cat/from_chars
   ${CATLIB}/socket/cat/socket
   ${CATLIB}/span/cat/span

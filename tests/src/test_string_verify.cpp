@@ -7,6 +7,7 @@
 #include <cat/allocator_linear>
 #include <cat/allocator_page>
 #include <cat/random>
+#include <cat/scan_str>
 #include <cat/string>
 
 using namespace cat::arithmetic;
@@ -440,4 +441,46 @@ dangling_raii_str_vec_allocator_clone_dyn(
    cat::allocator_linear linear = cat::make_allocator_linear(arena);
    // expected-warning@+1 1+ {{local variable 'linear'}}
    return source.clone(cat::allocator_dyn(linear));
+}
+
+// Owning results of `scan_str()` that do not hold onto the allocator may
+// outlive it.
+
+auto
+valid_scan_str_int(cat::span<cat::byte> arena) -> cat::maybe<int4> {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   return cat::scan_str<int4>(cat::allocator_dyn(linear), "1");
+}
+
+auto
+valid_scan_str_inplace(cat::span<cat::byte> arena)
+   -> cat::maybe<cat::str_inplace<8u>> {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   return cat::scan_str<cat::str_inplace<8u>>(cat::allocator_dyn(linear), "a");
+}
+
+auto
+valid_scan_str_vec(cat::span<cat::byte> arena) -> cat::maybe<cat::str_vec> {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   return cat::scan_str<cat::str_vec>(cat::allocator_dyn(linear), "a");
+}
+
+// Negative cases: a `raii` str vec from `scan_str()` outlives its allocator.
+
+auto
+dangling_raii_str_vec_allocator_scan_str(cat::span<cat::byte> arena) -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+3 1+ {{local variable 'linear'}}
+   return cat::scan_str<
+      cat::raii::str_vec<cat::allocator_linear>, cat::allocator_linear>(
+      linear, "a"
+   );
+}
+
+auto
+dangling_raii_str_vec_allocator_scan_str_dyn(cat::span<cat::byte> arena)
+   -> auto {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+1 1+ {{local variable 'linear'}}
+   return cat::scan_str<cat::raii::str_vec<>>(cat::allocator_dyn(linear), "a");
 }
