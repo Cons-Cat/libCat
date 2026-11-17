@@ -521,7 +521,10 @@ static_assert(!noexcept(cat::declval<cat::devec<int4>&>().erase(0u)));
 static_assert(
    !noexcept(cat::declval<cat::devec<int4>&>().push_back(g_tests_alloc, 1))
 );
-static_assert(!noexcept(cat::declval<cat::devec<devec_probe>&>().pop_back()));
+static_assert(
+   noexcept(cat::declval<cat::devec<devec_probe>&>().pop_back())
+   == is_without_exceptions
+);
 static_assert(cat::is_nothrow_move_constructible<cat::raii::devec<int4>>);
 static_assert(
    noexcept(cat::declval<cat::raii::devec<int4>&>().free())

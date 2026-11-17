@@ -395,7 +395,7 @@ basic_futex : public futex_word {
 
    // A constant `count` that is not positive selects this guard instead.
    void
-   wake_bitset(cat::int4 count, futex_bitset)
+   wake_bitset(cat::int4 count, futex_bitset /*unused*/)
       __attribute__((enable_if(count <= 0, ""))) {
       static_assert(false, "A `nix::futex`'s wake count must be positive!");
    }
