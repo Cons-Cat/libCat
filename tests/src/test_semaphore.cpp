@@ -268,7 +268,7 @@ namespace {
 template <typename Semaphore>
 void
 concurrent_permits(cat::uint4 permits) {
-   // Atomics next to `data` would evict its TSan shadow and hide the race.
+   // Adjacent atomics could hide races on `data` from TSan.
    alignas(64) Semaphore semaphore(permits);
    alignas(64) int4 data = 0;
    alignas(64) nix::futex acquired{};
@@ -373,7 +373,7 @@ release_publishes() {
 template <typename Semaphore>
 void
 failed_acquire(auto&& attempt) {
-   // Atomics next to `data` would evict its TSan shadow and hide the race.
+   // Adjacent atomics could hide races on `data` from TSan.
    alignas(64) Semaphore semaphore(1u);
    alignas(64) int4 data = 0;
    alignas(64) nix::futex written{};

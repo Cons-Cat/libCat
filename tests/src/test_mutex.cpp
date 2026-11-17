@@ -947,7 +947,8 @@ with_mutex(auto&& callback) {
       }
    };
 
-   Mutex mutex;
+   // Adjacent atomics could hide races from TSan.
+   alignas(64) Mutex mutex;
    callback(mutex);
 }
 
@@ -958,8 +959,9 @@ void
 counter(bool is_both_locked) {
    with_mutex<Mutex>([&](Mutex& mutex) {
       alignas(64) idx counter = 0;
-      nix::futex incremented{};
-      nix::futex finished{};
+      // Adjacent atomics could hide races on `counter` from TSan.
+      alignas(64) nix::futex incremented{};
+      alignas(64) nix::futex finished{};
 
       cat::thread worker;
       $defer {
@@ -1073,8 +1075,9 @@ $test(tsan_mutex_fair_unlocked_access) {
       with_mutex<cat::mutex>([&](cat::mutex& mutex) {
          cat::mutex_fair fair_mutex(mutex);
          alignas(64) idx counter = 0;
-         nix::futex incremented{};
-         nix::futex finished{};
+         // Adjacent atomics could hide races on `counter` from TSan.
+         alignas(64) nix::futex incremented{};
+         alignas(64) nix::futex finished{};
 
          cat::thread worker;
          $defer {

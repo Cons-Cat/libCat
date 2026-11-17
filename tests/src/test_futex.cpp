@@ -543,7 +543,8 @@ publish_through_futex(
    cat::memory_order store_order, cat::memory_order load_order
 ) {
    alignas(64) int4 data = 0;
-   nix::futex futex_word{};
+   // Adjacent atomics could hide races on `data` from TSan.
+   alignas(64) nix::futex futex_word{};
 
    cat::thread waiter;
    $defer {

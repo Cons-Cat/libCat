@@ -1265,7 +1265,8 @@ namespace {
 void
 publish(cat::memory_order store_order, cat::memory_order load_order) {
    alignas(64) int4 data = 0;
-   cat::atomic<bool> flag;
+   // Adjacent atomics could hide races on `data` from TSan.
+   alignas(64) cat::atomic<bool> flag;
 
    cat::thread reader;
    $defer {
@@ -1295,10 +1296,11 @@ void
 spin_lock_counter(
    cat::memory_order lock_order, cat::memory_order unlock_order
 ) {
-   cat::atomic_flag lock;
+   // Adjacent atomics could hide races on `counter` from TSan.
+   alignas(64) cat::atomic_flag lock;
    alignas(64) idx counter = 0;
-   nix::futex incremented{};
-   nix::futex finished{};
+   alignas(64) nix::futex incremented{};
+   alignas(64) nix::futex finished{};
 
    auto const increment = [&] {
       while (lock.test_and_set(lock_order)) {

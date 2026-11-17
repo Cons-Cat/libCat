@@ -370,8 +370,9 @@ $test(thread_local_storage_per_thread) {
 $test(tsan_thread_unsynchronized_writes) {
    expect_tsan_report(tsan_report::data_race, [&] {
       alignas(64) int4 data = 0;
-      nix::futex written{};
-      nix::futex finished{};
+      // Adjacent atomics could hide races on `data` from TSan.
+      alignas(64) nix::futex written{};
+      alignas(64) nix::futex finished{};
 
       cat::thread writer;
       $defer {
@@ -401,8 +402,9 @@ $test(tsan_thread_unsynchronized_writes) {
 $test(tsan_thread_read_before_join) {
    expect_tsan_report(tsan_report::data_race, [&] {
       alignas(64) int4 data = 0;
-      nix::futex written{};
-      nix::futex read{};
+      // Adjacent atomics could hide races on `data` from TSan.
+      alignas(64) nix::futex written{};
+      alignas(64) nix::futex read{};
 
       cat::thread writer;
       $defer {
