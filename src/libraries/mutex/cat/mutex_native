@@ -15,6 +15,12 @@ class mutex_native {
  public:
    constexpr mutex_native() = default;
 
+#if __has_feature(thread_sanitizer)
+   ~mutex_native() noexcept {
+      __tsan_mutex_destroy(this, 0u);
+   }
+#endif
+
    mutex_native(mutex_native const&) = delete;
    mutex_native(mutex_native&&) = delete;
 

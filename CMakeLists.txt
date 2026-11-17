@@ -388,6 +388,10 @@ if (CAT_USE_TSAN)
   # `-nostdlib` drops the libc that the static TSan runtime depends on, so link
   # the shared runtime, which carries its own `DT_NEEDED` on libc.
   target_link_options(cat INTERFACE -shared-libsan -Wl,-z,norelro)
+  # The shared runtime only finds the TSan callbacks that a program defines,
+  # such as `__tsan_default_options()` and `__tsan_on_report()`, when the
+  # executable exports them. Otherwise, it silently uses its own defaults.
+  target_link_options(cat INTERFACE "-Wl,--export-dynamic-symbol=__tsan_*")
   cmake_path(GET CAT_TSAN_RUNTIME_PATH PARENT_PATH _rpath_dir)
   target_link_options(cat INTERFACE "-Wl,-rpath,${_rpath_dir}")
 endif()

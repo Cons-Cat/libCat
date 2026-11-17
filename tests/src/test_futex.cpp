@@ -530,3 +530,62 @@ $test(futex_wait_flags) {
    }
 }
 
+// These verify that ThreadSanitizer reports races, so they only run with it.
+#if __has_feature(thread_sanitizer)
+
+namespace {
+
+// Publish `data` by storing to a futex word and waking its waiter. The futex
+// syscalls are invisible to ThreadSanitizer, so only the word's memory orders
+// can synchronize.
+void
+publish_through_futex(
+   cat::memory_order store_order, cat::memory_order load_order
+) {
+   alignas(64) int4 data = 0;
+   nix::futex futex_word{};
+
+   cat::thread waiter;
+   $defer {
+      waiter.free(g_tests_alloc);
+   };
+
+   waiter
+      .spawn(
+         g_tests_alloc, tsan_stack_size,
+         [&] {
+            while (futex_word.m_value.load(load_order) == 0u) {
+               // A wake, a signal, or a changed word all return here to
+               // re-check the word.
+               auto _ = futex_word.wait(0u);
+            }
+            cat::verify(data == 1);
+         }
+      )
+      .verify();
+
+   data = 1;
+   futex_word.m_value.store(1u, store_order);
+   auto _ = futex_word.wake();
+   waiter.join().verify();
+}
+
+}  // namespace
+
+$test(tsan_futex_wake_does_not_synchronize) {
+   expect_tsan_report(tsan_report::data_race, [&] {
+      publish_through_futex(
+         cat::memory_order::relaxed, cat::memory_order::relaxed
+      );
+   });
+}
+
+$test(tsan_futex_word_release_acquire) {
+   expect_tsan_report(tsan_report::none, [&] {
+      publish_through_futex(
+         cat::memory_order::release, cat::memory_order::acquire
+      );
+   });
+}
+
+#endif

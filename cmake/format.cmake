@@ -75,6 +75,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
   list(APPEND _cat_format_files
     "${CMAKE_SOURCE_DIR}/tests/unit_tests.cpp"
     "${CMAKE_SOURCE_DIR}/tests/unit_tests.hpp"
+    "${CMAKE_SOURCE_DIR}/tests/tsan_tests.hpp"
     "${CMAKE_SOURCE_DIR}/tests/src/test_arithmetic_verify.cpp"
     "${CMAKE_SOURCE_DIR}/tests/src/test_allocator_verify.cpp"
     "${CMAKE_SOURCE_DIR}/tests/src/test_array_verify.cpp"
@@ -82,6 +83,7 @@ if (NOT CMAKE_SCRIPT_MODE_FILE)
     "${CMAKE_SOURCE_DIR}/tests/src/test_bitset_verify.cpp"
     "${CMAKE_SOURCE_DIR}/tests/src/test_bitvec_verify.cpp"
     "${CMAKE_SOURCE_DIR}/tests/src/test_file_path_verify.cpp"
+    "${CMAKE_SOURCE_DIR}/tests/src/test_futex_verify.cpp"
     "${CMAKE_SOURCE_DIR}/tests/src/test_list_verify.cpp"
     "${CMAKE_SOURCE_DIR}/tests/src/test_map_verify.cpp"
     "${CMAKE_SOURCE_DIR}/tests/src/test_ring_verify.cpp"

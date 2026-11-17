@@ -7,6 +7,7 @@
 #include <cat/mutex_spin>
 #include <cat/thread>
 
+#include "../tsan_tests.hpp"
 #include "../unit_tests.hpp"
 
 // The parking lot's hash table cannot grow, so a known number of threads can
@@ -922,3 +923,183 @@ $test(mutex_two_lock_order) {
    join_threads(threads, thread_count);
    cat::verify(counter == thread_count * iteration_count);
 }
+
+// These verify that ThreadSanitizer reports races, so they only run with it.
+#if __has_feature(thread_sanitizer)
+
+namespace {
+
+template <typename Mutex>
+void
+with_mutex(auto&& callback) {
+   if constexpr (cat::is_same<Mutex, cat::mutex>) {
+      cat::alloc_mutex_runtime<cat::allocator_inplace<5_uki>>(
+         g_mutex_runtime_allocator, 2u
+      )
+         .verify();
+   }
+
+   $defer {
+      if constexpr (cat::is_same<Mutex, cat::mutex>) {
+         cat::free_mutex_runtime<cat::allocator_inplace<5_uki>>(
+            g_mutex_runtime_allocator
+         );
+      }
+   };
+
+   Mutex mutex;
+   callback(mutex);
+}
+
+// Two threads increment `counter`, but only one of them locks `mutex` when
+// `is_both_locked` is `false`.
+template <typename Mutex>
+void
+counter(bool is_both_locked) {
+   with_mutex<Mutex>([&](Mutex& mutex) {
+      alignas(64) idx counter = 0;
+      nix::futex incremented{};
+      nix::futex finished{};
+
+      cat::thread worker;
+      $defer {
+         worker.free(g_tests_alloc);
+      };
+
+      worker
+         .spawn(
+            g_tests_alloc, tsan_stack_size,
+            [&] {
+               unsynchronized_barrier(incremented, 2u);
+               mutex.lock();
+               ++counter;
+               mutex.unlock();
+               unsynchronized_barrier(finished, 2u);
+            }
+         )
+         .verify();
+
+      if (is_both_locked) {
+         mutex.lock();
+      }
+      ++counter;
+      if (is_both_locked) {
+         mutex.unlock();
+      }
+      unsynchronized_barrier(incremented, 2u);
+      unsynchronized_barrier(finished, 2u);
+      worker.join().verify();
+   });
+}
+
+// Lock two mutexes in both orders. ThreadSanitizer reports the cycle without
+// needing it to deadlock.
+template <typename Mutex>
+void
+lock_order_inversion() {
+   with_mutex<Mutex>([&](Mutex& first) {
+      Mutex second;
+      first.lock();
+      second.lock();
+      second.unlock();
+      first.unlock();
+
+      second.lock();
+      first.lock();
+      first.unlock();
+      second.unlock();
+   });
+}
+
+}  // namespace
+
+$test(tsan_mutex_unlocked_access) {
+   expect_tsan_report(tsan_report::data_race, [&] {
+      counter<cat::mutex>(false);
+   });
+}
+
+$test(tsan_mutex_locked_access) {
+   expect_tsan_report(tsan_report::none, [&] {
+      counter<cat::mutex>(true);
+   });
+}
+
+$test(tsan_mutex_lock_order_inversion) {
+   expect_tsan_report(tsan_report::lock_order_inversion, [&] {
+      lock_order_inversion<cat::mutex>();
+   });
+}
+
+$test(tsan_mutex_native_unlocked_access) {
+   expect_tsan_report(tsan_report::data_race, [&] {
+      counter<cat::mutex_native>(false);
+   });
+}
+
+$test(tsan_mutex_native_locked_access) {
+   expect_tsan_report(tsan_report::none, [&] {
+      counter<cat::mutex_native>(true);
+   });
+}
+
+$test(tsan_mutex_native_lock_order_inversion) {
+   expect_tsan_report(tsan_report::lock_order_inversion, [&] {
+      lock_order_inversion<cat::mutex_native>();
+   });
+}
+
+$test(tsan_mutex_spin_unlocked_access) {
+   expect_tsan_report(tsan_report::data_race, [&] {
+      counter<cat::mutex_spin>(false);
+   });
+}
+
+$test(tsan_mutex_spin_locked_access) {
+   expect_tsan_report(tsan_report::none, [&] {
+      counter<cat::mutex_spin>(true);
+   });
+}
+
+$test(tsan_mutex_spin_lock_order_inversion) {
+   expect_tsan_report(tsan_report::lock_order_inversion, [&] {
+      lock_order_inversion<cat::mutex_spin>();
+   });
+}
+
+// `cat::mutex_fair` forwards to its mutex, so it must keep its annotations.
+$test(tsan_mutex_fair_unlocked_access) {
+   expect_tsan_report(tsan_report::data_race, [&] {
+      with_mutex<cat::mutex>([&](cat::mutex& mutex) {
+         cat::mutex_fair fair_mutex(mutex);
+         alignas(64) idx counter = 0;
+         nix::futex incremented{};
+         nix::futex finished{};
+
+         cat::thread worker;
+         $defer {
+            worker.free(g_tests_alloc);
+         };
+
+         worker
+            .spawn(
+               g_tests_alloc, tsan_stack_size,
+               [&] {
+                  unsynchronized_barrier(incremented, 2u);
+                  fair_mutex.lock();
+                  ++counter;
+                  fair_mutex.unlock();
+                  unsynchronized_barrier(finished, 2u);
+               }
+            )
+            .verify();
+
+         ++counter;
+         unsynchronized_barrier(incremented, 2u);
+         unsynchronized_barrier(finished, 2u);
+         worker.join().verify();
+      });
+   });
+}
+
+#endif

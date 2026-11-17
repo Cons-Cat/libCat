@@ -203,6 +203,12 @@ __tsan_default_options() -> char const* _Nullable;
 // Default TSan suppressions.
 auto
 __tsan_default_suppressions() -> char const* _Nullable;
+
+// Register a callback to invoke after TSan prints a report. `p_report` can be
+// inspected with `__tsan_get_report_data()` and the other `__tsan_get_report_*`
+// functions.
+void
+__tsan_on_report(void* _Nonnull p_report);
 }
 
 #if __has_feature(thread_sanitizer)

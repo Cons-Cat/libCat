@@ -1,7 +1,9 @@
 #include <cat/allocator_linear>
 #include <cat/allocator_page>
 #include <cat/atomic>
+#include <cat/thread>
 
+#include "../tsan_tests.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -1234,3 +1236,112 @@ $test(atomic_lock_free) {
    [[maybe_unused]]
    bool const reference_lock_free = reference.is_lock_free();
 }
+
+// These verify that ThreadSanitizer reports races, so they only run with it.
+#if __has_feature(thread_sanitizer)
+
+namespace {
+
+// Publish `data` through `flag` with the given orders, then read it from
+// another thread.
+void
+publish(cat::memory_order store_order, cat::memory_order load_order) {
+   alignas(64) int4 data = 0;
+   cat::atomic<bool> flag;
+
+   cat::thread reader;
+   $defer {
+      reader.free(g_tests_alloc);
+   };
+
+   reader
+      .spawn(
+         g_tests_alloc, tsan_stack_size,
+         [&] {
+            while (!flag.load(load_order)) {
+               cat::machine_pause();
+            }
+            cat::verify(data == 1);
+         }
+      )
+      .verify();
+
+   data = 1;
+   flag.store(true, store_order);
+   reader.join().verify();
+}
+
+// Two threads increment `counter` one after the other under a spin lock built
+// on `cat::atomic_flag` with the given orders.
+void
+spin_lock_counter(
+   cat::memory_order lock_order, cat::memory_order unlock_order
+) {
+   cat::atomic_flag lock;
+   alignas(64) idx counter = 0;
+   nix::futex incremented{};
+   nix::futex finished{};
+
+   auto const increment = [&] {
+      while (lock.test_and_set(lock_order)) {
+         cat::machine_pause();
+      }
+      ++counter;
+      lock.clear(unlock_order);
+   };
+
+   cat::thread worker;
+   $defer {
+      worker.free(g_tests_alloc);
+   };
+
+   worker
+      .spawn(
+         g_tests_alloc, tsan_stack_size,
+         [&] {
+            unsynchronized_barrier(incremented, 2u);
+            increment();
+            unsynchronized_barrier(finished, 2u);
+         }
+      )
+      .verify();
+
+   increment();
+   unsynchronized_barrier(incremented, 2u);
+   unsynchronized_barrier(finished, 2u);
+   worker.join().verify();
+}
+
+}  // namespace
+
+$test(tsan_atomic_relaxed_publication) {
+   expect_tsan_report(tsan_report::data_race, [&] {
+      publish(cat::memory_order::relaxed, cat::memory_order::relaxed);
+   });
+}
+
+$test(tsan_atomic_release_without_acquire) {
+   expect_tsan_report(tsan_report::data_race, [&] {
+      publish(cat::memory_order::release, cat::memory_order::relaxed);
+   });
+}
+
+$test(tsan_atomic_release_acquire_publication) {
+   expect_tsan_report(tsan_report::none, [&] {
+      publish(cat::memory_order::release, cat::memory_order::acquire);
+   });
+}
+
+$test(tsan_atomic_flag_relaxed_spin_lock) {
+   expect_tsan_report(tsan_report::data_race, [&] {
+      spin_lock_counter(cat::memory_order::relaxed, cat::memory_order::relaxed);
+   });
+}
+
+$test(tsan_atomic_flag_acquire_release_spin_lock) {
+   expect_tsan_report(tsan_report::none, [&] {
+      spin_lock_counter(cat::memory_order::acquire, cat::memory_order::release);
+   });
+}
+
+#endif

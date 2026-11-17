@@ -20,6 +20,12 @@ class mutex_spin {
  public:
    constexpr mutex_spin() = default;
 
+#if __has_feature(thread_sanitizer)
+   ~mutex_spin() noexcept {
+      __tsan_mutex_destroy(this, 0u);
+   }
+#endif
+
    mutex_spin(mutex_spin const&) = delete;
    auto
    operator=(mutex_spin const&) noexcept -> mutex_spin& = delete;

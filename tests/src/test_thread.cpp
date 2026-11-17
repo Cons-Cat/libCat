@@ -8,6 +8,7 @@
 #include <cat/string>
 #include <cat/thread>
 
+#include "../tsan_tests.hpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -359,4 +360,95 @@ $test(thread_local_storage_per_thread) {
       initialized_value == 1 && zeroed_value == 1 && aligned_value == 1
    );
 }
+#endif
+
+// These verify that ThreadSanitizer reports races, so they only run with it.
+#if __has_feature(thread_sanitizer)
+
+$test(tsan_thread_unsynchronized_writes) {
+   expect_tsan_report(tsan_report::data_race, [&] {
+      alignas(64) int4 data = 0;
+      nix::futex written{};
+      nix::futex finished{};
+
+      cat::thread writer;
+      $defer {
+         writer.free(g_tests_alloc);
+      };
+
+      writer
+         .spawn(
+            g_tests_alloc, tsan_stack_size,
+            [&] {
+               unsynchronized_barrier(written, 2u);
+               data = 2;
+               unsynchronized_barrier(finished, 2u);
+            }
+         )
+         .verify();
+
+      data = 1;
+      unsynchronized_barrier(written, 2u);
+      unsynchronized_barrier(finished, 2u);
+      writer.join().verify();
+   });
+}
+
+// Reading a thread's write before joining it races, even after the writer
+// reaches a barrier that does not synchronize.
+$test(tsan_thread_read_before_join) {
+   expect_tsan_report(tsan_report::data_race, [&] {
+      alignas(64) int4 data = 0;
+      nix::futex written{};
+      nix::futex read{};
+
+      cat::thread writer;
+      $defer {
+         writer.free(g_tests_alloc);
+      };
+
+      writer
+         .spawn(
+            g_tests_alloc, tsan_stack_size,
+            [&] {
+               data = 1;
+               unsynchronized_barrier(written, 2u);
+               unsynchronized_barrier(read, 2u);
+            }
+         )
+         .verify();
+
+      unsynchronized_barrier(written, 2u);
+      cat::verify(data == 1);
+      unsynchronized_barrier(read, 2u);
+      writer.join().verify();
+   });
+}
+
+// Spawning a thread happens before it runs, and its exit happens before the
+// join returns.
+$test(tsan_thread_spawn_and_join_synchronize) {
+   expect_tsan_report(tsan_report::none, [&] {
+      alignas(64) int4 data = 1;
+
+      cat::thread worker;
+      $defer {
+         worker.free(g_tests_alloc);
+      };
+
+      worker
+         .spawn(
+            g_tests_alloc, tsan_stack_size,
+            [&] {
+               cat::verify(data == 1);
+               data = 2;
+            }
+         )
+         .verify();
+
+      worker.join().verify();
+      cat::verify(data == 2);
+   });
+}
+
 #endif

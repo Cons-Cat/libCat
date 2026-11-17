@@ -121,6 +121,12 @@ class mutex {
  public:
    constexpr mutex() = default;
 
+#if __has_feature(thread_sanitizer)
+   ~mutex() noexcept {
+      __tsan_mutex_destroy(this, 0u);
+   }
+#endif
+
    mutex(mutex const&) = delete;
    mutex(mutex&&) = delete;
 
