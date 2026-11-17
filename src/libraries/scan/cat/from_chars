@@ -1,0 +1,231 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/arithmetic>
+#include <cat/array>
+#include <cat/bit>
+#include <cat/limits>
+#include <cat/maybe>
+#include <cat/string>
+#include <cat/tuple>
+
+namespace cat {
+
+namespace detail {
+// TODO: We should support all of these and remove this concept.
+template <typename T>
+concept is_parseable_integral =
+   is_integral<T> && !is_bool<T> && !is_same_unqual<T, char>
+   && !is_specialization<T, basic_ualign>;
+
+// These SWAR helpers overflow on purpose. `wrap_uint8` shifts by rotating, so
+// we call `wrap_add()` and friends instead.
+
+// Load 8 characters into a SWAR vector, with the first character in the lowest
+// byte.
+[[nodiscard]]
+constexpr auto
+load_eight_chars(str_view input, idx offset) -> uint8 {
+   uint8 chunk = 0u;
+   if consteval {
+      for (idx i = 0u; i < 8u; ++i) {
+         uint8 const byte = bit_cast<uint1>(input[offset + i]);
+         chunk |= byte << (i * 8u);
+      }
+   } else {
+      __builtin_memcpy_inline(&chunk, &input[offset], 8u);
+   }
+   return chunk;
+}
+
+// Count the decimal digits at the start of `chunk`, up to 8.
+[[nodiscard]]
+constexpr auto
+count_leading_digits(uint8 chunk) -> idx {
+   // This sets the high bit of each non-digit byte, adapted from
+   // `is_made_of_eight_digits_fast()` in fast_float:
+   // https://github.com/fastfloat/fast_float/blob/main/include/fast_float/ascii_number.h
+   // Carries can spill into the bytes above the first non-digit, so only the
+   // lowest high bit is reliable.
+   uint8 const non_digits = (wrap_add(chunk, 0x46464646'46464646u)
+                             | wrap_sub(chunk, 0x30303030'30303030u))
+                            & 0x80808080'80808080u;
+   return countr_zero(non_digits) / 8u;
+}
+
+[[nodiscard]]
+constexpr auto
+parse_eight_digits(uint8 chunk) -> uint8 {
+   // This SWAR algorithm is explained by Daniel Lemire:
+   // https://lemire.me/blog/2022/01/21/swar-explained-parsing-eight-digits/
+   constexpr uint8 mask = 0x000000ff'000000ffu;
+   // `100 + (1'000'000 << 32)` and `1 + (10'000 << 32)`.
+   constexpr uint8 multiplier_1 = 0x000f4240'00000064u;
+   constexpr uint8 multiplier_2 = 0x00002710'00000001u;
+   chunk -= 0x30303030'30303030u;
+   chunk = chunk * 10u + (chunk >> 8u);
+   return wrap_add(
+             wrap_mul(chunk & mask, multiplier_1),
+             wrap_mul((chunk >> 16u) & mask, multiplier_2)
+          )
+          >> 32u;
+}
+
+// Parsing always consumes at least one character, so `0` can mean empty.
+template <typename T>
+constexpr auto
+is_from_chars_engaged(tuple<T, idx> const& result) -> bool {
+   return result.second() != 0u;
+}
+}  // namespace detail
+
+// A parsed value, and the count of characters it consumed.
+template <typename T>
+using maybe_from_chars = maybe<compact<
+   tuple<T, idx>, &detail::is_from_chars_engaged<T>, tuple<T, idx>{T(0), 0u}>>;
+
+// Parse a decimal integer from the start of `input`, like `std::from_chars()`.
+// This doesn't skip whitespace or accept a leading `+`.
+template <is_integral T>
+[[nodiscard]]
+constexpr auto
+from_chars(str_view input) -> maybe_from_chars<T> {
+   static_assert(
+      detail::is_parseable_integral<T>,
+      "This integer type is not supported yet!"
+   );
+
+   // TODO: We should use a generalized `cat::swar` type once we have one.
+
+   // The magnitude of a SWAR vector for parsing this should be at least 8
+   // bytes.
+   using magnitude_type = conditional<(sizeof(T) > 8u), uint16, uint8>;
+   constexpr array<magnitude_type, 9u> powers_of_ten = {
+      1u,       10u,        100u,        1'000u,       10'000u,
+      100'000u, 1'000'000u, 10'000'000u, 100'000'000u,
+   };
+
+   idx position = 0u;
+
+   // Check for an optional sign.
+   bool is_negative = false;
+   if constexpr (is_signed<T>) {
+      if (input.size() > 0u && input[0u] == '-') {
+         is_negative = true;
+         position = 1u;
+      }
+   }
+
+   idx const digits_begin = position;
+   magnitude_type magnitude = 0u;
+
+   // The int parses 8-byte chunks in a SWAR fashion.
+   // This is inspired by:
+   // https://github.com/fastfloat/fast_float/blob/main/include/fast_float/ascii_number.h
+   // A chunk with fewer than 8 digits holds the tail, so we keep it.
+   uint8 chunk;
+   idx tail_digits;
+   bool is_tail_counted = false;
+   while (input.size() - position >= 8u) {
+      chunk = detail::load_eight_chars(input, position);
+      idx const digits = detail::count_leading_digits(chunk);
+      if (digits != 8u) {
+         tail_digits = digits;
+         is_tail_counted = true;
+         break;
+      }
+
+      // TODO: We should have a maybe-propagating overflow semantic or public
+      // overflow-checking math helpers.
+      magnitude_type const value = detail::parse_eight_digits(chunk);
+      if (
+         __builtin_mul_overflow(
+            magnitude.raw, powers_of_ten[8u].raw, &magnitude.raw
+         )
+         || __builtin_add_overflow(magnitude.raw, value.raw, &magnitude.raw)
+      ) {
+         return nullopt;
+      }
+
+      position += 8u;
+   }
+
+   // Otherwise, fewer than 8 characters remain.
+   if !consteval {
+      // Memory is mapped in whole pages, so reading 8 bytes within one page
+      // can't segfault, even past the end of an object.
+      char const* const p_tail = input.data() + position;
+      if (
+         !is_tail_counted && position < input.size()
+         && (uintptr<char const>(p_tail) & (page_size - 1u)) <= page_size - 8u
+      ) {
+         // Load a SWAR vector. This might actually extend past `input`, which
+         // triggers undefined behavior warnings, so we load with inline
+         // assembly.
+         asm("movq (%1), %0"
+             : "=r"(chunk)
+             : "r"(p_tail)
+             : "memory");
+
+         idx const remaining = idx(input.size() - position);
+         chunk |= limits<uint8>::max() << (remaining * 8u);
+         tail_digits = detail::count_leading_digits(chunk);
+         is_tail_counted = true;
+      }
+   }
+
+   // For the < 8 digit SWAR tail, we use this funny algorithm adapted from
+   // Daniel Lemire:
+   // https://lemire.me/blog/2023/11/28/parsing-8-bit-integers-quickly/
+   uint8 tail = 0x30303030'30303030u;
+   if (is_tail_counted) {
+      // Shift the digits to the top, above `'0'`s.
+      tail = (tail_digits == 0u ? 0u : chunk << (64u - tail_digits * 8u))
+             | (tail >> (tail_digits * 8u));
+      position += tail_digits;
+   } else {
+      // If we read past a page boundary, we can't guarantee that the memory is
+      // owned by our process, so instead parse the digits in scalar.
+      // TODO: We should have a public and encoding-aware `is_digit()`.
+      tail_digits = 0u;
+      while (position < input.size() && input[position] >= '0'
+             && input[position] <= '9') {
+         uint8 const byte = uint1(input[position]);
+         tail = (tail >> 8u) | (byte << 56u);
+         ++tail_digits;
+         ++position;
+      }
+   }
+
+   if (position == digits_begin) {
+      return nullopt;
+   }
+
+   magnitude_type const tail_value = detail::parse_eight_digits(tail);
+   if (
+      __builtin_mul_overflow(
+         magnitude.raw, powers_of_ten[tail_digits].raw, &magnitude.raw
+      )
+      || __builtin_add_overflow(magnitude.raw, tail_value.raw, &magnitude.raw)
+   ) {
+      return nullopt;
+   }
+
+   // The minimum's magnitude is one more than the maximum's. Some types, such
+   // as `idx`, only use fractions of their bytes.
+   magnitude_type const max_magnitude = limits<T>::max();
+   if (magnitude > wrap_add(max_magnitude, is_negative ? 1u : 0u)) {
+      return nullopt;
+   }
+
+   magnitude_type const result =
+      is_negative ? wrap_sub(magnitude_type(0u), magnitude) : magnitude;
+
+   return tuple<T, idx>{
+      T(static_cast<raw_arithmetic_type<T>>(result)),
+      position,
+   };
+}
+
+}  // namespace cat
