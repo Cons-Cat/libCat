@@ -296,7 +296,9 @@ struct limits<__int128> {
 
    static consteval auto
    max() noexcept -> __int128 {
-      return ~__int128(0) >> 1;
+      // Shift an unsigned value, because shifting a negative one keeps its
+      // sign.
+      return static_cast<__int128>(~__uint128_t(0) >> 1u);
    }
 
    static constexpr __UINT8_TYPE__ digits = 127;
