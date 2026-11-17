@@ -618,42 +618,9 @@ template <typename T, ::cat::idx fixed_extent>
 struct tuple_size<::cat::span<T, fixed_extent>>
     : ::cat::constant<fixed_extent.raw> {};
 
-template <typename T, ::cat::idx fixed_extent>
-   requires(fixed_extent != ::cat::dynamic_extent)
-struct tuple_size<::cat::span<T, fixed_extent> const>
-    : tuple_size<::cat::span<T, fixed_extent>> {};
-
-template <typename T, ::cat::idx fixed_extent>
-   requires(fixed_extent != ::cat::dynamic_extent)
-struct tuple_size<::cat::span<T, fixed_extent> volatile>
-    : tuple_size<::cat::span<T, fixed_extent>> {};
-
-template <typename T, ::cat::idx fixed_extent>
-   requires(fixed_extent != ::cat::dynamic_extent)
-struct tuple_size<::cat::span<T, fixed_extent> const volatile>
-    : tuple_size<::cat::span<T, fixed_extent>> {};
-
 template <__SIZE_TYPE__ index, typename T, ::cat::idx fixed_extent>
    requires(fixed_extent != ::cat::dynamic_extent && index < fixed_extent)
 struct tuple_element<index, ::cat::span<T, fixed_extent>> {
-   using type = T&;
-};
-
-template <__SIZE_TYPE__ index, typename T, ::cat::idx fixed_extent>
-   requires(fixed_extent != ::cat::dynamic_extent && index < fixed_extent)
-struct tuple_element<index, ::cat::span<T, fixed_extent> const> {
-   using type = T&;
-};
-
-template <__SIZE_TYPE__ index, typename T, ::cat::idx fixed_extent>
-   requires(fixed_extent != ::cat::dynamic_extent && index < fixed_extent)
-struct tuple_element<index, ::cat::span<T, fixed_extent> volatile> {
-   using type = T&;
-};
-
-template <__SIZE_TYPE__ index, typename T, ::cat::idx fixed_extent>
-   requires(fixed_extent != ::cat::dynamic_extent && index < fixed_extent)
-struct tuple_element<index, ::cat::span<T, fixed_extent> const volatile> {
    using type = T&;
 };
 

@@ -186,28 +186,9 @@ namespace std {
 template <typename T, ::cat::idx length>
 struct tuple_size<::cat::array<T, length>> : ::cat::constant<length.raw> {};
 
-template <typename T, ::cat::idx length>
-struct tuple_size<::cat::array<T, length> const>
-    : tuple_size<::cat::array<T, length>> {};
-
 template <__SIZE_TYPE__ index, typename T, ::cat::idx length>
 struct tuple_element<index, ::cat::array<T, length>> {
    using type = T;
-};
-
-template <__SIZE_TYPE__ index, typename T, ::cat::idx length>
-struct tuple_element<index, ::cat::array<T, length> const> {
-   using type = T const;
-};
-
-template <__SIZE_TYPE__ index, typename T, ::cat::idx length>
-struct tuple_element<index, ::cat::array<T, length> volatile> {
-   using type = T volatile;
-};
-
-template <__SIZE_TYPE__ index, typename T, ::cat::idx length>
-struct tuple_element<index, ::cat::array<T, length> const volatile> {
-   using type = T const volatile;
 };
 
 }  // namespace std

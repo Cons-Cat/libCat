@@ -3239,13 +3239,6 @@ template <typename T, typename Abi>
 struct tuple_size<cat::simd_mask<T, Abi>>
     : cat::constant<cat::simd_mask<T, Abi>::abi_type::lanes.raw> {};
 
-template <typename T, typename Abi>
-struct tuple_size<cat::simd<T, Abi> const> : tuple_size<cat::simd<T, Abi>> {};
-
-template <typename T, typename Abi>
-struct tuple_size<cat::simd_mask<T, Abi> const>
-    : tuple_size<cat::simd_mask<T, Abi>> {};
-
 template <__SIZE_TYPE__ index, typename T, typename Abi>
 struct tuple_element<index, cat::simd<T, Abi>> {
    using type = T;
@@ -3253,16 +3246,6 @@ struct tuple_element<index, cat::simd<T, Abi>> {
 
 template <__SIZE_TYPE__ index, typename T, typename Abi>
 struct tuple_element<index, cat::simd_mask<T, Abi>> {
-   using type = cat::simd_mask<T, Abi>::lane_scalar;
-};
-
-template <__SIZE_TYPE__ index, typename T, typename Abi>
-struct tuple_element<index, cat::simd<T, Abi> const> {
-   using type = T;
-};
-
-template <__SIZE_TYPE__ index, typename T, typename Abi>
-struct tuple_element<index, cat::simd_mask<T, Abi> const> {
    using type = cat::simd_mask<T, Abi>::lane_scalar;
 };
 

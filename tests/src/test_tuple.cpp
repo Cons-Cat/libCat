@@ -16,10 +16,41 @@ $test(tuple_structured_bindings_with_get) {
    cat::verify(ti == 4 && tb);
    ti = 9;
    cat::verify(t.first() == 9);
+
+   auto const [ci, cb] = t;
+   static_assert(cat::is_same<decltype(ci), int const>);
+   cat::verify(ci == 9 && cb);
 }
 
+// Like the standard library, cv-qualified tuple-like types are tuple-like, and
+// cv-qualified other types are not.
+namespace {
+template <typename T>
+concept has_tuple_size = requires { std::tuple_size<T>::value; };
+
+using tuple_int_ref = cat::tuple<int, bool&>;
+static_assert(std::tuple_size_v<tuple_int_ref const> == 2u);
+static_assert(std::tuple_size_v<tuple_int_ref volatile> == 2u);
+static_assert(std::tuple_size_v<tuple_int_ref const volatile> == 2u);
+static_assert(
+   cat::is_same<std::tuple_element_t<0u, tuple_int_ref const>, int const>
+);
+static_assert(cat::is_same<
+              std::tuple_element_t<0u, tuple_int_ref const volatile>,
+              int const volatile>);
+// `const` does not apply through a reference.
+static_assert(
+   cat::is_same<std::tuple_element_t<1u, tuple_int_ref const>, bool&>
+);
+
+struct not_tuple_like {};
+
+static_assert(!has_tuple_size<not_tuple_like const>);
+static_assert(!has_tuple_size<int const>);
+}  // namespace
+
 struct tup_non_trivial {
-   tup_non_trivial(int) {
+   tup_non_trivial(int /*unused*/) {
    }
 
    ~tup_non_trivial() {
