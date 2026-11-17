@@ -211,6 +211,21 @@ void
 __tsan_on_report(void* _Nonnull p_report);
 }
 
+}  // namespace cat
+
+// TSan looks up this C++ hook in its own namespace.
+namespace __tsan {
+struct ReportDesc;
+
+// Register a callback to be invoked before TSan prints a report.
+// `is_suppressed` is true if a suppression matched it. Return true to neither
+// print nor count the report, which also skips `__tsan_on_report()`.
+auto
+OnReport(ReportDesc const* _Nonnull p_report, bool is_suppressed) -> bool;
+}  // namespace __tsan
+
+namespace cat {
+
 #if __has_feature(thread_sanitizer)
 extern "C" {
 // `__tsan_release` establishes a happens-before relation with a later

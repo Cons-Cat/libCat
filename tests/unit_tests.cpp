@@ -56,20 +56,23 @@ extern constructor_fn __init_array_end[];
 }
 
 #if __has_feature(thread_sanitizer)
-namespace {
-constinit cat::atomic<idx> unexpected_tsan_reports;
-}
-
 extern "C" {
 auto
 __tsan_default_options() -> char const* _Nullable {
    // If we skip reporting some races in the tests, we get false negatives.
    return "suppress_equal_stacks=0:suppress_equal_addresses=0";
 }
+}
 
-// Count each report for `expect_tsan_report()`.
-void
-__tsan_on_report(void* _Nonnull p_report) {
+// Count and hide each report that `expect_tsan_report()` expects. Unexpected
+// reports are printed, and TSan fails the run for them.
+auto
+__tsan::OnReport(ReportDesc const* _Nonnull p_report, bool is_suppressed)
+   -> bool {
+   if (is_suppressed || !detail::is_expecting_tsan_reports.load()) {
+      return is_suppressed;
+   }
+
    char const* p_description = nullptr;
    int4 count;
    int4 stack_count;
@@ -80,15 +83,10 @@ __tsan_on_report(void* _Nonnull p_report) {
    int4 unique_thread_id_count;
    void* p_sleep_trace = nullptr;
    auto _ = __tsan_get_report_data(
-      p_report, &p_description, &count, &stack_count, &memory_operation_count,
-      &location_count, &mutex_count, &thread_count, &unique_thread_id_count,
-      &p_sleep_trace, 0u
+      const_cast<__tsan::ReportDesc*>(p_report), &p_description, &count,
+      &stack_count, &memory_operation_count, &location_count, &mutex_count,
+      &thread_count, &unique_thread_id_count, &p_sleep_trace, 0u
    );
-
-   if (!detail::is_expecting_tsan_reports.load()) {
-      ++unexpected_tsan_reports;
-      return;
-   }
 
    cat::str_view const description =
       p_description != nullptr ? cat::str_view(p_description) : "";
@@ -99,13 +97,7 @@ __tsan_on_report(void* _Nonnull p_report) {
    } else {
       ++detail::tsan_other_reports;
    }
-}
-
-// Expected reports must not fail the run, but unexpected reports still do.
-auto
-__tsan_on_finalize(int4 /*unused*/) -> int4 {
-   return unexpected_tsan_reports.load() == 0u ? 0 : 1;
-}
+   return true;
 }
 #endif
 
