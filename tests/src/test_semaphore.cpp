@@ -268,11 +268,12 @@ namespace {
 template <typename Semaphore>
 void
 concurrent_permits(cat::uint4 permits) {
-   Semaphore semaphore(permits);
+   // Atomics next to `data` would evict its TSan shadow and hide the race.
+   alignas(64) Semaphore semaphore(permits);
    alignas(64) int4 data = 0;
-   nix::futex acquired{};
-   nix::futex written{};
-   nix::futex finished{};
+   alignas(64) nix::futex acquired{};
+   alignas(64) nix::futex written{};
+   alignas(64) nix::futex finished{};
 
    cat::thread worker;
    $defer {
@@ -372,10 +373,11 @@ release_publishes() {
 template <typename Semaphore>
 void
 failed_acquire(auto&& attempt) {
-   Semaphore semaphore(1u);
+   // Atomics next to `data` would evict its TSan shadow and hide the race.
+   alignas(64) Semaphore semaphore(1u);
    alignas(64) int4 data = 0;
-   nix::futex written{};
-   nix::futex attempted{};
+   alignas(64) nix::futex written{};
+   alignas(64) nix::futex attempted{};
 
    cat::thread holder;
    $defer {
