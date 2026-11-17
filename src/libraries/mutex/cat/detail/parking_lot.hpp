@@ -144,17 +144,9 @@ struct parker {
    park_until(time_point<Clock, Duration> timeout) noexcept(
       !__has_feature(cxx_exceptions)
    ) -> bool {
-      typename Clock::time_point const deadline =
-         typename Clock::time_point(timeout);
       while (m_futex.m_value.acquire() != 0) {
-         typename Clock::time_point const now = Clock::now().assert();
-         if (now >= deadline) {
-            return false;
-         }
-
-         nix::futex_timespec const remaining =
-            nix::make_timespec(deadline - now);
-         scaredy result = m_futex.wait(1, &remaining);
+         scaredy result =
+            m_futex.wait_until(1, Clock::native_handle(), timeout);
          if (result.has_value()) {
             continue;
          }

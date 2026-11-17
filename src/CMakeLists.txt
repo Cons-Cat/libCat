@@ -660,6 +660,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/thread/cat/detail/pthread.hpp
   ${CATLIB}/timer/cat/timer
   ${CATLIB}/chrono/cat/chrono
+  ${CATLIB}/chrono/cat/detail/is_clock.hpp
   ${CATLIB}/tui/cat/tui
   ${CATLIB}/tuple/cat/tuple
   ${CATLIB}/tuple/cat/detail/tuple_fwd.hpp

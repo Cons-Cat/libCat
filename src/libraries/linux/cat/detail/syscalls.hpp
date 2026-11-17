@@ -5,6 +5,8 @@
 // This file forward declares Linux syscalls and provides their
 // corresponding structs and enums.
 
+#include <cat/detail/is_clock.hpp>
+
 #include <cat/linux>
 #include <cat/string>
 
@@ -130,20 +132,30 @@ enum class [[clang::flag_enum]] futex_options : unsigned int {
    none = 0,
    private_process = 128,
    clock_realtime = 256,
+   // With `futex_command::wake`, `futex_command::wake_bitset`, or
+   // `futex_command::unlock_pi`, also unlock the futex word and clear the
+   // robust list's pending operation pointer, which the second futex address
+   // points to.
+   robust_unlock = 512,
+   // With `robust_unlock`, the pending operation pointer is 32-bit.
+   robust_list_32 = 1'024,
 };
 
-// Per-wait-entry flags in `struct futex_waitv::flags` (`linux/futex.h`,
-// futex2). Underlying type is `unsigned int` so values like `clock_realtime`
-// (256) fit and `struct futex_waitv` exposes a full `__u32`-sized flags word to
-// the kernel.
-enum class
-   [[clang::flag_enum,
-     clang::enum_extensibility(open)]] futex_wait_flags : unsigned int {
+enum class [[clang::flag_enum]] futex_wait_flags : unsigned int {
+   word_8 = 0,
+   word_16 = 1,
    word_32 = 2,
    word_64 = 3,
+   // The futex word is followed by a second word that holds its NUMA node, or
+   // `futex_no_node`.
+   numa = 4,
+   // Pick the NUMA node from the memory policy of the futex word's address.
+   memory_policy = 8,
    private_process = 128,
-   clock_realtime = 256,
 };
+
+// The NUMA node of a `futex_wait_flags::numa` futex that has none.
+inline constexpr cat::int4 futex_no_node = -1;
 
 // `flags` argument to `sys_futex_waitv()` (syscall `futex_waitv`,
 // `man 2 futex_waitv`).
@@ -155,7 +167,13 @@ enum class [[clang::flag_enum]] futex_waitv_call_flags : unsigned char {
 inline constexpr cat::uint4 futex_waiters_flag{0x80000000u};
 inline constexpr cat::uint4 futex_owner_died_flag{0x40000000u};
 inline constexpr cat::uint4 futex_tid_mask{0x3fffffffu};
-inline constexpr cat::uint4 futex_bitset_match_any{0xffffffffu};
+
+// The bits that `futex_command::wait_bitset` and `futex_command::wake_bitset`
+// match waiters and wakes with. A wake only wakes waiters whose bitset
+// intersects its own.
+enum class [[clang::flag_enum]] futex_bitset : unsigned int {
+   match_any = 0xffffffffu,
+};
 
 enum class [[clang::enum_extensibility(open)]] clock_id : int {
    realtime = 0,
@@ -312,11 +330,11 @@ struct futex_word {
    cat::atomic<cat::uint4> m_value;
 };
 
-// Selects `basic_futex` behavior. `futex_plain` is an ordinary user-chosen
-// futex word. `futex_robust` marks the same layout as used with the userspace
-// robust list (`set_robust_list`/`get_robust_list`) and owner/waiter bits.
+// `basic_futex` requires a tag for default/robust futexes.
+
 struct futex_plain {};
 
+// https://docs.kernel.org/locking/robust-futexes.html
 struct futex_robust {};
 
 template <class Kind = futex_plain>
@@ -330,17 +348,65 @@ class [[clang::preferred_name(futex), clang::preferred_name(robust_futex)]]
 basic_futex : public futex_word {
  public:
    // Block only if `value` still equals `expected` (`futex_command::wait`).
-   // Otherwise returns `linux_error::again` without sleeping.
+   // If not, this immediately returns `linux_error::again`.
    [[nodiscard]]
    auto
    wait(
       cat::uint4 expected, futex_timespec const* _Nullable p_timeout = nullptr
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<void>;
 
-   // Wake at most one waiter. Returns the number of waiting threads woken.
+   // Like `wait()`, but only a wake whose bitset intersects `bitset` wakes this
+   // (`futex_command::wait_bitset`).
    [[nodiscard]]
    auto
-   wake() noexcept -> scaredy_nix<cat::idx>;
+   wait_bitset(
+      cat::uint4 expected, futex_bitset bitset,
+      futex_timespec const* _Nullable p_deadline = nullptr,
+      futex_options options = futex_options::none
+   ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<void>;
+
+   // Wait until a deadline is reached.
+   template <clock_id clock, cat::is_clock Clock, cat::is_duration Duration>
+      requires((clock == clock_id::monotonic || clock == clock_id::realtime)
+               && (cat::is_same<Clock, clock_timerfd<clock>>
+                   || requires {
+                         requires cat::is_same<
+                            typename Clock::native_handle_type,
+                            clock_timerfd<clock>>;
+                      }))
+   [[nodiscard]]
+   auto
+   wait_until(
+      cat::uint4 expected, clock_timerfd<clock> const& timer,
+      cat::time_point<Clock, Duration> deadline
+   ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<void>;
+
+   // A constant `count` that is not positive selects this guard instead. Linux
+   // wakes one waiter for any count below one.
+   void
+   wake(cat::int4 count) __attribute__((enable_if(count <= 0, ""))) {
+      static_assert(false, "A `nix::futex`'s wake count must be positive!");
+   }
+
+   // Wake at most `count` waiters. Returns the number of waiting threads woken.
+   [[nodiscard]]
+   auto
+   wake(cat::int4 count = 1) noexcept -> scaredy_nix<cat::idx>;
+
+   // A constant `count` that is not positive selects this guard instead.
+   void
+   wake_bitset(cat::int4 count, futex_bitset)
+      __attribute__((enable_if(count <= 0, ""))) {
+      static_assert(false, "A `nix::futex`'s wake count must be positive!");
+   }
+
+   // Wake at most `count` waiters whose bitset intersects `bitset`
+   // (`futex_command::wake_bitset`). Returns the number of waiting threads
+   // woken.
+   [[nodiscard]]
+   auto
+   wake_bitset(cat::int4 count, futex_bitset bitset) noexcept
+      -> scaredy_nix<cat::idx>;
 
    // Wake as many waiters as possible. Returns the number of waiting threads
    // woken.

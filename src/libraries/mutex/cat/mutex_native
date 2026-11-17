@@ -146,8 +146,6 @@ class mutex_native {
    lock_contended_until(time_point<Clock, Duration> timeout) noexcept(
       !__has_feature(cxx_exceptions)
    ) -> bool {
-      typename Clock::time_point const deadline =
-         typename Clock::time_point(timeout);
       uint4 state = spin();
       if (state == unlocked) {
          if (
@@ -160,11 +158,6 @@ class mutex_native {
       }
 
       for (;;) {
-         typename Clock::time_point const before_park = Clock::now().assert();
-         if (before_park >= deadline) {
-            return false;
-         }
-
          if (
             state != contended
             && m_futex.m_value.acquire().exchange(contended) == unlocked
@@ -172,9 +165,7 @@ class mutex_native {
             return true;
          }
 
-         nix::futex_timespec const remaining =
-            nix::make_timespec(deadline - before_park);
-         if (!futex_wait(&remaining)) {
+         if (!futex_wait_until(timeout)) {
             return false;
          }
          state = spin();
@@ -193,12 +184,15 @@ class mutex_native {
       );
    }
 
+   // Returns `false` once `deadline` passes.
+   template <is_clock Clock, is_duration Duration>
    [[nodiscard]]
    auto
-   futex_wait(nix::futex_timespec const* _Nonnull p_timeout) noexcept(
+   futex_wait_until(time_point<Clock, Duration> deadline) noexcept(
       !__has_feature(cxx_exceptions)
    ) -> bool {
-      scaredy result = m_futex.wait(contended, p_timeout);
+      scaredy result =
+         m_futex.wait_until(contended, Clock::native_handle(), deadline);
       if (result.has_value()) {
          return true;
       }

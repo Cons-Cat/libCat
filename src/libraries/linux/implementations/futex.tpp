@@ -11,7 +11,10 @@ namespace detail {
 inline constexpr cat::uword futex_op_command_mask{0x7fu};
 
 inline constexpr cat::uword futex_op_options_mask = cat::to_underlying(
-   futex_options::private_process | futex_options::clock_realtime
+   futex_options::private_process
+   | futex_options::clock_realtime
+   | futex_options::robust_unlock
+   | futex_options::robust_list_32
 );
 
 [[nodiscard]]
@@ -95,10 +98,57 @@ basic_futex<Kind>::wait(
 template <class Kind>
 [[nodiscard]]
 inline auto
-basic_futex<Kind>::wake() noexcept -> scaredy_nix<cat::idx> {
+basic_futex<Kind>::wait_bitset(
+   cat::uint4 const expected, futex_bitset const bitset,
+   futex_timespec const* _Nullable p_deadline, futex_options const options
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<void> {
+   scaredy_nix<cat::idx> const result = sys_futex(
+      *this,
+      make_futex_op(
+         futex_command::wait_bitset, futex_options::private_process | options
+      ),
+      expected, p_deadline, nullptr, cat::to_underlying(bitset)
+   );
+
+   if (result.is_empty()) {
+      return result.error();
+   }
+
+   return cat::monostate;
+}
+
+template <class Kind>
+template <clock_id clock, cat::is_clock Clock, cat::is_duration Duration>
+   requires((clock == clock_id::monotonic || clock == clock_id::realtime)
+            && (cat::is_same<Clock, clock_timerfd<clock>>
+                || requires {
+                      requires cat::is_same<
+                         typename Clock::native_handle_type,
+                         clock_timerfd<clock>>;
+                   }))
+[[nodiscard]]
+inline auto
+basic_futex<Kind>::wait_until(
+   cat::uint4 const expected, clock_timerfd<clock> const& /*unused*/,
+   cat::time_point<Clock, Duration> const deadline
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<void> {
+   futex_timespec const absolute = make_timespec(deadline.time_since_epoch());
+   return wait_bitset(
+      expected, futex_bitset::match_any, &absolute,
+      clock == clock_id::realtime ? futex_options::clock_realtime
+                                  : futex_options::none
+   );
+}
+
+template <class Kind>
+[[nodiscard]]
+inline auto
+basic_futex<Kind>::wake(cat::int4 const count) noexcept
+   -> scaredy_nix<cat::idx> {
+   // `count` is a signed integer in the Linux ABI.
    return sys_futex(
       *this, make_futex_op(futex_command::wake, futex_options::private_process),
-      1u, nullptr, nullptr, 0u
+      __builtin_bit_cast(cat::uint4, count), nullptr, nullptr, 0u
    );
 }
 
@@ -106,9 +156,21 @@ template <class Kind>
 [[nodiscard]]
 inline auto
 basic_futex<Kind>::wake_all() noexcept -> scaredy_nix<cat::idx> {
+   return wake(cat::int4_max);
+}
+
+template <class Kind>
+[[nodiscard]]
+inline auto
+basic_futex<Kind>::wake_bitset(
+   cat::int4 const count, futex_bitset const bitset
+) noexcept -> scaredy_nix<cat::idx> {
+   // `count` is a signed integer in the Linux ABI.
    return sys_futex(
-      *this, make_futex_op(futex_command::wake, futex_options::private_process),
-      futex_bitset_match_any, nullptr, nullptr, 0u
+      *this,
+      make_futex_op(futex_command::wake_bitset, futex_options::private_process),
+      __builtin_bit_cast(cat::uint4, count), nullptr, nullptr,
+      cat::to_underlying(bitset)
    );
 }
 
