@@ -210,14 +210,14 @@ $test(mutex_handoff) {
       .spawn(
          g_tests_alloc, worker_stack_size,
          [&] {
-            entered.release() = true;
+            entered.order_release() = true;
             mutex.lock();
-            acquired.release() = true;
+            acquired.order_release() = true;
             mutex.unlock();
          }
       )
       .verify();
-   while (!entered.acquire()) {
+   while (!entered.order_acquire()) {
       cat::machine_pause();
    }
 
@@ -225,10 +225,10 @@ $test(mutex_handoff) {
       cat::this_thread::yield();
    }
 
-   cat::verify(!acquired.acquire());
+   cat::verify(!acquired.order_acquire());
    mutex.unlock();
    worker.join().verify();
-   cat::verify(acquired.acquire());
+   cat::verify(acquired.order_acquire());
 }
 
 $test(mutex_protected_publication) {
@@ -317,14 +317,14 @@ $test(mutex_native_try_lock_for_waits) {
       .spawn(
          g_tests_alloc, worker_stack_size,
          [&] {
-            entered.release() = true;
+            entered.order_release() = true;
             cat::verify(mutex.try_lock_for(1 * cat::units::second));
-            acquired.release() = true;
+            acquired.order_release() = true;
             mutex.unlock();
          }
       )
       .verify();
-   while (!entered.acquire()) {
+   while (!entered.order_acquire()) {
       cat::machine_pause();
    }
 
@@ -332,10 +332,10 @@ $test(mutex_native_try_lock_for_waits) {
       cat::this_thread::yield();
    }
 
-   cat::verify(!acquired.acquire());
+   cat::verify(!acquired.order_acquire());
    mutex.unlock();
    worker.join().verify();
-   cat::verify(acquired.acquire());
+   cat::verify(acquired.order_acquire());
 }
 
 $test(mutex_native_try_lock_until_times_out) {
@@ -355,12 +355,12 @@ $test(mutex_native_try_lock_until_times_out) {
             cat::clock_steady::time_point const deadline =
                cat::clock_steady::now().verify() + 10 * cat::units::millisecond;
             cat::verify(!mutex.try_lock_until(deadline));
-            finished.release() = true;
+            finished.order_release() = true;
          }
       )
       .verify();
 
-   while (!finished.acquire()) {
+   while (!finished.order_acquire()) {
       cat::machine_pause();
    }
 
@@ -637,14 +637,14 @@ $test(mutex_try_lock_for_waits) {
       .spawn(
          g_tests_alloc, worker_stack_size,
          [&] {
-            entered.release() = true;
+            entered.order_release() = true;
             cat::verify(mutex.try_lock_for(1 * cat::units::second));
-            acquired.release() = true;
+            acquired.order_release() = true;
             mutex.unlock();
          }
       )
       .verify();
-   while (!entered.acquire()) {
+   while (!entered.order_acquire()) {
       cat::machine_pause();
    }
 
@@ -652,10 +652,10 @@ $test(mutex_try_lock_for_waits) {
       cat::this_thread::yield();
    }
 
-   cat::verify(!acquired.acquire());
+   cat::verify(!acquired.order_acquire());
    mutex.unlock();
    worker.join().verify();
-   cat::verify(acquired.acquire());
+   cat::verify(acquired.order_acquire());
 }
 
 $test(mutex_try_lock_until_times_out) {
@@ -685,12 +685,12 @@ $test(mutex_try_lock_until_times_out) {
             cat::clock_steady::time_point const deadline =
                cat::clock_steady::now().verify() + 10 * cat::units::millisecond;
             cat::verify(!mutex.try_lock_until(deadline));
-            finished.release() = true;
+            finished.order_release() = true;
          }
       )
       .verify();
 
-   while (!finished.acquire()) {
+   while (!finished.order_acquire()) {
       cat::machine_pause();
    }
 
@@ -733,15 +733,15 @@ $test(mutex_spin_try_lock_for_waits) {
       .spawn(
          g_tests_alloc, worker_stack_size,
          [&] {
-            entered.release() = true;
+            entered.order_release() = true;
             cat::verify(mutex.try_lock_for(1 * cat::units::second));
-            acquired.release() = true;
+            acquired.order_release() = true;
             mutex.unlock();
          }
       )
       .verify();
 
-   while (!entered.acquire()) {
+   while (!entered.order_acquire()) {
       cat::machine_pause();
    }
 
@@ -749,10 +749,10 @@ $test(mutex_spin_try_lock_for_waits) {
       cat::this_thread::yield();
    }
 
-   cat::verify(!acquired.acquire());
+   cat::verify(!acquired.order_acquire());
    mutex.unlock();
    worker.join().verify();
-   cat::verify(acquired.acquire());
+   cat::verify(acquired.order_acquire());
 }
 
 $test(mutex_spin_try_lock_until_times_out) {
@@ -772,12 +772,12 @@ $test(mutex_spin_try_lock_until_times_out) {
             cat::clock_steady::time_point const deadline =
                cat::clock_steady::now().verify() + 10 * cat::units::millisecond;
             cat::verify(!mutex.try_lock_until(deadline));
-            finished.release() = true;
+            finished.order_release() = true;
          }
       )
       .verify();
 
-   while (!finished.acquire()) {
+   while (!finished.order_acquire()) {
       cat::machine_pause();
    }
 
@@ -810,25 +810,25 @@ $test(mutex_unlock_fair_wakes_waiter) {
       .spawn(
          g_tests_alloc, worker_stack_size,
          [&] {
-            entered.release() = true;
+            entered.order_release() = true;
             mutex.lock();
-            acquired.release() = true;
+            acquired.order_release() = true;
             mutex.unlock();
          }
       )
       .verify();
 
-   while (!entered.acquire()) {
+   while (!entered.order_acquire()) {
       cat::machine_pause();
    }
 
    for (idx iteration; iteration < 1'000; ++iteration) {
       cat::this_thread::yield();
    }
-   cat::verify(!acquired.acquire());
+   cat::verify(!acquired.order_acquire());
    mutex.unlock_fair();
    worker.join().verify();
-   cat::verify(acquired.acquire());
+   cat::verify(acquired.order_acquire());
 }
 
 $test(mutex_yield_to_waiters) {
@@ -856,15 +856,15 @@ $test(mutex_yield_to_waiters) {
       .spawn(
          g_tests_alloc, worker_stack_size,
          [&] {
-            entered.release() = true;
+            entered.order_release() = true;
             mutex.lock();
-            waiter_held.release() = true;
+            waiter_held.order_release() = true;
             mutex.unlock();
          }
       )
       .verify();
 
-   while (!entered.acquire()) {
+   while (!entered.order_acquire()) {
       cat::machine_pause();
    }
 
@@ -872,9 +872,9 @@ $test(mutex_yield_to_waiters) {
       cat::this_thread::yield();
    }
 
-   cat::verify(!waiter_held.acquire());
+   cat::verify(!waiter_held.order_acquire());
    mutex.yield_to_waiters();
-   cat::verify(waiter_held.acquire());
+   cat::verify(waiter_held.order_acquire());
    mutex.unlock();
    worker.join().verify();
 }

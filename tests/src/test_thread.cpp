@@ -83,7 +83,7 @@ $test(this_thread) {
          g_tests_alloc, g_thread_test_stack_size,
          [&observed_id] {
             cat::this_thread::yield();
-            observed_id.release() =
+            observed_id.order_release() =
                cat::this_thread::get_id().native_handle().value;
          }
       )
@@ -93,7 +93,9 @@ $test(this_thread) {
    worker.join().verify();
 
    cat::verify(worker_id != original_id);
-   cat::verify(observed_id.acquire().load() == worker_id.native_handle().value);
+   cat::verify(
+      observed_id.order_acquire().load() == worker_id.native_handle().value
+   );
 }
 
 #ifndef CAT_USE_PTHREAD
@@ -329,12 +331,12 @@ $test(thread_local_storage_per_thread) {
          .spawn(
             g_tests_alloc, g_thread_test_stack_size + 32u * i,
             [&] {
-               is_fresh.release() = has_fresh_thread_locals(2);
+               is_fresh.order_release() = has_fresh_thread_locals(2);
             }
          )
          .verify();
       worker.join().verify();
-      cat::verify(is_fresh.acquire().load());
+      cat::verify(is_fresh.order_acquire().load());
    }
 
    cat::atomic<bool> non_thread_is_fresh{};
@@ -347,12 +349,12 @@ $test(thread_local_storage_per_thread) {
       .spawn(
          g_tests_alloc, g_thread_test_stack_size,
          [&] {
-            non_thread_is_fresh.release() = has_fresh_thread_locals(3);
+            non_thread_is_fresh.order_release() = has_fresh_thread_locals(3);
          }
       )
       .verify();
    non_thread_child.wait().verify();
-   cat::verify(non_thread_is_fresh.acquire().load());
+   cat::verify(non_thread_is_fresh.order_acquire().load());
 
    // Each child started from the image rather than this thread's values, and
    // its writes stayed in its own storage.

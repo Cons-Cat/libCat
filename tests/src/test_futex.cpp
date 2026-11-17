@@ -32,7 +32,7 @@ $test(futex_syscalls) {
    cat::verify(assembled_op.encoded == wake_private.encoded);
 
    nix::futex futex_word{};
-   cat::verify(futex_word.m_value.relaxed().load() == 0u);
+   cat::verify(futex_word.m_value.order_relaxed().load() == 0u);
 
    // Robust futexes.
    cat::verify(nix::robust_futex::unlocked() == 0u);

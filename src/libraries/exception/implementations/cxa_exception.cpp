@@ -23,7 +23,7 @@ inline constinit exception_allocator_storage exception_allocator_slot{};
 
 auto
 exception_allocator() -> allocator_dyn* _Nullable {
-   if (exception_allocator_state.acquire() != allocator_state_ready) {
+   if (exception_allocator_state.order_acquire() != allocator_state_ready) {
       return nullptr;
    }
 
@@ -36,23 +36,23 @@ exception_allocator() -> allocator_dyn* _Nullable {
 
 void
 alloc_exception_runtime(allocator_dyn allocator) {
-   if (exception_allocator_state.acquire() == allocator_state_ready) {
+   if (exception_allocator_state.order_acquire() == allocator_state_ready) {
       return;
    }
 
    uint1 expected = allocator_state_empty;
-   if (!exception_allocator_state.acq_rel().compare_exchange_strong(
+   if (!exception_allocator_state.order_acq_rel().compare_exchange_strong(
           expected, allocator_state_initializing
        )) {
       while (expected != allocator_state_ready) {
          machine_pause();
-         expected = exception_allocator_state.acquire();
+         expected = exception_allocator_state.order_acquire();
       }
       return;
    }
 
    new (exception_allocator_slot.bytes) allocator_dyn(allocator);
-   exception_allocator_state.release() = allocator_state_ready;
+   exception_allocator_state.order_release() = allocator_state_ready;
 }
 
 namespace detail {

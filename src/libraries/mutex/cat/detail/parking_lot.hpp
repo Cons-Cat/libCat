@@ -120,12 +120,12 @@ inline atomic<idx> num_threads;
 struct parker {
    void
    prepare_park() noexcept {
-      m_futex.m_value.relaxed() = 1;
+      m_futex.m_value.order_relaxed() = 1;
    }
 
    void
    park() noexcept(!__has_feature(cxx_exceptions)) {
-      while (m_futex.m_value.acquire() != 0) {
+      while (m_futex.m_value.order_acquire() != 0) {
          scaredy result = m_futex.wait(1);
          if (result.has_value()) {
             continue;
@@ -144,7 +144,7 @@ struct parker {
    park_until(time_point<Clock, Duration> timeout) noexcept(
       !__has_feature(cxx_exceptions)
    ) -> bool {
-      while (m_futex.m_value.acquire() != 0) {
+      while (m_futex.m_value.order_acquire() != 0) {
          scaredy result =
             m_futex.wait_until(1, Clock::native_handle(), timeout);
          if (result.has_value()) {
@@ -166,7 +166,7 @@ struct parker {
 
    auto
    unpark_lock() noexcept [[clang::lifetimebound]] -> nix::futex* {
-      m_futex.m_value.release() = 0;
+      m_futex.m_value.order_release() = 0;
       return &m_futex;
    }
 
@@ -182,11 +182,11 @@ struct parker {
 
 struct thread_data {
    thread_data() noexcept {
-      num_threads.relaxed().fetch_add(1);
+      num_threads.order_relaxed().fetch_add(1);
    }
 
    ~thread_data() noexcept {
-      num_threads.relaxed().fetch_sub(1);
+      num_threads.order_relaxed().fetch_sub(1);
    }
 
    parker m_thread_parker;
@@ -281,7 +281,7 @@ auto
 alloc_mutex_runtime(
    allocator_ref<Allocator> allocator, idx thread_count
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
-   if (detail::mutex_parking_lot::p_hash_table.acquire() != nullptr) {
+   if (detail::mutex_parking_lot::p_hash_table.order_acquire() != nullptr) {
       return monostate;
    }
 
@@ -374,13 +374,13 @@ hash(uword key, uint1 bits) noexcept(!__has_feature(cxx_exceptions)) -> idx {
 
 inline auto
 lock_bucket(uword key) noexcept(!__has_feature(cxx_exceptions)) -> bucket* {
-   hash_table* const p_table = p_hash_table.acquire();
+   hash_table* const p_table = p_hash_table.order_acquire();
    assert(p_table != nullptr);
 
    bucket* const p_bucket =
       &p_table->m_p_entries[hash(key, p_table->m_hash_bits)];
    p_bucket->m_mutex.lock();
-   assert(p_hash_table.relaxed() == p_table);
+   assert(p_hash_table.order_relaxed() == p_table);
 
    return p_bucket;
 }
@@ -400,7 +400,7 @@ park(uword key, Validate&& validate, BeforeSleep&& before_sleep)
    }
 
    data.m_p_next_in_queue = nullptr;
-   data.m_key.relaxed() = key;
+   data.m_key.order_relaxed() = key;
    data.m_park_token = 0;
    data.m_parked_with_timeout = false;
    data.m_thread_parker.prepare_park();
@@ -438,7 +438,7 @@ park_until(
    }
 
    data.m_p_next_in_queue = nullptr;
-   data.m_key.relaxed() = key;
+   data.m_key.order_relaxed() = key;
    data.m_park_token = 0;
    data.m_parked_with_timeout = true;
    data.m_thread_parker.prepare_park();
@@ -488,7 +488,7 @@ park_until(
    bool have_more_threads = false;
    p_current = p_timeout_bucket->m_p_queue_head;
    while (p_current != nullptr) {
-      if (p_current->m_key.relaxed() == key) {
+      if (p_current->m_key.order_relaxed() == key) {
          have_more_threads = true;
          break;
       }
@@ -516,7 +516,7 @@ unpark_one(uword key, Callback&& callback) -> unpark_result {
    unpark_result result{};
 
    while (p_current != nullptr) {
-      if (p_current->m_key.relaxed() == key) {
+      if (p_current->m_key.order_relaxed() == key) {
          thread_data* const p_next = p_current->m_p_next_in_queue;
          *p_link = p_next;
 
@@ -525,7 +525,7 @@ unpark_one(uword key, Callback&& callback) -> unpark_result {
          } else {
             thread_data* p_scan = p_next;
             while (p_scan != nullptr) {
-               if (p_scan->m_key.relaxed() == key) {
+               if (p_scan->m_key.order_relaxed() == key) {
                   result.m_have_more_threads = true;
                   break;
                }

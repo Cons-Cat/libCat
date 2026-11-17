@@ -37,7 +37,7 @@ class word_lock {
       // TSan does not model the standalone fences in `unlock_slow()`, so the
       // queue accesses must be hidden inside these annotations.
       auto _ = __tsan_mutex_pre_unlock(this, 0u);
-      uword const previous = m_state.release().fetch_sub(locked_bit);
+      uword const previous = m_state.order_release().fetch_sub(locked_bit);
       if (
          (previous & queue_locked_bit) == 0u && (previous & queue_mask) != 0u
       ) {
@@ -81,12 +81,12 @@ class word_lock {
 
    void
    prepare_park(thread_data& node) noexcept {
-      node.m_parker.m_value.relaxed() = 1u;
+      node.m_parker.m_value.order_relaxed() = 1u;
    }
 
    void
    park(thread_data& node) noexcept(!__has_feature(cxx_exceptions)) {
-      while (node.m_parker.m_value.acquire() != 0u) {
+      while (node.m_parker.m_value.order_acquire() != 0u) {
          scaredy result = node.m_parker.wait(1u);
          if (result.has_value()) {
             continue;
@@ -102,7 +102,7 @@ class word_lock {
 
    void
    unpark(thread_data& node) noexcept {
-      node.m_parker.m_value.release() = 0u;
+      node.m_parker.m_value.order_release() = 0u;
       // The waiter may have already observed the store and left, so waking
       // nobody is fine.
       auto _ = node.m_parker.wake();
@@ -112,7 +112,7 @@ class word_lock {
    void
    lock_slow() noexcept(!__has_feature(cxx_exceptions)) {
       uint1 spin_counter = 0u;
-      uword state = m_state.relaxed();
+      uword state = m_state.order_relaxed();
       for (;;) {
          if (!is_locked(state)) {
             if (
@@ -133,7 +133,7 @@ class word_lock {
             } else {
                this_thread::yield();
             }
-            state = m_state.relaxed();
+            state = m_state.order_relaxed();
             continue;
          }
 
@@ -158,7 +158,7 @@ class word_lock {
          ) {
             park(node);
             spin_counter = 0;
-            state = m_state.relaxed();
+            state = m_state.order_relaxed();
          }
       }
    }
@@ -166,7 +166,7 @@ class word_lock {
    [[gnu::noinline]]
    void
    unlock_slow() noexcept(!__has_feature(cxx_exceptions)) {
-      uword state = m_state.relaxed();
+      uword state = m_state.order_relaxed();
       for (;;) {
          if (is_queue_locked(state) || queue_head(state) == nullptr) {
             return;
@@ -197,7 +197,7 @@ class word_lock {
 
          if (is_locked(state)) {
             if (
-               m_state.release().compare_exchange_weak(
+               m_state.order_release().compare_exchange_weak(
                   state, state & ~queue_locked_bit
                )
             ) {
@@ -213,7 +213,7 @@ class word_lock {
          if (p_new_tail == nullptr) {
             for (;;) {
                if (
-                  m_state.release().compare_exchange_weak(
+                  m_state.order_release().compare_exchange_weak(
                      state, state & locked_bit
                   )
                ) {
@@ -230,7 +230,7 @@ class word_lock {
             p_head->m_p_queue_tail = p_new_tail;
             // The queue stays non-empty here, so the previous state cannot
             // change what happens next.
-            auto _ = m_state.release().fetch_and(~queue_locked_bit);
+            auto _ = m_state.order_release().fetch_and(~queue_locked_bit);
          }
 
          if (rescan) {

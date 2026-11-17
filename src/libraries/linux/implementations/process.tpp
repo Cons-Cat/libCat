@@ -61,16 +61,17 @@ struct process {
          return *this;
       }
 
-      m_id.relaxed() = other.m_id.relaxed().load();
-      m_clone_child_clear_tid_for_kernel.m_value.relaxed() =
-         other.m_clone_child_clear_tid_for_kernel.m_value.relaxed().load();
+      m_id.order_relaxed() = other.m_id.order_relaxed().load();
+      m_clone_child_clear_tid_for_kernel.m_value.order_relaxed() =
+         other.m_clone_child_clear_tid_for_kernel.m_value.order_relaxed()
+            .load();
       m_p_stack_bottom = other.m_p_stack_bottom;
       m_stack_size = other.m_stack_size;
       m_allocation_bytes = other.m_allocation_bytes;
       m_flags = other.m_flags;
 
-      other.m_id.relaxed() = 0u;
-      other.m_clone_child_clear_tid_for_kernel.m_value.relaxed() = 0;
+      other.m_id.order_relaxed() = 0u;
+      other.m_clone_child_clear_tid_for_kernel.m_value.order_relaxed() = 0;
       other.m_p_stack_bottom = nullptr;
       other.m_stack_size = 0;
       other.m_allocation_bytes = 0;
@@ -120,7 +121,7 @@ struct process {
    [[nodiscard]]
    constexpr auto
    id() const -> process_id {
-      return m_id.relaxed().load();
+      return m_id.order_relaxed().load();
    }
 
    // Deallocate this `process`'s stack from `allocator`. Call after `wait()`.

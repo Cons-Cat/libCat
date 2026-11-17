@@ -153,38 +153,53 @@ bind_atomic_overflow_policy(auto memory_order_reference) noexcept {
 
 template <is_atomic Atomic, overflow_policies overflow_policy>
 constexpr auto
-detail::atomic_overflow_reference<Atomic, overflow_policy>::relaxed() const {
-   return bind_atomic_overflow_policy<overflow_policy>(m_p_atomic->relaxed());
+detail::atomic_overflow_reference<
+   Atomic, overflow_policy>::order_relaxed() const {
+   return bind_atomic_overflow_policy<overflow_policy>(
+      m_p_atomic->order_relaxed()
+   );
 }
 
 template <is_atomic Atomic, overflow_policies overflow_policy>
 constexpr auto
-detail::atomic_overflow_reference<Atomic, overflow_policy>::acquire() const {
-   return bind_atomic_overflow_policy<overflow_policy>(m_p_atomic->acquire());
+detail::atomic_overflow_reference<
+   Atomic, overflow_policy>::order_acquire() const {
+   return bind_atomic_overflow_policy<overflow_policy>(
+      m_p_atomic->order_acquire()
+   );
 }
 
 template <is_atomic Atomic, overflow_policies overflow_policy>
 constexpr auto
-detail::atomic_overflow_reference<Atomic, overflow_policy>::release() const {
-   return bind_atomic_overflow_policy<overflow_policy>(m_p_atomic->release());
+detail::atomic_overflow_reference<
+   Atomic, overflow_policy>::order_release() const {
+   return bind_atomic_overflow_policy<overflow_policy>(
+      m_p_atomic->order_release()
+   );
 }
 
 template <is_atomic Atomic, overflow_policies overflow_policy>
 constexpr auto
-detail::atomic_overflow_reference<Atomic, overflow_policy>::acq_rel() const {
-   return bind_atomic_overflow_policy<overflow_policy>(m_p_atomic->acq_rel());
+detail::atomic_overflow_reference<
+   Atomic, overflow_policy>::order_acq_rel() const {
+   return bind_atomic_overflow_policy<overflow_policy>(
+      m_p_atomic->order_acq_rel()
+   );
 }
 
 template <is_atomic Atomic, overflow_policies overflow_policy>
 constexpr auto
-detail::atomic_overflow_reference<Atomic, overflow_policy>::seq_cst() const {
-   return bind_atomic_overflow_policy<overflow_policy>(m_p_atomic->seq_cst());
+detail::atomic_overflow_reference<
+   Atomic, overflow_policy>::order_seq_cst() const {
+   return bind_atomic_overflow_policy<overflow_policy>(
+      m_p_atomic->order_seq_cst()
+   );
 }
 
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::relaxed() & noexcept
+atomic<T>::order_relaxed() & noexcept
    -> memory_order_reference<atomic, memory_order::relaxed> {
    return memory_order_reference<atomic, memory_order::relaxed>(*this);
 }
@@ -192,7 +207,7 @@ atomic<T>::relaxed() & noexcept
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::relaxed() const& noexcept
+atomic<T>::order_relaxed() const& noexcept
    -> memory_order_reference<atomic const, memory_order::relaxed> {
    return memory_order_reference<atomic const, memory_order::relaxed>(*this);
 }
@@ -200,7 +215,7 @@ atomic<T>::relaxed() const& noexcept
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::acquire() & noexcept
+atomic<T>::order_acquire() & noexcept
    -> memory_order_reference<atomic, memory_order::acquire> {
    return memory_order_reference<atomic, memory_order::acquire>(*this);
 }
@@ -208,7 +223,7 @@ atomic<T>::acquire() & noexcept
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::acquire() const& noexcept
+atomic<T>::order_acquire() const& noexcept
    -> memory_order_reference<atomic const, memory_order::acquire> {
    return memory_order_reference<atomic const, memory_order::acquire>(*this);
 }
@@ -216,7 +231,7 @@ atomic<T>::acquire() const& noexcept
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::release() & noexcept
+atomic<T>::order_release() & noexcept
    -> memory_order_reference<atomic, memory_order::release> {
    return memory_order_reference<atomic, memory_order::release>(*this);
 }
@@ -224,7 +239,7 @@ atomic<T>::release() & noexcept
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::release() const& noexcept
+atomic<T>::order_release() const& noexcept
    -> memory_order_reference<atomic const, memory_order::release> {
    return memory_order_reference<atomic const, memory_order::release>(*this);
 }
@@ -232,7 +247,7 @@ atomic<T>::release() const& noexcept
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::acq_rel() & noexcept
+atomic<T>::order_acq_rel() & noexcept
    -> memory_order_reference<atomic, memory_order::acq_rel> {
    return memory_order_reference<atomic, memory_order::acq_rel>(*this);
 }
@@ -240,7 +255,7 @@ atomic<T>::acq_rel() & noexcept
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::acq_rel() const& noexcept
+atomic<T>::order_acq_rel() const& noexcept
    -> memory_order_reference<atomic const, memory_order::acq_rel> {
    return memory_order_reference<atomic const, memory_order::acq_rel>(*this);
 }
@@ -248,7 +263,7 @@ atomic<T>::acq_rel() const& noexcept
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::seq_cst() & noexcept
+atomic<T>::order_seq_cst() & noexcept
    -> memory_order_reference<atomic, memory_order::seq_cst> {
    return memory_order_reference<atomic, memory_order::seq_cst>(*this);
 }
@@ -256,7 +271,7 @@ atomic<T>::seq_cst() & noexcept
 template <typename T>
    requires(!is_reference<T> && !is_const<T> && !is_volatile<T>)
 constexpr auto
-atomic<T>::seq_cst() const& noexcept
+atomic<T>::order_seq_cst() const& noexcept
    -> memory_order_reference<atomic const, memory_order::seq_cst> {
    return memory_order_reference<atomic const, memory_order::seq_cst>(*this);
 }
@@ -264,7 +279,7 @@ atomic<T>::seq_cst() const& noexcept
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::relaxed() & noexcept
+atomic<T&>::order_relaxed() & noexcept
    -> memory_order_reference<atomic, memory_order::relaxed> {
    return memory_order_reference<atomic, memory_order::relaxed>(*this);
 }
@@ -272,7 +287,7 @@ atomic<T&>::relaxed() & noexcept
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::relaxed() const& noexcept
+atomic<T&>::order_relaxed() const& noexcept
    -> memory_order_reference<atomic const, memory_order::relaxed> {
    return memory_order_reference<atomic const, memory_order::relaxed>(*this);
 }
@@ -280,7 +295,7 @@ atomic<T&>::relaxed() const& noexcept
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::acquire() & noexcept
+atomic<T&>::order_acquire() & noexcept
    -> memory_order_reference<atomic, memory_order::acquire> {
    return memory_order_reference<atomic, memory_order::acquire>(*this);
 }
@@ -288,7 +303,7 @@ atomic<T&>::acquire() & noexcept
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::acquire() const& noexcept
+atomic<T&>::order_acquire() const& noexcept
    -> memory_order_reference<atomic const, memory_order::acquire> {
    return memory_order_reference<atomic const, memory_order::acquire>(*this);
 }
@@ -296,7 +311,7 @@ atomic<T&>::acquire() const& noexcept
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::release() & noexcept
+atomic<T&>::order_release() & noexcept
    -> memory_order_reference<atomic, memory_order::release> {
    return memory_order_reference<atomic, memory_order::release>(*this);
 }
@@ -304,7 +319,7 @@ atomic<T&>::release() & noexcept
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::release() const& noexcept
+atomic<T&>::order_release() const& noexcept
    -> memory_order_reference<atomic const, memory_order::release> {
    return memory_order_reference<atomic const, memory_order::release>(*this);
 }
@@ -312,7 +327,7 @@ atomic<T&>::release() const& noexcept
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::acq_rel() & noexcept
+atomic<T&>::order_acq_rel() & noexcept
    -> memory_order_reference<atomic, memory_order::acq_rel> {
    return memory_order_reference<atomic, memory_order::acq_rel>(*this);
 }
@@ -320,7 +335,7 @@ atomic<T&>::acq_rel() & noexcept
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::acq_rel() const& noexcept
+atomic<T&>::order_acq_rel() const& noexcept
    -> memory_order_reference<atomic const, memory_order::acq_rel> {
    return memory_order_reference<atomic const, memory_order::acq_rel>(*this);
 }
@@ -328,7 +343,7 @@ atomic<T&>::acq_rel() const& noexcept
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::seq_cst() & noexcept
+atomic<T&>::order_seq_cst() & noexcept
    -> memory_order_reference<atomic, memory_order::seq_cst> {
    return memory_order_reference<atomic, memory_order::seq_cst>(*this);
 }
@@ -336,7 +351,7 @@ atomic<T&>::seq_cst() & noexcept
 template <typename T>
    requires(!is_volatile<T>)
 constexpr auto
-atomic<T&>::seq_cst() const& noexcept
+atomic<T&>::order_seq_cst() const& noexcept
    -> memory_order_reference<atomic const, memory_order::seq_cst> {
    return memory_order_reference<atomic const, memory_order::seq_cst>(*this);
 }

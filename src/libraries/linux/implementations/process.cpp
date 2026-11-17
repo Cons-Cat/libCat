@@ -39,10 +39,10 @@ wait_clone_thread_through_cleartid_futex(
    nix::process_id const thread_group_id = nix::sys_getpid();
    cat::uword spins = 0u;
    for (;;) {
-      cat::uint4 const published = p_clear_tid->m_value.acquire();
+      cat::uint4 const published = p_clear_tid->m_value.order_acquire();
       if (published != 0u) {
          for (;;) {
-            cat::uint4 const word = p_clear_tid->m_value.acquire();
+            cat::uint4 const word = p_clear_tid->m_value.order_acquire();
             if (word == 0u) {
                return child_id;
             }
@@ -93,7 +93,7 @@ nix::manual::process::wait() const -> scaredy_nix<process_id> {
    process_id child_id;
    cat::uint1 count = 1u;
    for (;;) {
-      cat::uint4 const observed = m_id.acquire();
+      cat::uint4 const observed = m_id.order_acquire();
       if (observed != 0u) {
          child_id = observed;
          break;

@@ -61,7 +61,7 @@ musl_add_counter(
    musl_counter_storage<is_shared>& counter, uword amount
 ) noexcept(!__has_feature(cxx_exceptions)) {
    if constexpr (is_shared) {
-      uword const old = counter.relaxed().fetch_add(amount);
+      uword const old = counter.order_relaxed().fetch_add(amount);
       verify(old <= limits<uword>::max() - amount);
    } else {
       verify(counter <= limits<uword>::max() - amount);
@@ -75,7 +75,7 @@ musl_subtract_counter(
    musl_counter_storage<is_shared>& counter, uword amount
 ) noexcept(!__has_feature(cxx_exceptions)) {
    if constexpr (is_shared) {
-      uword const old = counter.relaxed().fetch_sub(amount);
+      uword const old = counter.order_relaxed().fetch_sub(amount);
       verify(old >= amount);
    } else {
       verify(counter >= amount);
@@ -1629,7 +1629,7 @@ auto
 basic_allocator_musl<is_shared>::ensure_context() noexcept(
    !__has_feature(cxx_exceptions)
 ) -> context* _Nullable {
-   context* p_context = m_p_context.acquire();
+   context* p_context = m_p_context.order_acquire();
    if (p_context != nullptr) {
       return p_context;
    }
@@ -1804,7 +1804,7 @@ basic_allocator_musl<is_shared>::allocate_zeroed_feedback(
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe_sized_allocation<void*> {
    maybe_sized_allocation<void*> result = allocate_feedback(requested_bytes);
    if (result.has_value()) {
-      context* const p_context = m_p_context.acquire();
+      context* const p_context = m_p_context.order_acquire();
       verify(p_context != nullptr);
       auto* const p_result = bit_cast<byte*>(result.value().first());
       if (!p_context->is_all_zero(p_result)) {
@@ -1843,7 +1843,7 @@ basic_allocator_musl<is_shared>::aligned_allocate_zeroed_feedback(
    maybe_sized_allocation<void*> result =
       aligned_allocate_feedback(alignment, requested_bytes);
    if (result.has_value()) {
-      context* const p_context = m_p_context.acquire();
+      context* const p_context = m_p_context.order_acquire();
       verify(p_context != nullptr);
       auto* const p_result = bit_cast<byte*>(result.value().first());
       if (!p_context->is_all_zero(p_result)) {
@@ -1861,7 +1861,7 @@ auto
 basic_allocator_musl<is_shared>::recorded_allocation_bytes(
    void const* p_storage
 ) noexcept(!__has_feature(cxx_exceptions)) -> idx {
-   context* const p_context = m_p_context.acquire();
+   context* const p_context = m_p_context.order_acquire();
    verify(p_context != nullptr);
    auto* const p_allocation =
       const_cast<byte*>(bit_cast<byte const*>(p_storage));
@@ -1879,7 +1879,7 @@ void
 basic_allocator_musl<is_shared>::deallocate(
    void const* p_storage, idx allocation_bytes
 ) noexcept(!__has_feature(cxx_exceptions)) {
-   context* const p_context = m_p_context.acquire();
+   context* const p_context = m_p_context.order_acquire();
    verify(p_context != nullptr);
    auto* const p_allocation =
       const_cast<byte*>(bit_cast<byte const*>(p_storage));
@@ -1908,7 +1908,7 @@ auto
 basic_allocator_musl<is_shared>::grow(
    span<byte> allocation, idx new_bytes
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<void> {
-   context* const p_context = m_p_context.acquire();
+   context* const p_context = m_p_context.order_acquire();
    verify(p_context != nullptr);
    byte* p_allocation = allocation.data();
    bool const resized = p_context->resize_in_place(
@@ -1923,7 +1923,7 @@ auto
 basic_allocator_musl<is_shared>::grow_feedback(
    span<byte> allocation, idx new_bytes
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe_non_zero<idx> {
-   context* const p_context = m_p_context.acquire();
+   context* const p_context = m_p_context.order_acquire();
    verify(p_context != nullptr);
    byte* p_allocation = allocation.data();
    uword usable_bytes;
@@ -1942,7 +1942,7 @@ auto
 basic_allocator_musl<is_shared>::reallocate_memory(
    span<byte> allocation, idx new_bytes, uword* _Nullable p_feedback_bytes
 ) noexcept(!__has_feature(cxx_exceptions)) -> void* _Nullable {
-   context* const p_context = m_p_context.acquire();
+   context* const p_context = m_p_context.order_acquire();
    verify(p_context != nullptr);
    byte* p_allocation = allocation.data();
    uword const settled_bytes = new_bytes == 0u ? 1u : new_bytes;
@@ -2002,7 +2002,7 @@ auto
 basic_allocator_musl<is_shared>::bytes_used() const noexcept(
    !__has_feature(cxx_exceptions)
 ) -> idx {
-   context const* const p_context = m_p_context.acquire();
+   context const* const p_context = m_p_context.order_acquire();
    if (p_context == nullptr) {
       return 0u;
    }
@@ -2018,7 +2018,7 @@ auto
 basic_allocator_musl<is_shared>::bytes_capacity() const noexcept(
    !__has_feature(cxx_exceptions)
 ) -> idx {
-   context const* const p_context = m_p_context.acquire();
+   context const* const p_context = m_p_context.order_acquire();
    if (p_context == nullptr) {
       return 0u;
    }
@@ -2037,8 +2037,9 @@ basic_allocator_musl<is_shared>::is_equivalent(
    if (this == &other) {
       return true;
    }
-   context* const p_context = m_p_context.acquire();
-   return p_context != nullptr && p_context == other.m_p_context.acquire();
+   context* const p_context = m_p_context.order_acquire();
+   return p_context != nullptr
+          && p_context == other.m_p_context.order_acquire();
 }
 
 template class basic_allocator_musl<false>;

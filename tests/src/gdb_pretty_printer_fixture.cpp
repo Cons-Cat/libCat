@@ -263,11 +263,12 @@ cat::atomic<int&> cat_gdb_atomic_reference_value{
 cat::atomic<int> const cat_gdb_const_atomic_value{62};
 
 [[gnu::used, gnu::retain]]
-auto cat_gdb_memory_order_reference_value = cat_gdb_atomic_value.release();
+auto cat_gdb_memory_order_reference_value =
+   cat_gdb_atomic_value.order_release();
 
 [[gnu::used, gnu::retain]]
 auto cat_gdb_const_memory_order_reference_value =
-   cat_gdb_const_atomic_value.acquire();
+   cat_gdb_const_atomic_value.order_acquire();
 
 [[gnu::used, gnu::retain]]
 cat::atomic<cat::uint4> cat_gdb_atomic_combined_storage{72u};
@@ -277,11 +278,11 @@ auto cat_gdb_atomic_overflow_value = cat_gdb_atomic_combined_storage.wrap();
 
 [[gnu::used, gnu::retain]]
 auto cat_gdb_atomic_wrap_release_value =
-   cat_gdb_atomic_combined_storage.wrap().release();
+   cat_gdb_atomic_combined_storage.wrap().order_release();
 
 [[gnu::used, gnu::retain]]
 auto cat_gdb_atomic_release_wrap_value =
-   cat_gdb_atomic_combined_storage.release().wrap();
+   cat_gdb_atomic_combined_storage.order_release().wrap();
 
 [[gnu::used, gnu::retain]]
 cat::idx cat_gdb_index_value = 7u;

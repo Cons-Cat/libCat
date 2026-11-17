@@ -273,7 +273,8 @@ class semaphore_counting<least_max_value> {
          return;
       }
 
-      uint4 const old_state = m_state.m_value.release().exchange(available);
+      uint4 const old_state =
+         m_state.m_value.order_release().exchange(available);
       assert(old_state != available);
       if (old_state == contended) {
          // The waiter may have already left, so waking nobody is fine.
@@ -353,13 +354,13 @@ class semaphore_counting<least_max_value> {
    auto
    spin() const noexcept(!__has_feature(cxx_exceptions)) -> uint4 {
       for (uint1 shift; shift < 8u; ++shift) {
-         uint4 const state = m_state.m_value.relaxed();
+         uint4 const state = m_state.m_value.order_relaxed();
          if (state != empty) {
             return state;
          }
          machine_pause(uint1(1u) << shift);
       }
-      return m_state.m_value.relaxed();
+      return m_state.m_value.order_relaxed();
    }
 
    template <is_clock Clock>
@@ -378,7 +379,7 @@ class semaphore_counting<least_max_value> {
          // one spurious wake, and only a taken permit fences.
          if (
             state != contended
-            && m_state.m_value.relaxed().exchange(contended) == available
+            && m_state.m_value.order_relaxed().exchange(contended) == available
          ) {
             thread_fence(memory_order::acquire);
             return true;

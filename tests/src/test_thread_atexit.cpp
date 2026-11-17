@@ -157,7 +157,7 @@ $test(thread_atexit_parking_lot_threads_exit) {
          )
          .verify();
    }
-   while (entered.acquire() != thread_count) {
+   while (entered.order_acquire() != thread_count) {
       cat::machine_pause();
    }
    for (idx iteration; iteration < 1'000; ++iteration) {

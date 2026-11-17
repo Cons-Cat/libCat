@@ -193,7 +193,7 @@ $test(exceptions_parallel_throws) {
    second.join().verify();
    first.free(g_tests_alloc);
    second.free(g_tests_alloc);
-   cat::verify(passed.relaxed() == 300);
+   cat::verify(passed.order_relaxed() == 300);
 }
 
 namespace {

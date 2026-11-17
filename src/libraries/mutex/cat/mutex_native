@@ -84,7 +84,7 @@ class mutex_native {
    void
    unlock() noexcept {
       auto _ = __tsan_mutex_pre_unlock(this, 0u);
-      if (m_futex.m_value.release().exchange(unlocked) == contended) {
+      if (m_futex.m_value.order_release().exchange(unlocked) == contended) {
          auto _ = m_futex.wake();
       }
       __tsan_mutex_post_unlock(this, 0u);
@@ -110,7 +110,7 @@ class mutex_native {
    spin() const noexcept -> uint4 {
       int4 spins = 100;
       for (;;) {
-         uint4 const state = m_futex.m_value.relaxed();
+         uint4 const state = m_futex.m_value.order_relaxed();
          if (state != locked || spins == 0) {
             return state;
          }
@@ -136,7 +136,7 @@ class mutex_native {
       for (;;) {
          if (
             state != contended
-            && m_futex.m_value.acquire().exchange(contended) == unlocked
+            && m_futex.m_value.order_acquire().exchange(contended) == unlocked
          ) {
             return;
          }
@@ -166,7 +166,7 @@ class mutex_native {
       for (;;) {
          if (
             state != contended
-            && m_futex.m_value.acquire().exchange(contended) == unlocked
+            && m_futex.m_value.order_acquire().exchange(contended) == unlocked
          ) {
             return true;
          }

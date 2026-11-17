@@ -31,25 +31,25 @@
 //
 //    atomic<int4> value = 0;
 //    // Similar to `value.fetch_add(1u, memory_order::relaxed)`:
-//    value.relaxed() += 1u;
+//    value.order_relaxed() += 1u;
 //
 //    // Similar to `value.fetch_add(1u, memory_order::acquire)`:
-//    value.acquire() += 1u;
+//    value.order_acquire() += 1u;
 //
 //    // Similar to `value.fetch_add(1u, memory_order::release)`:
-//    value.release() += 1u;
+//    value.order_release() += 1u;
 //
 //    // Similar to `value.fetch_add(1u, memory_order::acq_rel)`:
-//    value.acq_rel() += 1u;
+//    value.order_acq_rel() += 1u;
 //
 //    // Similar to `value.fetch_add(1u, memory_order::seq_cst)`:
-//    value.seq_cst() += 1u;
+//    value.order_seq_cst() += 1u;
 //
 //    // Similar to `result.store(
 //                         value1.load(memory_order::relaxed)
 //                         + value2.load(memory_order::acquire),
 //                      memory_order::relaxed)`:
-//    result.relaxed() = value1.relaxed() + value2.acquire();
+//    result.order_relaxed() = value1.order_relaxed() + value2.order_acquire();
 //
 // This class is also informed by the following papers:
 //
@@ -442,19 +442,19 @@ class atomic_overflow_reference {
    }
 
    constexpr auto
-   relaxed() const;
+   order_relaxed() const;
 
    constexpr auto
-   acquire() const;
+   order_acquire() const;
 
    constexpr auto
-   release() const;
+   order_release() const;
 
    constexpr auto
-   acq_rel() const;
+   order_acq_rel() const;
 
    constexpr auto
-   seq_cst() const;
+   order_seq_cst() const;
 
  private:
    template <bool return_new, typename Operation>
@@ -629,74 +629,74 @@ class atomic<T> {
    }
 
    constexpr auto
-   relaxed() & noexcept [[clang::lifetimebound]]
+   order_relaxed() & noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic, memory_order::relaxed>;
 
    constexpr auto
-   relaxed() const& noexcept [[clang::lifetimebound]]
+   order_relaxed() const& noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic const, memory_order::relaxed>;
 
    constexpr auto
-   relaxed() && = delete;
+   order_relaxed() && = delete;
 
    constexpr auto
-   relaxed() const&& = delete;
+   order_relaxed() const&& = delete;
 
    constexpr auto
-   acquire() & noexcept [[clang::lifetimebound]]
+   order_acquire() & noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic, memory_order::acquire>;
 
    constexpr auto
-   acquire() const& noexcept [[clang::lifetimebound]]
+   order_acquire() const& noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic const, memory_order::acquire>;
 
    constexpr auto
-   acquire() && = delete;
+   order_acquire() && = delete;
 
    constexpr auto
-   acquire() const&& = delete;
+   order_acquire() const&& = delete;
 
    constexpr auto
-   release() & noexcept [[clang::lifetimebound]]
+   order_release() & noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic, memory_order::release>;
 
    constexpr auto
-   release() const& noexcept
+   order_release() const& noexcept
       -> memory_order_reference<atomic const, memory_order::release>;
 
    constexpr auto
-   release() && = delete;
+   order_release() && = delete;
 
    constexpr auto
-   release() const&& = delete;
+   order_release() const&& = delete;
 
    constexpr auto
-   acq_rel() & noexcept [[clang::lifetimebound]]
+   order_acq_rel() & noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic, memory_order::acq_rel>;
 
    constexpr auto
-   acq_rel() const& noexcept
+   order_acq_rel() const& noexcept
       -> memory_order_reference<atomic const, memory_order::acq_rel>;
 
    constexpr auto
-   acq_rel() && = delete;
+   order_acq_rel() && = delete;
 
    constexpr auto
-   acq_rel() const&& = delete;
+   order_acq_rel() const&& = delete;
 
    constexpr auto
-   seq_cst() & noexcept [[clang::lifetimebound]]
+   order_seq_cst() & noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic, memory_order::seq_cst>;
 
    constexpr auto
-   seq_cst() const& noexcept
+   order_seq_cst() const& noexcept
       -> memory_order_reference<atomic const, memory_order::seq_cst>;
 
    constexpr auto
-   seq_cst() && = delete;
+   order_seq_cst() && = delete;
 
    constexpr auto
-   seq_cst() const&& = delete;
+   order_seq_cst() const&& = delete;
 
    constexpr auto
    undef() & noexcept
@@ -1491,43 +1491,43 @@ class atomic<T&> {
    }
 
    constexpr auto
-   relaxed() & noexcept
+   order_relaxed() & noexcept
       -> memory_order_reference<atomic, memory_order::relaxed>;
 
    constexpr auto
-   relaxed() const& noexcept [[clang::lifetimebound]]
+   order_relaxed() const& noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic const, memory_order::relaxed>;
 
    constexpr auto
-   acquire() & noexcept [[clang::lifetimebound]]
+   order_acquire() & noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic, memory_order::acquire>;
 
    constexpr auto
-   acquire() const& noexcept
+   order_acquire() const& noexcept
       -> memory_order_reference<atomic const, memory_order::acquire>;
 
    constexpr auto
-   release() & noexcept [[clang::lifetimebound]]
+   order_release() & noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic, memory_order::release>;
 
    constexpr auto
-   release() const& noexcept
+   order_release() const& noexcept
       -> memory_order_reference<atomic const, memory_order::release>;
 
    constexpr auto
-   acq_rel() & noexcept
+   order_acq_rel() & noexcept
       -> memory_order_reference<atomic, memory_order::acq_rel>;
 
    constexpr auto
-   acq_rel() const& noexcept
+   order_acq_rel() const& noexcept
       -> memory_order_reference<atomic const, memory_order::acq_rel>;
 
    constexpr auto
-   seq_cst() & noexcept [[clang::lifetimebound]]
+   order_seq_cst() & noexcept [[clang::lifetimebound]]
    -> memory_order_reference<atomic, memory_order::seq_cst>;
 
    constexpr auto
-   seq_cst() const& noexcept
+   order_seq_cst() const& noexcept
       -> memory_order_reference<atomic const, memory_order::seq_cst>;
 
    constexpr auto

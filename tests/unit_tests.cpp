@@ -145,8 +145,8 @@ main() -> int {
 
    // `tests_passed` and `tests_failed` are modified within the `$test`
    // macro.
-   cat::idx const n_passed = tests_passed.relaxed();
-   cat::idx const n_failed = tests_failed.relaxed();
+   cat::idx const n_passed = tests_passed.order_relaxed();
+   cat::idx const n_failed = tests_failed.order_relaxed();
 
    print_allocator.reset();
    auto _ = cat::print_fmt(

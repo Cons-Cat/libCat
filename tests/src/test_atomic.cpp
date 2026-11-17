@@ -30,11 +30,11 @@ concept has_runtime_store_order =
 
 template <typename Atomic>
 concept has_relaxed_order_store =
-   requires(Atomic& atomic) { atomic.relaxed().store(1); };
+   requires(Atomic& atomic) { atomic.order_relaxed().store(1); };
 
 template <typename Atomic>
 concept has_relaxed_order_assignment =
-   requires(Atomic& atomic) { atomic.relaxed() = 1; };
+   requires(Atomic& atomic) { atomic.order_relaxed() = 1; };
 
 template <typename Reference>
 concept has_order_reference_comparison =
@@ -72,41 +72,42 @@ verify_order_reference_comparisons(
 
 template <typename Atomic>
 concept has_rvalue_relaxed_order =
-   requires { cat::declval<Atomic&&>().relaxed(); };
+   requires { cat::declval<Atomic&&>().order_relaxed(); };
 
 template <typename Atomic>
-concept has_atomic_order_overflow_composition = requires(Atomic& atomic) {
-                                                   atomic.relaxed().undef();
-                                                   atomic.undef().relaxed();
-                                                   atomic.acquire().undef();
-                                                   atomic.undef().acquire();
-                                                   atomic.release().undef();
-                                                   atomic.undef().release();
-                                                   atomic.acq_rel().undef();
-                                                   atomic.undef().acq_rel();
-                                                   atomic.seq_cst().undef();
-                                                   atomic.undef().seq_cst();
-                                                   atomic.relaxed().wrap();
-                                                   atomic.wrap().relaxed();
-                                                   atomic.acquire().wrap();
-                                                   atomic.wrap().acquire();
-                                                   atomic.release().wrap();
-                                                   atomic.wrap().release();
-                                                   atomic.acq_rel().wrap();
-                                                   atomic.wrap().acq_rel();
-                                                   atomic.seq_cst().wrap();
-                                                   atomic.wrap().seq_cst();
-                                                   atomic.relaxed().sat();
-                                                   atomic.sat().relaxed();
-                                                   atomic.acquire().sat();
-                                                   atomic.sat().acquire();
-                                                   atomic.release().sat();
-                                                   atomic.sat().release();
-                                                   atomic.acq_rel().sat();
-                                                   atomic.sat().acq_rel();
-                                                   atomic.seq_cst().sat();
-                                                   atomic.sat().seq_cst();
-                                                };
+concept has_atomic_order_overflow_composition =
+   requires(Atomic& atomic) {
+      atomic.order_relaxed().undef();
+      atomic.undef().order_relaxed();
+      atomic.order_acquire().undef();
+      atomic.undef().order_acquire();
+      atomic.order_release().undef();
+      atomic.undef().order_release();
+      atomic.order_acq_rel().undef();
+      atomic.undef().order_acq_rel();
+      atomic.order_seq_cst().undef();
+      atomic.undef().order_seq_cst();
+      atomic.order_relaxed().wrap();
+      atomic.wrap().order_relaxed();
+      atomic.order_acquire().wrap();
+      atomic.wrap().order_acquire();
+      atomic.order_release().wrap();
+      atomic.wrap().order_release();
+      atomic.order_acq_rel().wrap();
+      atomic.wrap().order_acq_rel();
+      atomic.order_seq_cst().wrap();
+      atomic.wrap().order_seq_cst();
+      atomic.order_relaxed().sat();
+      atomic.sat().order_relaxed();
+      atomic.order_acquire().sat();
+      atomic.sat().order_acquire();
+      atomic.order_release().sat();
+      atomic.sat().order_release();
+      atomic.order_acq_rel().sat();
+      atomic.sat().order_acq_rel();
+      atomic.order_seq_cst().sat();
+      atomic.sat().order_seq_cst();
+   };
 
 template <typename Reference>
 concept has_reference_address = requires(Reference& reference) { &reference; };
@@ -264,29 +265,29 @@ constexpr_atomic_reference_operations() -> bool {
 consteval auto
 constexpr_atomic_order_operations() -> bool {
    cat::atomic<int> value{1};
-   value.relaxed().store(2);
-   value.acquire().store(3);
-   if (value.release().load() != 3) {
+   value.order_relaxed().store(2);
+   value.order_acquire().store(3);
+   if (value.order_release().load() != 3) {
       return false;
    }
-   if (value.acquire() != 3 || value.acquire() == 4) {
+   if (value.order_acquire() != 3 || value.order_acquire() == 4) {
       return false;
    }
-   if (!(value.acquire() < 4) || !(2 < value.acquire())) {
+   if (!(value.order_acquire() < 4) || !(2 < value.order_acquire())) {
       return false;
    }
-   if (value.acq_rel().exchange(4) != 3) {
+   if (value.order_acq_rel().exchange(4) != 3) {
       return false;
    }
-   value.seq_cst().store(6);
+   value.order_seq_cst().store(6);
    if (value.load() != 6) {
       return false;
    }
 
    int storage = 7;
    cat::atomic<int&> reference{storage};
-   reference.release().store(8);
-   return reference.acquire().load() == 8;
+   reference.order_release().store(8);
+   return reference.order_acquire().load() == 8;
 }
 
 }  // namespace
@@ -843,78 +844,93 @@ $test(atomic_ref_bound) {
 $test(memory_order_reference) {
    cat::atomic<int> value{0};
    static_assert(cat::is_same<
-                 decltype(value.relaxed()),
+                 decltype(value.order_relaxed()),
                  cat::memory_order_reference<
                     cat::atomic<int>, cat::memory_order::relaxed>>);
    static_assert(cat::is_same<
-                 decltype(value.acquire()),
+                 decltype(value.order_acquire()),
                  cat::memory_order_reference<
                     cat::atomic<int>, cat::memory_order::acquire>>);
    static_assert(cat::is_same<
-                 decltype(value.release()),
+                 decltype(value.order_release()),
                  cat::memory_order_reference<
                     cat::atomic<int>, cat::memory_order::release>>);
    static_assert(cat::is_same<
-                 decltype(value.acq_rel()),
+                 decltype(value.order_acq_rel()),
                  cat::memory_order_reference<
                     cat::atomic<int>, cat::memory_order::acq_rel>>);
    static_assert(cat::is_same<
-                 decltype(value.seq_cst()),
+                 decltype(value.order_seq_cst()),
                  cat::memory_order_reference<
                     cat::atomic<int>, cat::memory_order::seq_cst>>);
-   static_assert(cat::is_copy_constructible<decltype(value.relaxed())>);
-   static_assert(!cat::is_copy_assignable<decltype(value.relaxed())>);
-   static_assert(!has_reference_address<decltype(value.relaxed())>);
-   static_assert(cat::is_same<decltype(value.relaxed() = 1), int>);
-   static_assert(cat::is_convertible<decltype(value.acquire()), int>);
+   static_assert(cat::is_copy_constructible<decltype(value.order_relaxed())>);
+   static_assert(!cat::is_copy_assignable<decltype(value.order_relaxed())>);
+   static_assert(!has_reference_address<decltype(value.order_relaxed())>);
+   static_assert(cat::is_same<decltype(value.order_relaxed() = 1), int>);
+   static_assert(cat::is_convertible<decltype(value.order_acquire()), int>);
 
-   cat::verify((value.relaxed() = 1) == 1);
+   cat::verify((value.order_relaxed() = 1) == 1);
    cat::verify(value.load() == 1);
    cat::memory_order_reference<cat::atomic<int>, cat::memory_order::relaxed>
       direct{value};
    direct.store(1);
-   cat::verify(value.acquire().load() == 1);
-   value.acquire().store(2);
-   cat::verify(value.release().load() == 2);
-   value.release().store(3);
-   cat::verify(value.acq_rel().exchange(4) == 3);
-   cat::verify(value.seq_cst().fetch_add(2) == 4);
+   cat::verify(value.order_acquire().load() == 1);
+   value.order_acquire().store(2);
+   cat::verify(value.order_release().load() == 2);
+   value.order_release().store(3);
+   cat::verify(value.order_acq_rel().exchange(4) == 3);
+   cat::verify(value.order_seq_cst().fetch_add(2) == 4);
    cat::verify(value.load() == 6);
-   int loaded = value.acquire();
+   int loaded = value.order_acquire();
    cat::verify(loaded == 6);
-   cat::verify(value.seq_cst() == 6);
+   cat::verify(value.order_seq_cst() == 6);
    cat::atomic<int> equal_value{6};
    cat::atomic<int> greater_value{7};
    verify_order_reference_comparisons(
-      value.relaxed(), equal_value.relaxed(), greater_value.relaxed()
+      value.order_relaxed(), equal_value.order_relaxed(),
+      greater_value.order_relaxed()
    );
    verify_order_reference_comparisons(
-      value.acquire(), equal_value.acquire(), greater_value.acquire()
+      value.order_acquire(), equal_value.order_acquire(),
+      greater_value.order_acquire()
    );
    verify_order_reference_comparisons(
-      value.release(), equal_value.release(), greater_value.release()
+      value.order_release(), equal_value.order_release(),
+      greater_value.order_release()
    );
    verify_order_reference_comparisons(
-      value.acq_rel(), equal_value.acq_rel(), greater_value.acq_rel()
+      value.order_acq_rel(), equal_value.order_acq_rel(),
+      greater_value.order_acq_rel()
    );
    verify_order_reference_comparisons(
-      value.seq_cst(), equal_value.seq_cst(), greater_value.seq_cst()
+      value.order_seq_cst(), equal_value.order_seq_cst(),
+      greater_value.order_seq_cst()
    );
-   static_assert(has_order_reference_comparison<decltype(value.relaxed())>);
-   static_assert(has_order_reference_comparison<decltype(value.acquire())>);
-   static_assert(has_order_reference_comparison<decltype(value.release())>);
-   static_assert(has_order_reference_comparison<decltype(value.acq_rel())>);
-   static_assert(has_order_reference_comparison<decltype(value.seq_cst())>);
+   static_assert(
+      has_order_reference_comparison<decltype(value.order_relaxed())>
+   );
+   static_assert(
+      has_order_reference_comparison<decltype(value.order_acquire())>
+   );
+   static_assert(
+      has_order_reference_comparison<decltype(value.order_release())>
+   );
+   static_assert(
+      has_order_reference_comparison<decltype(value.order_acq_rel())>
+   );
+   static_assert(
+      has_order_reference_comparison<decltype(value.order_seq_cst())>
+   );
 
    cat::atomic<bool> flag{true};
-   cat::verify(flag.acquire());
-   cat::verify(flag.acquire() == true);
+   cat::verify(flag.order_acquire());
+   cat::verify(flag.order_acquire() == true);
 
    cat::atomic<int> const& read_only_value = value;
-   int const_loaded = read_only_value.acquire();
+   int const_loaded = read_only_value.order_acquire();
    cat::verify(const_loaded == 6);
-   cat::verify(read_only_value.acquire().load() == 6);
-   cat::verify(read_only_value.acquire() == value.acquire());
+   cat::verify(read_only_value.order_acquire().load() == 6);
+   cat::verify(read_only_value.order_acquire() == value.order_acquire());
    static_assert(!has_relaxed_order_store<cat::atomic<int> const>);
    static_assert(!has_relaxed_order_assignment<cat::atomic<int> const>);
    static_assert(!has_rvalue_relaxed_order<cat::atomic<int>>);
@@ -922,27 +938,27 @@ $test(memory_order_reference) {
    int storage = 7;
    cat::atomic<int&> reference{storage};
    static_assert(cat::is_same<
-                 decltype(reference.relaxed()),
+                 decltype(reference.order_relaxed()),
                  cat::memory_order_reference<
                     cat::atomic<int&>, cat::memory_order::relaxed>>);
-   auto ordered_reference = reference.release();
+   auto ordered_reference = reference.order_release();
    cat::verify((ordered_reference = 8) == 8);
    cat::verify(storage == 8);
-   int reference_loaded = reference.acquire();
+   int reference_loaded = reference.order_acquire();
    cat::verify(reference_loaded == 8);
    cat::atomic<int&> const const_reference{storage};
-   const_reference.relaxed().store(9);
+   const_reference.order_relaxed().store(9);
    cat::verify(storage == 9);
 
    cat::atomic<int const&> read_only_reference{storage};
-   cat::verify(read_only_reference.seq_cst().load() == 9);
+   cat::verify(read_only_reference.order_seq_cst().load() == 9);
    static_assert(!has_relaxed_order_store<cat::atomic<int const&>>);
    static_assert(!has_relaxed_order_assignment<cat::atomic<int const&>>);
 
    cat::atomic<cat::sat_uint1> byte{cat::limits<cat::sat_uint1>::max()};
-   byte.relaxed().fetch_add(1u);
+   byte.order_relaxed().fetch_add(1u);
    cat::verify(byte.load() == cat::limits<cat::sat_uint1>::max());
-   byte.sat().release().fetch_sub(1u);
+   byte.sat().order_release().fetch_sub(1u);
    cat::verify(byte.load() == 254u);
 
    cat::atomic<cat::uint1> boundary{cat::limits<cat::uint1>::max()};
@@ -953,44 +969,45 @@ $test(memory_order_reference) {
       !has_atomic_order_overflow_composition<cat::atomic<cat::uint1> const>
    );
    static_assert(cat::is_same<
-                 decltype(boundary.relaxed().wrap()),
-                 decltype(boundary.wrap().relaxed())>);
+                 decltype(boundary.order_relaxed().wrap()),
+                 decltype(boundary.wrap().order_relaxed())>);
    static_assert(cat::is_same<
-                 decltype(boundary.acquire().wrap()),
-                 decltype(boundary.wrap().acquire())>);
+                 decltype(boundary.order_acquire().wrap()),
+                 decltype(boundary.wrap().order_acquire())>);
    static_assert(cat::is_same<
-                 decltype(boundary.release().wrap()),
-                 decltype(boundary.wrap().release())>);
+                 decltype(boundary.order_release().wrap()),
+                 decltype(boundary.wrap().order_release())>);
    static_assert(cat::is_same<
-                 decltype(boundary.acq_rel().wrap()),
-                 decltype(boundary.wrap().acq_rel())>);
+                 decltype(boundary.order_acq_rel().wrap()),
+                 decltype(boundary.wrap().order_acq_rel())>);
    static_assert(cat::is_same<
-                 decltype(boundary.seq_cst().wrap()),
-                 decltype(boundary.wrap().seq_cst())>);
+                 decltype(boundary.order_seq_cst().wrap()),
+                 decltype(boundary.wrap().order_seq_cst())>);
    static_assert(cat::is_same<
-                 decltype(boundary.relaxed().undef()),
-                 decltype(boundary.undef().relaxed())>);
-   static_assert(
-      cat::is_same<
-         decltype(boundary.relaxed().sat()), decltype(boundary.sat().relaxed())>
-   );
+                 decltype(boundary.order_relaxed().undef()),
+                 decltype(boundary.undef().order_relaxed())>);
+   static_assert(cat::is_same<
+                 decltype(boundary.order_relaxed().sat()),
+                 decltype(boundary.sat().order_relaxed())>);
 
    cat::verify(
-      boundary.relaxed().wrap().fetch_add(1u) == cat::limits<cat::uint1>::max()
+      boundary.order_relaxed().wrap().fetch_add(1u)
+      == cat::limits<cat::uint1>::max()
    );
    cat::verify(boundary.load() == 0u);
    boundary.store(cat::limits<cat::uint1>::max());
    cat::verify(
-      boundary.wrap().relaxed().fetch_add(1u) == cat::limits<cat::uint1>::max()
+      boundary.wrap().order_relaxed().fetch_add(1u)
+      == cat::limits<cat::uint1>::max()
    );
    cat::verify(boundary.load() == 0u);
    boundary.store(cat::limits<cat::uint1>::max());
-   boundary.relaxed().sat().fetch_add(1u);
+   boundary.order_relaxed().sat().fetch_add(1u);
    cat::verify(boundary.load() == cat::limits<cat::uint1>::max());
-   boundary.sat().relaxed().fetch_add(1u);
+   boundary.sat().order_relaxed().fetch_add(1u);
    cat::verify(boundary.load() == cat::limits<cat::uint1>::max());
 
-   auto combined = boundary.release().wrap();
+   auto combined = boundary.order_release().wrap();
    combined.store(12u);
    cat::uint1 combined_loaded = combined;
    cat::verify(combined_loaded == 12u);
@@ -999,17 +1016,17 @@ $test(memory_order_reference) {
 
    cat::uint1 boundary_storage = cat::limits<cat::uint1>::max();
    cat::atomic<cat::uint1&> boundary_reference{boundary_storage};
-   boundary_reference.release().wrap().fetch_add(1u);
+   boundary_reference.order_release().wrap().fetch_add(1u);
    cat::verify(boundary_storage == 0u);
    boundary_storage = cat::limits<cat::uint1>::max();
-   boundary_reference.wrap().release().fetch_add(1u);
+   boundary_reference.wrap().order_release().fetch_add(1u);
    cat::verify(boundary_storage == 0u);
 
    cat::atomic<idx> entered;
    constexpr idx thread_count = 4;
-   entered.release() = thread_count;
-   cat::verify(!(entered.acquire() != thread_count));
-   cat::verify(entered.acquire() == thread_count);
+   entered.order_release() = thread_count;
+   cat::verify(!(entered.order_acquire() != thread_count));
+   cat::verify(entered.order_acquire() == thread_count);
 }
 
 $test(memory_order_reference_format) {
@@ -1021,10 +1038,11 @@ $test(memory_order_reference_format) {
 
    cat::atomic<cat::uint1> value{42u};
    auto wrap_release =
-      cat::fmt(allocator, "{}", value.wrap().release()).verify();
+      cat::fmt(allocator, "{}", value.wrap().order_release()).verify();
    auto release_wrap =
-      cat::fmt(allocator, "{}", value.release().wrap()).verify();
-   auto sat_acquire = cat::fmt(allocator, "{}", value.sat().acquire()).verify();
+      cat::fmt(allocator, "{}", value.order_release().wrap()).verify();
+   auto sat_acquire =
+      cat::fmt(allocator, "{}", value.sat().order_acquire()).verify();
 
    cat::verify(wrap_release == "atomic_ref(42)");
    cat::verify(release_wrap == wrap_release);

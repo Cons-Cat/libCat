@@ -272,11 +272,11 @@ verify_cross_thread_release(Allocator& allocator) {
          g_tests_alloc, worker_stack_size,
          [&allocator, allocation, &released] {
             allocator.free_multi_uninit(allocation);
-            released.release() = true;
+            released.order_release() = true;
          }
       )
       .verify();
-   while (!released.acquire()) {
+   while (!released.order_acquire()) {
       cat::machine_pause();
    }
 #if __has_feature(address_sanitizer)
@@ -946,8 +946,8 @@ $test(allocator_musl_shared_lock_wakeup_stress) {
          .spawn(
             g_tests_alloc, worker_stack_size,
             [&allocator, &ready, &start, index, iteration_count] {
-               ready.release().fetch_add(1u);
-               while (!start.acquire()) {
+               ready.order_release().fetch_add(1u);
+               while (!start.order_acquire()) {
                   cat::machine_pause();
                }
                shared_contention_worker_impl(allocator, index, iteration_count);
@@ -955,10 +955,10 @@ $test(allocator_musl_shared_lock_wakeup_stress) {
          )
          .verify();
    }
-   while (ready.acquire().load() != thread_count) {
+   while (ready.order_acquire().load() != thread_count) {
       cat::machine_pause();
    }
-   start.release() = true;
+   start.order_release() = true;
    for (idx index; index < thread_count; ++index) {
       threads[index].join().verify();
    }
@@ -981,7 +981,7 @@ $test(allocator_musl_shared_aligned_accounting_is_final) {
       .spawn(
          g_tests_alloc, worker_stack_size,
          [&allocator, &start, &done, allocation_bytes] {
-            while (!start.acquire()) {
+            while (!start.order_acquire()) {
                cat::machine_pause();
             }
             for (idx iteration; iteration < 20'000u; ++iteration) {
@@ -989,12 +989,12 @@ $test(allocator_musl_shared_aligned_accounting_is_final) {
                   aligned_allocate_bytes(allocator, 64u, allocation_bytes);
                deallocate_bytes(allocator, p_allocation, allocation_bytes);
             }
-            done.release() = true;
+            done.order_release() = true;
          }
       )
       .verify();
-   start.release() = true;
-   while (!done.acquire()) {
+   start.order_release() = true;
+   while (!done.order_acquire()) {
       idx const used = allocator.bytes_used();
       cat::verify(used == 0u || used == allocation_bytes);
    }

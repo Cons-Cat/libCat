@@ -79,18 +79,18 @@ synchronize_time() -> cat::maybe<synchronized_time> {
 auto
 read_conversion() -> conversion {
    for (;;) {
-      cat::uint4 const before = clock_state.sequence.acquire();
+      cat::uint4 const before = clock_state.sequence.order_acquire();
       if ((before & 1u) != 0u) {
          cat::machine_pause();
          continue;
       }
 
       conversion const result = {
-         .base_tsc = clock_state.base_tsc.relaxed(),
-         .base_nanoseconds = clock_state.base_nanoseconds.relaxed(),
-         .multiplier = clock_state.multiplier.relaxed(),
+         .base_tsc = clock_state.base_tsc.order_relaxed(),
+         .base_nanoseconds = clock_state.base_nanoseconds.order_relaxed(),
+         .multiplier = clock_state.multiplier.order_relaxed(),
       };
-      if (before == clock_state.sequence.acquire().load()) {
+      if (before == clock_state.sequence.order_acquire().load()) {
          return result;
       }
    }
@@ -101,14 +101,14 @@ write_conversion(
    conversion const& value, cat::int8 base_error,
    cat::uint8 next_calibration_value
 ) {
-   cat::uint4 sequence = clock_state.sequence.relaxed();
-   clock_state.sequence.seq_cst() = sequence + 1u;
-   clock_state.base_tsc.relaxed() = value.base_tsc;
-   clock_state.base_nanoseconds.relaxed() = value.base_nanoseconds;
-   clock_state.multiplier.relaxed() = value.multiplier;
-   clock_state.base_error.relaxed() = base_error;
-   clock_state.next_calibration.relaxed() = next_calibration_value;
-   clock_state.sequence.seq_cst() = sequence + 2u;
+   cat::uint4 sequence = clock_state.sequence.order_relaxed();
+   clock_state.sequence.order_seq_cst() = sequence + 1u;
+   clock_state.base_tsc.order_relaxed() = value.base_tsc;
+   clock_state.base_nanoseconds.order_relaxed() = value.base_nanoseconds;
+   clock_state.multiplier.order_relaxed() = value.multiplier;
+   clock_state.base_error.order_relaxed() = base_error;
+   clock_state.next_calibration.order_relaxed() = next_calibration_value;
+   clock_state.sequence.order_seq_cst() = sequence + 2u;
 }
 
 [[nodiscard]]
@@ -173,7 +173,7 @@ sleep_for_calibration(x64::clock_tsc::duration elapsed) {
 
 auto
 x64::clock_tsc::initialize(duration calibration_time) -> bool {
-   cat::uint4 initialized = clock_state.initialized.acquire();
+   cat::uint4 initialized = clock_state.initialized.order_acquire();
    if (initialized == ready) {
       return true;
    }
@@ -189,24 +189,24 @@ x64::clock_tsc::initialize(duration calibration_time) -> bool {
       )
    ) {
       if (!x64::has_invariant_tsc()) {
-         clock_state.initialized.release() = unavailable;
+         clock_state.initialized.order_release() = unavailable;
          return false;
       }
 
       cat::maybe<synchronized_time> const first = synchronize_time();
       if (first.is_empty()) {
-         clock_state.initialized.release() = unavailable;
+         clock_state.initialized.order_release() = unavailable;
          return false;
       }
 
       if (!sleep_for_calibration(calibration_time)) {
-         clock_state.initialized.release() = unavailable;
+         clock_state.initialized.order_release() = unavailable;
          return false;
       }
 
       cat::maybe<synchronized_time> const second = synchronize_time();
       if (second.is_empty() || second.value().tsc <= first.value().tsc) {
-         clock_state.initialized.release() = unavailable;
+         clock_state.initialized.order_release() = unavailable;
          return false;
       }
 
@@ -216,7 +216,7 @@ x64::clock_tsc::initialize(duration calibration_time) -> bool {
       );
 
       if (multiplier.is_empty()) {
-         clock_state.initialized.release() = unavailable;
+         clock_state.initialized.order_release() = unavailable;
          return false;
       }
 
@@ -229,11 +229,12 @@ x64::clock_tsc::initialize(duration calibration_time) -> bool {
          0, next_calibration(second.value().tsc, multiplier.value())
       );
 
-      clock_state.initialized.release() = ready;
+      clock_state.initialized.order_release() = ready;
       return true;
    }
 
-   while ((initialized = clock_state.initialized.acquire()) == initializing) {
+   while ((initialized = clock_state.initialized.order_acquire())
+          == initializing) {
       cat::machine_pause();
    }
    return initialized == ready;
@@ -264,7 +265,7 @@ x64::clock_tsc::calibrate() {
    }
 
    conversion const old = read_conversion();
-   if (read_tsc() < clock_state.next_calibration.relaxed().load()) {
+   if (read_tsc() < clock_state.next_calibration.order_relaxed().load()) {
       clock_state.calibrating.clear(cat::memory_order::release);
       return;
    }
@@ -290,7 +291,7 @@ x64::clock_tsc::calibrate() {
    }
 
    cat::int8 const predicted_elapsed = predicted.value() - old.base_nanoseconds;
-   cat::int8 const base_error = clock_state.base_error.relaxed();
+   cat::int8 const base_error = clock_state.base_error.order_relaxed();
    cat::int8 const corrected_elapsed =
       predicted_elapsed - (error * 2 - base_error);
    cat::maybe<cat::uint8> const multiplier = make_multiplier(

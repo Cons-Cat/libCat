@@ -130,14 +130,14 @@ $test(semaphore_counting_try_acquire_for_waits) {
       .spawn(
          g_tests_alloc, worker_stack_size,
          [&] {
-            entered.release() = true;
+            entered.order_release() = true;
             cat::verify(semaphore.try_acquire_for(1 * cat::units::second));
-            acquired.release() = true;
+            acquired.order_release() = true;
          }
       )
       .verify();
 
-   while (!entered.acquire()) {
+   while (!entered.order_acquire()) {
       cat::machine_pause();
    }
 
@@ -145,10 +145,10 @@ $test(semaphore_counting_try_acquire_for_waits) {
       cat::this_thread::yield();
    }
 
-   cat::verify(!acquired.acquire());
+   cat::verify(!acquired.order_acquire());
    semaphore.release();
    worker.join().verify();
-   cat::verify(acquired.acquire());
+   cat::verify(acquired.order_acquire());
 }
 
 // A single `release(n)` must wake `n` sleeping threads, not only one.
