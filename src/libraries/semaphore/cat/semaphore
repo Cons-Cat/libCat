@@ -1,0 +1,406 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// This header provides `cat::semaphore_counting` and `cat::semaphore_binary`.
+// It's based upon `std::counting_semaphore`, most closely the libc++
+// implementation and Ulrich Drepper's design for GlibC, which I think is shared
+// by Intel Thread Building Blocks.
+//    https://www.akkadia.org/drepper/futex.pdf
+
+#include <cat/atomic>
+#include <cat/chrono>
+#include <cat/linux>
+#include <cat/sanitizer>
+#include <cat/thread>
+
+namespace cat::detail {
+
+// Sleep while `futex` holds `expected`, until `deadline` if it has one.
+// Returns `false` once `deadline` passes.
+template <is_clock Clock>
+[[nodiscard]]
+auto
+semaphore_futex_wait(
+   nix::futex& futex, uint4 expected,
+   maybe<typename Clock::time_point> const& deadline
+) noexcept(!__has_feature(cxx_exceptions)) -> bool {
+   scaredy result =
+      deadline.has_value()
+         ? futex.wait_until(expected, Clock::native_handle(), deadline.value())
+         : futex.wait(expected);
+   if (result.has_value()) {
+      return true;
+   }
+
+   nix::linux_error const error = result.error();
+   if (error == nix::linux_error::timedout) {
+      return false;
+   }
+   assert(error == nix::linux_error::again || error == nix::linux_error::intr);
+   return true;
+}
+
+}  // namespace cat::detail
+
+namespace cat {
+
+template <uint4 least_max_value = uint4_max>
+class semaphore_counting {
+ public:
+   // `desired` cannot exceed `max()`.
+   constexpr explicit semaphore_counting(uint4 desired)
+      __attribute__((enable_if(desired > least_max_value, ""))) {
+      static_assert(
+         false,
+         "The initial count value exceeds this `cat::semaphore`'s maximum!"
+      );
+   }
+
+   constexpr explicit semaphore_counting(uint4 desired) noexcept
+       : m_count{{desired}} {
+   }
+
+   semaphore_counting(semaphore_counting const&) = delete;
+   semaphore_counting(semaphore_counting&&) = delete;
+
+   auto
+   operator=(semaphore_counting const&) noexcept
+      -> semaphore_counting& = delete;
+   auto
+   operator=(semaphore_counting&&) noexcept -> semaphore_counting& = delete;
+
+   [[nodiscard]]
+   static constexpr auto
+   max() noexcept -> uint4 {
+      return least_max_value;
+   }
+
+   // A constant `update` that exceeds `max()` selects this guard instead.
+   void
+   release(uint4 update)
+      __attribute__((enable_if(update > least_max_value, ""))) {
+      static_assert(false, "Release count exceeds the semaphore's maximum!");
+   }
+
+   // Return `update` permits without exceeding `max()`, and wake that many
+   // waiters.
+   void
+   release(uint4 update = 1u) noexcept {
+      __tsan_release(this);
+      if (update == 0u) {
+         return;
+      }
+
+      // This pairs with the fence in `acquire_slow()`, so either this sees a
+      // waiter, or the waiter sees this permit.
+      uint4 const old_count = m_count.m_value.fetch_add(update);
+      assert(update <= least_max_value - old_count);
+
+      uint4 const waiters = m_waiters.load();
+      if (waiters != 0u) {
+         // Waking nobody is fine, and this fits because waiters are threads.
+         auto _ = m_count.wake(
+            narrow_cast<int4>(update < waiters ? update : waiters).value()
+         );
+      }
+   }
+
+   void
+   acquire() noexcept(!__has_feature(cxx_exceptions)) {
+      if (!try_take()) {
+         auto _ = acquire_slow<clock_steady>(nullopt);
+      }
+      __tsan_acquire(this);
+   }
+
+   [[nodiscard]]
+   auto
+   try_acquire() noexcept -> bool {
+      return annotate_acquire(try_take());
+   }
+
+   template <is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_acquire_for(Duration timeout) noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
+      if (try_acquire()) {
+         return true;
+      }
+
+      clock_steady::time_point const now = clock_steady::now().assert();
+      return annotate_acquire(
+         acquire_slow<clock_steady>(now + clock_steady::duration(timeout))
+      );
+   }
+
+   template <is_clock Clock, is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_acquire_until(time_point<Clock, Duration> timeout) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
+      return annotate_acquire(
+         try_take() || acquire_slow<Clock>(typename Clock::time_point(timeout))
+      );
+   }
+
+ private:
+   // Tell TSan that a release happens before the acquire that takes its permit.
+   [[nodiscard]]
+   auto
+   annotate_acquire(bool is_acquired) noexcept -> bool {
+      if (is_acquired) {
+         __tsan_acquire(this);
+      }
+      return is_acquired;
+   }
+
+   // `try_acquire()` without its TSan annotation.
+   [[nodiscard]]
+   auto
+   try_take() noexcept -> bool {
+      return try_decrement(m_count.m_value.load(memory_order::relaxed));
+   }
+
+   // Take a permit if `count`, the last observed count, is non-zero.
+   [[nodiscard]]
+   auto
+   try_decrement(uint4 count) noexcept -> bool {
+      while (count != 0u) {
+         if (
+            m_count.m_value.compare_exchange_weak(
+               count, count - 1u, memory_order::acquire, memory_order::relaxed
+            )
+         ) {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   // Spin with exponential backoff for up to about a thousand pauses while the
+   // count is zero, then try to take a permit.
+   [[nodiscard]]
+   auto
+   spin() noexcept(!__has_feature(cxx_exceptions)) -> bool {
+      for (uint1 shift; shift < 8u; ++shift) {
+         if (try_take()) {
+            return true;
+         }
+         machine_pause(uint1(1u) << shift);
+      }
+      return try_take();
+   }
+
+   template <is_clock Clock>
+   [[nodiscard, gnu::cold, gnu::noinline]]
+   auto
+   acquire_slow(maybe<typename Clock::time_point> deadline) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
+      if (spin()) {
+         return true;
+      }
+
+      m_waiters.fetch_add(1u);
+      bool is_acquired = false;
+      for (;;) {
+         // Unlike a sequentially-consistent load, this fence pairs with
+         // `release()` without making a failed acquire synchronize.
+         thread_fence(memory_order::seq_cst);
+         if (try_decrement(m_count.m_value.load(memory_order::relaxed))) {
+            is_acquired = true;
+            break;
+         }
+
+         if (!detail::semaphore_futex_wait<Clock>(m_count, 0u, deadline)) {
+            // A `release()` may have raced the deadline.
+            is_acquired = try_take();
+            break;
+         }
+      }
+
+      m_waiters.fetch_sub(1u, memory_order::relaxed);
+      return is_acquired;
+   }
+
+   nix::futex m_count;
+   atomic<uint4> m_waiters;
+};
+
+template <uint4 least_max_value>
+   requires(least_max_value == 1u)
+class semaphore_counting<least_max_value> {
+ public:
+   // A constant `desired` that exceeds `max()` selects this guard instead.
+   constexpr explicit semaphore_counting(uint4 desired)
+      __attribute__((enable_if(desired > 1u, ""))) {
+      static_assert(false, "Initial count exceeds the semaphore's maximum!");
+   }
+
+   constexpr explicit semaphore_counting(uint4 desired) noexcept
+       : m_state{{desired}} {
+   }
+
+   semaphore_counting(semaphore_counting const&) = delete;
+   semaphore_counting(semaphore_counting&&) = delete;
+
+   auto
+   operator=(semaphore_counting const&) noexcept
+      -> semaphore_counting& = delete;
+   auto
+   operator=(semaphore_counting&&) noexcept -> semaphore_counting& = delete;
+
+   [[nodiscard]]
+   static constexpr auto
+   max() noexcept -> uint4 {
+      return 1u;
+   }
+
+   // A constant `update` that exceeds `max()` selects this guard instead.
+   void
+   release(uint4 update) __attribute__((enable_if(update > 1u, ""))) {
+      static_assert(false, "Release count exceeds the semaphore's maximum!");
+   }
+
+   // Return a permit to an empty semaphore, and wake a waiter.
+   void
+   release(uint4 update = 1u) noexcept {
+      __tsan_release(this);
+      if (update == 0u) {
+         return;
+      }
+
+      uint4 const old_state = m_state.m_value.release().exchange(available);
+      assert(old_state != available);
+      if (old_state == contended) {
+         // The waiter may have already left, so waking nobody is fine.
+         auto _ = m_state.wake();
+      }
+   }
+
+   void
+   acquire() noexcept(!__has_feature(cxx_exceptions)) {
+      if (!try_take()) {
+         auto _ = acquire_slow<clock_steady>(nullopt);
+      }
+      __tsan_acquire(this);
+   }
+
+   [[nodiscard]]
+   auto
+   try_acquire() noexcept -> bool {
+      return annotate_acquire(try_take());
+   }
+
+   template <is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_acquire_for(Duration timeout) noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
+      if (try_acquire()) {
+         return true;
+      }
+
+      clock_steady::time_point const now = clock_steady::now().assert();
+      return annotate_acquire(
+         acquire_slow<clock_steady>(now + clock_steady::duration(timeout))
+      );
+   }
+
+   template <is_clock Clock, is_duration Duration>
+   [[nodiscard]]
+   auto
+   try_acquire_until(time_point<Clock, Duration> timeout) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
+      return annotate_acquire(
+         try_take() || acquire_slow<Clock>(typename Clock::time_point(timeout))
+      );
+   }
+
+ private:
+   static constexpr uint4 empty = 0u;
+   static constexpr uint4 available = 1u;
+   // Empty, and threads may be sleeping.
+   static constexpr uint4 contended = 2u;
+
+   // Tell TSan that a release happens before the acquire that takes its permit.
+   [[nodiscard]]
+   auto
+   annotate_acquire(bool is_acquired) noexcept -> bool {
+      if (is_acquired) {
+         __tsan_acquire(this);
+      }
+      return is_acquired;
+   }
+
+   // `try_acquire()` without its TSan annotation.
+   [[nodiscard]]
+   auto
+   try_take() noexcept -> bool {
+      uint4 expected = available;
+      return m_state.m_value.compare_exchange_strong(
+         expected, empty, memory_order::acquire, memory_order::relaxed
+      );
+   }
+
+   // Spin with exponential backoff while the semaphore is empty without
+   // sleepers, then return the last observed state.
+   [[nodiscard]]
+   auto
+   spin() const noexcept(!__has_feature(cxx_exceptions)) -> uint4 {
+      for (uint1 shift; shift < 8u; ++shift) {
+         uint4 const state = m_state.m_value.relaxed();
+         if (state != empty) {
+            return state;
+         }
+         machine_pause(uint1(1u) << shift);
+      }
+      return m_state.m_value.relaxed();
+   }
+
+   template <is_clock Clock>
+   [[nodiscard, gnu::cold, gnu::noinline]]
+   auto
+   acquire_slow(maybe<typename Clock::time_point> deadline) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
+      uint4 state = spin();
+      if (state == available && try_take()) {
+         return true;
+      }
+
+      for (;;) {
+         // This leaves the state contended even with no sleepers, which costs
+         // one spurious wake, and only a taken permit fences.
+         if (
+            state != contended
+            && m_state.m_value.relaxed().exchange(contended) == available
+         ) {
+            thread_fence(memory_order::acquire);
+            return true;
+         }
+
+         if (!detail::semaphore_futex_wait<Clock>(
+                m_state, contended, deadline
+             )) {
+            // A `release()` may have raced the deadline.
+            return try_take();
+         }
+         state = spin();
+      }
+   }
+
+   nix::futex m_state;
+};
+
+using semaphore_binary = semaphore_counting<1u>;
+
+static_assert(sizeof(semaphore_binary) == sizeof(uint4));
+
+static_assert(sizeof(semaphore_counting<>) == sizeof(uint4) * 2u);
+
+}  // namespace cat
