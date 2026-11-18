@@ -3,7 +3,7 @@
 #pragma once
 
 // `scan_str<T>()` is a general-purpose text parser. It reads a string and
-// outputs a `maybe` which holds `T` iff the string was convertible, and is
+// outputs a `maybe` which holds `T` iff the string was convertible or is
 // empty otherwise. It's loosely based on `boost::lexical_cast()` and the
 // proposed `std::scan()` described in P1729.
 // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2024/p1729r5.html
@@ -33,30 +33,39 @@ template <typename T>
 concept is_raii_allocated = requires(T const& value) { value.get_allocator(); };
 }  // namespace detail
 
+// A `scanner` that never allocates also provides `.scan()` without an
+// allocator.
+template <typename T>
+concept is_scannable_without_allocator =
+   requires(str_view input) { scanner<T>{}.scan(input); };
+
 // Decimal integers.
 template <detail::is_parseable_integral T>
 struct scanner<T> {
-   template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   scan(
-      [[maybe_unused]] allocator_ref<Allocator> /*allocator*/, str_view input
-   ) const -> maybe<T> {
+   scan(str_view input) const -> maybe<T> {
       auto const [value, consumed] = $prop(from_chars<T>(input));
       if (consumed != input.size()) {
          return nullopt;
       }
       return value;
    }
+
+   template <is_allocator Allocator>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   scan(allocator_ref<Allocator> /*unused*/, str_view input) const -> maybe<T> {
+      return scan(input);
+   }
 };
 
 template <idx inline_capacity, str_vec_flags flags>
    requires(!flags.vec.is_fixed_size)
 struct scanner<basic_str_inplace<char, inline_capacity, flags>> {
-   template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   scan(allocator_ref<Allocator>, str_view input) const
+   scan(str_view input) const
       -> maybe<basic_str_inplace<char, inline_capacity, flags>> {
       basic_str_inplace<char, inline_capacity, flags> result;
       for (char const character : input) {
@@ -65,6 +74,14 @@ struct scanner<basic_str_inplace<char, inline_capacity, flags>> {
          }
       }
       return result;
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   scan(allocator_ref<Allocator> /*unused*/, str_view input) const
+      -> maybe<basic_str_inplace<char, inline_capacity, flags>> {
+      return scan(input);
    }
 };
 
@@ -106,6 +123,13 @@ struct scanner<basic_str_span<CharT, flags>> {
               "immediately dangle. Scan into `cat::str_vec` or "
               "`cat::str_inplace` instead.");
 };
+
+template <is_scannable_without_allocator T>
+[[nodiscard]]
+constexpr auto
+scan_str(str_view input) -> maybe<T> {
+   return scanner<T>{}.scan(input);
+}
 
 template <typename T, is_allocator Allocator>
    requires(!detail::is_raii_allocated<T>)

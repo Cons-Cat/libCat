@@ -58,8 +58,8 @@ list(
   -Xclang -verify-ignore-unexpected=note
   ${_cat_arith_verify_incs})
 foreach(_container IN ITEMS
-    allocator array bit bitset bitvec devec file_path futex iterable list map
-    maybe ring scaredy span stepanov string tuple variant vec)
+    allocator array bit bitset bitvec cli devec file_path futex iterable list
+    map maybe ring scaredy span stepanov string tuple variant vec)
   set(_source "${CMAKE_SOURCE_DIR}/tests/src/test_${_container}_verify.cpp")
   add_test(
     NAME SafetyTypeCheck_${_container}
@@ -162,6 +162,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_scaredy.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_from_chars.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_scan_str.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_cli.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_fill_memory.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_tuple.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_magic_get.cpp

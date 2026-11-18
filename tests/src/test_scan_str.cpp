@@ -26,6 +26,13 @@ static_assert(!has_scanner<cat::zstr_view>);
 static_assert(!has_scanner<cat::str_span>);
 static_assert(!has_scanner<cat::zstr_span>);
 
+static_assert(cat::is_scannable_without_allocator<int4>);
+static_assert(cat::is_scannable_without_allocator<cat::str_inplace<8u>>);
+static_assert(!cat::is_scannable_without_allocator<cat::str_vec>);
+static_assert(!cat::is_scannable_without_allocator<cat::raii::str_vec<>>);
+static_assert(!cat::is_scannable_without_allocator<cat::str_view>);
+static_assert(cat::scan_str<int4>("42").value() == 42);
+
 template <typename T>
 void
 verify_scan_integer(
