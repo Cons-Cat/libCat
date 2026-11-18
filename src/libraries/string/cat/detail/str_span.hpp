@@ -421,14 +421,7 @@ class
    constexpr basic_str_span(decltype(nullptr)) = delete;
 
    constexpr auto
-   operator=(basic_str_span const& other_string) noexcept -> basic_str_span& {
-      // Omitting `[[clang::lifetimebound]]` on the RHS avoids Clang 23
-      // `-Wdangling-assignment` false positives on assigns from pointers or
-      // arrays whose storage still outlives this view.
-      this->m_p_data = other_string.data();
-      this->m_size = other_string.size();
-      return *this;
-   }
+   operator=(basic_str_span const&) noexcept -> basic_str_span& = default;
 
    [[nodiscard]]
    constexpr auto

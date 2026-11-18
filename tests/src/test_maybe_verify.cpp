@@ -4,6 +4,7 @@
 // the first error in a translation unit. Run with `just test safety`.
 
 #include <cat/maybe>
+#include <cat/string>
 
 using namespace cat::literals;
 using namespace cat::arithmetic;
@@ -36,6 +37,23 @@ borrow_custom_ptr_maybe(int4* p_value [[clang::lifetimebound]])
 }
 
 inline constexpr int4 g_constant = 3;
+
+// Assigning a `maybe` of a view copies the view. The result borrows the view's
+// referent, not the source `maybe`, so neither of these warns.
+auto
+valid_maybe_view_copy_assignment() -> cat::maybe<cat::str_view> {
+   cat::maybe<cat::str_view> const source = cat::str_view("static");
+   cat::maybe<cat::str_view> target;
+   target = source;
+   return target;
+}
+
+auto
+valid_maybe_view_move_assignment() -> cat::maybe<cat::zstr_view> {
+   cat::maybe<cat::zstr_view> target;
+   target = cat::maybe<cat::zstr_view>(cat::zstr_view("static"));
+   return target;
+}
 
 // Deleted temporary-binding constructors are verified via `static_assert` so
 // this TU stays error-free and `-Wlifetime-safety` analyzes every function.

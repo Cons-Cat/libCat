@@ -243,6 +243,45 @@ struct maybe_value_storage {
       }
    }
 
+   constexpr maybe_value_storage(maybe_value_storage const&) = default;
+   constexpr maybe_value_storage(maybe_value_storage&&) = default;
+   constexpr auto
+
+   operator=(maybe_value_storage const&) -> maybe_value_storage& = default;
+   
+   constexpr auto
+   operator=(maybe_value_storage const& other) -> maybe_value_storage&
+      requires(
+         is_copy_assignable<T> && is_copy_constructible<T>
+         && !is_trivially_copy_assignable<T>
+      )
+   {
+      if (other.m_has_some) {
+         this->assign(other.m_storage);
+      } else {
+         this->hard_reset();
+      }
+      return *this;
+   }
+
+   constexpr auto
+   operator=(maybe_value_storage&&) -> maybe_value_storage& = default;
+
+   constexpr auto
+   operator=(maybe_value_storage&& other) -> maybe_value_storage&
+      requires(
+         is_move_assignable<T> && is_move_constructible<T>
+         && !is_trivially_move_assignable<T>
+      )
+   {
+      if (other.m_has_some) {
+         this->assign(move(other.m_storage));
+      } else {
+         this->hard_reset();
+      }
+      return *this;
+   }
+
    // If `T` is trivially-copy-assignable, then forward this value.
    constexpr auto
    operator=(T const& in_value) -> maybe_value_storage&
