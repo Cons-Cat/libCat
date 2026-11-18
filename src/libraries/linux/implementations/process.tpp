@@ -101,6 +101,8 @@ struct process {
       );
    }
 
+   // `stack_size` should be relatively large to defend against stack overflow.
+   // 16 KiB is customary, but as little as 8 KiB should often be acceptable.
    template <typename... Args, cat::is_invocable<Args...> Callback>
    auto
    spawn(

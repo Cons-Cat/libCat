@@ -116,9 +116,10 @@ static_assert(versioned::version_text == "1.2.rc.1");
 static_assert(sizeof(versioned) == sizeof(file_cli));
 
 // The version can be a braced list.
-static_assert(decltype(cat::cli(1, g_argv).add_version<{1, 2, "rc.1"}>())::
-                 version_text
-              == "1.2.rc.1");
+static_assert(
+   decltype(cat::cli(1, g_argv).add_version<{1, 2, "rc.1"}>())::version_text
+   == "1.2.rc.1"
+);
 
 // No flags can follow `.add_version()`.
 template <typename T>

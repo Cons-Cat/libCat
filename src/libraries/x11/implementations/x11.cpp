@@ -74,10 +74,10 @@ decimal_digit(cat::uint4 value) -> char {
 [[nodiscard]]
 auto
 find_environment(
-   char const* _Nullable const* _Nonnull p_environment, cat::str_view name
+   char const* _Nullable const* _Nonnull pp_environment, cat::str_view name
 ) -> cat::str_view {
-   for (; *p_environment != nullptr; ++p_environment) {
-      char const* p_entry = *p_environment;
+   for (; *pp_environment != nullptr; ++pp_environment) {
+      char const* p_entry = *pp_environment;
       cat::idx i = 0u;
 
       // `p_entry` is null-terminated, so a mismatch stops this before then.
@@ -403,9 +403,9 @@ x11::manual::connection::reject(error_code code, cat::idx bad_value) noexcept {
 auto
 x11::manual::connection::open(
    cat::allocator_dyn allocator, nix::manual::io_uring& ring,
-   char const* _Nullable const* _Nonnull p_environment
+   char const* _Nullable const* _Nonnull pp_environment
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection> {
-   cat::str_view const display = find_environment(p_environment, "DISPLAY");
+   cat::str_view const display = find_environment(pp_environment, "DISPLAY");
 
    // Build a null-terminated path to the Xauthority file.
    cat::array<char, 4_uki> path;
@@ -420,11 +420,11 @@ x11::manual::connection::open(
    };
 
    cat::str_view const authority =
-      find_environment(p_environment, "XAUTHORITY");
+      find_environment(pp_environment, "XAUTHORITY");
    if (authority.size() != 0u) {
       append(authority);
    } else {
-      cat::str_view const home = find_environment(p_environment, "HOME");
+      cat::str_view const home = find_environment(pp_environment, "HOME");
       if (home.size() != 0u) {
          append(home);
          append("/.Xauthority");
@@ -1676,9 +1676,44 @@ x11::manual::connection::set_title(
       allocator, target, atoms::wm_name, m_utf8_string, property_format::bits_8,
       as_bytes(title)
    );
+
    return change_property(
       allocator, target, m_net_wm_name, m_utf8_string, property_format::bits_8,
       as_bytes(title)
+   );
+}
+
+auto
+x11::manual::connection::set_class(
+   cat::allocator_dyn allocator, window target, cat::zstr_view class_name
+) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
+   cat::zstr_view instance_name = class_name;
+   cat::span<char const* _Nonnull const> const arguments =
+      cat::detail::get_command_arguments();
+
+   if (!arguments.is_empty()) {
+      cat::zstr_view program_name = arguments[0u];
+
+      cat::maybe<cat::idx> const maybe_slash =
+         cat::detail::path_find_last_equal(program_name, '/');
+      if (maybe_slash.has_value()) {
+         program_name = program_name.remove_prefix(maybe_slash.value() + 1u);
+      }
+
+      // The last char is `\0`.
+      if (program_name.size() > 1u) {
+         instance_name = program_name;
+      }
+   }
+
+   change_property(
+      allocator, target, atoms::wm_class, atoms::string,
+      property_format::bits_8, cat::as_bytes(instance_name)
+   );
+
+   return change_property(
+      allocator, target, atoms::wm_class, atoms::string,
+      property_format::bits_8, cat::as_bytes(class_name), property_mode::append
    );
 }
 

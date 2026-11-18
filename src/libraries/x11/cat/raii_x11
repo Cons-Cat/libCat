@@ -54,10 +54,10 @@ class [[gsl::Owner]] connection {
    open(
       cat::allocator_dyn allocator [[clang::lifetimebound]],
       nix::manual::io_uring& ring [[clang::lifetimebound]],
-      char const* _Nullable const* _Nonnull p_environment
+      char const* _Nullable const* _Nonnull pp_environment
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection> {
       return connection(
-         $prop(manual::connection::open(allocator, ring, p_environment)),
+         $prop(manual::connection::open(allocator, ring, pp_environment)),
          allocator
       );
    }
@@ -218,6 +218,13 @@ class [[gsl::Owner]] connection {
       !__has_feature(cxx_exceptions)
    ) -> cookie<void> {
       return m_core.set_title(m_allocator, target, title);
+   }
+
+   auto
+   set_class(window target, cat::zstr_view class_name) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> cookie<void> {
+      return m_core.set_class(m_allocator, target, class_name);
    }
 
    auto

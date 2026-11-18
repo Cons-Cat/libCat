@@ -6,13 +6,14 @@
 
 #include <cat/arithmetic>
 #include <cat/meta>
+#include <cat/runtime>
 #include <cat/stepanov>
 
 // `__BYTE_ORDER__` and `__ORDER_LITTLE_ENDIAN__` are macros defined by Clang.
 
 namespace cat {
 
-template <typename T, idx fixed_extent = idx::max()>
+template <typename T, idx fixed_extent>
 class span;
 
 inline namespace literals {

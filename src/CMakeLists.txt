@@ -38,6 +38,7 @@ target_sources(cat INTERFACE
 # TODO: Group and annotate these lines by their corresponding header.
 target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/exit.cpp
+  ${CATLIB}/runtime/implementations/get_command_arguments.cpp
   ${CATLIB}/runtime/implementations/__stack_chk_fail.cpp
   ${CATLIB}/runtime/implementations/__cxa_atexit.cpp
   ${CATLIB}/runtime/implementations/__cxa_guard.cpp

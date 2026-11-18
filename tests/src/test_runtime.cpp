@@ -1,4 +1,6 @@
 #include <cat/runtime>
+#include <cat/span>
+#include <cat/string>
 
 #include "../unit_tests.hpp"
 
@@ -105,4 +107,23 @@ $test(runtime_int128_shift_bit_and_conversion) {
    );
    cat::verify(cat::__fixtfti(static_cast<__float128>(-123.75)) == -123);
    cat::verify(cat::__fixunstfti(static_cast<__float128>(123.75)) == 123u);
+}
+
+$test(runtime_get_command_arguments) {
+   cat::span<char const* _Nonnull const> const arguments =
+      cat::detail::get_command_arguments();
+#ifdef CAT_NO_VDSO
+   cat::verify(arguments.is_empty());
+#else
+   cat::verify(!arguments.is_empty());
+
+   // `argv` is null-terminated after its last argument.
+   cat::verify(arguments.data()[arguments.size()] == nullptr);
+
+   cat::str_view program = cat::zstr_view(arguments[0u]);
+   cat::verify(program.size() >= 10u);
+   cat::verify(
+      program.remove_prefix(idx(program.size() - 10u)) == "unit_tests"
+   );
+#endif
 }

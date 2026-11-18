@@ -43,21 +43,16 @@ detect_syscall_support() {
 
    // For most syscalls, we assume it is available if the kernel version is
    // at least their minimum required version.
-   nix::detail::has_sys_cachestat_cache =
-      version >= nix::kernel_version{6, 5};
-   nix::detail::has_sys_fchmodat2_cache =
-      version >= nix::kernel_version{6, 6};
+   nix::detail::has_sys_cachestat_cache = version >= nix::kernel_version{6, 5};
+   nix::detail::has_sys_fchmodat2_cache = version >= nix::kernel_version{6, 6};
    // TODO: Shadow stack availability may need deeper introspection.
    nix::detail::has_sys_map_shadow_stack_cache =
       version >= nix::kernel_version{6, 6};
-   nix::detail::has_sys_futex_wake_cache =
-      version >= nix::kernel_version{6, 7};
-   nix::detail::has_sys_futex_wait_cache =
-      version >= nix::kernel_version{6, 7};
+   nix::detail::has_sys_futex_wake_cache = version >= nix::kernel_version{6, 7};
+   nix::detail::has_sys_futex_wait_cache = version >= nix::kernel_version{6, 7};
    nix::detail::has_sys_futex_requeue_cache =
       version >= nix::kernel_version{6, 7};
-   nix::detail::has_sys_mseal_cache =
-      version >= nix::kernel_version{6, 10};
+   nix::detail::has_sys_mseal_cache = version >= nix::kernel_version{6, 10};
 
    // Base `io_uring` is available from Linux 5.1, but distributions often
    // disable it either via `/proc/sys/kernel/io_uring_disabled` or by compiling
@@ -110,10 +105,17 @@ call_main() {
 [[gnu::used]]
 void
 call_main(int argc, char* const* pp_argv) {
+   cat::detail::command_arguments_count = cat::idx(argc);
+   cat::detail::pp_command_arguments = pp_argv;
 #else
 [[gnu::used]]
 void
 call_main(cat::uword const* _Nonnull p_stack) {
+   // When vDSO is supported, we have to load the arguments regardless of
+   // `CAT_NO_ARGC_ARGV`, so we can use cache them in any path beneath here.
+   cat::detail::command_arguments_count = cat::idx(p_stack[0]);
+   cat::detail::pp_command_arguments =
+      __builtin_bit_cast(char const* const*, p_stack + 1);
    init_vdso(p_stack);
 #endif
 #ifndef CAT_NO_CPUID
@@ -129,10 +131,10 @@ call_main(cat::uword const* _Nonnull p_stack) {
 #endif
 #if defined(CAT_STATIC_LINKED) \
    && (!defined(CAT_THREAD_LOCAL_SIZE) || (CAT_THREAD_LOCAL_SIZE) != 0)
-   // Set up `%fs` so the parent process can access `thread_local` values. The
-   // buffer is deliberately leaked (kernel reclaims at `_exit`). Only emitted
-   // under static, non-PIE links where no dynamic loader has set `%fs` for us
-   // first. `CAT_STATIC_LINKED` is set by the top-level `CMakeLists.txt`.
+   // Set up `%fs` so the parent process can access `thread_local` values. Only
+   // emitted under static, non-PIE links where no dynamic loader has set `%fs`
+   // for us first. `CAT_STATIC_LINKED` is set by the top-level
+   // `CMakeLists.txt`.
    //
    // TODO: Support `-static-pie`. It also has no dynamic loader to set `%fs`,
    // but `CAT_STATIC_LINKED` is only set alongside `--no-pie`, so this never

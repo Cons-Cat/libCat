@@ -1036,7 +1036,7 @@ class connection : detail::connection_state {
    operator=(connection const&) -> connection& = delete;
 
    // Connect to `$DISPLAY`, authenticating with `$XAUTHORITY` or
-   // `$HOME/.Xauthority`. `p_environment` is the null-terminated environment
+   // `$HOME/.Xauthority`. `pp_environment` is the null-terminated environment
    // array, which follows `argv`'s null terminator. Socket operations go
    // through `ring`, which must outlive this connection. Buffers come from
    // `allocator`, which later calls must pass too.
@@ -1045,7 +1045,7 @@ class connection : detail::connection_state {
    open(
       cat::allocator_dyn allocator,
       nix::manual::io_uring& ring [[clang::lifetimebound]],
-      char const* _Nullable const* _Nonnull p_environment
+      char const* _Nullable const* _Nonnull pp_environment
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection>;
 
    // Connect to `display`, authenticating with the Xauthority file at
@@ -1398,6 +1398,12 @@ class connection : detail::connection_state {
    auto
    set_title(
       cat::allocator_dyn allocator, window target, cat::str_view title
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void>;
+
+   // Set `WM_CLASS`.
+   auto
+   set_class(
+      cat::allocator_dyn allocator, window target, cat::zstr_view class_name
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void>;
 
    // Ask the window manager for a close request event instead of killing

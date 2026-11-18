@@ -306,10 +306,10 @@ class [[gsl::Pointer(char const*)]] cli {
 
    constexpr cli(
       int argc,
-      char const* _Nonnull const* _Nonnull p_argv [[clang::lifetimebound]]
+      char const* _Nonnull const* _Nonnull pp_argv [[clang::lifetimebound]]
    )
        // `argv[0]` is the program path, so skip the 0th index.
-       : m_arguments(p_argv + 1, argc > 0 ? idx(argc - 1) : 0u) {
+       : m_arguments(pp_argv + 1, argc > 0 ? idx(argc - 1) : 0u) {
    }
 
    constexpr cli(cli const&) = default;

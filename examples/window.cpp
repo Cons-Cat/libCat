@@ -48,6 +48,7 @@ main(int argc, char* const* pp_argv) -> int {
       });
 
       display.set_title(window, "libCat");
+      display.set_class(window, "window");
       display.enable_close_request(window);
       display.map_window(window);
    }

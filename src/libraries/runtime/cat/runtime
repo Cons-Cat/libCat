@@ -6,11 +6,23 @@
 
 namespace cat {
 
+template <typename T, idx fixed_extent = idx::max()>
+class span;
+
 namespace detail {
 // Name mangling prevents the linker from finding this symbol.
 extern "C" [[gnu::used, gnu::force_align_arg_pointer]]
 void
 _start();  // NOLINT
+
+constinit inline idx command_arguments_count = 0u;
+constinit inline char const* _Nonnull const* _Nullable pp_command_arguments =
+   nullptr;
+
+// TODO: Should this return a `span` of `zstr_view`?
+[[nodiscard]]
+auto
+get_command_arguments() noexcept -> span<char const* _Nonnull const>;
 }  // namespace detail
 
 // The `cat::exit()` function is provided globally. This streamlines out the

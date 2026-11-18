@@ -2,26 +2,27 @@
 #include <cat/file>
 #include <cat/linux>
 
+using cat::operator""_uki;
+
 auto
 cat::get_executable_path(allocator_dyn allocator) -> maybe<file_path> {
-   // TODO: This is not a robust way to get the executable path.
-   // Under Steam or similar sandboxes, the path might completely differ,
-   // and some environments like AppArmor or SELinux could disable access to
-   // procfs path like `/proc/self/exe` entirely.
-   //
-   // On Linux, we can alternatively read `argv[0]` to get this executable path.
+   // The customary (but not specified) `PATH_MAX` of Linux userspace runtimes
+   // is conventionally 4 KiB. This is also the limit for file paths provided to
+   // some syscalls, so it's a good upper bound to assume. Technically many
+   // syscalls accept essentially unbounded length paths, though. We could
+   // imagine a more robust implementation to Linux edge cases. Maybe a future
+   // problem?
 
-   // 1 KiB keeps this off the stack of a small clone thread. Paths are
-   // conventionally bounded by a 4 KiB `PATH_MAX`, but that is a suggestion
-   // rather than a kernel guarantee, so no buffer size is truncation-proof.
-   array<char, 1'024u> buffer;
+   // TODO: Use a `file_path_inplace` here.
+   array<char, 4_uki> buffer;
    nix::scaredy_nix<idx> const length =
-      nix::sys_readlink("/proc/self/exe", span(buffer));
+      nix::sys_readlink("/proc/self/exe", buffer);
 
-   // A path longer than the buffer truncates instead of failing, and partial
-   // results are not worth returning. Failure means `/proc` is missing or
-   // disabled, or, uncommonly, that a restrictive security module denies
-   // access to `/proc/pid/exe`. Neither is transient.
+   // If that fails, probably `/proc` is missing or disabled. These errors can't
+   // be retried successfully as far as I know. If the buffer was merely too
+   // small, then just propagate the same way.
+
+   // TODO: Is that the right answer to the buffer being too small?
    if (length.is_empty() || length.value() == buffer.size()) {
       return nullopt;
    }
