@@ -247,6 +247,10 @@ verify_vec_niche() {
    static_assert(sizeof(cat::maybe<Vector>) == sizeof(Vector));
    cat::maybe<Vector> empty;
    cat::verify(empty.is_empty());
+
+   // Moving the niche reads its size and capacity.
+   cat::maybe<Vector> moved = cat::move(empty);
+   cat::verify(moved.is_empty());
 }
 
 template <typename Vector>
@@ -1816,9 +1820,6 @@ struct counted_destructor {
    }
 };
 }  // namespace
-
-static_assert(cat::vec<int4>::takes_value_parameter);
-static_assert(!cat::vec<self_pointer>::takes_value_parameter);
 
 // Growing preserves every element, including when the new element is one of
 // them.

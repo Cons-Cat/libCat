@@ -171,7 +171,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       }
 
       assert(
-         data() == nullptr,
+         !m_storage.has_storage(),
          "basic_vec move-assigned over while still owning storage! "
          "Call .free(allocator) first."
       );
@@ -189,7 +189,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       destroy_n_elements(data(), size());
       annotate_size_change(old_size, capacity());
       if consteval {
-         if (data() != nullptr) {
+         if (m_storage.has_storage()) {
             std::allocator<T> allocator;
             allocator.deallocate(data(), capacity());
          }
@@ -417,7 +417,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       T* _Nonnull const p_slot = data() + old_size;
       new (p_slot) T($fwd(arguments)...);
       guard.commit();
-      m_storage.set_size(old_size + 1u);
+      m_storage.increment_size();
       return *p_slot;
    }
 
@@ -719,7 +719,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    // Reallocate memory, or make an initial allocation.
    constexpr void
    annotate_size_change(idx old_size, idx new_size) const noexcept {
-      if (data() == nullptr) {
+      if (!m_storage.has_storage()) {
          return;
       }
 
@@ -867,14 +867,27 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       return monostate;
    }
 
+   // Pass small arguments by value if safe to do so.
+   template <typename U>
+   using value_or_ref_type = conditional<
+      is_trivially_copyable<U> && sizeof(U) <= 2u * sizeof(void*)
+         && (!is_lvalue_reference<U> || is_same<remove_cvref<U>, T>),
+      remove_cvref<U>, U&&>;
+
    // Construct one element at the end of a full `vec`. This is kept out of
    // line so that it does not bloat every call to `emplace_back()`.
-   template <is_allocator Allocator, typename... Args>
+   //
+   // This is only used by `emplace_back()` which already annotates the
+   // lifetime.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-intra-tu-suggestions"
+
+   template <typename Result, is_allocator Allocator, typename... Args>
    [[gnu::noinline]]
    constexpr auto
-   grow_and_emplace_back(
-      allocator_ref<Allocator> allocator, Args&&... arguments
-   ) [[clang::lifetimebound]] -> maybe<T&> {
+   grow_and_construct_back(
+      allocator_ref<Allocator> allocator, Args... arguments
+   ) -> Result {
       idx const old_size = size();
       // The new element is built before relocating, because `arguments` may
       // refer to an element of this `vec`.
@@ -886,8 +899,14 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
          allocator, recommend_capacity(old_size + 1u), old_size, 1u, fill
       ));
 
-      return data()[old_size];
+      if constexpr (is_same<Result, maybe<void>>) {
+         return monostate;
+      } else {
+         return data()[old_size];
+      }
    }
+
+#pragma clang diagnostic pop
 
    // Change the size to `new_size`, building new elements with
    // `fill(p_first)`.
@@ -953,7 +972,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
 
       if constexpr (detail::vec_storage<T, flags>::is_inline) {
          free_inline_storage(allocator);
-      } else if (data() != nullptr) {
+      } else if (m_storage.has_storage()) {
          allocator.free_multi_uninit(span<T>(data(), old_capacity));
       }
 
@@ -986,7 +1005,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
             m_storage.m_handle =
                typename detail::vec_storage<T, flags>::handle_type{};
          }
-      } else if (data() != nullptr) {
+      } else if (m_storage.has_storage()) {
          allocator.cfree_multi_uninit(span<T>(data(), old_capacity));
       }
 
@@ -1294,43 +1313,21 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       return clone<allocator_dyn>(allocator);
    }
 
-   // Small trivially copyable elements are passed by value, which keeps them
-   // in registers and cannot alias this `vec`.
-   static constexpr bool takes_value_parameter =
-      is_trivially_copyable<T> && sizeof(T) <= 2u * sizeof(void*);
-
-   template <is_allocator Allocator>
-   [[nodiscard]]
-   constexpr auto
-   push_back(allocator_ref<Allocator> allocator, T value) -> maybe<void>
-      requires(!flags.is_fixed_size && takes_value_parameter)
-   {
-      if (this->emplace_back(allocator, value).is_empty()) {
-         return nullopt;
-      }
-
-      return monostate;
-   }
-
-   [[nodiscard, gnu::always_inline, gnu::nodebug]]
-   constexpr auto
-   push_back(allocator_dyn allocator, T value) -> maybe<void>
-      requires(!flags.is_fixed_size && takes_value_parameter)
-   {
-      return push_back<allocator_dyn>(allocator, value);
-   }
-
    template <is_allocator Allocator>
       requires(is_copy_constructible<T>)
    [[nodiscard]]
    constexpr auto
    push_back(allocator_ref<Allocator> allocator, T const& value) -> maybe<void>
-      requires(!flags.is_fixed_size && !takes_value_parameter)
+      requires(!flags.is_fixed_size)
    {
-      if (this->emplace_back(allocator, value).is_empty()) {
-         return nullopt;
+      if (size() == capacity()) [[unlikely]] {
+         return grow_and_construct_back<
+            maybe<void>, Allocator, value_or_ref_type<T const&>>(
+            allocator, value
+         );
       }
 
+      construct_back(value);
       return monostate;
    }
 
@@ -1339,19 +1336,23 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    [[nodiscard]]
    constexpr auto
    push_back(allocator_ref<Allocator> allocator, T&& value) -> maybe<void>
-      requires(!flags.is_fixed_size && !takes_value_parameter)
+      requires(!flags.is_fixed_size)
    {
-      if (this->emplace_back(allocator, move(value)).is_empty()) {
-         return nullopt;
+      if (size() == capacity()) [[unlikely]] {
+         return grow_and_construct_back<
+            maybe<void>, Allocator, value_or_ref_type<T>>(
+            allocator, move(value)
+         );
       }
 
+      construct_back(move(value));
       return monostate;
    }
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    push_back(allocator_dyn allocator, T const& value) -> maybe<void>
-      requires(!flags.is_fixed_size && !takes_value_parameter)
+      requires(!flags.is_fixed_size)
    {
       return push_back<allocator_dyn>(allocator, value);
    }
@@ -1359,7 +1360,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    push_back(allocator_dyn allocator, T&& value) -> maybe<void>
-      requires(!flags.is_fixed_size && !takes_value_parameter)
+      requires(!flags.is_fixed_size)
    {
       return push_back<allocator_dyn>(allocator, move(value));
    }
@@ -1391,7 +1392,10 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       requires(!flags.is_fixed_size)
    {
       if (size() == capacity()) [[unlikely]] {
-         return grow_and_emplace_back(allocator, $fwd(arguments)...);
+         return grow_and_construct_back<
+            maybe<T&>, Allocator, value_or_ref_type<Args>...>(
+            allocator, $fwd(arguments)...
+         );
       }
 
       return construct_back($fwd(arguments)...);
@@ -1591,7 +1595,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_allocator Allocator, typename Range>
       requires(
          is_contiguous_iterable<Range>
-         && is_same<remove_cvref<decltype(*declval<Range&>().data())>, T>
+         && is_same_unqual<typeof(*declval<Range&>().data()), T>
          && !flags.is_fixed_size
       )
    [[nodiscard]]
@@ -1625,7 +1629,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_allocator Allocator, is_iterable Iterable>
       requires(
          (!is_contiguous_iterable<Iterable>
-          || !is_same<remove_cvref<decltype(*declval<Iterable&>().data())>, T>)
+          || !is_same_unqual<typeof(*declval<Iterable&>().data()), T>)
          && !flags.is_fixed_size
       )
    [[nodiscard]]
@@ -1663,7 +1667,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_allocator Allocator, typename Range>
       requires(
          is_contiguous_iterable<Range>
-         && is_same<remove_cvref<decltype(*declval<Range&>().data())>, T>
+         && is_same_unqual<typeof(*declval<Range&>().data()), T>
          && !flags.is_fixed_size
       )
    [[nodiscard]]
@@ -1698,7 +1702,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_allocator Allocator, is_iterable Iterable>
       requires(
          (!is_contiguous_iterable<Iterable>
-          || !is_same<remove_cvref<decltype(*declval<Iterable&>().data())>, T>)
+          || !is_same_unqual<typeof(*declval<Iterable&>().data()), T>)
          && is_assignable<T&, T&&> && !flags.is_fixed_size
       )
    [[nodiscard]]
@@ -1728,7 +1732,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_allocator Allocator, typename Range>
       requires(
          is_contiguous_iterable<Range>
-         && is_same<remove_cvref<decltype(*declval<Range&>().data())>, T>
+         && is_same_unqual<typeof(*declval<Range&>().data()), T>
          && !flags.is_fixed_size
       )
    [[nodiscard]]
@@ -1765,7 +1769,7 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
    template <is_allocator Allocator, is_iterable Iterable>
       requires(
          (!is_contiguous_iterable<Iterable>
-          || !is_same<remove_cvref<decltype(*declval<Iterable&>().data())>, T>)
+          || !is_same_unqual<typeof(*declval<Iterable&>().data()), T>)
          && is_assignable<T&, T&&> && !flags.is_fixed_size
       )
    [[nodiscard]]
@@ -1922,17 +1926,17 @@ template <typename T, vec_flags flags = {}>
 
 template <typename T, is_allocator Allocator, vec_flags flags = {}>
 [[nodiscard]] constexpr auto
-   make_vec(allocator_ref<Allocator> allocator, initializer_list<T> values)
+   make_vec(allocator_ref<Allocator> allocator, initializer_list<T> arguments)
       -> maybe<vec<T, flags>> {
    vec<T, flags> new_vector;
    if constexpr (flags.is_fixed_size) {
-      $prop(new_vector.initialize_fixed(allocator, values.size()));
+      $prop(new_vector.initialize_fixed(allocator, arguments.size()));
       detail::exception_defer guard([&] {
          new_vector.free(allocator);
       });
 
       idx index;
-      for (T const& value : values) {
+      for (T const& value : arguments) {
          new_vector[index] = value;
          ++index;
       }
@@ -1941,7 +1945,7 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
    } else {
       // On failure, nothing is allocated.
       $prop(new_vector.append_range(
-         allocator, span<T const>(values.begin(), values.size())
+         allocator, span<T const>(arguments.begin(), arguments.size())
       ));
    }
 
@@ -1950,9 +1954,9 @@ template <typename T, is_allocator Allocator, vec_flags flags = {}>
 
 template <typename T, vec_flags flags = {}>
 [[nodiscard, gnu::always_inline, gnu::nodebug]] constexpr auto
-   make_vec(allocator_dyn allocator, initializer_list<T> values)
+   make_vec(allocator_dyn allocator, initializer_list<T> arguments)
       -> maybe<vec<T, flags>> {
-   return make_vec<T, allocator_dyn, flags>(allocator, values);
+   return make_vec<T, allocator_dyn, flags>(allocator, arguments);
 }
 
 template <typename T, is_allocator Allocator, vec_flags flags = {}>

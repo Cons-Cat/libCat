@@ -37,6 +37,22 @@ valid_vec_iterator_offset(cat::vec<int4>& caller_vec [[clang::lifetimebound]])
    return caller_vec.begin() + 1 - 1;
 }
 
+// `push_back()` returns no reference, so pushing into a local cannot dangle.
+auto
+valid_vec_push_back(int4 value) -> cat::maybe<void> {
+   cat::vec<int4> local;
+   $prop(local.push_back(g_page, value));
+   return local.push_back(g_page, 1);
+}
+
+auto
+valid_vec_push_back_large(cat::array<int4, 8u> const& element)
+   -> cat::maybe<void> {
+   cat::vec<cat::array<int4, 8u>> local;
+   $prop(local.push_back(g_page, element));
+   return local.push_back(g_page, cat::array<int4, 8u>());
+}
+
 // Negative cases: element references and iterators outlive their container.
 
 auto

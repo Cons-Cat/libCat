@@ -94,9 +94,7 @@ using vec_big_fixed = basic_vec<
 }  // namespace cat::raii
 
 namespace cat::detail {
-// The `maybe<raii::vec>` niche reuses the manual core's niche: disengaged
-// when `data() == nullptr && size() != 0`. The owned allocator is a
-// `allocator_null` while empty, which is never dispatched through.
+// `maybe<raii::vec>` reuses the core's niche, with an unused `allocator_null`.
 template <typename T, vec_flags flags>
 constexpr auto
 raii_vec_has_value(
