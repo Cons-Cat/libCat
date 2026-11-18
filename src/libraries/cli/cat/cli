@@ -10,7 +10,8 @@
 // It is used like this:
 //    auto cli = cat::cli(argc, p_argv)
 //                  .add_flag<"f,file">()
-//                  .add_flag<"number">();
+//                  .add_flag<"number">()
+//                  .add_version<{1, 2, 3}>();
 //
 //    cat::maybe<int4> number = cli.parse<int4>("number");
 //    cat::maybe<cat::str_view> file = cli.parse<cat::str_view>("f");
@@ -23,15 +24,20 @@
 // TODO: Positional arguments and subcommands. We need a trie?
 // TODO: Runtime `.add_flag()`?
 // TODO: `.add_help()` auto-generated menu.
+// TODO: `.add_copyright()`, `.add_title()`, and `.add_author()`, printed in the
+// `--version` message.
+// TODO: Print a version with separators other than `.`, such as semver.
 //
-// TODO: An eager `.validate()` pass that reports unregistered flags? Can also
-// pre-index `argv` to make repeated lookups cheaper?
-//
+// TODO: An eager `.validate()` pass that reports unregistered flags? Can we
+// also pre-index `argv` to make repeated lookups cheaper?
 
+#include <cat/format>
+#include <cat/runtime>
 #include <cat/scan_str>
 #include <cat/str_literal>
 #include <cat/string>
 #include <cat/utility>
+#include <cat/version>
 
 namespace cat {
 
@@ -147,14 +153,13 @@ struct cli_match {
    bool takes_next = false;
 };
 
-// Match `p_argument`, which must begin with `-`, against the flag `spelling`.
+// Match `p_argument`, which must begin with `-`, against the flag `names`.
 // This takes a pointer rather than a `zstr_view` so that arguments are never
 // measured unless they match.
-template <basic_str_literal spelling>
+template <cli_names const& names>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 cli_match_flag(char const* _Nonnull p_argument) -> cli_match {
-   constexpr cli_names const& names = cli_names_of<spelling>;
    if constexpr (names.short_name != '\0') {
       if (p_argument[1] == names.short_name) {
          if (p_argument[2] == '\0') {
@@ -177,24 +182,101 @@ cli_match_flag(char const* _Nonnull p_argument) -> cli_match {
    return {};
 }
 
+// The version flag's names, less any that a registered flag already spells.
+template <basic_str_literal version_spelling, basic_str_literal... spellings>
+consteval auto
+make_cli_version_names() -> cli_names {
+   cli_names names = cli_names_of<version_spelling>;
+   if (((names.short_name == cli_names_of<spellings>.short_name) || ...)) {
+      names.short_name = '\0';
+   }
+
+   if (
+      !names.long_name.is_empty()
+      && (cli_name_equals(names.long_name, cli_names_of<spellings>.long_name) || ...)
+   ) {
+      names.long_name = {};
+   }
+   return names;
+}
+
+template <basic_str_literal version_spelling, basic_str_literal... spellings>
+inline constexpr cli_names cli_version_names_of =
+   make_cli_version_names<version_spelling, spellings...>();
+
+// If `arguments` hold the flag `names` before any positional argument or `--`.
+// The values of registered flags are stepped over, so `-f -v` is not a request
+// for the version.
+template <cli_names const& names, basic_str_literal... spellings>
+constexpr auto
+cli_has_bool_flag(span<char const* _Nonnull const> arguments) -> bool {
+   for (idx i = 0u; i < arguments.size(); ++i) {
+      char const* _Nonnull const p_argument = arguments[i];
+      if (
+         p_argument[0] != '-' || (p_argument[1] == '-' && p_argument[2] == '\0')
+      ) {
+         return false;
+      }
+
+      if (cli_match_flag<names>(p_argument).takes_next) {
+         return true;
+      }
+
+      if (
+         (cli_match_flag<cli_names_of<spellings>>(p_argument).takes_next || ...)
+      ) {
+         ++i;
+      }
+   }
+   return false;
+}
+
+template <auto field>
+consteval auto
+cli_version_field_text() {
+   if constexpr (is_integral<decltype(field)>) {
+      return to_chars<make_raw_arithmetic(field)>();
+   } else {
+      return field;
+   }
+}
+
+// A `version` as a `str_literal` like `"1.2.3"`.
+template <auto version_value, idx... indices>
+consteval auto
+make_cli_version_text(index_list_type<indices...> /*unused*/) {
+   return (
+      cli_version_field_text<version_value.template get<0u>()>() + ...
+      + ('.'
+         + cli_version_field_text<version_value.template get<indices + 1u>()>())
+   );
+}
+
 }  // namespace detail
+
+template <
+   auto version_value, basic_str_literal version_spelling,
+   basic_str_literal... spellings>
+class versioned_cli;
 
 template <basic_str_literal... spellings>
 class [[gsl::Pointer(char const*)]] cli {
    template <basic_str_literal...>
    friend class cli;
 
+   template <auto, basic_str_literal, basic_str_literal...>
+   friend class versioned_cli;
+
    using arguments_span = span<char const* _Nonnull const>;
 
  public:
    static constexpr idx flag_count = sizeof...(spellings);
 
-   // A compile-time handle to a registered flag. Constructing it from an
-   // unregistered name is a compile error.
-   class key {
+   // A compile-time handle to a registered flag.
+   class flag {
     public:
       template <__SIZE_TYPE__ extent>
-      consteval key(char const (&name)[extent]) : m_index(find(name)) {
+      consteval flag(char const (&name)[extent]) : m_index(find(name)) {
       }
 
       [[nodiscard]]
@@ -250,11 +332,22 @@ class [[gsl::Pointer(char const*)]] cli {
       return cli<spellings..., add_spelling>(self.m_arguments);
    }
 
-   // Scan the value of the flag `name` as `T`.
+   template <
+      version version_value, basic_str_literal version_spelling = "v,version">
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   add_version(this cli self [[clang::lifetimebound]])
+      -> versioned_cli<version_value, version_spelling, spellings...> {
+      return versioned_cli<version_value, version_spelling, spellings...>(
+         self.m_arguments
+      );
+   }
+
+   // Try to parse the value of the command flag `name` as a `T`.
    template <typename T>
    [[nodiscard]]
    constexpr auto
-   parse(key name) const -> maybe<T> {
+   parse(flag name) const -> maybe<T> {
       return scan_str<T>($prop(find_value(name)));
    }
 
@@ -265,7 +358,7 @@ class [[gsl::Pointer(char const*)]] cli {
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   find_value(key name) const -> maybe<zstr_view> {
+   find_value(flag name) const -> maybe<zstr_view> {
       return find_value(name.index(), index_sequence<flag_count>);
    }
 
@@ -277,8 +370,8 @@ class [[gsl::Pointer(char const*)]] cli {
    find_value(idx index, index_list_type<indices...> /*unused*/) const
       -> maybe<zstr_view> {
       maybe<zstr_view> value;
-      auto _ = ((index == indices && (value = find_value<spellings>(), true))
-             || ...);
+      auto _ =
+         ((index == indices && (value = find_value<spellings>(), true)) || ...);
       return value;
    }
 
@@ -300,7 +393,7 @@ class [[gsl::Pointer(char const*)]] cli {
          }
 
          detail::cli_match const match =
-            detail::cli_match_flag<spelling>(p_argument);
+            detail::cli_match_flag<detail::cli_names_of<spelling>>(p_argument);
          if (match.value.has_value()) {
             value = match.value;
             continue;
@@ -310,7 +403,11 @@ class [[gsl::Pointer(char const*)]] cli {
          // another registered flag.
          if (
             match.takes_next
-            || (detail::cli_match_flag<spellings>(p_argument).takes_next || ...)
+            || (detail::cli_match_flag<detail::cli_names_of<spellings>>(
+                   p_argument
+                )
+                   .takes_next
+                || ...)
          ) {
             ++i;
             if (i == m_arguments.size()) {
@@ -333,5 +430,77 @@ class [[gsl::Pointer(char const*)]] cli {
 };
 
 cli(int, char const* _Nonnull const* _Nonnull) -> cli<>;
+
+// The `cli` that `.add_version()` returns. Its constructor handles the version
+// flag, so no flags may be registered after it.
+template <
+   auto version_value, basic_str_literal version_spelling,
+   basic_str_literal... spellings>
+class [[gsl::Pointer(char const*)]]
+versioned_cli : public cli<spellings...> {
+   friend class cli<spellings...>;
+
+   using base = cli<spellings...>;
+
+ public:
+   static constexpr detail::cli_names const& version_names =
+      detail::cli_version_names_of<version_spelling, spellings...>;
+
+   static constexpr auto version_text =
+      detail::make_cli_version_text<version_value>(
+         index_sequence<idx(version_value.size() - 1u)>
+      );
+
+   constexpr versioned_cli(versioned_cli const&) = default;
+   constexpr auto
+   operator=(versioned_cli const&) -> versioned_cli& = default;
+
+   template <basic_str_literal>
+   void
+   add_flag() =
+      delete ("`.add_version()` must be the last call to a `cat::cli`!");
+
+   template <auto, basic_str_literal = "">
+   void
+   add_version() = delete ("`cat::cli` can only have one version!");
+
+ private:
+   constexpr versioned_cli(
+      base::arguments_span arguments [[clang::lifetimebound]]
+   )
+       : base(arguments) {
+      if !consteval {
+         if (
+            detail::cli_has_bool_flag<version_names, spellings...>(
+               this->m_arguments
+            )
+         ) {
+            print_version();
+         }
+      }
+   }
+
+   // The `--version` message.
+   [[noreturn]]
+   void
+   print_version() const {
+      // `argv[0]` precedes the arguments, and it is null when `argc` is 0.
+      char const* const p_program = this->m_arguments.data()[-1];
+      if (p_program != nullptr) {
+         char const* p_name = p_program;
+         for (char const* p_cursor = p_program; *p_cursor != '\0'; ++p_cursor) {
+            if (*p_cursor == '/') {
+               p_name = p_cursor + 1;
+            }
+         }
+
+         auto _ = print(zstr_view(p_name));
+         auto _ = print(" ");
+      }
+
+      auto _ = println(version_text);
+      exit(0);
+   }
+};
 
 }  // namespace cat

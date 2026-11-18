@@ -105,3 +105,68 @@ $test(cli_skips_program_name) {
       == 5
    );
 }
+
+namespace {
+
+using versioned = decltype(cat::cli(1, g_argv)
+                              .add_flag<"f,file">()
+                              .add_version<cat::version{1, 2, "rc.1"}>());
+
+static_assert(versioned::version_text == "1.2.rc.1");
+static_assert(sizeof(versioned) == sizeof(file_cli));
+
+// The version can be a braced list.
+static_assert(decltype(cat::cli(1, g_argv).add_version<{1, 2, "rc.1"}>())::
+                 version_text
+              == "1.2.rc.1");
+
+// No flags can follow `.add_version()`.
+template <typename T>
+concept can_add_flag = requires(T cli) { cli.template add_flag<"n">(); };
+
+static_assert(can_add_flag<file_cli>);
+static_assert(!can_add_flag<versioned>);
+
+// A registered flag keeps any name that the version flag would spell.
+using verbose_cli = decltype(cat::cli(1, g_argv)
+                                .add_flag<"v,verbose">()
+                                .add_version<cat::version{1}>());
+
+static_assert(verbose_cli::version_names.short_name == '\0');
+static_assert(verbose_cli::version_names.long_name == "version");
+
+using respelled_cli = decltype(cat::cli(1, g_argv)
+                                  .add_flag<"version">()
+                                  .add_version<cat::version{1}, "V,version">());
+
+static_assert(respelled_cli::version_names.short_name == 'V');
+static_assert(respelled_cli::version_names.long_name.is_empty());
+
+template <
+   cat::detail::cli_names const& names, cat::basic_str_literal... spellings>
+constexpr auto
+requests_version(auto const&... arguments) -> bool {
+   char const* const argv[] = {arguments...};
+   return cat::detail::cli_has_bool_flag<names, spellings...>(
+      cat::span<char const* const>(argv, sizeof...(arguments))
+   );
+}
+
+constexpr auto const& default_names = versioned::version_names;
+
+static_assert(requests_version<default_names, "f,file">("--version"));
+static_assert(requests_version<default_names, "f,file">("-f", "x", "-v"));
+// `-v` is the value of `-f`.
+static_assert(!requests_version<default_names, "f,file">("-f", "-v"));
+static_assert(!requests_version<default_names, "f,file">("--", "-v"));
+static_assert(!requests_version<default_names, "f,file">("--version=1"));
+static_assert(!requests_version<default_names, "f,file">("-vv"));
+static_assert(!requests_version<verbose_cli::version_names, "v,verbose">("-v"));
+
+}  // namespace
+
+$test(cli_version_without_flag) {
+   char const* argv[] = {"program", "-n", "3", nullptr};
+   auto cli = cat::cli(3, argv).add_flag<"n">().add_version<cat::version{1}>();
+   cat::verify(cli.parse<int4>("n").value() == 3);
+}
