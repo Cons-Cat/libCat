@@ -281,18 +281,18 @@ $test(str_vec_iterable_range_modifiers) {
    linear_arena arena;
    cat::array<char, 3u> source{'c', 'a', 't'};
    cat::raii::zstr_vec<cat::allocator_linear> string(arena.alloc);
-   auto consonants = cat::ref(source).filter([](char value) -> bool {
-      return value != 'a';
-   });
+   auto consonants = cat::ref(source) | cat::filter([](char value) -> bool {
+                        return value != 'a';
+                     });
    string.append_range(consonants).verify();
    cat::verify(string.view() == cat::str_view("ct"));
 
    string.insert_range(1u, source).verify();
    cat::verify(string.view() == cat::str_view("ccatt"));
 
-   auto vowels = cat::ref(source).filter([](char value) -> bool {
-      return value == 'a';
-   });
+   auto vowels = cat::ref(source) | cat::filter([](char value) -> bool {
+                    return value == 'a';
+                 });
    string.replace_with_range(1u, 4u, vowels).verify();
    cat::verify(string.view() == cat::str_view("cat"));
    cat::verify(string.data()[string.size()] == '\0');

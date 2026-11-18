@@ -10,18 +10,16 @@
 namespace cat {
 namespace detail {
 template <typename T>
-concept has_void_reverse_inplace_member =
+concept has_void_reverse_member =
    requires {
-      static_cast<void (remove_cvref<T>::*)()>(
-         &remove_cvref<T>::reverse_inplace
-      );
+      static_cast<void (remove_cvref<T>::*)()>(&remove_cvref<T>::reverse);
    };
 
 template <typename T>
-concept has_const_self_reverse_inplace_member =
+concept has_const_self_reverse_member =
    requires {
       static_cast<remove_cvref<T> (remove_cvref<T>::*)() const>(
-         &remove_cvref<T>::reverse_inplace
+         &remove_cvref<T>::reverse
       );
    };
 
@@ -73,12 +71,10 @@ struct reverse_inplace_impl {
       reverse_inplace_impl /*reverse_inplace_impl*/
    ) -> decltype(auto) {
       auto&& range = unwrap_ref(incoming);
-      if constexpr (has_void_reverse_inplace_member<decltype(range)>) {
-         range.reverse_inplace();
-      } else if constexpr (
-         has_const_self_reverse_inplace_member<decltype(range)>
-      ) {
-         auto _ = range.reverse_inplace();
+      if constexpr (has_void_reverse_member<decltype(range)>) {
+         range.reverse();
+      } else if constexpr (has_const_self_reverse_member<decltype(range)>) {
+         auto _ = range.reverse();
       } else {
          if constexpr (
             is_random_access_collection<decltype(range)> && requires {

@@ -351,15 +351,17 @@ $test(simd_collection) {
    cat::verify(cat::read_at(lanes, 1u) == 2_i4);
    auto lane_tail = lanes | cat::reverse() | cat::take(2u);
    cat::verify(lane_tail.sum() == 7_i4);
-   auto doubled_evens =
-      cat::ref(lanes).filter(cat::is_even).transform([](int4 lane) -> int4 {
-         return lane * 2_i4;
-      });
+   auto doubled_evens = cat::ref(lanes)
+                        | cat::filter(cat::is_even)
+                        | cat::transform([](int4 lane) -> int4 {
+                             return lane * 2_i4;
+                          });
    cat::verify(doubled_evens.sum() == 12_i4);
-   auto trebled_odds =
-      cat::ref(lanes).filter(cat::is_odd).transform([](int4 lane) -> int4 {
-         return lane * 3_i4;
-      });
+   auto trebled_odds = cat::ref(lanes)
+                       | cat::filter(cat::is_odd)
+                       | cat::transform([](int4 lane) -> int4 {
+                            return lane * 3_i4;
+                         });
    cat::verify(trebled_odds.sum() == 12_i4);
 
    cat::fixed_size_simd_mask<int4, 4u> mask{true, false, true, false};
@@ -371,12 +373,12 @@ $test(simd_collection) {
                      });
    cat::verify((true_lanes | cat::count()) == 2u);
    auto true_lane_values = cat::ref(mask)
-                              .filter([](bool lane) -> bool {
-                                 return lane;
-                              })
-                              .transform([](bool lane) -> int {
-                                 return lane ? 3 : 0;
-                              });
+                           | cat::filter([](bool lane) -> bool {
+                                return lane;
+                             })
+                           | cat::transform([](bool lane) -> int {
+                                return lane ? 3 : 0;
+                             });
    cat::verify(true_lane_values.sum() == 6);
 }
 

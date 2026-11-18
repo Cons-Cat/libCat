@@ -296,8 +296,8 @@ basic_forward_list
    }
 
    constexpr void
-   reverse_inplace() {
-      m_core.reverse_inplace();
+   reverse() {
+      m_core.reverse();
    }
 
    // Return iterator to the first element.

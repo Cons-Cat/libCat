@@ -218,12 +218,12 @@ $test(array_collection) {
    auto array_tail = array_values | cat::reverse() | cat::take(2u);
    cat::verify(array_tail.sum() == 7);
    auto even_squares = array_values
-                          .filter([](int value) -> bool {
-                             return (value % 2) == 0;
-                          })
-                          .transform([](int value) -> int {
-                             return value * value;
-                          });
+                       | cat::filter([](int value) -> bool {
+                            return (value % 2) == 0;
+                         })
+                       | cat::transform([](int value) -> int {
+                            return value * value;
+                         });
    cat::verify(even_squares.sum() == 20);
    cat::verify(cat::as_span(array_values).size() == 4u);
 }

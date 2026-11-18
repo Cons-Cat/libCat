@@ -292,11 +292,11 @@ $test(bitvec_manual_core) {
    cat::verify(bits.popcount() == 1u);
    cat::verify(bits.count() == 10u);
    cat::verify(
-      cat::ref(bits)
-         .filter([](auto bit) -> bool {
+      (cat::ref(bits)
+       | cat::filter([](auto bit) -> bool {
             return bit;
          })
-         .count()
+       | cat::count())
       == 1u
    );
    cat::idx reverse_weight = 1u;
@@ -313,25 +313,25 @@ $test(bitvec_manual_core) {
    );
    bits | cat::reverse_inplace();
    cat::verify(bits[6u]);
-   bits.reverse_inplace();
+   bits.reverse();
    cat::verify(bits[3u]);
    auto bit_slice = cat::slice(bits, 0u, 5u);
    cat::verify(
-      bit_slice
-         .filter([](auto bit) -> bool {
+      (bit_slice
+       | cat::filter([](auto bit) -> bool {
             return bit;
          })
-         .count()
+       | cat::count())
       == 1u
    );
    cat::read_at(bit_slice, 4u).assign(true);
    cat::verify(bits[4u]);
    cat::verify(
-      bit_slice
-         .transform([](auto bit) -> cat::idx {
+      (bit_slice
+       | cat::transform([](auto bit) -> cat::idx {
             return bit ? 1u : 0u;
          })
-         .sum()
+       | cat::sum())
       == 2u
    );
    cat::verify(manual_range_count == 1u);
@@ -429,11 +429,11 @@ $test(bitvec_core_operations) {
    cat::verify((bits | cat::popcount()) == 3u);
    cat::verify(bits.count() == 70u);
    cat::verify(
-      cat::ref(bits)
-         .filter([](auto bit) -> bool {
+      (cat::ref(bits)
+       | cat::filter([](auto bit) -> bool {
             return bit;
          })
-         .count()
+       | cat::count())
       == 3u
    );
    cat::idx reverse_weight = 1u;
@@ -450,23 +450,24 @@ $test(bitvec_core_operations) {
    );
    bits | cat::reverse_inplace();
    cat::verify(bits[6u]);
-   bits.reverse_inplace();
+   bits.reverse();
    cat::verify(bits[63u]);
    auto bit_slice = cat::slice(bits, 60u, 70u);
    cat::verify(
-      bit_slice
-         .filter([](auto bit) -> bool {
+      (bit_slice
+       | cat::filter([](auto bit) -> bool {
             return bit;
          })
-         .count()
+       | cat::count())
       == 2u
    );
    cat::verify(
-      bit_slice.reverse()
-         .transform([](auto bit) -> cat::idx {
+      (bit_slice
+       | cat::reverse()
+       | cat::transform([](auto bit) -> cat::idx {
             return bit ? 1u : 0u;
          })
-         .sum()
+       | cat::sum())
       == 2u
    );
 
@@ -571,9 +572,9 @@ $test(bitvec_append_range) {
 $test(bitvec_iterable_range_modifiers) {
    cat::array<bool, 4u> source{true, false, true, false};
    cat::raii::bitvec<> bits{cat::allocator_dyn(g_tests_alloc)};
-   auto set_bits = cat::ref(source).filter([](bool value) -> bool {
-      return value;
-   });
+   auto set_bits = cat::ref(source) | cat::filter([](bool value) -> bool {
+                      return value;
+                   });
    bits.append_range(set_bits).verify();
    cat::verify(bits.size() == 2u);
    cat::verify(bits.popcount() == 2u);
@@ -582,9 +583,9 @@ $test(bitvec_iterable_range_modifiers) {
    cat::verify(bits.size() == 6u);
    cat::verify(bits.popcount() == 4u);
 
-   auto clear_bits = cat::ref(source).filter([](bool value) -> bool {
-      return !value;
-   });
+   auto clear_bits = cat::ref(source) | cat::filter([](bool value) -> bool {
+                        return !value;
+                     });
    bits.replace_with_range(1u, 5u, clear_bits).verify();
    cat::verify(bits.size() == 4u);
    cat::verify(bits[0u]);

@@ -23,13 +23,6 @@ operator typename basic_str_literal<CharT, fixed_size>::view_type() const
    return view();
 }
 
-template <typename CharT, __SIZE_TYPE__ fixed_size>
-template <typename Predicate>
-constexpr auto
-basic_str_literal<CharT, fixed_size>::filter(Predicate&& predicate) const {
-   return view().filter(static_cast<Predicate&&>(predicate));
-}
-
 template <typename CharT, idx size>
 basic_str_literal(array<CharT, size> const&)
    -> basic_str_literal<CharT, size.raw>;

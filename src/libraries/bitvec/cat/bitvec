@@ -300,8 +300,8 @@ basic_bitvec : public bit_collection_interface<basic_bitvec<flags>> {
    }
 
    constexpr void
-   reverse_inplace() noexcept {
-      bit_span(*this).reverse_inplace();
+   reverse() noexcept {
+      bit_span(*this).reverse();
    }
 
    // Count the set bits in the vector.

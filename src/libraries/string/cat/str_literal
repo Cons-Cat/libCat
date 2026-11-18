@@ -239,11 +239,6 @@ class
       return true;
    }
 
-   template <typename Predicate>
-   [[nodiscard]]
-   constexpr auto
-   filter(Predicate&& predicate) const;
-
    template <__SIZE_TYPE__ other_size>
    [[nodiscard]]
    friend constexpr auto

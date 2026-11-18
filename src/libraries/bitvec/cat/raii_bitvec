@@ -332,8 +332,8 @@ class [[gsl::Owner]] basic_bitvec
    }
 
    constexpr void
-   reverse_inplace() noexcept {
-      m_core.reverse_inplace();
+   reverse() noexcept {
+      m_core.reverse();
    }
 
    // Count the set bits in the vector.

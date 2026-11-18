@@ -7,6 +7,7 @@
 #include <cat/arithmetic>
 #include <cat/maybe>
 #include <cat/span>
+#include <cat/str_literal>
 #include <cat/utility>
 
 // While libCat supports Stepanov-like iterators, algorithmic composition is
@@ -42,12 +43,12 @@
 //
 // A container, for example, could be either a collection or merely iterable.
 //
-// Either of these can "pipe" into a function pipeline. If this iterable
-// implements the `cat::iterable_interface`, then a dot-chaining fluent API may
-// be used instead. However, this design is not user-extensible, whereas the
-// pipe-chaining API is.
+// Either of these can "pipe" into a function pipeline.
 //
 // Iterables pipe into view adaptors, which produce lazily evaluated iterables.
+// View adaptors are only reachable through `|`. If this iterable implements
+// `cat::iterable_interface`, then terminal and in-place algorithms are also
+// available as members, such as `.sum()` or `.reverse()`.
 // Pipelines end in terminal algorithms, which eagerly evaluate.
 //
 // View adaptors take ownership of their base by value. An r-value argument is
@@ -134,6 +135,73 @@ template <typename T>
 constexpr auto
 read_at_unchecked(initializer_list<T> const& collection, idx position)
    -> T const& {
+   return collection.data()[position];
+}
+
+// `basic_str_literal` cannot inherit `contiguous_collection_interface` because
+// `<cat/arithmetic>` depends on it, so it gets the position protocol here.
+template <typename CharT, __SIZE_TYPE__ fixed_size>
+[[nodiscard]]
+constexpr auto
+begin_pos(
+   [[maybe_unused]] basic_str_literal<CharT, fixed_size> const& collection
+) -> idx {
+   return 0u;
+}
+
+template <typename CharT, __SIZE_TYPE__ fixed_size>
+[[nodiscard]]
+constexpr auto
+end_pos([[maybe_unused]] basic_str_literal<CharT, fixed_size> const& collection)
+   -> idx {
+   return fixed_size;
+}
+
+template <typename CharT, __SIZE_TYPE__ fixed_size>
+constexpr void
+inc_pos(
+   [[maybe_unused]] basic_str_literal<CharT, fixed_size> const& collection,
+   idx& position
+) {
+   ++position;
+}
+
+template <typename CharT, __SIZE_TYPE__ fixed_size>
+constexpr void
+dec_pos(
+   [[maybe_unused]] basic_str_literal<CharT, fixed_size> const& collection,
+   idx& position
+) {
+   position = idx(position.raw - 1u);
+}
+
+template <typename CharT, __SIZE_TYPE__ fixed_size>
+constexpr void
+offset_pos(
+   [[maybe_unused]] basic_str_literal<CharT, fixed_size> const& collection,
+   idx& position, iword offset
+) {
+   position = idx(static_cast<idx::raw_type>((position + offset).raw));
+}
+
+template <typename CharT, __SIZE_TYPE__ fixed_size>
+[[nodiscard]]
+constexpr auto
+distance(
+   [[maybe_unused]] basic_str_literal<CharT, fixed_size> const& collection,
+   idx left, idx right
+) -> iword {
+   return right - left;
+}
+
+template <typename CharT, __SIZE_TYPE__ fixed_size>
+[[nodiscard]]
+constexpr auto
+read_at_unchecked(
+   basic_str_literal<CharT, fixed_size> const& collection
+   [[clang::lifetimebound]],
+   idx position
+) -> CharT const& {
    return collection.data()[position];
 }
 
@@ -543,16 +611,6 @@ using iterable_element_type = iterable_iteration_context_type<T>::element_type;
 
 template <is_iterable T>
 using iterable_value_type = remove_cvref<iterable_element_type<T>>;
-
-// Invoke a fallible callback for every element and stop on failure.
-// When the target is iterable, `reference_wrapper` also inherits
-// `iterable_interface` so borrowed sequences carry the member-call surface.
-template <typename T>
-   requires(is_iterable<T&>)
-struct reference_wrapper<T> : detail::reference_wrapper_impl<T>,
-                              iterable_interface<> {
-   using detail::reference_wrapper_impl<T>::reference_wrapper_impl;
-};
 
 // Pipe `apply` accepts r-values, trivially-copyable l-values, or
 // `reference_wrapper` as the storage policy for the view adaptor base. Non

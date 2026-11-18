@@ -150,24 +150,24 @@ $test(string_collection) {
    cat::verify((text | cat::count()) == 3u);
    cat::verify(cat::read_at(text, 0u) == 'c');
    auto non_a_offsets = cat::ref(text)
-                           .filter([](char value) -> bool {
-                              return value != 'a';
-                           })
-                           .transform([](char value) -> int {
-                              return value - 'a';
-                           });
+                        | cat::filter([](char value) -> bool {
+                             return value != 'a';
+                          })
+                        | cat::transform([](char value) -> int {
+                             return value - 'a';
+                          });
    cat::verify(non_a_offsets.sum() == 21);
 
    cat::str_view view = text;
    cat::verify((view | cat::count()) == 3u);
    cat::verify(cat::read_at(view, 2u) == 't');
    auto prefix_offsets = cat::ref(view)
-                            .filter([](char value) -> bool {
-                               return value < 't';
-                            })
-                            .transform([](char value) -> int {
-                               return value - 'a';
-                            });
+                         | cat::filter([](char value) -> bool {
+                              return value < 't';
+                           })
+                         | cat::transform([](char value) -> int {
+                              return value - 'a';
+                           });
    cat::verify(prefix_offsets.sum() == 2);
 
    cat::wstr_inplace<3u> wide_text = L"cat";

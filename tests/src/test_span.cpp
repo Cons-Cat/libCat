@@ -369,12 +369,12 @@ $test(span_collection) {
    auto span_tail = array_span | cat::reverse() | cat::take(2u);
    cat::verify(span_tail.sum() == 7);
    auto transformed_tail = array_span
-                              .filter([](int value) -> bool {
-                                 return value > 2;
-                              })
-                              .transform([](int value) -> int {
-                                 return value * 3;
-                              });
+                           | cat::filter([](int value) -> bool {
+                                return value > 2;
+                             })
+                           | cat::transform([](int value) -> int {
+                                return value * 3;
+                             });
    cat::verify(transformed_tail.sum() == 21);
 }
 

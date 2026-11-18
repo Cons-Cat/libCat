@@ -1162,13 +1162,7 @@ struct common_type_trait
 template <typename... Args>
 using common_type = detail::common_type_trait<Args...>::type;
 
-template <typename T>
-struct reference_wrapper;
-
 namespace detail {
-// Splitting `reference_wrapper_impl<T>` out from the derived class allows us to
-// easily specialize `reference_wrapper` for different types, which is used for
-// algorithms.
 template <typename T>
 constexpr auto
 reference_wrapper_bind(T& target [[clang::lifetimebound]]) noexcept -> T& {
@@ -1178,21 +1172,22 @@ reference_wrapper_bind(T& target [[clang::lifetimebound]]) noexcept -> T& {
 template <typename T>
 void
 reference_wrapper_bind(T&&) = delete;
+}  // namespace detail
 
 template <typename T>
-struct reference_wrapper_impl {
+struct reference_wrapper {
    using type = T;
 
    T* _Nonnull m_p_target;
 
    template <typename U>
       requires(
-         !is_same<remove_cvref<U>, reference_wrapper<T>>
+         !is_same<remove_cvref<U>, reference_wrapper>
          && requires(
             U&& target
          ) { detail::reference_wrapper_bind<T>(static_cast<U&&>(target)); }
       )
-   constexpr reference_wrapper_impl(
+   constexpr reference_wrapper(
       U&& target [[clang::lifetimebound]]
    ) noexcept(noexcept(detail::
                           reference_wrapper_bind<T>(static_cast<U&&>(target))))
@@ -1230,12 +1225,6 @@ struct reference_wrapper_impl {
    ) -> decltype(auto) {
       return __builtin_invoke(this->get(), static_cast<Args&&>(arguments)...);
    }
-};
-}  // namespace detail
-
-template <typename T>
-struct reference_wrapper : detail::reference_wrapper_impl<T> {
-   using detail::reference_wrapper_impl<T>::reference_wrapper_impl;
 
    // P3207R0. This type is reference-like.
    friend constexpr void

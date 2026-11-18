@@ -1074,84 +1074,18 @@ $test(flux_fluent_terminals) {
    cat::verify(product == 384);  // 2 * 4 * 6 * 8
 }
 
-$test(flux_fluent_chain) {
-   // The fluent surface is the dual of the pipe surface: same adaptors, same
-   // closures, same ownership policy. This $test mirrors `flux_pipe_collection`
-   // but spelled fluently.
-   tiny_array<int, 6u> arr = {
-      {},
-      {1, 2, 3, 4, 5, 6}
-   };
-
-   int result = arr.filter(cat::is_even)
-                   .transform([](int x) -> int {
-                      return x * x;
-                   })
-                   .sum();
-   cat::verify(result == 56);  // 4 + 16 + 36
-
-   // `take` is also fluent.
-   int first_three = arr.take(3u).sum();
-   cat::verify(first_three == 6);  // 1 + 2 + 3
-
-   int middle_two = arr.drop(2u).take(2u).sum();
-   cat::verify(middle_two == 7);  // 3 + 4
-
-   cat::verify(arr.take_last(2u).sum() == 11);
-   cat::verify(arr.drop_last(2u).sum() == 10);
-   cat::verify(arr.take_while(cat::is_greater(4)).sum() == 6);
-   cat::verify(arr.drop_while(cat::is_greater(4)).sum() == 15);
-   cat::verify(arr.take_last_while(cat::is_less(3)).sum() == 15);
-   cat::verify(arr.drop_last_while(cat::is_less(3)).sum() == 6);
-}
-
-$test(flux_fluent_reverse) {
+$test(flux_member_reverse) {
    tiny_array<int, 5u> arr = {
       {},
       {1, 2, 3, 4, 5}
    };
 
-   // A bidirectional collection auto-derives reverse, and the fluent
-   // `.reverse()` reads it back to back with the rest of the chain.
-   int last_two = arr.reverse().take(2u).sum();
-   cat::verify(last_two == 9);  // 5 + 4
-
-   // `tiny_list` opts into reverse via a member `reverse_iterate()`, and the
-   // fluent form picks that up identically.
-   tiny_list<int, 8u> list;
-   list.push_back(10);
-   list.push_back(20);
-   list.push_back(30);
-   list.push_back(40);
-
-   int reversed_doubled = list.reverse()
-                             .transform([](int x) -> int {
-                                return x * 2;
-                             })
-                             .sum();
-   cat::verify(reversed_doubled == 200);  // 80 + 60 + 40 + 20
-}
-
-$test(flux_fluent_through_ref) {
-   // The ownership policy applies to the fluent surface in exactly the same
-   // way: a non-trivially-copyable l-value has to come in through
-   // `cat::ref(x)`, but once it does, the same chain composes.
-   noisy_box box{
-      tiny_array<int, 4u>{{}, {3, 6, 9, 12}}
-   };
-
-   int doubled_sum = cat::ref(box)
-                        .transform([](int x) -> int {
-                           return x * 2;
-                        })
-                        .sum();
-   cat::verify(doubled_sum == 60);  // (3 + 6 + 9 + 12) * 2
-
-   // And the r-value case stays working.
-   int sum_inline = noisy_box{
-      tiny_array<int, 4u>{{}, {1, 1, 1, 1}}
-   }.sum();
-   cat::verify(sum_inline == 4);
+   // The `.reverse()` member is in-place, unlike the `cat::reverse()` view.
+   arr.reverse();
+   cat::verify(cat::read_at(arr, 0u) == 5);
+   cat::verify(cat::read_at(arr, 4u) == 1);
+   int first_two = arr | cat::take(2u) | cat::sum();
+   cat::verify(first_two == 9);  // 5 + 4
 }
 
 $test(flux_internal_iterate_collection) {
@@ -1236,22 +1170,6 @@ $test(flux_internal_iterate_empty_filter) {
          ++iterations;
       });
    cat::verify(iterations == 0);
-}
-
-$test(flux_fluent_on_slice) {
-   // A `slice_view` also inherits `iterable_interface`, so a slice can keep
-   // using the member-call form without dropping back to the pipe.
-   tiny_array<int, 6u> arr = {
-      {},
-      {10, 20, 30, 40, 50, 60}
-   };
-
-   int from_slice = cat::slice(arr, cat::idx{1u}, cat::idx{5u})
-                       .filter([](int x) -> bool {
-                          return x != 30;
-                       })
-                       .sum();
-   cat::verify(from_slice == 110);  // 20 + 40 + 50
 }
 
 // P3725 demo: `filter | reverse | as_rvalue | to<vector>`:
@@ -1417,10 +1335,6 @@ $test(flux_as_rvalue_element_type) {
    using fwd_chain = decltype(cat::ref(arr) | cat::as_rvalue());
    using fwd_ctx = cat::iterable_iteration_context_type<fwd_chain>;
    static_assert(cat::is_same<fwd_ctx::element_type, tiny_string&&>);
-   using member_fwd_chain = decltype(cat::ref(arr).as_rvalue());
-   using member_fwd_ctx =
-      cat::iterable_iteration_context_type<member_fwd_chain>;
-   static_assert(cat::is_same<member_fwd_ctx::element_type, tiny_string&&>);
 
    using rev_chain =
       decltype(cat::ref(arr) | cat::reverse() | cat::as_rvalue());
@@ -1671,5 +1585,5 @@ $test(iterable_is_all_is_any_is_none) {
    cat::verify(values.is_none(is_large));
    cat::verify(bits.is_all());
    cat::verify(!bits.is_none());
-   cat::verify(values.take(1u).is_none(cat::is_even));
+   cat::verify((values | cat::take(1u)).is_none(cat::is_even));
 }

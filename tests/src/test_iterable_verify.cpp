@@ -1,7 +1,7 @@
 // Clang `-verify` checks of the `[[clang::lifetimebound]]` annotations on the
 // `<cat/iterable>` API, exercised through `cat::vec` and `cat::list`. These
-// cover every view adaptor in both its pipe and member forms, `cat::iterate()`,
-// `cat::reverse_iterate()`, and the borrowing members of `iterable_interface`.
+// cover every view adaptor, `cat::iterate()`, `cat::reverse_iterate()`, and
+// the borrowing members of `iterable_interface`.
 // Any `expected-error` checks must come last, because Clang stops its
 // `-Wlifetime-safety` pass after the first error in a translation unit. Run
 // with `just test safety`.
@@ -37,7 +37,7 @@ valid_vec_terminal() -> int4 {
 auto
 valid_vec_member_terminal() -> idx {
    cat::vec<int4> local;
-   return cat::ref(local).filter(is_big).count();
+   return (cat::ref(local) | cat::filter(is_big)).count();
 }
 
 auto
@@ -50,12 +50,6 @@ auto
 valid_vec_owned_nested_view() -> auto {
    cat::vec<int4> local;
    return cat::move(local) | cat::reverse() | cat::take(1u);
-}
-
-auto
-valid_vec_owned_member_view() -> auto {
-   cat::vec<int4> local;
-   return cat::move(local).reverse().drop(1u);
 }
 
 auto
@@ -88,13 +82,6 @@ void
 valid_vec_nested_context() {
    cat::vec<int4> local;
    auto context = (cat::ref(local) | cat::reverse() | cat::take(2u)).iterate();
-   consume(context);
-}
-
-void
-valid_vec_nested_member_context() {
-   cat::vec<int4> local;
-   auto context = cat::ref(local).reverse().as_rvalue().iterate();
    consume(context);
 }
 
@@ -239,7 +226,7 @@ valid_list_terminal() -> int4 {
 auto
 valid_list_member_terminal() -> idx {
    cat::list<int4> local;
-   return cat::ref(local).filter(is_big).count();
+   return (cat::ref(local) | cat::filter(is_big)).count();
 }
 
 auto
@@ -252,12 +239,6 @@ auto
 valid_list_owned_nested_view() -> auto {
    cat::list<int4> local;
    return cat::move(local) | cat::reverse() | cat::take(1u);
-}
-
-auto
-valid_list_owned_member_view() -> auto {
-   cat::list<int4> local;
-   return cat::move(local).reverse().drop(1u);
 }
 
 auto
@@ -290,13 +271,6 @@ void
 valid_list_nested_context() {
    cat::list<int4> local;
    auto context = (cat::ref(local) | cat::reverse() | cat::take(2u)).iterate();
-   consume(context);
-}
-
-void
-valid_list_nested_member_context() {
-   cat::list<int4> local;
-   auto context = cat::ref(local).reverse().as_rvalue().iterate();
    consume(context);
 }
 
@@ -426,13 +400,6 @@ dangling_vec_reverse() -> auto {
 }
 
 auto
-dangling_vec_member_reverse() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).reverse();
-}
-
-auto
 dangling_vec_reverse_context() -> auto {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
@@ -445,13 +412,6 @@ dangling_vec_as_rvalue() -> auto {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::as_rvalue();
-}
-
-auto
-dangling_vec_member_as_rvalue() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).as_rvalue();
 }
 
 auto
@@ -470,13 +430,6 @@ dangling_vec_take() -> auto {
 }
 
 auto
-dangling_vec_member_take() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).take(1u);
-}
-
-auto
 dangling_vec_take_context() -> auto {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
@@ -489,13 +442,6 @@ dangling_vec_drop() -> auto {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::drop(1u);
-}
-
-auto
-dangling_vec_member_drop() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).drop(1u);
 }
 
 auto
@@ -514,13 +460,6 @@ dangling_vec_take_last() -> auto {
 }
 
 auto
-dangling_vec_member_take_last() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).take_last(1u);
-}
-
-auto
 dangling_vec_take_last_context() -> auto {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
@@ -533,13 +472,6 @@ dangling_vec_drop_last() -> auto {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::drop_last(1u);
-}
-
-auto
-dangling_vec_member_drop_last() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).drop_last(1u);
 }
 
 auto
@@ -558,13 +490,6 @@ dangling_vec_take_while() -> auto {
 }
 
 auto
-dangling_vec_member_take_while() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).take_while(is_big);
-}
-
-auto
 dangling_vec_take_while_context() -> auto {
    cat::vec<int4> local;
    auto view = cat::ref(local) | cat::take_while(is_big);
@@ -577,13 +502,6 @@ dangling_vec_drop_while() -> auto {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::drop_while(is_big);
-}
-
-auto
-dangling_vec_member_drop_while() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).drop_while(is_big);
 }
 
 auto
@@ -602,13 +520,6 @@ dangling_vec_take_last_while() -> auto {
 }
 
 auto
-dangling_vec_member_take_last_while() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).take_last_while(is_big);
-}
-
-auto
 dangling_vec_take_last_while_context() -> auto {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
@@ -621,13 +532,6 @@ dangling_vec_drop_last_while() -> auto {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::drop_last_while(is_big);
-}
-
-auto
-dangling_vec_member_drop_last_while() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).drop_last_while(is_big);
 }
 
 auto
@@ -646,13 +550,6 @@ dangling_vec_filter() -> auto {
 }
 
 auto
-dangling_vec_member_filter() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).filter(is_big);
-}
-
-auto
 dangling_vec_filter_context() -> auto {
    cat::vec<int4> local;
    auto view = cat::ref(local) | cat::filter(is_big);
@@ -668,13 +565,6 @@ dangling_vec_transform() -> auto {
 }
 
 auto
-dangling_vec_member_transform() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).transform(twice);
-}
-
-auto
 dangling_vec_transform_context() -> auto {
    cat::vec<int4> local;
    auto view = cat::ref(local) | cat::transform(twice);
@@ -687,13 +577,6 @@ dangling_vec_nested() -> auto {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::reverse() | cat::take(1u) | cat::as_rvalue();
-}
-
-auto
-dangling_vec_member_nested() -> auto {
-   cat::vec<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).reverse().take(1u).as_rvalue();
 }
 
 auto
@@ -745,13 +628,6 @@ dangling_vec_view_of_owned_view() -> auto {
    return cat::ref(view) | cat::take(1u);
 }
 
-auto
-dangling_vec_member_view_of_owned_view() -> auto {
-   auto view = cat::vec<int4>{} | cat::reverse();
-   // expected-warning@+1 1+ {{local variable 'view'}}
-   return cat::ref(view).take(1u);
-}
-
 void
 dangling_vec_view_after_scope() {
    cat::vec<int4> outer;
@@ -768,13 +644,6 @@ void
 dangling_vec_owned_context() {
    // expected-warning@+1 1+ {{temporary}}
    auto context = (cat::vec<int4>{} | cat::reverse()).iterate();
-   consume(context);
-}
-
-void
-dangling_vec_owned_member_context() {
-   // expected-warning@+1 1+ {{temporary}}
-   auto context = cat::vec<int4>{}.reverse().iterate();
    consume(context);
 }
 
@@ -878,13 +747,6 @@ dangling_list_reverse() -> auto {
 }
 
 auto
-dangling_list_member_reverse() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).reverse();
-}
-
-auto
 dangling_list_reverse_context() -> auto {
    cat::list<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
@@ -897,13 +759,6 @@ dangling_list_as_rvalue() -> auto {
    cat::list<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::as_rvalue();
-}
-
-auto
-dangling_list_member_as_rvalue() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).as_rvalue();
 }
 
 auto
@@ -922,13 +777,6 @@ dangling_list_take() -> auto {
 }
 
 auto
-dangling_list_member_take() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).take(1u);
-}
-
-auto
 dangling_list_take_context() -> auto {
    cat::list<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
@@ -941,13 +789,6 @@ dangling_list_drop() -> auto {
    cat::list<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::drop(1u);
-}
-
-auto
-dangling_list_member_drop() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).drop(1u);
 }
 
 auto
@@ -966,13 +807,6 @@ dangling_list_take_last() -> auto {
 }
 
 auto
-dangling_list_member_take_last() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).take_last(1u);
-}
-
-auto
 dangling_list_take_last_context() -> auto {
    cat::list<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
@@ -985,13 +819,6 @@ dangling_list_drop_last() -> auto {
    cat::list<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::drop_last(1u);
-}
-
-auto
-dangling_list_member_drop_last() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).drop_last(1u);
 }
 
 auto
@@ -1010,13 +837,6 @@ dangling_list_take_while() -> auto {
 }
 
 auto
-dangling_list_member_take_while() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).take_while(is_big);
-}
-
-auto
 dangling_list_take_while_context() -> auto {
    cat::list<int4> local;
    auto view = cat::ref(local) | cat::take_while(is_big);
@@ -1029,13 +849,6 @@ dangling_list_drop_while() -> auto {
    cat::list<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::drop_while(is_big);
-}
-
-auto
-dangling_list_member_drop_while() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).drop_while(is_big);
 }
 
 auto
@@ -1054,13 +867,6 @@ dangling_list_filter() -> auto {
 }
 
 auto
-dangling_list_member_filter() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).filter(is_big);
-}
-
-auto
 dangling_list_filter_context() -> auto {
    cat::list<int4> local;
    auto view = cat::ref(local) | cat::filter(is_big);
@@ -1076,13 +882,6 @@ dangling_list_transform() -> auto {
 }
 
 auto
-dangling_list_member_transform() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).transform(twice);
-}
-
-auto
 dangling_list_transform_context() -> auto {
    cat::list<int4> local;
    auto view = cat::ref(local) | cat::transform(twice);
@@ -1095,13 +894,6 @@ dangling_list_nested() -> auto {
    cat::list<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
    return cat::ref(local) | cat::reverse() | cat::take(1u) | cat::as_rvalue();
-}
-
-auto
-dangling_list_member_nested() -> auto {
-   cat::list<int4> local;
-   // expected-warning@+1 1+ {{local variable 'local'}}
-   return cat::ref(local).reverse().take(1u).as_rvalue();
 }
 
 auto
@@ -1153,13 +945,6 @@ dangling_list_view_of_owned_view() -> auto {
    return cat::ref(view) | cat::take(1u);
 }
 
-auto
-dangling_list_member_view_of_owned_view() -> auto {
-   auto view = cat::list<int4>{} | cat::reverse();
-   // expected-warning@+1 1+ {{local variable 'view'}}
-   return cat::ref(view).take(1u);
-}
-
 void
 dangling_list_view_after_scope() {
    cat::list<int4> outer;
@@ -1176,13 +961,6 @@ void
 dangling_list_owned_context() {
    // expected-warning@+1 1+ {{temporary}}
    auto context = (cat::list<int4>{} | cat::reverse()).iterate();
-   consume(context);
-}
-
-void
-dangling_list_owned_member_context() {
-   // expected-warning@+1 1+ {{temporary}}
-   auto context = cat::list<int4>{}.reverse().iterate();
    consume(context);
 }
 
@@ -1303,10 +1081,10 @@ dangling_vec_pipe_fill() -> decltype(auto) {
 }
 
 auto
-dangling_vec_reverse_inplace() -> decltype(auto) {
+dangling_vec_member_reverse() -> decltype(auto) {
    cat::vec<int4> local;
    // expected-warning@+1 1+ {{local variable 'local'}}
-   return local.reverse_inplace();
+   return local.reverse();
 }
 
 auto
@@ -1341,7 +1119,7 @@ ref_of_rvalue_list() {
 
 // A non-`cat::ref()` l-value container is not a borrow-acceptable view base,
 // and `cat::list` is not a collection, so it has no `*_last_while` views.
-// expected-error@cat/iterable:* 6 {{no matching member function}}
+// expected-error@cat/iterable:* 4 {{no matching member function}}
 
 void
 pipe_lvalue_vec() {
@@ -1353,18 +1131,6 @@ void
 pipe_lvalue_list() {
    cat::list<int4> local;
    auto view = local | cat::take(1u);
-}
-
-void
-member_view_of_lvalue_vec() {
-   cat::vec<int4> local;
-   auto view = local.reverse();
-}
-
-void
-member_view_of_lvalue_list() {
-   cat::list<int4> local;
-   auto view = local.filter(is_big);
 }
 
 void

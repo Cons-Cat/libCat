@@ -446,7 +446,7 @@ bit_span : public bit_collection_interface<bit_span<Storage>> {
    }
 
    constexpr auto
-   reverse_inplace() const noexcept -> bit_span
+   reverse() const noexcept -> bit_span
       requires(!is_const<Storage>)
    {
       cat::stepanov_reverse_inplace(begin(), end());

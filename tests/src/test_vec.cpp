@@ -544,9 +544,9 @@ $test(vec_iterable_range_modifiers) {
    cat::array<int4, 4u> source{1_i4, 2_i4, 3_i4, 4_i4};
    cat::raii::vec<int4, cat::allocator_linear> values(arena.alloc);
 
-   auto evens = cat::ref(source).filter([](int4 value) -> bool {
-      return value % 2_i4 == 0_i4;
-   });
+   auto evens = cat::ref(source) | cat::filter([](int4 value) -> bool {
+                   return value % 2_i4 == 0_i4;
+                });
    values.append_range(evens).verify();
    cat::verify(values.size() == 2u);
    cat::verify(values[0u] == 2_i4);
@@ -559,9 +559,10 @@ $test(vec_iterable_range_modifiers) {
    cat::verify(values[4u] == 4_i4);
    cat::verify(values[5u] == 4_i4);
 
-   auto greater_than_two = cat::ref(source).filter([](int4 value) -> bool {
-      return value > 2_i4;
-   });
+   auto greater_than_two =
+      cat::ref(source) | cat::filter([](int4 value) -> bool {
+         return value > 2_i4;
+      });
    values.replace_with_range(1u, 5u, greater_than_two).verify();
    cat::verify(values.size() == 4u);
    cat::verify(values[0u] == 2_i4);
@@ -1093,9 +1094,9 @@ $test(vec_noncontiguous_replace_failure_preserves_values) {
       )
          .verify();
    cat::array<int4, 2u> replacements{8_i4, 9_i4};
-   auto noncontiguous = cat::ref(replacements).filter([](int4) -> bool {
-      return true;
-   });
+   auto noncontiguous = cat::ref(replacements) | cat::filter([](int4) -> bool {
+                           return true;
+                        });
 
    auto const result =
       values.replace_with_range(null_alloc, 1u, 2u, noncontiguous);
@@ -1470,7 +1471,7 @@ $test(vec_collection) {
    cat::verify(vec_values[0] == 7);
    cat::verify(vec_values[1] == 6);
    cat::verify(vec_values[2] == 5);
-   vec_values.reverse_inplace();
+   vec_values.reverse();
    cat::verify(vec_values[0] == 5);
    cat::verify(vec_values[1] == 6);
    cat::verify(vec_values[2] == 7);
@@ -1484,18 +1485,18 @@ $test(vec_collection) {
    cat::verify(managed_values[0] == 10);
    cat::verify(managed_values[1] == 9);
    cat::verify(managed_values[2] == 8);
-   managed_values.reverse_inplace();
+   managed_values.reverse();
    cat::verify(managed_values[0] == 8);
    cat::verify(managed_values[1] == 9);
    cat::verify(managed_values[2] == 10);
 
    auto transformed_tail = cat::ref(vec_values)
-                              .filter([](int value) -> bool {
-                                 return value > 5;
-                              })
-                              .transform([](int value) -> int {
-                                 return value * 10;
-                              });
+                           | cat::filter([](int value) -> bool {
+                                return value > 5;
+                             })
+                           | cat::transform([](int value) -> int {
+                                return value * 10;
+                             });
    cat::verify(transformed_tail.sum() == 130);
    cat::verify(cat::as_span(vec_values).size() == 3u);
 }
@@ -1516,7 +1517,7 @@ $test(vec_reverse_inplace_simd) {
       cat::verify(values[i] == static_cast<int>(64u - i));
    }
 
-   values.reverse_inplace();
+   values.reverse();
    for (cat::idx i = 0u; i < values.size(); ++i) {
       cat::verify(values[i] == static_cast<int>(i));
    }
@@ -2442,9 +2443,9 @@ $test(vec_empty_and_end_edge_cases) {
 $test(vec_single_pass_range_failure) {
    cat::allocator_null null_alloc;
    cat::array<int4, 4u> source = {10, 11, 12, 13};
-   auto single_pass = cat::ref(source).filter([](int4) -> bool {
-      return true;
-   });
+   auto single_pass = cat::ref(source) | cat::filter([](int4) -> bool {
+                         return true;
+                      });
 
    cat::vec_big<int4> vector;
    cat::verify(vector.reserve(g_tests_alloc, 4u).has_value());
@@ -2898,9 +2899,10 @@ $test(vec_allocation_failure_sweeps) {
          range[i].value = int4(1'000 + i.raw);
       }
 
-      auto single_pass = cat::ref(range).filter([](counted const&) -> bool {
-         return true;
-      });
+      auto single_pass =
+         cat::ref(range) | cat::filter([](counted const&) -> bool {
+            return true;
+         });
       cat::vec_big<counted> values;
       auto refill = [&] {
          values.free(allocator);

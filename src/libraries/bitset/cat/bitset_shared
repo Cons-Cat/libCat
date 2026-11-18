@@ -624,9 +624,9 @@ class bitset_shared {
 
    // Reversal reads and publishes independent word snapshots.
    constexpr void
-   reverse_inplace() noexcept {
+   reverse() noexcept {
       bitset<bits_count> reversed = load();
-      reversed.reverse_inplace();
+      reversed.reverse();
       store(reversed);
    }
 

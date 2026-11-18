@@ -376,10 +376,10 @@ basic_list : public container_interface<basic_list<T, Allocator>, T>,
 
    // Reverse element order.
    constexpr void
-   reverse_inplace() {
-      // Shadows `cat::iterable_interface::reverse_inplace()`.
+   reverse() {
+      // Shadows `cat::iterable_interface::reverse()`.
       // This is optimized for list compared to the default implementation.
-      m_core.reverse_inplace();
+      m_core.reverse();
    }
 
    // Remove elements matching predicate and return count removed.

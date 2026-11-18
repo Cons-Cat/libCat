@@ -28,7 +28,7 @@ constexpr_list_func() -> int4 {
    auto _ = list.push_back<cat::allocator_page>(pager, 1);
    auto _ = list.push_back<cat::allocator_page>(pager, 2);
    auto _ = list.push_front<cat::allocator_page>(pager, 3);
-   list.reverse_inplace();
+   list.reverse();
    int4 result = list.front() + list.back();
    list.free<cat::allocator_page>(pager);
    return result;
@@ -91,7 +91,7 @@ $test(manual_list_modifiers) {
 
    cat::verify(list.unique_inplace(allocator_ref) == 1);
    cat::verify(list.size() == 4);
-   list.reverse_inplace();
+   list.reverse();
    cat::verify(list.front() == 5);
    cat::verify(list.back() == 1);
 
@@ -141,7 +141,7 @@ $test(list_reverse_inplace) {
    manual | cat::reverse_inplace();
    cat::verify(manual.front() == 4);
    cat::verify(manual.back() == 1);
-   manual.reverse_inplace();
+   manual.reverse();
    cat::verify(manual.front() == 1);
    cat::verify(manual.back() == 4);
 
@@ -150,7 +150,7 @@ $test(list_reverse_inplace) {
    managed | cat::reverse_inplace();
    cat::verify(managed.front() == 7);
    cat::verify(managed.back() == 5);
-   managed.reverse_inplace();
+   managed.reverse();
    cat::verify(managed.front() == 5);
    cat::verify(managed.back() == 7);
 
@@ -170,7 +170,7 @@ $test(forward_list_reverse_inplace) {
    cat::verify(*++manual_iterator == 3);
    cat::verify(*++manual_iterator == 2);
    cat::verify(*++manual_iterator == 1);
-   manual.reverse_inplace();
+   manual.reverse();
    cat::verify(manual.front() == 1);
 
    cat::raii::forward_list managed =
@@ -180,7 +180,7 @@ $test(forward_list_reverse_inplace) {
    cat::verify(*managed_iterator == 7);
    cat::verify(*++managed_iterator == 6);
    cat::verify(*++managed_iterator == 5);
-   managed.reverse_inplace();
+   managed.reverse();
    cat::verify(managed.front() == 5);
 
    manual.free(allocator_ref);
@@ -198,7 +198,7 @@ $test(raii_list_modifiers_release) {
    cat::verify(list.remove(2) == 2);
    cat::verify(list.unique_inplace() == 1);
    cat::verify(list.size() == 3);
-   list.reverse_inplace();
+   list.reverse();
    cat::verify(list.front() == 4);
    cat::verify(list.back() == 1);
 
@@ -233,9 +233,9 @@ $test(list_iterable_range_modifiers) {
    cat::verify(*(list.begin() + 2u) == 1);
 
    auto forward = cat::raii::make_forward_list<int>(arena.alloc, 1, 4).verify();
-   auto threes = cat::ref(source).filter([](int value) -> bool {
-      return value == 3;
-   });
+   auto threes = cat::ref(source) | cat::filter([](int value) -> bool {
+                    return value == 3;
+                 });
    forward.append_range(threes).verify();
    cat::verify(forward.size() == 3u);
    cat::verify(*(forward.begin() + 2u) == 3);
@@ -505,12 +505,12 @@ $test(list_iterable) {
    auto list_tail = cat::ref(list_values) | cat::reverse() | cat::take(2u);
    cat::verify(list_tail.sum() == 7);
    auto doubled_tail = cat::ref(list_values)
-                          .filter([](int value) -> bool {
-                             return value > 1;
-                          })
-                          .transform([](int value) -> int {
-                             return value * 2;
-                          });
+                       | cat::filter([](int value) -> bool {
+                            return value > 1;
+                         })
+                       | cat::transform([](int value) -> int {
+                            return value * 2;
+                         });
    cat::verify(doubled_tail.sum() == 18);
 
    auto context = cat::iterate(list_values);
@@ -537,12 +537,12 @@ $test(list_iterable) {
          .verify();
    cat::verify((forward_list_values | cat::sum()) == 15);
    auto shifted_edges = cat::ref(forward_list_values)
-                           .filter([](int value) -> bool {
-                              return value != 5;
-                           })
-                           .transform([](int value) -> int {
-                              return value + 1;
-                           });
+                        | cat::filter([](int value) -> bool {
+                             return value != 5;
+                          })
+                        | cat::transform([](int value) -> int {
+                             return value + 1;
+                          });
    cat::verify(shifted_edges.sum() == 12);
 }
 

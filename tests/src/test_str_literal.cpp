@@ -46,13 +46,16 @@ $test(str_literal_construction_and_access) {
    cat::verify(count == text.size());
 
    auto consonant_offsets = text
-                               .filter([](char value) -> bool {
-                                  return value != 'a';
-                               })
-                               .transform([](char value) -> int {
-                                  return value - 'a';
-                               });
+                            | cat::filter([](char value) -> bool {
+                                 return value != 'a';
+                              })
+                            | cat::transform([](char value) -> int {
+                                 return value - 'a';
+                              });
    cat::verify(consonant_offsets.sum() == 21);
+   cat::verify(cat::read_at(text, 2u) == 't');
+   cat::verify((text | cat::reverse() | cat::count()) == 3u);
+   cat::verify((cat::ref(text) | cat::take_last(1u) | cat::count()) == 1u);
 }
 
 $test(str_literal_concat_compare_and_swap) {

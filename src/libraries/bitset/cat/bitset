@@ -489,7 +489,7 @@ bitset : public bitwise_interface<bitset<bits_count, T>>,
    }
 
    constexpr void
-   reverse_inplace() noexcept {
+   reverse() noexcept {
       auto first = bit_stepanov_iterator(m_data.rbegin(), leading_skipped_bits);
       cat::stepanov_reverse_inplace(first, first + bits_count);
    }

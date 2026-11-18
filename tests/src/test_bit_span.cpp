@@ -83,11 +83,11 @@ $test(bit_span) {
    cat::verify(cat::bit_width(array_bits) == 64u);
    cat::verify(array_bits.count() == 64u);
    cat::verify(
-      array_bits
-         .filter([](auto bit) -> bool {
+      (array_bits
+       | cat::filter([](auto bit) -> bool {
             return bit;
          })
-         .count()
+       | cat::count())
       == 3u
    );
    cat::idx reverse_weight = 1u;
@@ -107,25 +107,25 @@ $test(bit_span) {
    cat::verify(array_bits[60u]);
    cat::verify(array_bits[62u]);
    cat::verify(array_bits[63u]);
-   array_bits.reverse_inplace();
+   array_bits.reverse();
    cat::verify(array_bits[0u]);
    auto array_bit_slice = cat::slice(array_bits, 0u, 4u);
    cat::verify(
-      array_bit_slice
-         .filter([](auto bit) -> bool {
+      (array_bit_slice
+       | cat::filter([](auto bit) -> bool {
             return bit;
          })
-         .count()
+       | cat::count())
       == 3u
    );
    cat::read_at(array_bit_slice, 2u) = true;
    cat::verify(array_bits[2u]);
    cat::verify(
-      array_bit_slice
-         .transform([](auto bit) -> cat::idx {
+      (array_bit_slice
+       | cat::transform([](auto bit) -> cat::idx {
             return bit ? 1u : 0u;
          })
-         .sum()
+       | cat::sum())
       == 4u
    );
    cat::idx array_range_count = 0u;
@@ -193,7 +193,7 @@ $test(bit_span_algorithms) {
    right.shift_left(2u);
    cat::verify(right_words[0u] == 0b0010'1100_u1);
 
-   right.reverse_inplace();
+   right.reverse();
    cat::verify(right_words[0u] == 0b0011'0100_u1);
 
    cat::array<cat::uint1, 1u> same_word_storage{0u};
@@ -202,7 +202,7 @@ $test(bit_span_algorithms) {
    for (cat::idx bit_index = 0u; bit_index < 6u; ++bit_index) {
       same_word_bits[bit_index] = same_word_values[bit_index];
    }
-   same_word_bits.reverse_inplace();
+   same_word_bits.reverse();
    for (cat::idx bit_index = 0u; bit_index < 6u; ++bit_index) {
       cat::verify(
          same_word_bits[bit_index] == same_word_values[5u - bit_index]
@@ -217,14 +217,14 @@ $test(bit_span_algorithms) {
    for (cat::idx bit_index = 0u; bit_index < 10u; ++bit_index) {
       cross_word_bits[bit_index] = cross_word_values[bit_index];
    }
-   cross_word_bits.reverse_inplace();
+   cross_word_bits.reverse();
    for (cat::idx bit_index = 0u; bit_index < 10u; ++bit_index) {
       cat::verify(
          cross_word_bits[bit_index] == cross_word_values[9u - bit_index]
       );
    }
 
-   right.reverse_inplace();
+   right.reverse();
    cat::verify(right_words[0u] == 0b0010'1100_u1);
 
    // Rotations match `bitset`: rotating left moves bits to higher indices.
@@ -424,7 +424,7 @@ $test(bit_span_const_correctness_and_noexcept) {
                 bits.reset();
                 bits.shift_left(1u);
                 bits.shift_right(1u);
-                bits.reverse_inplace();
+                bits.reverse();
                 bits.copy_from(bits);
                 bits.move_from(bits);
              };
@@ -439,7 +439,7 @@ $test(bit_span_const_correctness_and_noexcept) {
    static_assert(noexcept(bits.reset()));
    static_assert(noexcept(bits.shift_left(1u)));
    static_assert(noexcept(bits.shift_right(1u)));
-   static_assert(noexcept(bits.reverse_inplace()));
+   static_assert(noexcept(bits.reverse()));
    static_assert(noexcept(bits.countl_zero()));
    static_assert(noexcept(bits.countl_one()));
    static_assert(noexcept(bits.countr_zero()));

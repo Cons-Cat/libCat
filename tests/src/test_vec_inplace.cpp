@@ -144,12 +144,12 @@ $test(vec_inplace_append_and_iterate) {
    cat::verify(count == values.size());
 
    auto even_squares = cat::ref(values)
-                          .filter([](int4 value) -> bool {
-                             return value % 2_i4 == 0_i4;
-                          })
-                          .transform([](int4 value) -> int4 {
-                             return value * value;
-                          });
+                       | cat::filter([](int4 value) -> bool {
+                            return value % 2_i4 == 0_i4;
+                         })
+                       | cat::transform([](int4 value) -> int4 {
+                            return value * value;
+                         });
    cat::verify(even_squares.sum() == 20_i4);
 }
 
@@ -564,9 +564,9 @@ $test(vec_inplace_insert_range) {
 
    // A single-pass range which does not fit has no effects.
    cat::array source{10_i4, 11_i4, 12_i4};
-   auto single_pass = cat::ref(source).filter([](int4) -> bool {
-      return true;
-   });
+   auto single_pass = cat::ref(source) | cat::filter([](int4) -> bool {
+                         return true;
+                      });
    values.erase(6u, values.size());
    cat::verify(values.append_range(single_pass).is_empty());
    cat::verify(values.insert_range(0u, single_pass).is_empty());

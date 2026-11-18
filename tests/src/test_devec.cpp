@@ -1581,9 +1581,9 @@ $test(devec_insert_range) {
       // A non-contiguous range.
       values
          .insert_range(
-            g_tests_alloc, position, cat::ref(range).filter([](int4) {
-               return true;
-            })
+            g_tests_alloc, position, cat::ref(range) | cat::filter([](int4) {
+                                        return true;
+                                     })
          )
          .verify();
       expected.insert_range(g_tests_alloc, position, range).verify();

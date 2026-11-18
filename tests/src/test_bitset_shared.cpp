@@ -113,8 +113,8 @@ verify_bitset_shared_value_operations() {
 
    cat::bitset_shared<bits_count> reversed(left);
    cat::bitset<bits_count> reversed_value = left_value;
-   reversed.reverse_inplace();
-   reversed_value.reverse_inplace();
+   reversed.reverse();
+   reversed_value.reverse();
    cat::verify(reversed.load() == reversed_value);
 
    cat::bitset_shared<bits_count> patterns;

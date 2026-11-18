@@ -252,7 +252,7 @@ $test(bitset_popcount) {
    cat::verify(!bits129.has_single_bit());
    cat::verify(cat::countl_zero(bits129) == 0u);
    cat::bitset<129u> reversed129 = bits129;
-   reversed129.reverse_inplace();
+   reversed129.reverse();
    cat::verify(reversed129[0u]);
    cat::verify(bits129.any_of());
    cat::verify(!bits129.all_of());
@@ -575,14 +575,14 @@ $test(bitset_rotate_every_shift) {
 $test(bitset_reverse_inplace) {
    cat::bitset<8u> bits8("10010000");
    cat::bitset<8u> reversed8 = bits8;
-   reversed8.reverse_inplace();
+   reversed8.reverse();
    cat::verify(!reversed8[0u]);
    cat::verify(reversed8[4u]);
    cat::verify(reversed8[7u]);
 
    cat::bitset<7u> bits7("1001000");
    cat::bitset<7u> reversed7 = bits7;
-   reversed7.reverse_inplace();
+   reversed7.reverse();
    cat::verify(!reversed7[0u]);
    cat::verify(reversed7[3u]);
    cat::verify(reversed7[6u]);
@@ -592,7 +592,7 @@ $test(bitset_reverse_inplace) {
    bits127[66u] = true;
    bits127[126u] = true;
    cat::bitset<127u> reversed127 = bits127;
-   reversed127.reverse_inplace();
+   reversed127.reverse();
    cat::verify(reversed127[0u]);
    cat::verify(reversed127[60u]);
    cat::verify(reversed127[126u]);
@@ -826,11 +826,11 @@ $test(bitset_collection) {
    cat::verify((bits | cat::count()) == 5u);
    cat::verify(bits.count() == 5u);
    cat::verify(
-      bits
-         .filter([](auto bit) -> bool {
+      (bits
+       | cat::filter([](auto bit) -> bool {
             return bit;
          })
-         .count()
+       | cat::count())
       == 2u
    );
    cat::idx reverse_weight = 1u;
@@ -848,24 +848,25 @@ $test(bitset_collection) {
    bits | cat::reverse_inplace();
    cat::verify(bits[2u]);
    cat::verify(bits[4u]);
-   bits.reverse_inplace();
+   bits.reverse();
    cat::verify(bits[0u]);
    cat::verify(bits[2u]);
    auto bit_slice = cat::slice(bits, 0u, 3u);
    cat::verify(
-      bit_slice
-         .filter([](auto bit) -> bool {
+      (bit_slice
+       | cat::filter([](auto bit) -> bool {
             return bit;
          })
-         .count()
+       | cat::count())
       == 2u
    );
    cat::verify(
-      bit_slice.reverse()
-         .transform([](auto bit) -> cat::idx {
+      (bit_slice
+       | cat::reverse()
+       | cat::transform([](auto bit) -> cat::idx {
             return bit ? 1u : 0u;
          })
-         .sum()
+       | cat::sum())
       == 2u
    );
    cat::verify(cat::read_at(bits, 0u));
@@ -884,12 +885,12 @@ $test(bitset_collection) {
    });
    cat::verify(true_count == 2u);
    auto true_bit_values = cat::ref(bits)
-                             .filter([](auto bit) -> bool {
-                                return bit;
-                             })
-                             .transform([](auto bit) -> int {
-                                return bit ? 10 : 0;
-                             });
+                          | cat::filter([](auto bit) -> bool {
+                               return bit;
+                            })
+                          | cat::transform([](auto bit) -> int {
+                               return bit ? 10 : 0;
+                            });
    cat::verify(true_bit_values.sum() == 20);
 
    auto reversed = cat::reverse_iterate(bits);
