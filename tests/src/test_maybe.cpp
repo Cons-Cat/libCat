@@ -2,6 +2,7 @@
 #include <cat/maybe>
 #include <cat/memory>
 #include <cat/scaredy>
+#include <cat/string>
 #include <cat/tuple>
 #include <cat/unique>
 #include <cat/utility>
@@ -2212,4 +2213,77 @@ $test(maybe_reference_temporary_assignment) {
    static_assert(is_assignable_to_temporary<cat::maybe<int4>, int4>);
    cat::maybe<int4&>(value).value() = 3;
    cat::verify(value == 3);
+}
+
+namespace {
+// A type that is copyable but not trivially copy-assignable, which used to
+// delete `maybe`'s own assignment operators.
+struct non_trivially_assignable {
+   int4 value;
+
+   constexpr non_trivially_assignable(int4 in_value) : value(in_value) {
+   }
+
+   constexpr non_trivially_assignable(non_trivially_assignable const&) =
+      default;
+
+   constexpr auto
+   operator=(non_trivially_assignable const& other)
+      -> non_trivially_assignable& {
+      value = other.value;
+      return *this;
+   }
+};
+}  // namespace
+
+$test(maybe_assign_non_trivially_assignable) {
+   using maybe_type = cat::maybe<non_trivially_assignable>;
+   static_assert(!cat::is_trivially_copy_assignable<non_trivially_assignable>);
+   static_assert(cat::is_copy_assignable<maybe_type>);
+   static_assert(cat::is_move_assignable<maybe_type>);
+
+   maybe_type const one = non_trivially_assignable(1);
+   maybe_type const empty = cat::nullopt;
+   maybe_type target;
+
+   // Empty to engaged.
+   target = one;
+   cat::verify(target.value().value == 1);
+   // Engaged to engaged, by move.
+   target = maybe_type(non_trivially_assignable(2));
+   cat::verify(target.value().value == 2);
+   // Engaged to empty.
+   target = empty;
+   cat::verify(!target.has_value());
+   // Empty to empty.
+   target = empty;
+   cat::verify(!target.has_value());
+
+   // `maybe` assignment is usable in constant evaluation.
+   static_assert([] {
+      maybe_type left;
+      maybe_type const right = non_trivially_assignable(3);
+      left = right;
+      return left.value().value == 3;
+   }());
+}
+
+// Views are trivially copy-assignable, so `maybe` of a view is too.
+$test(maybe_assign_views) {
+   static_assert(cat::is_trivially_copy_assignable<cat::str_view>);
+   static_assert(cat::is_trivially_copy_assignable<cat::zstr_view>);
+   static_assert(cat::is_trivially_copy_assignable<cat::maybe<cat::str_view>>);
+   static_assert(cat::is_trivially_copy_assignable<cat::maybe<cat::zstr_view>>);
+   // Trivially assignable types keep trivial assignment.
+   static_assert(cat::is_trivially_copy_assignable<cat::maybe<int4>>);
+   static_assert(cat::is_trivially_move_assignable<cat::maybe<int4>>);
+
+   cat::maybe<cat::zstr_view> const hello = cat::zstr_view("hello");
+   cat::maybe<cat::zstr_view> target;
+   target = hello;
+   cat::verify(target.value() == "hello");
+   // A `zstr_view` keeps its null terminator through assignment.
+   cat::verify(target.value().size() == hello.value().size());
+   target = cat::maybe<cat::zstr_view>();
+   cat::verify(!target.has_value());
 }
