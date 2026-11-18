@@ -43,22 +43,21 @@ detect_syscall_support() {
 
    // For most syscalls, we assume it is available if the kernel version is
    // at least their minimum required version.
-   // TODO: Can we generalize a data type for versions?
    nix::detail::has_sys_cachestat_cache =
-      version >= nix::kernel_version{.major = 6, .minor = 5};
+      version >= nix::kernel_version{6, 5};
    nix::detail::has_sys_fchmodat2_cache =
-      version >= nix::kernel_version{.major = 6, .minor = 6};
+      version >= nix::kernel_version{6, 6};
    // TODO: Shadow stack availability may need deeper introspection.
    nix::detail::has_sys_map_shadow_stack_cache =
-      version >= nix::kernel_version{.major = 6, .minor = 6};
+      version >= nix::kernel_version{6, 6};
    nix::detail::has_sys_futex_wake_cache =
-      version >= nix::kernel_version{.major = 6, .minor = 7};
+      version >= nix::kernel_version{6, 7};
    nix::detail::has_sys_futex_wait_cache =
-      version >= nix::kernel_version{.major = 6, .minor = 7};
+      version >= nix::kernel_version{6, 7};
    nix::detail::has_sys_futex_requeue_cache =
-      version >= nix::kernel_version{.major = 6, .minor = 7};
+      version >= nix::kernel_version{6, 7};
    nix::detail::has_sys_mseal_cache =
-      version >= nix::kernel_version{.major = 6, .minor = 10};
+      version >= nix::kernel_version{6, 10};
 
    // Base `io_uring` is available from Linux 5.1, but distributions often
    // disable it either via `/proc/sys/kernel/io_uring_disabled` or by compiling
@@ -124,8 +123,8 @@ call_main(cat::uword const* _Nonnull p_stack) {
 #ifndef CAT_NO_SYSCALL_PROBES
    // Initialize the `nix::has_sys_*` flags for later use. Define
    // `CAT_NO_SYSCALL_PROBES` for binaries that never query the
-   // `has_sys_*` family, to skip the two startup syscalls
-   // (`sys_uname` + `sys_io_uring_setup`).
+   // `has_sys_*` family, to skip the startup `sys_io_uring_setup`, and
+   // `sys_uname` when there is no vDSO.
    detect_syscall_support();
 #endif
 #if defined(CAT_STATIC_LINKED) \

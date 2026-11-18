@@ -438,7 +438,7 @@ class
    friend constexpr auto
    operator==(
       basic_str_span const& this_string, basic_str_span const& other_string
-   ) noexcept {
+   ) noexcept -> bool {
       using char_type = remove_const<CharT>;
       using view_type = basic_str_span<char_type const>;
       return compare_strings(view_type(this_string), view_type(other_string));
