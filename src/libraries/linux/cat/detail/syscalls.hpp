@@ -7,6 +7,7 @@
 
 #include <cat/linux>
 #include <cat/string>
+#include <cat/version>
 
 #include "io_uring.hpp"
 
@@ -821,18 +822,19 @@ struct linux_dirent {
 };
 
 // `kernel_version` is the parsed `major.minor` pair from `utsname::release`.
-struct kernel_version {
-   cat::int4 major;
-   cat::int4 minor;
+using kernel_version = cat::version<cat::int4, cat::int4>;
 
-   constexpr auto
-   operator<=>(kernel_version const&) const = default;
-};
-
-// Parse the host's kernel version from `sys_uname()`.
+// The host's kernel version. This reads the vDSO, or else `sys_uname()`.
 [[nodiscard]]
 auto
 get_kernel_version() noexcept -> kernel_version;
+
+namespace detail {
+// Parse the host's kernel version from `sys_uname()`.
+[[nodiscard]]
+auto
+get_uname_kernel_version() noexcept -> kernel_version;
+}  // namespace detail
 
 namespace detail {
 // These runtime feature checks are initialized in `_start()`.

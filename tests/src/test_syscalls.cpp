@@ -184,7 +184,12 @@ $test(syscall_uname) {
 $test(syscall_kernel_version) {
    auto v = nix::get_kernel_version();
    // libCat targets Linux 5+ (reasonable lower bound for a modern dev box).
-   cat::verify(v.major >= 5);
+   cat::verify(v >= nix::kernel_version{5, 0});
+   cat::verify(v == nix::detail::get_uname_kernel_version());
+#ifndef CAT_NO_VDSO
+   // The vDSO's note agrees with `sys_uname()`.
+   cat::verify(nix::detail::vdso_kernel_version.value() == v);
+#endif
 }
 
 // File I/O round trip.

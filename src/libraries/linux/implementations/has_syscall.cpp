@@ -1,3 +1,6 @@
+#ifndef CAT_NO_VDSO
+#include <cat/detail/vdso.hpp>
+#endif
 #include <cat/linux>
 
 namespace {
@@ -14,20 +17,29 @@ parse_decimal(char const* _Nonnull& p_cursor) -> cat::int4 {
 
 auto
 nix::get_kernel_version() noexcept -> kernel_version {
+#ifndef CAT_NO_VDSO
+   if (detail::vdso_kernel_version.has_value()) {
+      return detail::vdso_kernel_version.value();
+   }
+#endif
+   return detail::get_uname_kernel_version();
+}
+
+auto
+nix::detail::get_uname_kernel_version() noexcept -> kernel_version {
    utsname uts{};
    if (auto result = sys_uname(uts); result.is_empty()) {
-      // Treat as 0.0 on the rare case the syscall itself fails. The
-      // startup probe falls back to "no feature present" for every
-      // version-gated check.
-      return {.major = 0, .minor = 0};
+      // Evaluate to 0.0 if somehow this fails.
+      return {0, 0};
    }
 
    char const* _Nonnull p_cursor = uts.release.data();
    kernel_version parsed{};
-   parsed.major = parse_decimal(p_cursor);
+   auto& [major, minor] = parsed;
+   major = parse_decimal(p_cursor);
    if (*p_cursor == '.') {
       ++p_cursor;
-      parsed.minor = parse_decimal(p_cursor);
+      minor = parse_decimal(p_cursor);
    }
    return parsed;
 }

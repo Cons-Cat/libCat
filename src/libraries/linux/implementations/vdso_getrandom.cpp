@@ -11,11 +11,11 @@ struct vgetrandom_opaque_params {
 
 static_assert(sizeof(vgetrandom_opaque_params) == 64);
 
-using getrandom_hook = cat::int8 (*)(
+using getrandom_hook = cat::int8(
    void* _Nullable, cat::uword, cat::uint4, void* _Nullable, cat::uword
 );
 
-getrandom_hook p_getrandom = nullptr;
+getrandom_hook* p_getrandom = nullptr;
 void* p_getrandom_state = nullptr;
 cat::uint4 getrandom_state_size = 0u;
 bool getrandom_resolved = false;
@@ -25,7 +25,7 @@ bool getrandom_in_use = false;
 void
 initialize_getrandom_state() {
    getrandom_state_initialized = true;
-   getrandom_hook const p_hook =
+   getrandom_hook* const p_hook =
       __atomic_load_n(&p_getrandom, __ATOMIC_RELAXED);
    vgetrandom_opaque_params params{};
    cat::maybe<cat::int8> const query_result = nix::detail::call_vdso_hook(
@@ -56,7 +56,7 @@ auto
 nix::detail::vdso_getrandom(
    cat::span<unsigned char> buffer, getrandom_flags flags
 ) -> cat::maybe<cat::int8> {
-   getrandom_hook const p_hook = resolve_vdso_hook(
+   getrandom_hook* const p_hook = resolve_vdso_hook(
       p_getrandom, getrandom_resolved, "__vdso_getrandom", "getrandom"
    );
    if (
