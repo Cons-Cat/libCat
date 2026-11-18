@@ -1,0 +1,177 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::version` is a math type for hierchical version strings, including
+// SemVer, such as `1.2.3`. Fields can be any type, including strings, so
+// `2026.4-beta` is a valid version. It provides comparison operators against
+// other `cat::version`s and, when possible, provides a `.major()` and
+// `.minor()` accessors, and if so then an additional `.patch()` when possible.
+//
+// TODO: Elaborate docs on nicher features. For now, look at `test_version.cpp`
+// for all use cases.
+//
+// TODO: Support calendar types when there are calendar quantities.
+// TODO: Semantic version precedence, where `1.0.0-rc.1 < 1.0.0`.
+// TODO: A `cat::scanner` that accepts `=` and `v` prefixes, leading zeros,
+// missing trailing fields, etc...
+// TODO: Stepanov iterators and cat iterables. How to handle non-heterogenous
+// `cat::tuple`s though?
+
+#include <cat/array>
+#include <cat/format>
+#include <cat/str_literal>
+#include <cat/string>
+#include <cat/tuple>
+
+namespace cat {
+
+namespace detail {
+
+// A version's non-string field (like `uint4`).
+template <typename T>
+struct version_field_trait {
+   using type = T;
+};
+
+// A version's string field.
+template <is_string_char CharT, __SIZE_TYPE__ extent>
+struct version_field_trait<CharT[extent]> {
+   using type = typeof(basic_str_literal(declval<CharT const (&)[extent]>()));
+};
+}  // namespace detail
+
+template <typename... Fields>
+struct version : tuple<Fields...> {
+   constexpr auto
+   operator<=>(version const&) const = default;
+   constexpr auto
+   operator==(version const&) const -> bool = default;
+
+   using types = type_list<Fields...>;
+
+   [[nodiscard]]
+   constexpr auto
+   major(this auto&& self [[clang::lifetimebound]]) -> decltype(auto)
+      requires(
+         types::size() >= 2u && is_integral<typename types::template get<0u>>
+         && is_integral<typename types::template get<1u>>
+      )
+   {
+      return $fwd(self).template get<0u>();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   minor(this auto&& self [[clang::lifetimebound]]) -> decltype(auto)
+      requires(
+         types::size() >= 2u && is_integral<typename types::template get<0u>>
+         && is_integral<typename types::template get<1u>>
+      )
+   {
+      return $fwd(self).template get<1u>();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   patch(this auto&& self [[clang::lifetimebound]]) -> decltype(auto)
+      requires(
+         types::size() >= 3u && is_integral<typename types::template get<0u>>
+         && is_integral<typename types::template get<1u>>
+         && is_integral<typename types::template get<2u>>
+      )
+   {
+      return $fwd(self).template get<2u>();
+   }
+};
+
+template <typename... Fields>
+version(Fields const&...)
+   -> version<typename detail::version_field_trait<Fields>::type...>;
+
+template <typename... Fields, typename CharT>
+struct formatter<version<Fields...>, CharT> : formatter_base<CharT> {
+ private:
+   static constexpr idx separator_count =
+      sizeof...(Fields) == 0u ? 0u : idx(sizeof...(Fields) - 1u);
+
+   tuple<formatter<Fields>...> m_underlying;
+   // `separators[i]` precedes field `i + 1`.
+   array<char, separator_count> m_separators = make_default_separators();
+
+   static constexpr auto
+   make_default_separators() -> array<char, separator_count> {
+      array<char, separator_count> separators;
+      for (idx i = 0u; i < separator_count; ++i) {
+         separators[i] = '.';
+      }
+      return separators;
+   }
+
+   template <idx... indices>
+   auto
+   format_fields(
+      version<Fields...> const& value, format_context& context,
+      index_list_type<indices...> /*unused*/
+   ) const -> scaredy_format<void> {
+      scaredy_format<void> result = monostate;
+      auto format_one = [&]<idx index> {
+         if constexpr (index != 0u) {
+            result = context.append(m_separators[idx(index - 1u)]);
+            if (result.is_empty()) {
+               return false;
+            }
+         }
+
+         result = m_underlying.template get<index>().format(
+            value.template get<index>(), context
+         );
+         return !result.is_empty();
+      };
+      auto _ = (format_one.template operator()<indices>() && ...);
+      return result;
+   }
+
+ public:
+   constexpr auto
+   parse(format_parse_context& context)
+      -> scaredy_format<format_parse_context::const_iterator> {
+      format_parse_context::const_iterator p_it = context.begin();
+      for (idx i = 0u; p_it != context.end() && *p_it != '}'; ++i, ++p_it) {
+         if (i == separator_count) {
+            return format_errors::unknown_format_specifier;
+         }
+
+         m_separators[i] = *p_it;
+      }
+
+      if (p_it == context.end()) {
+         return format_errors::unmatched_open_brace;
+      }
+
+      return p_it;
+   }
+
+   auto
+   format(version<Fields...> const& value, format_context& context) const
+      -> scaredy_format<void> {
+      return format_fields(
+         value, context, index_sequence_over_types<Fields...>{}
+      );
+   }
+};
+
+}  // namespace cat
+
+namespace std {
+
+template <typename... Fields>
+struct tuple_size<cat::version<Fields...>> : cat::constant<sizeof...(Fields)> {
+};
+
+template <__SIZE_TYPE__ index, typename... Fields>
+struct tuple_element<index, cat::version<Fields...>> {
+   using type = cat::type_list<Fields...>::template get<cat::idx(index)>;
+};
+
+}  // namespace std
