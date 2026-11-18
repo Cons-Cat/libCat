@@ -163,6 +163,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_from_chars.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_scan_str.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_cli.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_version.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_fill_memory.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_tuple.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_magic_get.cpp
