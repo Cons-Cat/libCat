@@ -1,0 +1,337 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `cat::cli` is libCat's default command line argument parser. It is difficult
+// to design a one-size-fits-all implementation, but this design should suit
+// most use cases with extremely low overhead. It is heavily compile-time
+// oriented and lazily evaluated, so you generally only pay for what you use.
+//
+// It is used like this:
+//    auto cli = cat::cli(argc, p_argv)
+//                  .add_flag<"f,file">()
+//                  .add_flag<"number">();
+//
+//    cat::maybe<int4> number = cli.parse<int4>("number");
+//    cat::maybe<cat::str_view> file = cli.parse<cat::str_view>("f");
+//
+// TODO: Elaborate usage.
+//
+// TODO: Distinguish an absent flag from a malformed value.
+// TODO: Richer error handling.
+// TODO: GNU-style `bool` flags, which permit clustered short flags like `-abc`.
+// TODO: Positional arguments and subcommands. We need a trie?
+// TODO: Runtime `.add_flag()`?
+// TODO: `.add_help()` auto-generated menu.
+//
+// TODO: An eager `.validate()` pass that reports unregistered flags? Can also
+// pre-index `argv` to make repeated lookups cheaper?
+//
+
+#include <cat/scan_str>
+#include <cat/str_literal>
+#include <cat/string>
+#include <cat/utility>
+
+namespace cat {
+
+namespace detail {
+
+void
+cli_error_malformed_flag_spelling();
+void
+cli_error_flag_is_not_registered();
+
+// A spelling such as `"f,file"`, split into its short and long name.
+struct cli_names {
+   // `'\0'` when there is no short name.
+   char short_name = '\0';
+   // Empty when there is no long name.
+   str_view long_name;
+};
+
+consteval auto
+is_valid_cli_name_character(char character) -> bool {
+   return character > ' ' && character <= '~' && character != ','
+          && character != '=';
+}
+
+template <basic_str_literal spelling>
+consteval auto
+parse_cli_names() -> cli_names {
+   cli_names names;
+   idx begin = 0u;
+   idx length = 0u;
+   for (idx end = 0u; end <= spelling.size(); ++end) {
+      if (end != spelling.size() && spelling[end] != ',') {
+         if (!is_valid_cli_name_character(spelling[end])) {
+            cli_error_malformed_flag_spelling();
+         }
+         ++length;
+         continue;
+      }
+
+      // Names may not be empty, or begin with a `-` which `cli` itself spells.
+      if (length == 0u || spelling[begin] == '-') {
+         cli_error_malformed_flag_spelling();
+      }
+
+      if (length == 1u) {
+         if (names.short_name != '\0') {
+            cli_error_malformed_flag_spelling();
+         }
+         names.short_name = spelling[begin];
+      } else {
+         if (!names.long_name.is_empty()) {
+            cli_error_malformed_flag_spelling();
+         }
+         names.long_name = {spelling.data() + begin, length};
+      }
+      begin = end + 1u;
+      length = 0u;
+   }
+   return names;
+}
+
+consteval auto
+cli_name_equals(str_view left, str_view right) -> bool {
+   if (left.size() != right.size()) {
+      return false;
+   }
+   for (idx i = 0u; i < left.size(); ++i) {
+      if (left[i] != right[i]) {
+         return false;
+      }
+   }
+   return true;
+}
+
+// If `name` (without dashes) spells either name in `names`.
+consteval auto
+cli_names_spell(cli_names names, str_view name) -> bool {
+   if (name.size() == 1u) {
+      return names.short_name != '\0' && names.short_name == name[0];
+   }
+   return !names.long_name.is_empty() && cli_name_equals(names.long_name, name);
+}
+
+consteval auto
+cli_names_collide(cli_names left, cli_names right) -> bool {
+   return (left.short_name != '\0' && left.short_name == right.short_name)
+          || (!left.long_name.is_empty()
+              && cli_name_equals(left.long_name, right.long_name));
+}
+
+// Every option's names are parsed once per spelling.
+template <basic_str_literal spelling>
+inline constexpr cli_names cli_names_of = parse_cli_names<spelling>();
+
+// If `p_argument` begins with `--name`, where `name` is a compile-time
+// constant. The `&&` fold short-circuits on the first mismatch, so this never
+// reads past `p_argument`'s terminator.
+template <cli_names const& names, idx... indices>
+[[gnu::always_inline, gnu::nodebug]]
+constexpr auto
+cli_has_long_prefix(
+   char const* _Nonnull p_argument, index_list_type<indices...>
+) -> bool {
+   return p_argument[1] == '-'
+          && ((p_argument[indices + 2u] == names.long_name[indices]) && ...);
+}
+
+// The result of matching one argument against one flag.
+struct cli_match {
+   // A value in the same argument, like `-fvalue` or `--file=value`.
+   maybe<zstr_view> value;
+   // The value is the next argument, like `-f value` or `--file value`.
+   bool takes_next = false;
+};
+
+// Match `p_argument`, which must begin with `-`, against the flag `spelling`.
+// This takes a pointer rather than a `zstr_view` so that arguments are never
+// measured unless they match.
+template <basic_str_literal spelling>
+[[gnu::always_inline, gnu::nodebug]]
+constexpr auto
+cli_match_flag(char const* _Nonnull p_argument) -> cli_match {
+   constexpr cli_names const& names = cli_names_of<spelling>;
+   if constexpr (names.short_name != '\0') {
+      if (p_argument[1] == names.short_name) {
+         if (p_argument[2] == '\0') {
+            return {.value = nullopt, .takes_next = true};
+         }
+         return {.value = zstr_view(p_argument + 2)};
+      }
+   }
+   if constexpr (!names.long_name.is_empty()) {
+      constexpr idx length = names.long_name.size();
+      if (cli_has_long_prefix<names>(p_argument, index_sequence<length>)) {
+         if (p_argument[length + 2u] == '\0') {
+            return {.value = nullopt, .takes_next = true};
+         }
+         if (p_argument[length + 2u] == '=') {
+            return {.value = zstr_view(p_argument + length + 3u)};
+         }
+      }
+   }
+   return {};
+}
+
+}  // namespace detail
+
+template <basic_str_literal... spellings>
+class [[gsl::Pointer(char const*)]] cli {
+   template <basic_str_literal...>
+   friend class cli;
+
+   using arguments_span = span<char const* _Nonnull const>;
+
+ public:
+   static constexpr idx flag_count = sizeof...(spellings);
+
+   // A compile-time handle to a registered flag. Constructing it from an
+   // unregistered name is a compile error.
+   class key {
+    public:
+      template <__SIZE_TYPE__ extent>
+      consteval key(char const (&name)[extent]) : m_index(find(name)) {
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      index() const -> idx {
+         return m_index;
+      }
+
+    private:
+      static consteval auto
+      find(str_view name) -> idx {
+         idx index = 0u;
+         bool is_found = false;
+         ((is_found =
+              is_found
+              || detail::cli_names_spell(detail::cli_names_of<spellings>, name),
+           index += is_found ? 0u : 1u),
+          ...);
+         if (!is_found) {
+            detail::cli_error_flag_is_not_registered();
+         }
+         return index;
+      }
+
+      idx m_index;
+   };
+
+   constexpr cli(
+      int argc,
+      char const* _Nonnull const* _Nonnull p_argv [[clang::lifetimebound]]
+   )
+       // `argv[0]` is the program path, so skip the 0th index.
+       : m_arguments(p_argv + 1, argc > 0 ? idx(argc - 1) : 0u) {
+   }
+
+   constexpr cli(cli const&) = default;
+   constexpr auto
+   operator=(cli const&) -> cli& = default;
+
+   // Register a flag spelled like `"m,meow"`.
+   template <basic_str_literal add_spelling>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   add_flag(this cli self [[clang::lifetimebound]])
+      -> cli<spellings..., add_spelling> {
+      constexpr detail::cli_names names = detail::cli_names_of<add_spelling>;
+      static_assert(
+         !(detail::cli_names_collide(names, detail::cli_names_of<spellings>)
+           || ...),
+         "`cat::cli` flag names must be unique! Change this flag's spellings."
+      );
+
+      return cli<spellings..., add_spelling>(self.m_arguments);
+   }
+
+   // Scan the value of the flag `name` as `T`.
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   parse(key name) const -> maybe<T> {
+      return scan_str<T>($prop(find_value(name)));
+   }
+
+ private:
+   constexpr cli(arguments_span arguments [[clang::lifetimebound]])
+       : m_arguments(arguments) {
+   }
+
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   find_value(key name) const -> maybe<zstr_view> {
+      return find_value(name.index(), index_sequence<flag_count>);
+   }
+
+   // `index` is a constant after inlining, so this folds to one
+   // `find_value()`.
+   template <idx... indices>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   find_value(idx index, index_list_type<indices...> /*unused*/) const
+      -> maybe<zstr_view> {
+      maybe<zstr_view> value;
+      auto _ = ((index == indices && (value = find_value<spellings>(), true))
+             || ...);
+      return value;
+   }
+
+   template <basic_str_literal spelling>
+   [[nodiscard]]
+   constexpr auto
+   find_value() const -> maybe<zstr_view> {
+      maybe<zstr_view> value;
+      for (idx i = 0u; i < m_arguments.size(); ++i) {
+         char const* _Nonnull const p_argument = m_arguments[i];
+         // TODO: Positional arguments.
+         if (p_argument[0] != '-') {
+            return nullopt;
+         }
+
+         // `--` ends flag parsing, and everything after it is positional.
+         if (p_argument[1] == '-' && p_argument[2] == '\0') {
+            break;
+         }
+
+         detail::cli_match const match =
+            detail::cli_match_flag<spelling>(p_argument);
+         if (match.value.has_value()) {
+            value = match.value;
+            continue;
+         }
+
+         // Step over a separate value, whether it belongs to this flag or to
+         // another registered flag.
+         if (
+            match.takes_next
+            || (detail::cli_match_flag<spellings>(p_argument).takes_next || ...)
+         ) {
+            ++i;
+            if (i == m_arguments.size()) {
+               // A trailing flag with no value.
+               if (match.takes_next) {
+                  value = nullopt;
+               }
+               break;
+            }
+
+            if (match.takes_next) {
+               value = zstr_view(m_arguments[i]);
+            }
+         }
+      }
+      return value;
+   }
+
+   arguments_span m_arguments;
+};
+
+cli(int, char const* _Nonnull const* _Nonnull) -> cli<>;
+
+}  // namespace cat
