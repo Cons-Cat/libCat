@@ -1,0 +1,164 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/file_path>
+
+namespace cat {
+
+template <idx inline_capacity>
+class [[clang::trivial_abi, gsl::Owner]]
+file_path_inplace
+    : public container_interface<file_path_inplace<inline_capacity>, char>,
+      public random_access_stepanov_iterable_interface<char>,
+      public file_path_interface {
+ public:
+   constexpr file_path_inplace() = default;
+
+   template <idx other_capacity>
+   [[nodiscard]]
+   constexpr auto
+   operator==(file_path_inplace<other_capacity> const& other) const noexcept
+      -> bool {
+      return view() == other.view();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator==(str_view other) const noexcept -> bool {
+      return view() == other;
+   }
+
+   [[nodiscard, gnu::returns_nonnull]]
+   constexpr auto
+   data() noexcept [[clang::lifetimebound]] -> char* _Nonnull {
+      return m_storage.data();
+   }
+
+   [[nodiscard, gnu::returns_nonnull]]
+   constexpr auto
+   data() const noexcept [[clang::lifetimebound]] -> char const* _Nonnull {
+      return m_storage.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const noexcept -> idx {
+      return m_storage.size();
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   capacity() noexcept -> idx {
+      return inline_capacity;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   max_size() noexcept -> idx {
+      return inline_capacity;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_null_terminated() const noexcept -> bool {
+      return true;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   view() const noexcept [[clang::lifetimebound]] -> str_view {
+      return m_storage;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   native_handle() noexcept [[clang::lifetimebound]] -> zstr_span {
+      return m_storage;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   native_handle() const noexcept [[clang::lifetimebound]] -> zstr_view {
+      return m_storage;
+   }
+
+   [[nodiscard]]
+   constexpr
+   operator zstr_span() noexcept [[clang::lifetimebound]] {
+      return native_handle();
+   }
+
+   [[nodiscard]]
+   constexpr
+   operator zstr_view() const noexcept [[clang::lifetimebound]] {
+      return native_handle();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   reserve(idx minimum_capacity) const noexcept -> maybe<void> {
+      return m_storage.reserve(minimum_capacity);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   resize(idx new_size) noexcept -> maybe<void> {
+      return m_storage.resize(new_size);
+   }
+
+   constexpr void
+   clear() noexcept {
+      m_storage.clear();
+   }
+
+   // Join `segment` onto this path. If it does not fit, the path is unchanged.
+   template <is_path_segment Segment>
+   [[nodiscard]]
+   constexpr auto
+   append(Segment const& segment) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void> {
+      str_view const right = detail::path_segment_view(segment);
+      if (right.size() == 0u) {
+         return monostate;
+      }
+      if (right[0] == '/') {
+         if (right.size() > inline_capacity) {
+            return nullopt;
+         }
+         clear();
+         return m_storage.append_range(right);
+      }
+
+      bool const needs_separator =
+         !this->is_empty() && (*this)[idx(size() - 1u)] != '/';
+      if (right.size() + idx(needs_separator) > inline_capacity - size()) {
+         return nullopt;
+      }
+      if (needs_separator) {
+         m_storage.unchecked_push_back('/');
+      }
+      return m_storage.append_range(right);
+   }
+
+ private:
+   zstr_inplace<inline_capacity> m_storage;
+};
+
+template <idx inline_capacity, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_file_path_inplace(Segment const& segment) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> maybe<file_path_inplace<inline_capacity>> {
+   file_path_inplace<inline_capacity> result;
+   $prop(result.append(segment));
+   return result;
+}
+
+template <idx inline_capacity, typename CharT>
+   requires(is_same<CharT, char>)
+struct formatter<file_path_inplace<inline_capacity>, CharT>
+    : detail::path_formatter<CharT> {};
+
+}  // namespace cat

@@ -1,5 +1,4 @@
-#include <cat/allocator_inplace>
-#include <cat/file_path>
+#include <cat/file_path_inplace>
 #include <cat/socket>
 #include <cat/x11>
 
@@ -560,14 +559,9 @@ x11::manual::connection::connect(
       ++path_size;
    }
 
-   // TODO: Use a `file_path_inplace` when we have one.
-   auto path_allocator = cat::make_allocator_inplace<64u>();
-   cat::file_path socket_path =
-      cat::make_file_path(path_allocator, cat::str_view(path.data(), path_size))
+   cat::file_path_inplace<26u> const socket_path =
+      cat::make_file_path_inplace<26u>(cat::str_view(path.data(), path_size))
          .verify();
-   $defer {
-      socket_path.free(path_allocator);
-   };
 
    // A 26-byte path always fits a `sockaddr_un`.
    cat::unix_socket_address const address =

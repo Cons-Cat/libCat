@@ -137,6 +137,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_view_find.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_str_vec.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_file_path.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_file_path_inplace.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_file.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_iterable.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_iterable_find.cpp

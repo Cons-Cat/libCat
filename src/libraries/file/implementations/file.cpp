@@ -86,7 +86,7 @@ file_handle::~file_handle() {
 
 auto
 file_handle::open(
-   file_path const& file_path, file_access access, file_creation creation,
+   zstr_view file_path, file_access access, file_creation creation,
    file_flags flags, file_permissions permissions
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy<file_handle, io_error> {
    return open_from({}, file_path, access, creation, flags, permissions);
@@ -94,7 +94,7 @@ file_handle::open(
 
 auto
 file_handle::open_at(
-   file_handle const& directory, file_path const& file_path, file_access access,
+   file_handle const& directory, zstr_view file_path, file_access access,
    file_creation creation, file_flags flags, file_permissions permissions
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy<file_handle, io_error> {
    return open_from(
@@ -207,7 +207,7 @@ file_handle::data_sync() const noexcept(!__has_feature(cxx_exceptions))
 
 auto
 file_handle::open_from(
-   cat::native_handle directory, file_path const& file_path, file_access access,
+   cat::native_handle directory, zstr_view file_path, file_access access,
    file_creation creation, file_flags file_options, file_permissions permissions
 ) -> scaredy<file_handle, io_error> {
    nix::open_mode mode;
@@ -271,7 +271,7 @@ file_handle::open_from(
                                          : nix::file_descriptor(uint4(value));
    }
    nix::scaredy_nix<nix::file_descriptor> result = nix::sys_openat(
-      directory_descriptor, file_path.native_handle(), mode, flags,
+      directory_descriptor, file_path, mode, flags,
       static_cast<nix::file_permissions>(permissions)
    );
    if (result.has_value()) {

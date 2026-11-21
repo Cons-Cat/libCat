@@ -47,7 +47,9 @@
 // this tradeoff ideal.
 // TODO: Furthor research that.
 // TODO: Provide a `cat::file_path_small[_fixed]` alias.
-// TODO: Provide a `cat::file_path_inplace` container.
+//
+// `cat::file_path_inplace<n>` is a never-allocating path of up to `n`
+// characters, declared in `<cat/file_path_inplace>`.
 //
 // When `inline_storage` is disabled, `file_path`s grow from 0 to a capacity of
 // their `initial_growth` count in their initial allocation. Reallocations grow
@@ -430,6 +432,190 @@ class path_components : public iterable_interface<path_components> {
    str_view m_value;
 };
 
+// Lexical path queries shared by every file path container. They only read
+// `.view()` of the derived path.
+class file_path_interface {
+ public:
+   [[nodiscard]]
+   constexpr auto
+   is_absolute(this auto const& self) noexcept -> bool {
+      str_view const value = self.view();
+      return value.size() != 0u && value[0] == '/';
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_relative(this auto const& self) noexcept -> bool {
+      return !self.is_absolute();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_name(this auto const&) noexcept -> str_view {
+      return {};
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_directory(this auto const& self [[clang::lifetimebound]]) noexcept
+      -> str_view {
+      if (!self.is_absolute()) {
+         return {};
+      }
+      return detail::path_slice(self.view(), 0u, 1u);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_path(this auto const& self [[clang::lifetimebound]]) noexcept
+      -> str_view {
+      return self.root_directory();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   relative_path(this auto const& self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> str_view {
+      str_view const value = self.view();
+      idx const first = detail::path_root_end(value);
+      return detail::path_slice(value, first, value.size());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   parent_path(this auto const& self [[clang::lifetimebound]]) -> str_view {
+      str_view const value = self.view();
+      idx const end = detail::path_trimmed_end(value);
+      if (end == 0u) {
+         return {};
+      }
+      if (end == 1u && value[0] == '/') {
+         return detail::path_slice(value, 0u, 1u);
+      }
+
+      maybe<idx> const found =
+         detail::path_find_last_equal(detail::path_slice(value, 0u, end), '/');
+      if (found.is_empty()) {
+         return {};
+      }
+      idx const slash = found.value() + 1u;
+      if (slash == 1u) {
+         return detail::path_slice(value, 0u, slash);
+      }
+      maybe<idx> const parent_end = detail::path_find_last_not_equal(
+         detail::path_slice(value, 1u, slash), '/'
+      );
+      if (parent_end.has_value()) {
+         return detail::path_slice(value, 0u, parent_end.value() + 2u);
+      }
+      return detail::path_slice(value, 0u, 1u);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   filename(this auto const& self [[clang::lifetimebound]]) -> str_view {
+      str_view const value = self.view();
+      if (value.size() == 0u || value[idx(value.size() - 1u)] == '/') {
+         return {};
+      }
+      maybe<idx> const slash = detail::path_find_last_equal(value, '/');
+      if (slash.has_value()) {
+         return detail::path_slice(value, slash.value() + 1u, value.size());
+      }
+      return value;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   stem(this auto const& self [[clang::lifetimebound]]) -> str_view {
+      str_view const name = self.filename();
+      if (name == "." || name == "..") {
+         return name;
+      }
+      maybe<idx> const dot = detail::path_find_last_equal(name, '.');
+      if (dot.is_empty() || dot.value() == 0u) {
+         return name;
+      }
+      return detail::path_slice(name, 0u, dot.value());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   extension(this auto const& self [[clang::lifetimebound]]) -> str_view {
+      str_view const name = self.filename();
+      if (name == "." || name == "..") {
+         return {};
+      }
+      maybe<idx> const dot = detail::path_find_last_equal(name, '.');
+      if (dot.is_empty() || dot.value() == 0u) {
+         return {};
+      }
+      return detail::path_slice(name, dot.value(), name.size());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_name(this auto const&) noexcept -> bool {
+      return false;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_directory(this auto const& self) noexcept -> bool {
+      return self.is_absolute();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_path(this auto const& self) noexcept -> bool {
+      return self.is_absolute();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_relative_path(this auto const& self) noexcept -> bool {
+      return self.relative_path().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_parent_path(this auto const& self) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
+      return self.parent_path().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_filename(this auto const& self) noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
+      return self.filename().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_stem(this auto const& self) noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
+      return self.stem().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_extension(this auto const& self) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
+      return self.extension().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   components(this auto const& self [[clang::lifetimebound]]) noexcept
+      -> path_components {
+      return self.view();
+   }
+};
+
 namespace raii {
 template <
    is_allocator Allocator = allocator_dyn,
@@ -464,7 +650,8 @@ inline namespace manual {
 template <str_vec_flags flags>
 class [[clang::preferred_name(file_path), gsl::Owner]]
 basic_file_path : public container_interface<basic_file_path<flags>, char>,
-                  public random_access_stepanov_iterable_interface<char> {
+                  public random_access_stepanov_iterable_interface<char>,
+                  public file_path_interface {
  private:
    static constexpr str_vec_flags m_flags =
       str_flags::null_terminated
@@ -638,172 +825,6 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    constexpr auto
    clone(allocator_dyn allocator) const& noexcept -> maybe<basic_file_path> {
       return clone<allocator_dyn>(allocator);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   is_absolute() const noexcept -> bool {
-      return !this->is_empty() && data()[0] == '/';
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   is_relative() const noexcept -> bool {
-      return !is_absolute();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_name() const noexcept -> str_view {
-      return {};
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_directory() const noexcept -> str_view {
-      if (!is_absolute()) {
-         return {};
-      }
-      return {data(), 1u};
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_path() const noexcept -> str_view {
-      return root_directory();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   relative_path() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
-      idx const first = detail::path_root_end(view());
-      return detail::path_slice(view(), first, size());
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   parent_path() const -> str_view {
-      str_view const value = view();
-      idx const end = detail::path_trimmed_end(value);
-      if (end == 0u) {
-         return {};
-      }
-      if (end == 1u && value[0] == '/') {
-         return detail::path_slice(value, 0u, 1u);
-      }
-
-      maybe<idx> const found =
-         detail::path_find_last_equal(detail::path_slice(value, 0u, end), '/');
-      if (found.is_empty()) {
-         return {};
-      }
-      idx const slash = found.value() + 1u;
-      if (slash == 1u) {
-         return detail::path_slice(value, 0u, slash);
-      }
-      maybe<idx> const parent_end = detail::path_find_last_not_equal(
-         detail::path_slice(value, 1u, slash), '/'
-      );
-      if (parent_end.has_value()) {
-         return detail::path_slice(value, 0u, parent_end.value() + 2u);
-      }
-      return detail::path_slice(value, 0u, 1u);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   filename() const [[clang::lifetimebound]] -> str_view {
-      str_view const value = view();
-      if (value.size() == 0u || value[idx(value.size() - 1u)] == '/') {
-         return {};
-      }
-      maybe<idx> const slash = detail::path_find_last_equal(value, '/');
-      if (slash.has_value()) {
-         return detail::path_slice(value, slash.value() + 1u, value.size());
-      }
-      return value;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   stem() const [[clang::lifetimebound]] -> str_view {
-      str_view const name = filename();
-      if (name == "." || name == "..") {
-         return name;
-      }
-      maybe<idx> const dot = detail::path_find_last_equal(name, '.');
-      if (dot.is_empty() || dot.value() == 0u) {
-         return name;
-      }
-      return detail::path_slice(name, 0u, dot.value());
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   extension() const -> str_view {
-      str_view const name = filename();
-      if (name == "." || name == "..") {
-         return {};
-      }
-      maybe<idx> const dot = detail::path_find_last_equal(name, '.');
-      if (dot.is_empty() || dot.value() == 0u) {
-         return {};
-      }
-      return detail::path_slice(name, dot.value(), name.size());
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_name() const noexcept -> bool {
-      return false;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_directory() const noexcept -> bool {
-      return is_absolute();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_path() const noexcept -> bool {
-      return is_absolute();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_relative_path() const noexcept -> bool {
-      return relative_path().size() != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_parent_path() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      return parent_path().size() != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_filename() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      return filename().size() != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_stem() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      return stem().size() != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_extension() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      return extension().size() != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   components() const noexcept [[clang::lifetimebound]] -> path_components {
-      return view();
    }
 
    template <is_allocator Allocator, is_path_segment Segment>
@@ -1236,4 +1257,5 @@ struct formatter<manual::basic_file_path<flags>, CharT>
 
 }  // namespace cat
 
+#include <cat/file_path_inplace>
 #include <cat/raii_file_path>

@@ -75,7 +75,7 @@ class file_handle {
    [[nodiscard]]
    static auto
    open(
-      file_path const& file_path, file_access access = file_access::read,
+      zstr_view file_path, file_access access = file_access::read,
       file_creation creation = file_creation::open_existing,
       file_flags flags = file_flags::none,
       file_permissions permissions = file_permissions::user_read
@@ -87,7 +87,7 @@ class file_handle {
    [[nodiscard]]
    static auto
    open_at(
-      file_handle const& directory, file_path const& file_path,
+      file_handle const& directory, zstr_view file_path,
       file_access access = file_access::read,
       file_creation creation = file_creation::open_existing,
       file_flags flags = file_flags::none,
@@ -166,7 +166,7 @@ class file_handle {
    [[nodiscard]]
    static auto
    open_from(
-      cat::native_handle directory, file_path const& file_path,
+      cat::native_handle directory, zstr_view file_path,
       file_access access, file_creation creation, file_flags flags,
       file_permissions permissions
    ) -> scaredy<file_handle, io_error>;
@@ -203,7 +203,7 @@ class [[gsl::Owner]] mapped_file_handle {
    [[nodiscard]]
    static auto
    open(
-      file_path const& file_path, file_access access = file_access::read,
+      zstr_view file_path, file_access access = file_access::read,
       file_creation creation = file_creation::open_existing,
       file_flags flags = file_flags::none,
       file_permissions permissions = file_permissions::user_read
@@ -215,7 +215,7 @@ class [[gsl::Owner]] mapped_file_handle {
    [[nodiscard]]
    static auto
    open_at(
-      file_handle const& directory, file_path const& file_path,
+      file_handle const& directory, zstr_view file_path,
       file_access access = file_access::read,
       file_creation creation = file_creation::open_existing,
       file_flags flags = file_flags::none,

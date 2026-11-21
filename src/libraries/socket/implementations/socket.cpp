@@ -126,7 +126,7 @@ socket_disposition(socket_flags flags) -> native_handle_disposition {
 
 }  // namespace
 
-unix_socket_address::unix_socket_address(file_path const& socket_path) noexcept(
+unix_socket_address::unix_socket_address(str_view socket_path) noexcept(
    !__has_feature(cxx_exceptions)
 ) {
    cat::assert(path_fits(socket_path));
@@ -136,7 +136,7 @@ unix_socket_address::unix_socket_address(file_path const& socket_path) noexcept(
 }
 
 auto
-unix_socket_address::create(file_path const& socket_path) noexcept(
+unix_socket_address::create(str_view socket_path) noexcept(
    !__has_feature(cxx_exceptions)
 ) -> scaredy<unix_socket_address, io_error> {
    if (!path_fits(socket_path)) {
@@ -148,7 +148,7 @@ unix_socket_address::create(file_path const& socket_path) noexcept(
 }
 
 void
-unix_socket_address::assign(file_path const& socket_path) {
+unix_socket_address::assign(str_view socket_path) {
    for (idx index = 0u; index < socket_path.size(); ++index) {
       m_path[index] = socket_path[index];
    }
@@ -246,8 +246,7 @@ socket_handle::bind(ipv6_socket_address const& address) const noexcept(
 }
 
 auto
-socket_handle::bind(file_path const& socket_path) const
-   -> scaredy<void, io_error> {
+socket_handle::bind(str_view socket_path) const -> scaredy<void, io_error> {
    auto address = unix_socket_address::create(socket_path);
    if (address.has_value()) {
       return bind(address.value());
@@ -289,8 +288,7 @@ socket_handle::connect(ipv6_socket_address const& address) const noexcept(
 }
 
 auto
-socket_handle::connect(file_path const& socket_path) const
-   -> scaredy<void, io_error> {
+socket_handle::connect(str_view socket_path) const -> scaredy<void, io_error> {
    auto address = unix_socket_address::create(socket_path);
    if (address.has_value()) {
       return connect(address.value());

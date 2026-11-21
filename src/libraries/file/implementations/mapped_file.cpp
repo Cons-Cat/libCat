@@ -35,7 +35,7 @@ mapped_file_handle::~mapped_file_handle() {
 
 auto
 mapped_file_handle::open(
-   file_path const& file_path, file_access access, file_creation creation,
+   zstr_view file_path, file_access access, file_creation creation,
    file_flags flags, file_permissions permissions
 ) -> scaredy<mapped_file_handle, io_error> {
    if (!is_mapping_access(access)) {
@@ -51,7 +51,7 @@ mapped_file_handle::open(
 
 auto
 mapped_file_handle::open_at(
-   file_handle const& directory, file_path const& file_path, file_access access,
+   file_handle const& directory, zstr_view file_path, file_access access,
    file_creation creation, file_flags flags, file_permissions permissions
 ) -> scaredy<mapped_file_handle, io_error> {
    if (!is_mapping_access(access)) {

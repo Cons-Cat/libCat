@@ -67,13 +67,13 @@ class unix_socket_address {
  public:
    constexpr unix_socket_address() = default;
 
-   explicit unix_socket_address(file_path const& socket_path) noexcept(
+   explicit unix_socket_address(str_view socket_path) noexcept(
       !__has_feature(cxx_exceptions)
    );
 
    [[nodiscard]]
    static auto
-   create(file_path const& socket_path) noexcept(!__has_feature(cxx_exceptions))
+   create(str_view socket_path) noexcept(!__has_feature(cxx_exceptions))
       -> scaredy<unix_socket_address, io_error>;
 
    [[nodiscard]]
@@ -116,7 +116,7 @@ class unix_socket_address {
 
    [[nodiscard]]
    static constexpr auto
-   path_fits(file_path const& socket_path) noexcept -> bool {
+   path_fits(str_view socket_path) noexcept -> bool {
       if (socket_path.is_empty()) {
          return true;
       }
@@ -125,7 +125,7 @@ class unix_socket_address {
    }
 
    void
-   assign(file_path const& socket_path);
+   assign(str_view socket_path);
 
    constexpr void
    set_size(iword size) noexcept {
@@ -331,7 +331,7 @@ class socket_handle {
    ) -> scaredy<void, io_error>;
 
    auto
-   bind(file_path const& socket_path) const -> scaredy<void, io_error>;
+   bind(str_view socket_path) const -> scaredy<void, io_error>;
 
    auto
    connect(unix_socket_address const& address) const noexcept(
@@ -349,7 +349,7 @@ class socket_handle {
    ) -> scaredy<void, io_error>;
 
    auto
-   connect(file_path const& socket_path) const -> scaredy<void, io_error>;
+   connect(str_view socket_path) const -> scaredy<void, io_error>;
 
    auto
    listen(int8 backlog) const noexcept(!__has_feature(cxx_exceptions))

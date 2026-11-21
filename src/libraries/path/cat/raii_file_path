@@ -40,7 +40,6 @@
 // this tradeoff ideal.
 // TODO: Furthor research that.
 // TODO: Provide a `cat::file_path_small[_fixed]` alias.
-// TODO: Provide a `cat::file_path_inplace` container.
 //
 // When `inline_storage` is disabled, `file_path`s grow from 0 to a capacity of
 // their `initial_growth` count in their initial allocation. Reallocations grow
@@ -75,7 +74,8 @@ template <is_allocator Allocator, str_vec_flags flags>
 class [[clang::preferred_name(file_path<Allocator>), gsl::Owner]]
 basic_file_path
     : public container_interface<basic_file_path<Allocator, flags>, char>,
-      public random_access_stepanov_iterable_interface<char> {
+      public random_access_stepanov_iterable_interface<char>,
+      public file_path_interface {
    static constexpr str_vec_flags m_flags = detail::path_default_flags | flags;
 
  public:
@@ -240,122 +240,6 @@ basic_file_path
    constexpr auto
    release() -> manual::basic_file_path<flags> {
       return move(m_path);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   is_absolute() const noexcept -> bool {
-      return m_path.is_absolute();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   is_relative() const noexcept -> bool {
-      return m_path.is_relative();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_name() const noexcept -> str_view {
-      return m_path.root_name();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_directory() const noexcept -> str_view {
-      return m_path.root_directory();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_path() const noexcept -> str_view {
-      return m_path.root_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   relative_path() const noexcept -> str_view {
-      return m_path.relative_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   parent_path() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
-      return m_path.parent_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   filename() const noexcept(!__has_feature(cxx_exceptions))
-      [[clang::lifetimebound]] -> str_view {
-      return m_path.filename();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   stem() const noexcept(!__has_feature(cxx_exceptions))
-      [[clang::lifetimebound]] -> str_view {
-      return m_path.stem();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   extension() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
-      return m_path.extension();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_name() const noexcept -> bool {
-      return m_path.has_root_name();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_directory() const noexcept -> bool {
-      return m_path.has_root_directory();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_path() const noexcept -> bool {
-      return m_path.has_root_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_relative_path() const noexcept -> bool {
-      return m_path.has_relative_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_parent_path() const noexcept -> bool {
-      return m_path.has_parent_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_filename() const noexcept -> bool {
-      return m_path.has_filename();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_stem() const noexcept -> bool {
-      return m_path.has_stem();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_extension() const noexcept -> bool {
-      return m_path.has_extension();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   components() const noexcept [[clang::lifetimebound]] -> path_components {
-      return m_path.components();
    }
 
    template <is_path_segment Segment>
