@@ -33,10 +33,11 @@ mapped_file_handle::~mapped_file_handle() {
    auto _ = close();
 }
 
+template <path_os os>
 auto
 mapped_file_handle::open(
-   file_path const& file_path, file_access access, file_creation creation,
-   file_flags flags, file_permissions permissions
+   basic_file_path<os> const& file_path, file_access access,
+   file_creation creation, file_flags flags, file_permissions permissions
 ) -> scaredy<mapped_file_handle, io_error> {
    if (!is_mapping_access(access)) {
       return io_error::invalid_argument;
@@ -49,10 +50,12 @@ mapped_file_handle::open(
    return map(move(file.value()));
 }
 
+template <path_os os>
 auto
 mapped_file_handle::open_at(
-   file_handle const& directory, file_path const& file_path, file_access access,
-   file_creation creation, file_flags flags, file_permissions permissions
+   file_handle const& directory, basic_file_path<os> const& file_path,
+   file_access access, file_creation creation, file_flags flags,
+   file_permissions permissions
 ) -> scaredy<mapped_file_handle, io_error> {
    if (!is_mapping_access(access)) {
       return io_error::invalid_argument;
@@ -144,5 +147,31 @@ mapped_file_handle::close() noexcept(!__has_feature(cxx_exceptions))
    }
    return {};
 }
+
+template auto
+mapped_file_handle::open(
+   basic_file_path<path_os::portable> const& file_path, file_access access,
+   file_creation creation, file_flags flags, file_permissions permissions
+) -> scaredy<mapped_file_handle, io_error>;
+
+template auto
+mapped_file_handle::open_at(
+   file_handle const& directory,
+   basic_file_path<path_os::portable> const& file_path, file_access access,
+   file_creation creation, file_flags flags, file_permissions permissions
+) -> scaredy<mapped_file_handle, io_error>;
+
+template auto
+mapped_file_handle::open(
+   basic_file_path<path_os::native> const& file_path, file_access access,
+   file_creation creation, file_flags flags, file_permissions permissions
+) -> scaredy<mapped_file_handle, io_error>;
+
+template auto
+mapped_file_handle::open_at(
+   file_handle const& directory,
+   basic_file_path<path_os::native> const& file_path, file_access access,
+   file_creation creation, file_flags flags, file_permissions permissions
+) -> scaredy<mapped_file_handle, io_error>;
 
 }  // namespace cat

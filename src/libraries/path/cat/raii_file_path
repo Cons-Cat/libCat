@@ -52,16 +52,22 @@
 #include <cat/propagate>
 
 namespace cat::detail {
-template <str_vec_flags flags>
+template <path_os os, str_vec_flags flags>
 constexpr auto
 raii_file_path_has_value(
-   raii::basic_file_path<allocator_dyn, flags> const& value
+   raii::basic_file_path<allocator_dyn, os, flags> const& value
 ) noexcept(false) -> bool;
 
-template <str_vec_flags flags>
+template <path_os os, str_vec_flags flags>
 constexpr auto
 raii_file_path_nullopt() noexcept(false)
-   -> raii::basic_file_path<allocator_dyn, flags>;
+   -> raii::basic_file_path<allocator_dyn, os, flags>;
+
+template <is_allocator Allocator, path_os path_os_value, str_vec_flags flags>
+struct path_os_trait<raii::basic_file_path<Allocator, path_os_value, flags>> {
+   static constexpr bool is_file_path = true;
+   static constexpr path_os os = path_os_value;
+};
 }  // namespace cat::detail
 
 namespace cat::raii {
@@ -69,12 +75,12 @@ namespace cat::raii {
 template <
    is_allocator Allocator = allocator_dyn,
    str_vec_flags flags = detail::path_default_flags>
-using file_path = basic_file_path<Allocator, flags>;
+using file_path = basic_file_path<Allocator, path_os::portable, flags>;
 
-template <is_allocator Allocator, str_vec_flags flags>
+template <is_allocator Allocator, path_os os, str_vec_flags flags>
 class [[clang::preferred_name(file_path<Allocator>), gsl::Owner]]
 basic_file_path
-    : public container_interface<basic_file_path<Allocator, flags>, char>,
+    : public container_interface<basic_file_path<Allocator, os, flags>, char>,
       public random_access_stepanov_iterable_interface<char> {
    static constexpr str_vec_flags m_flags = detail::path_default_flags | flags;
 
@@ -105,6 +111,7 @@ basic_file_path
       if (this == __builtin_addressof(other)) {
          return *this;
       }
+
       m_path.free(m_allocator);
       cat::assert(m_allocator == other.m_allocator);
       m_path = move(other.m_path);
@@ -219,12 +226,13 @@ basic_file_path
    constexpr auto
    clone(
       allocator_ref<NewAllocator> allocator [[clang::lifetimebound]]
-   ) const& -> maybe<basic_file_path<NewAllocator, flags>> {
+   ) const& -> maybe<basic_file_path<NewAllocator, os, flags>> {
       auto path = m_path.clone(allocator);
       if (path.is_empty()) {
          return nullopt;
       }
-      basic_file_path<NewAllocator, flags> result(allocator);
+
+      basic_file_path<NewAllocator, os, flags> result(allocator);
       result.m_path = move(path).value();
       return result;
    }
@@ -232,13 +240,13 @@ basic_file_path
    [[nodiscard]]
    constexpr auto
    clone(allocator_dyn allocator [[clang::lifetimebound]]) const& noexcept
-      -> maybe<basic_file_path<allocator_dyn, flags>> {
+      -> maybe<basic_file_path<allocator_dyn, os, flags>> {
       return clone<allocator_dyn>(allocator);
    }
 
    [[nodiscard]]
    constexpr auto
-   release() -> manual::basic_file_path<flags> {
+   release() -> manual::basic_file_path<os, flags> {
       return move(m_path);
    }
 
@@ -367,21 +375,22 @@ basic_file_path
    }
 
  private:
-   template <is_allocator OtherAllocator, str_vec_flags other_flags>
+   template <
+      is_allocator OtherAllocator, path_os other_os, str_vec_flags other_flags>
    friend class basic_file_path;
 
-   template <str_vec_flags other_flags>
+   template <path_os other_os, str_vec_flags other_flags>
    friend constexpr auto
    detail::raii_file_path_has_value(
-      basic_file_path<allocator_dyn, other_flags> const&
+      basic_file_path<allocator_dyn, other_os, other_flags> const&
    ) -> bool;
 
-   template <str_vec_flags other_flags>
+   template <path_os other_os, str_vec_flags other_flags>
    friend constexpr auto
    detail::raii_file_path_nullopt()
-      -> basic_file_path<allocator_dyn, other_flags>;
+      -> basic_file_path<allocator_dyn, other_os, other_flags>;
 
-   manual::basic_file_path<flags> m_path;
+   manual::basic_file_path<os, flags> m_path;
    [[no_unique_address]]
    allocator_ref<Allocator> m_allocator;
 };
@@ -390,25 +399,25 @@ basic_file_path
 
 namespace cat::detail {
 
-template <str_vec_flags flags>
+template <path_os os, str_vec_flags flags>
 constexpr auto
 raii_file_path_has_value(
-   raii::basic_file_path<allocator_dyn, flags> const& value
+   raii::basic_file_path<allocator_dyn, os, flags> const& value
 ) -> bool {
    return maybe_file_path_has_value(value.m_path);
 }
 
 inline constexpr allocator_null raii_file_path_niche_allocator_null{};
 
-template <str_vec_flags flags>
+template <path_os os, str_vec_flags flags>
 constexpr auto
-raii_file_path_nullopt() -> raii::basic_file_path<allocator_dyn, flags> {
-   raii::basic_file_path<allocator_dyn, flags> value(
+raii_file_path_nullopt() -> raii::basic_file_path<allocator_dyn, os, flags> {
+   raii::basic_file_path<allocator_dyn, os, flags> value(
       allocator_ref<allocator_dyn>(allocator_dyn(
          const_cast<allocator_null&>(raii_file_path_niche_allocator_null)
       ))
    );
-   value.m_path = maybe_file_path_nullopt<flags>();
+   value.m_path = maybe_file_path_nullopt<os, flags>();
    return value;
 }
 
@@ -416,73 +425,83 @@ raii_file_path_nullopt() -> raii::basic_file_path<allocator_dyn, flags> {
 
 namespace cat {
 
-template <str_vec_flags flags>
-struct default_compact_trait<raii::basic_file_path<allocator_dyn, flags>>
+template <path_os os, str_vec_flags flags>
+struct default_compact_trait<raii::basic_file_path<allocator_dyn, os, flags>>
     : identity_trait<compact<
-         raii::basic_file_path<allocator_dyn, flags>,
-         detail::raii_file_path_has_value<flags>,
-         detail::raii_file_path_nullopt<flags>>> {};
+         raii::basic_file_path<allocator_dyn, os, flags>,
+         detail::raii_file_path_has_value<os, flags>,
+         detail::raii_file_path_nullopt<os, flags>>> {};
 
 }  // namespace cat
 
 namespace cat::raii {
 
 template <
-   is_allocator Allocator, str_vec_flags flags = detail::path_default_flags,
-   is_path_segment Segment>
+   is_allocator Allocator, path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
 make_file_path(
    allocator_ref<Allocator> allocator [[clang::lifetimebound]],
    Segment const& segment
 ) noexcept(!__has_feature(cxx_exceptions))
-   -> maybe<basic_file_path<Allocator, flags>> {
-   basic_file_path<Allocator, flags> result(allocator);
+   -> maybe<
+      basic_file_path<Allocator, detail::path_deduce_os<os, Segment>, flags>> {
+   basic_file_path<Allocator, detail::path_deduce_os<os, Segment>, flags>
+      result(allocator);
    str_view const value = detail::path_segment_view(segment);
    $prop(
       result.reserve(max(value.size(), detail::path_initial_capacity(flags)))
    );
    $prop(result.resize(0u));
-   $prop(result.append(value));
+   $prop(result.append(segment));
    return result;
 }
 
 template <
+   path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
 make_file_path(
    allocator_dyn allocator [[clang::lifetimebound]], Segment const& segment
-) noexcept -> maybe<basic_file_path<allocator_dyn, flags>> {
-   return raii::make_file_path<allocator_dyn, flags>(allocator, segment);
+) noexcept
+   -> maybe<basic_file_path<
+      allocator_dyn, detail::path_deduce_os<os, Segment>, flags>> {
+   return raii::make_file_path<allocator_dyn, os, flags>(allocator, segment);
 }
 
 template <
-   is_allocator Allocator, str_vec_flags flags = detail::path_default_flags>
+   is_allocator Allocator, path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
 make_file_path(
    allocator_ref<Allocator> allocator [[clang::lifetimebound]]
-) noexcept -> maybe<basic_file_path<Allocator, flags>> {
-   return raii::make_file_path<Allocator, flags>(allocator, str_view{});
+) noexcept -> maybe<basic_file_path<Allocator, os, flags>> {
+   return raii::make_file_path<Allocator, os, flags>(allocator, str_view{});
 }
 
-template <str_vec_flags flags = detail::path_default_flags>
+template <
+   path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
 make_file_path(allocator_dyn allocator [[clang::lifetimebound]]) noexcept
-   -> maybe<basic_file_path<allocator_dyn, flags>> {
-   return raii::make_file_path<allocator_dyn, flags>(allocator);
+   -> maybe<basic_file_path<allocator_dyn, os, flags>> {
+   return raii::make_file_path<allocator_dyn, os, flags>(allocator);
 }
 
-template <is_allocator Allocator, str_vec_flags flags, is_path_segment Segment>
+template <
+   is_allocator Allocator, path_os os, str_vec_flags flags,
+   is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
 operator/(
-   basic_file_path<Allocator, flags> const& left, Segment const& right
+   basic_file_path<Allocator, os, flags> const& left, Segment const& right
 ) noexcept(!__has_feature(cxx_exceptions))
-   -> maybe<basic_file_path<Allocator, flags>> {
-   basic_file_path<Allocator, flags> result = $prop(left.clone());
+   -> maybe<basic_file_path<Allocator, os, flags>> {
+   basic_file_path<Allocator, os, flags> result = $prop(left.clone());
    $prop(result.append(right));
    return result;
 }
@@ -491,9 +510,10 @@ operator/(
 
 namespace cat {
 
-template <is_allocator Allocator, str_vec_flags flags, typename CharT>
+template <
+   is_allocator Allocator, path_os os, str_vec_flags flags, typename CharT>
    requires(is_same<CharT, char>)
-struct formatter<raii::basic_file_path<Allocator, flags>, CharT>
+struct formatter<raii::basic_file_path<Allocator, os, flags>, CharT>
     : detail::path_formatter<CharT> {};
 
 }  // namespace cat

@@ -248,7 +248,7 @@ struct maybe_value_storage {
    constexpr auto
 
    operator=(maybe_value_storage const&) -> maybe_value_storage& = default;
-   
+
    constexpr auto
    operator=(maybe_value_storage const& other) -> maybe_value_storage&
       requires(

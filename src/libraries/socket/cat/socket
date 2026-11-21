@@ -67,14 +67,17 @@ class unix_socket_address {
  public:
    constexpr unix_socket_address() = default;
 
-   explicit unix_socket_address(file_path const& socket_path) noexcept(
-      !__has_feature(cxx_exceptions)
-   );
+   template <path_os os>
+   explicit unix_socket_address(
+      basic_file_path<os> const& socket_path
+   ) noexcept(!__has_feature(cxx_exceptions));
 
+   template <path_os os>
    [[nodiscard]]
    static auto
-   create(file_path const& socket_path) noexcept(!__has_feature(cxx_exceptions))
-      -> scaredy<unix_socket_address, io_error>;
+   create(basic_file_path<os> const& socket_path) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> scaredy<unix_socket_address, io_error>;
 
    [[nodiscard]]
    constexpr auto
@@ -114,9 +117,10 @@ class unix_socket_address {
    static constexpr uint1 family_size = sizeof(uint2);
    static constexpr uint1 max_size = sizeof(uint2) + 108u;
 
+   template <path_os os>
    [[nodiscard]]
    static constexpr auto
-   path_fits(file_path const& socket_path) noexcept -> bool {
+   path_fits(basic_file_path<os> const& socket_path) noexcept -> bool {
       if (socket_path.is_empty()) {
          return true;
       }
@@ -124,8 +128,9 @@ class unix_socket_address {
       return socket_path.size() <= capacity;
    }
 
+   template <path_os os>
    void
-   assign(file_path const& socket_path);
+   assign(basic_file_path<os> const& socket_path);
 
    constexpr void
    set_size(iword size) noexcept {
@@ -330,8 +335,10 @@ class socket_handle {
       !__has_feature(cxx_exceptions)
    ) -> scaredy<void, io_error>;
 
+   template <path_os os>
    auto
-   bind(file_path const& socket_path) const -> scaredy<void, io_error>;
+   bind(basic_file_path<os> const& socket_path) const
+      -> scaredy<void, io_error>;
 
    auto
    connect(unix_socket_address const& address) const noexcept(
@@ -348,8 +355,10 @@ class socket_handle {
       !__has_feature(cxx_exceptions)
    ) -> scaredy<void, io_error>;
 
+   template <path_os os>
    auto
-   connect(file_path const& socket_path) const -> scaredy<void, io_error>;
+   connect(basic_file_path<os> const& socket_path) const
+      -> scaredy<void, io_error>;
 
    auto
    listen(int8 backlog) const noexcept(!__has_feature(cxx_exceptions))

@@ -7,9 +7,6 @@
 // only encoding is utf8 characters across all platforms.
 // TODO: On Windows, this will mean the UTF-8 Active Code Page is used over `A`
 // family syscalls.
-// TODO: We should extend to opaque native encodings as well.
-//
-// Upon construction, the path is empty.
 //
 // As this is a `manual` namespace container, its destructor does not deallocate
 // storage. To deallocate storage, call `.free(allocator)` or
@@ -48,6 +45,7 @@
 // TODO: Furthor research that.
 // TODO: Provide a `cat::file_path_small[_fixed]` alias.
 // TODO: Provide a `cat::file_path_inplace` container.
+// TODO: Document the `path_os` field.
 //
 // When `inline_storage` is disabled, `file_path`s grow from 0 to a capacity of
 // their `initial_growth` count in their initial allocation. Reallocations grow
@@ -64,6 +62,19 @@
 #include <cat/string>
 
 namespace cat {
+
+// The syntax that a `cat::basic_file_path` is decomposed and joined with.
+// NOLINTNEXTLINE
+enum class [[clang::enum_extensibility(closed)]] path_os : unsigned char {
+   portable,
+   nix,
+   nt,
+#ifdef _WIN32
+   native = nt,
+#else
+   native = nix,
+#endif
+};
 
 namespace detail {
 
@@ -85,7 +96,7 @@ path_initial_capacity(str_vec_flags flags) noexcept -> idx {
 template <typename Segment>
 concept is_char_safe_string =
    is_safe_string<Segment>
-   && is_same<remove_const<typename remove_cvref<Segment>::value_type>, char>;
+   && is_same<__typeof_unqual(typename Segment::value_type), char>;
 
 template <typename Segment>
    requires(is_char_safe_string<Segment>)
@@ -127,97 +138,136 @@ path_slice(str_view value, idx first, idx last) noexcept -> str_view {
    if (first == last) {
       return {};
    }
+
    return {value.data() + first, idx(last - first)};
 }
 
+// Find the first character that is (or isn't) either `first` or `second`.
+// TODO: UTF-16?
 template <bool equal>
 [[nodiscard]]
 constexpr auto
-path_find_first(str_view value, char character) noexcept(
+path_find_first(str_view value, char first, char second) noexcept(
    !__has_feature(cxx_exceptions)
 ) -> maybe<idx> {
    if consteval {
       for (idx position = 0u; position < value.size(); ++position) {
-         if ((value[position] == character) == equal) {
+         char const character = value[position];
+
+         if ((character == first || character == second) == equal) {
             return position;
          }
       }
+
       return nullopt;
    } else {
       return $simd_switch($abi((avx2, sse2), {
          constexpr idx lanes = char1x_::size();
          idx position = 0u;
-         char1x_ characters;
-         characters.fill(character);
+         char1x_ firsts;
+         firsts.fill(first);
+         char1x_ seconds;
+         seconds.fill(second);
+
          while (value.size() - position >= lanes) {
             char1x_ chunk;
             chunk.load(value.data() + position);
+
+            auto const matches =
+               chunk.equal_lanes(firsts) || chunk.equal_lanes(seconds);
+
             auto const mask = [&] {
                if constexpr (equal) {
-                  return chunk.equal_lanes(characters);
+                  return matches;
                } else {
-                  return !chunk.equal_lanes(characters);
+                  return !matches;
                }
             }();
+
             if (mask.any_of()) {
                return maybe<idx>(position + mask.find_if_true());
             }
+
             position += lanes;
          }
+
          while (position < value.size()) {
-            if ((value[position] == character) == equal) {
+            char const character = value[position];
+
+            if ((character == first || character == second) == equal) {
                return maybe<idx>(position);
             }
+
             ++position;
          }
+
          return maybe<idx>(nullopt);
       }));
    }
 }
 
+// Find the last character that is (or isn't) either `first` or `second`.
 template <bool equal>
 [[nodiscard]]
 constexpr auto
-path_find_last(str_view value, char character) noexcept(
+path_find_last(str_view value, char first, char second) noexcept(
    !__has_feature(cxx_exceptions)
 ) -> maybe<idx> {
    if consteval {
       idx position = value.size();
+
       while (position > 0u) {
          position = idx(position - 1u);
-         if ((value[position] == character) == equal) {
+         char const character = value[position];
+
+         if ((character == first || character == second) == equal) {
             return position;
          }
       }
+
       return nullopt;
    } else {
       return $simd_switch($abi((avx2, sse2), {
          constexpr idx lanes = char1x_::size();
          idx end = value.size();
-         char1x_ characters;
-         characters.fill(character);
+         char1x_ firsts;
+         firsts.fill(first);
+         char1x_ seconds;
+         seconds.fill(second);
+
          while (end >= lanes) {
             idx const position = idx(end - lanes);
+
             char1x_ chunk;
             chunk.load(value.data() + position);
+
+            auto const matches =
+               chunk.equal_lanes(firsts) || chunk.equal_lanes(seconds);
+
             auto const mask = [&] {
                if constexpr (equal) {
-                  return chunk.equal_lanes(characters);
+                  return matches;
                } else {
-                  return !chunk.equal_lanes(characters);
+                  return !matches;
                }
             }();
+
             if (mask.any_of()) {
                return maybe<idx>(position + mask.find_last_if_true());
             }
+
             end = position;
          }
+
          while (end > 0u) {
             end = idx(end - 1u);
-            if ((value[end] == character) == equal) {
+            char const character = value[end];
+
+            if ((character == first || character == second) == equal) {
                return maybe<idx>(end);
             }
          }
+
          return maybe<idx>(nullopt);
       }));
    }
@@ -226,52 +276,295 @@ path_find_last(str_view value, char character) noexcept(
 [[nodiscard]]
 constexpr auto
 path_find_first_equal(str_view value, char character) noexcept -> maybe<idx> {
-   return path_find_first<true>(value, character);
-}
-
-[[nodiscard]]
-constexpr auto
-path_find_first_not_equal(str_view value, char character) noexcept
-   -> maybe<idx> {
-   return path_find_first<false>(value, character);
+   return path_find_first<true>(value, character, character);
 }
 
 [[nodiscard]]
 constexpr auto
 path_find_last_equal(str_view value, char character) noexcept -> maybe<idx> {
-   return path_find_last<true>(value, character);
+   return path_find_last<true>(value, character, character);
+}
+
+// On most platforms, paths are separated by `/`, but Windows also accepts `\`.
+struct path_separators {
+   char first;
+   char second;
+};
+
+inline constexpr path_separators path_slash_separators = {
+   .first = '/',
+   .second = '/',
+};
+inline constexpr path_separators path_nt_separators = {
+   .first = '\\',
+   .second = '/',
+};
+inline constexpr path_separators path_nt_verbatim_separators = {
+   .first = '\\',
+   .second = '\\',
+};
+
+[[nodiscard]]
+constexpr auto
+path_is_separator(path_separators separators, char character) noexcept -> bool {
+   return character == separators.first || character == separators.second;
 }
 
 [[nodiscard]]
 constexpr auto
-path_find_last_not_equal(str_view value, char character) noexcept
+path_find_first_separator(str_view value, path_separators separators) noexcept
    -> maybe<idx> {
-   return path_find_last<false>(value, character);
+   return path_find_first<true>(value, separators.first, separators.second);
 }
 
 [[nodiscard]]
 constexpr auto
-path_root_end(str_view value) -> idx {
-   maybe<idx> const end = path_find_first_not_equal(value, '/');
-   if (end.has_value()) {
-      return end.value();
+path_find_first_not_separator(
+   str_view value, path_separators separators
+) noexcept -> maybe<idx> {
+   return path_find_first<false>(value, separators.first, separators.second);
+}
+
+[[nodiscard]]
+constexpr auto
+path_find_last_separator(str_view value, path_separators separators) noexcept
+   -> maybe<idx> {
+   return path_find_last<true>(value, separators.first, separators.second);
+}
+
+[[nodiscard]]
+constexpr auto
+path_find_last_not_separator(
+   str_view value, path_separators separators
+) noexcept -> maybe<idx> {
+   return path_find_last<false>(value, separators.first, separators.second);
+}
+
+struct path_root {
+   idx name_end;
+   idx end;
+   path_separators separators;
+   bool is_absolute;
+};
+
+[[nodiscard]]
+constexpr auto
+path_starts_with(str_view value, idx position, str_view prefix) noexcept
+   -> bool {
+   return value.size() >= position + prefix.size()
+          && path_slice(value, position, position + prefix.size()) == prefix;
+}
+
+[[nodiscard]]
+constexpr auto
+path_is_drive(str_view value, idx position) noexcept -> bool {
+   if (position + 1u >= value.size()) {
+      return false;
    }
+
+   char const letter = value[position];
+   return ((letter >= 'a' && letter <= 'z') || (letter >= 'A' && letter <= 'Z'))
+          && value[position + 1u] == ':';
+}
+
+// The end of the component that begins at `position`.
+[[nodiscard]]
+constexpr auto
+path_component_end(
+   str_view value, idx position, path_separators separators
+) noexcept -> idx {
+   if (position >= value.size()) {
+      return value.size();
+   }
+
+   maybe<idx> const found = path_find_first_separator(
+      path_slice(value, position, value.size()), separators
+   );
+
+   if (found.has_value()) {
+      return position + found.value();
+   }
+
+   return value.size();
+}
+
+// Parse an `nt` root name like Rust's `std::path::Prefix`.
+[[nodiscard]]
+constexpr auto
+path_parse_nt_root(str_view value) noexcept -> path_root {
+   idx const size = value.size();
+   auto const make_root = [&](
+                             idx name_end, path_separators separators,
+                             bool has_implicit_root
+                          ) -> path_root {
+      bool const has_directory =
+         name_end < size && path_is_separator(separators, value[name_end]);
+      return {
+         .name_end = name_end,
+         .end = has_directory ? idx(name_end + 1u) : name_end,
+         .separators = separators,
+         .is_absolute = has_implicit_root || (has_directory && name_end != 0u),
+      };
+   };
+
+   if (
+      size >= 2u && path_is_separator(path_nt_separators, value[0])
+      && path_is_separator(path_nt_separators, value[1])
+   ) {
+      if (path_starts_with(value, 0u, R"(\\?\)")) {
+         if (path_starts_with(value, 4u, "UNC\\")) {
+            idx const server_end =
+               path_component_end(value, 8u, path_nt_verbatim_separators);
+            return make_root(
+               path_component_end(
+                  value, server_end + 1u, path_nt_verbatim_separators
+               ),
+               path_nt_verbatim_separators, true
+            );
+         }
+
+         if (path_is_drive(value, 4u) && (size == 6u || value[6] == '\\')) {
+            return make_root(6u, path_nt_verbatim_separators, true);
+         }
+
+         return make_root(
+            path_component_end(value, 4u, path_nt_verbatim_separators),
+            path_nt_verbatim_separators, true
+         );
+      }
+
+      if (
+         size >= 4u && value[2] == '.'
+         && path_is_separator(path_nt_separators, value[3])
+      ) {
+         return make_root(
+            path_component_end(value, 4u, path_nt_separators),
+            path_nt_separators, true
+         );
+      }
+
+      // A share needs both a server and a share name.
+      idx const server_end = path_component_end(value, 2u, path_nt_separators);
+      if (server_end != 2u && server_end < size) {
+         idx const share_end =
+            path_component_end(value, server_end + 1u, path_nt_separators);
+         if (share_end != server_end + 1u) {
+            return make_root(share_end, path_nt_separators, true);
+         }
+      }
+
+      return make_root(0u, path_nt_separators, false);
+   }
+
+   if (path_is_drive(value, 0u)) {
+      return make_root(2u, path_nt_separators, false);
+   }
+
+   return make_root(0u, path_nt_separators, false);
+}
+
+template <path_os os>
+[[nodiscard]]
+constexpr auto
+path_parse_root(str_view value) noexcept -> path_root {
+   if constexpr (os == path_os::nt) {
+      return path_parse_nt_root(value);
+   } else {
+      bool const has_directory = value.size() != 0u && value[0] == '/';
+      return {
+         .name_end = 0u,
+         .end = has_directory ? 1u : 0u,
+         .separators = path_slash_separators,
+         .is_absolute = has_directory,
+      };
+   }
+}
+
+[[nodiscard]]
+constexpr auto
+path_relative_start(str_view value, path_root root) noexcept -> idx {
+   maybe<idx> const found = path_find_first_not_separator(
+      path_slice(value, root.name_end, value.size()), root.separators
+   );
+
+   if (found.has_value()) {
+      return root.name_end + found.value();
+   }
+
    return value.size();
 }
 
 [[nodiscard]]
 constexpr auto
-path_trimmed_end(str_view value) -> idx {
-   if (value.size() <= 1u) {
-      return value.size();
+path_parent(str_view value, path_root root) noexcept -> str_view {
+   str_view const root_path = path_slice(value, 0u, root.end);
+   maybe<idx> const last = path_find_last_not_separator(
+      path_slice(value, root.end, value.size()), root.separators
+   );
+
+   if (last.is_empty()) {
+      return root_path;
    }
-   maybe<idx> const end =
-      path_find_last_not_equal(path_slice(value, 1u, value.size()), '/');
-   if (end.has_value()) {
-      return end.value() + 2u;
+
+   idx const end = root.end + last.value() + 1u;
+   maybe<idx> const separator = path_find_last_separator(
+      path_slice(value, root.end, end), root.separators
+   );
+
+   if (separator.is_empty()) {
+      return root_path;
    }
-   return 1u;
+
+   maybe<idx> const parent_end = path_find_last_not_separator(
+      path_slice(value, root.end, root.end + separator.value()), root.separators
+   );
+
+   if (parent_end.is_empty()) {
+      return root_path;
+   }
+
+   return path_slice(value, 0u, root.end + parent_end.value() + 1u);
 }
+
+[[nodiscard]]
+constexpr auto
+path_filename(str_view value, path_root root) noexcept -> str_view {
+   str_view const relative = path_slice(value, root.name_end, value.size());
+   if (
+      relative.size() == 0u
+      || path_is_separator(root.separators, relative[idx(relative.size() - 1u)])
+   ) {
+      return {};
+   }
+
+   maybe<idx> const separator =
+      path_find_last_separator(relative, root.separators);
+   if (separator.has_value()) {
+      return path_slice(relative, separator.value() + 1u, relative.size());
+   }
+
+   return relative;
+}
+
+// Identifies `basic_file_path` types and their `path_os`.
+template <typename T>
+struct path_os_trait {
+   static constexpr bool is_file_path = false;
+   static constexpr path_os os = path_os::portable;
+};
+
+// Whether `Segment` can be joined onto a path of `os`.
+template <path_os os, typename Segment>
+inline constexpr bool path_segment_has_os =
+   !path_os_trait<Segment>::is_file_path || path_os_trait<Segment>::os == os;
+
+// The `path_os` that a factory produces. That is `os` when it is given,
+// otherwise the `path_os` of `Segment` or `Base`, if either is a path.
+template <path_os os, typename Segment, typename Base = void>
+inline constexpr path_os path_deduce_os =
+   os != path_os::portable                ? os
+   : path_os_trait<Segment>::is_file_path ? path_os_trait<Segment>::os
+                                          : path_os_trait<Base>::os;
 
 }  // namespace detail
 
@@ -290,9 +583,13 @@ class [[gsl::Pointer(char const)]] path_component_stepanov_iterator
    constexpr path_component_stepanov_iterator() = default;
 
    constexpr path_component_stepanov_iterator(
-      str_view value [[clang::lifetimebound]], idx position
+      str_view value [[clang::lifetimebound]], idx position,
+      detail::path_separators separators
    ) noexcept(!__has_feature(cxx_exceptions))
-       : m_value(value), m_start(position), m_end(position) {
+       : m_value(value),
+         m_start(position),
+         m_end(position),
+         m_separators(separators) {
       seek();
    }
 
@@ -324,15 +621,19 @@ class [[gsl::Pointer(char const)]] path_component_stepanov_iterator
    seek() {
       str_view remaining = detail::path_slice(m_value, m_start, m_value.size());
       maybe<idx> const start =
-         detail::path_find_first_not_equal(remaining, '/');
+         detail::path_find_first_not_separator(remaining, m_separators);
+
       if (start.is_empty()) {
          m_start = m_value.size();
          m_end = m_start;
          return;
       }
+
       m_start += start.value();
       remaining = detail::path_slice(m_value, m_start, m_value.size());
-      maybe<idx> const end = detail::path_find_first_equal(remaining, '/');
+      maybe<idx> const end =
+         detail::path_find_first_separator(remaining, m_separators);
+
       if (end.has_value()) {
          m_end = m_start + end.value();
       } else {
@@ -343,6 +644,7 @@ class [[gsl::Pointer(char const)]] path_component_stepanov_iterator
    str_view m_value;
    idx m_start;
    idx m_end;
+   detail::path_separators m_separators = detail::path_slash_separators;
 };
 
 class path_component_iteration_context {
@@ -375,8 +677,10 @@ class path_component_iteration_context {
          if (!loop_body(*m_current)) {
             return iteration_result::incomplete;
          }
+
          ++m_current;
       }
+
       return iteration_result::complete;
    }
 
@@ -385,6 +689,7 @@ class path_component_iteration_context {
    path_component_stepanov_iterator m_end;
 };
 
+// The components of a path after its root name, separated by `separators`.
 class path_components : public iterable_interface<path_components> {
  public:
    using value_type = str_view;
@@ -393,20 +698,23 @@ class path_components : public iterable_interface<path_components> {
 
    constexpr path_components() = default;
 
-   constexpr path_components(str_view value [[clang::lifetimebound]]) noexcept
-       : m_value(value) {
+   constexpr path_components(
+      str_view value [[clang::lifetimebound]],
+      detail::path_separators separators = detail::path_slash_separators
+   ) noexcept
+       : m_value(value), m_separators(separators) {
    }
 
    [[nodiscard]]
    constexpr auto
    begin() const noexcept -> iterator {
-      return {m_value, 0u};
+      return {m_value, 0u, m_separators};
    }
 
    [[nodiscard]]
    constexpr auto
    end() const noexcept -> iterator {
-      return {m_value, m_value.size()};
+      return {m_value, m_value.size(), m_separators};
    }
 
    [[nodiscard]]
@@ -421,6 +729,7 @@ class path_components : public iterable_interface<path_components> {
       return end();
    }
 
+   [[nodiscard]]
    constexpr auto
    iterate() const noexcept -> path_component_iteration_context {
       return {begin(), end()};
@@ -428,42 +737,52 @@ class path_components : public iterable_interface<path_components> {
 
  private:
    str_view m_value;
+   detail::path_separators m_separators = detail::path_slash_separators;
 };
 
 namespace raii {
 template <
-   is_allocator Allocator = allocator_dyn,
+   is_allocator Allocator = allocator_dyn, path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags>
 class basic_file_path;
 }  // namespace raii
 
 inline namespace manual {
 
-template <str_vec_flags flags = detail::path_default_flags>
+template <
+   path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags>
 class basic_file_path;
 
 using file_path = basic_file_path<>;
 
 template <str_vec_flags flags = detail::path_default_flags>
-using file_path_fixed = basic_file_path<vec_flags::fixed_size | flags>;
+using file_path_fixed =
+   basic_file_path<path_os::portable, vec_flags::fixed_size | flags>;
 
 }  // namespace manual
 
 namespace detail {
-template <str_vec_flags flags>
+template <path_os os, str_vec_flags flags>
 constexpr auto
-maybe_file_path_has_value(basic_file_path<flags> const& value) -> bool;
+maybe_file_path_has_value(basic_file_path<os, flags> const& value) -> bool;
 
-template <str_vec_flags flags>
+template <path_os os, str_vec_flags flags>
 constexpr auto
-maybe_file_path_nullopt() -> basic_file_path<flags>;
+maybe_file_path_nullopt() -> basic_file_path<os, flags>;
+
+template <path_os path_os_value, str_vec_flags flags>
+struct path_os_trait<manual::basic_file_path<path_os_value, flags>> {
+   static constexpr bool is_file_path = true;
+   static constexpr path_os os = path_os_value;
+};
 }  // namespace detail
 
 inline namespace manual {
 
-template <str_vec_flags flags>
+template <path_os os, str_vec_flags flags>
 class [[clang::preferred_name(file_path), gsl::Owner]]
-basic_file_path : public container_interface<basic_file_path<flags>, char>,
+basic_file_path : public container_interface<basic_file_path<os, flags>, char>,
                   public random_access_stepanov_iterable_interface<char> {
  private:
    static constexpr str_vec_flags m_flags =
@@ -475,7 +794,8 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    static_assert(m_flags.str.is_null_terminated);
    static_assert(m_flags.vec.uses_pointer_size_layout);
 
-   template <is_allocator Allocator, str_vec_flags other_flags>
+   template <
+      is_allocator Allocator, path_os other_os, str_vec_flags other_flags>
    friend class raii::basic_file_path;
 
  public:
@@ -629,6 +949,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
       if (storage.is_empty()) {
          return nullopt;
       }
+
       basic_file_path result;
       result.m_storage = move(storage).value();
       return result;
@@ -643,7 +964,7 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    [[nodiscard]]
    constexpr auto
    is_absolute() const noexcept -> bool {
-      return !this->is_empty() && data()[0] == '/';
+      return parse_root().is_absolute;
    }
 
    [[nodiscard]]
@@ -655,73 +976,39 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    [[nodiscard]]
    constexpr auto
    root_name() const noexcept -> str_view {
-      return {};
+      return detail::path_slice(view(), 0u, parse_root().name_end);
    }
 
    [[nodiscard]]
    constexpr auto
    root_directory() const noexcept -> str_view {
-      if (!is_absolute()) {
-         return {};
-      }
-      return {data(), 1u};
+      detail::path_root const root = parse_root();
+      return detail::path_slice(view(), root.name_end, root.end);
    }
 
    [[nodiscard]]
    constexpr auto
    root_path() const noexcept -> str_view {
-      return root_directory();
+      return detail::path_slice(view(), 0u, parse_root().end);
    }
 
    [[nodiscard]]
    constexpr auto
    relative_path() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
-      idx const first = detail::path_root_end(view());
+      idx const first = detail::path_relative_start(view(), parse_root());
       return detail::path_slice(view(), first, size());
    }
 
    [[nodiscard]]
    constexpr auto
    parent_path() const -> str_view {
-      str_view const value = view();
-      idx const end = detail::path_trimmed_end(value);
-      if (end == 0u) {
-         return {};
-      }
-      if (end == 1u && value[0] == '/') {
-         return detail::path_slice(value, 0u, 1u);
-      }
-
-      maybe<idx> const found =
-         detail::path_find_last_equal(detail::path_slice(value, 0u, end), '/');
-      if (found.is_empty()) {
-         return {};
-      }
-      idx const slash = found.value() + 1u;
-      if (slash == 1u) {
-         return detail::path_slice(value, 0u, slash);
-      }
-      maybe<idx> const parent_end = detail::path_find_last_not_equal(
-         detail::path_slice(value, 1u, slash), '/'
-      );
-      if (parent_end.has_value()) {
-         return detail::path_slice(value, 0u, parent_end.value() + 2u);
-      }
-      return detail::path_slice(value, 0u, 1u);
+      return detail::path_parent(view(), parse_root());
    }
 
    [[nodiscard]]
    constexpr auto
    filename() const [[clang::lifetimebound]] -> str_view {
-      str_view const value = view();
-      if (value.size() == 0u || value[idx(value.size() - 1u)] == '/') {
-         return {};
-      }
-      maybe<idx> const slash = detail::path_find_last_equal(value, '/');
-      if (slash.has_value()) {
-         return detail::path_slice(value, slash.value() + 1u, value.size());
-      }
-      return value;
+      return detail::path_filename(view(), parse_root());
    }
 
    [[nodiscard]]
@@ -731,10 +1018,12 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
       if (name == "." || name == "..") {
          return name;
       }
+
       maybe<idx> const dot = detail::path_find_last_equal(name, '.');
       if (dot.is_empty() || dot.value() == 0u) {
          return name;
       }
+
       return detail::path_slice(name, 0u, dot.value());
    }
 
@@ -745,29 +1034,32 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
       if (name == "." || name == "..") {
          return {};
       }
+
       maybe<idx> const dot = detail::path_find_last_equal(name, '.');
       if (dot.is_empty() || dot.value() == 0u) {
          return {};
       }
+
       return detail::path_slice(name, dot.value(), name.size());
    }
 
    [[nodiscard]]
    constexpr auto
    has_root_name() const noexcept -> bool {
-      return false;
+      return parse_root().name_end != 0u;
    }
 
    [[nodiscard]]
    constexpr auto
    has_root_directory() const noexcept -> bool {
-      return is_absolute();
+      detail::path_root const root = parse_root();
+      return root.end != root.name_end;
    }
 
    [[nodiscard]]
    constexpr auto
    has_root_path() const noexcept -> bool {
-      return is_absolute();
+      return parse_root().end != 0u;
    }
 
    [[nodiscard]]
@@ -803,26 +1095,58 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    [[nodiscard]]
    constexpr auto
    components() const noexcept [[clang::lifetimebound]] -> path_components {
-      return view();
+      detail::path_root const root = parse_root();
+      return {
+         detail::path_slice(view(), root.name_end, size()),
+         root.separators,
+      };
    }
 
+   // Join `segment` like `std::filesystem::path::operator/=`.
    template <is_allocator Allocator, is_path_segment Segment>
    [[nodiscard]]
    constexpr auto
    append(allocator_ref<Allocator> allocator, Segment const& segment)
       -> maybe<void> {
+      static_assert(
+         detail::path_segment_has_os<os, Segment>,
+         "A path cannot be joined with a path of a different `cat::path_os`! "
+         "Join its `.view()` instead."
+      );
       str_view const right = detail::path_segment_view(segment);
+
       if (right.size() == 0u) {
          return monostate;
       }
-      if (right[0] == '/') {
+
+      detail::path_root const left_root = parse_root();
+      detail::path_root const right_root = detail::path_parse_root<os>(right);
+      str_view const right_name =
+         detail::path_slice(right, 0u, right_root.name_end);
+
+      if (right_root.is_absolute
+          || (right_name.size() != 0u
+              && right_name
+                    != detail::path_slice(view(), 0u, left_root.name_end))) {
          clear();
          return m_storage.append(allocator, right);
       }
-      if (!this->is_empty() && (*this)[idx(size() - 1u)] != '/') {
-         $prop(m_storage.push_back(allocator, '/'));
+
+      str_view const right_tail =
+         detail::path_slice(right, right_root.name_end, right.size());
+      if (right_root.end != right_root.name_end) {
+         $prop(m_storage.resize(allocator, left_root.name_end));
+         return m_storage.append(allocator, right_tail);
       }
-      return m_storage.append(allocator, right);
+
+      if (
+         has_filename()
+         || (left_root.end == left_root.name_end && left_root.is_absolute)
+      ) {
+         $prop(m_storage.push_back(allocator, os == path_os::nt ? '\\' : '/'));
+      }
+
+      return m_storage.append(allocator, right_tail);
    }
 
    template <is_path_segment Segment>
@@ -835,14 +1159,21 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
    }
 
  private:
-   template <str_vec_flags other_flags>
-   friend constexpr auto
-   detail::maybe_file_path_has_value(basic_file_path<other_flags> const&)
-      -> bool;
+   [[nodiscard]]
+   constexpr auto
+   parse_root() const noexcept -> detail::path_root {
+      return detail::path_parse_root<os>(view());
+   }
 
-   template <str_vec_flags other_flags>
+   template <path_os other_os, str_vec_flags other_flags>
    friend constexpr auto
-   detail::maybe_file_path_nullopt() -> basic_file_path<other_flags>;
+   detail::maybe_file_path_has_value(
+      basic_file_path<other_os, other_flags> const&
+   ) -> bool;
+
+   template <path_os other_os, str_vec_flags other_flags>
+   friend constexpr auto
+   detail::maybe_file_path_nullopt() -> basic_file_path<other_os, other_flags>;
 
    basic_str_vec<char, m_flags> m_storage;
 };
@@ -850,100 +1181,110 @@ basic_file_path : public container_interface<basic_file_path<flags>, char>,
 }  // namespace manual
 
 namespace detail {
-template <str_vec_flags flags>
+template <path_os os, str_vec_flags flags>
 constexpr auto
-maybe_file_path_has_value(basic_file_path<flags> const& value) -> bool {
+maybe_file_path_has_value(basic_file_path<os, flags> const& value) -> bool {
    return maybe_str_vec_has_value(value.m_storage);
 }
 
-template <str_vec_flags flags>
+template <path_os os, str_vec_flags flags>
 constexpr auto
-maybe_file_path_nullopt() -> basic_file_path<flags> {
-   basic_file_path<flags> value;
+maybe_file_path_nullopt() -> basic_file_path<os, flags> {
+   basic_file_path<os, flags> value;
    value.m_storage =
-      maybe_str_vec_nullopt<char, basic_file_path<flags>::m_flags>();
+      maybe_str_vec_nullopt<char, basic_file_path<os, flags>::m_flags>();
    return value;
 }
 }  // namespace detail
 
-template <str_vec_flags flags>
-struct default_compact_trait<basic_file_path<flags>>
+template <path_os os, str_vec_flags flags>
+struct default_compact_trait<basic_file_path<os, flags>>
     : identity_trait<compact<
-         basic_file_path<flags>, detail::maybe_file_path_has_value<flags>,
-         detail::maybe_file_path_nullopt<flags>>> {};
+         basic_file_path<os, flags>,
+         detail::maybe_file_path_has_value<os, flags>,
+         detail::maybe_file_path_nullopt<os, flags>>> {};
 
 inline namespace manual {
 
 template <
-   is_allocator Allocator, str_vec_flags flags = detail::path_default_flags,
-   is_path_segment Segment>
+   is_allocator Allocator, path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
 make_file_path(allocator_ref<Allocator> allocator, Segment const& segment)
-   -> maybe<basic_file_path<flags>> {
-   basic_file_path<flags> result;
+   -> maybe<basic_file_path<detail::path_deduce_os<os, Segment>, flags>> {
+   basic_file_path<detail::path_deduce_os<os, Segment>, flags> result;
    $defer {
       result.free(allocator);
    };
+
    str_view const value = detail::path_segment_view(segment);
    $prop(result.reserve(
       allocator, max(value.size(), detail::path_initial_capacity(flags))
    ));
    $prop(result.resize(allocator, 0u));
-   $prop(result.append(allocator, value));
+   $prop(result.append(allocator, segment));
    return move(result);
 }
 
 template <
+   path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
 make_file_path(allocator_dyn allocator, Segment const& segment) noexcept(
    !__has_feature(cxx_exceptions)
-) -> maybe<basic_file_path<flags>> {
-   return manual::make_file_path<allocator_dyn, flags>(allocator, segment);
+) -> maybe<basic_file_path<detail::path_deduce_os<os, Segment>, flags>> {
+   return manual::make_file_path<allocator_dyn, os, flags>(allocator, segment);
 }
 
 template <
-   is_allocator Allocator, str_vec_flags flags = detail::path_default_flags>
+   is_allocator Allocator, path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
 make_file_path(allocator_ref<Allocator> allocator) noexcept(
    !__has_feature(cxx_exceptions)
-) -> maybe<basic_file_path<flags>> {
-   return make_file_path<Allocator, flags>(allocator, str_view{});
+) -> maybe<basic_file_path<os, flags>> {
+   return make_file_path<Allocator, os, flags>(allocator, str_view{});
 }
 
-template <str_vec_flags flags = detail::path_default_flags>
+template <
+   path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
 make_file_path(allocator_dyn allocator) noexcept
-   -> maybe<basic_file_path<flags>> {
-   return make_file_path<allocator_dyn, flags>(allocator);
+   -> maybe<basic_file_path<os, flags>> {
+   return make_file_path<allocator_dyn, os, flags>(allocator);
 }
 
-template <is_allocator Allocator, str_vec_flags flags, is_path_segment Segment>
+template <
+   is_allocator Allocator, path_os os, str_vec_flags flags,
+   is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
 make_file_path_joined(
-   allocator_ref<Allocator> allocator, basic_file_path<flags> const& left,
+   allocator_ref<Allocator> allocator, basic_file_path<os, flags> const& left,
    Segment const& right
-) -> maybe<basic_file_path<flags>> {
-   basic_file_path<flags> result = $prop(left.clone(allocator));
+) -> maybe<basic_file_path<os, flags>> {
+   basic_file_path<os, flags> result = $prop(left.clone(allocator));
    $defer {
       result.free(allocator);
    };
+
    $prop(result.append(allocator, right));
    return move(result);
 }
 
-template <str_vec_flags flags, is_path_segment Segment>
+template <path_os os, str_vec_flags flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
 make_file_path_joined(
-   allocator_dyn allocator, basic_file_path<flags> const& left,
+   allocator_dyn allocator, basic_file_path<os, flags> const& left,
    Segment const& right
-) noexcept(!__has_feature(cxx_exceptions)) -> maybe<basic_file_path<flags>> {
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<basic_file_path<os, flags>> {
    return make_file_path_joined<allocator_dyn>(allocator, left, right);
 }
 
@@ -951,12 +1292,12 @@ make_file_path_joined(
 
 namespace detail {
 
-template <str_vec_flags flags>
+template <path_os os, str_vec_flags flags>
 [[nodiscard]]
 auto
-path_scaredy_value(manual::basic_file_path<flags>&& value)
-   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   scaredy<manual::basic_file_path<flags>, nix::linux_error> result =
+path_scaredy_value(manual::basic_file_path<os, flags>&& value)
+   -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
+   scaredy<manual::basic_file_path<os, flags>, nix::linux_error> result =
       nix::linux_error::nomem;
    result = move(value);
    return result;
@@ -965,25 +1306,27 @@ path_scaredy_value(manual::basic_file_path<flags>&& value)
 }  // namespace detail
 
 template <
+   path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_allocator Allocator>
 [[nodiscard]]
 auto
 make_file_path_current(allocator_ref<Allocator> allocator) noexcept(false)
-   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   auto made = manual::make_file_path<Allocator, flags>(allocator);
+   -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
+   auto made = manual::make_file_path<Allocator, os, flags>(allocator);
    if (made.is_empty()) {
       return nix::linux_error::nomem;
    }
-   manual::basic_file_path<flags> result = move(made).value();
+
+   manual::basic_file_path<os, flags> result = move(made).value();
    $defer {
       result.free(allocator);
    };
-
    while (true) {
       idx capacity = result.capacity();
       if (capacity == 0u) {
          capacity = detail::path_initial_capacity(flags);
       }
+
       if (result.resize(allocator, capacity).is_empty()) {
          return nix::linux_error::nomem;
       }
@@ -994,80 +1337,98 @@ make_file_path_current(allocator_ref<Allocator> allocator) noexcept(false)
          result.resize(allocator, idx(cwd.value() - 1u)).verify();
          return detail::path_scaredy_value(move(result));
       }
+
       if (cwd.error() != nix::linux_error::range) {
          return cwd.error();
       }
+
       if (result.reserve(allocator, capacity * 2u).is_empty()) {
          return nix::linux_error::nomem;
       }
    }
 }
 
-template <str_vec_flags flags = detail::path_default_flags>
+template <
+   path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 auto
 make_file_path_current(allocator_dyn allocator) noexcept(
    !__has_feature(cxx_exceptions)
-) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_current<flags, allocator_dyn>(allocator);
+) -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
+   return make_file_path_current<os, flags, allocator_dyn>(allocator);
 }
 
 template <
+   path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment,
    is_path_segment Base, is_allocator Allocator>
 [[nodiscard]]
 auto
 make_file_path_absolute(
    Segment const& segment, Base const& base, allocator_ref<Allocator> allocator
-) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
+)
+   -> scaredy<
+      manual::basic_file_path<detail::path_deduce_os<os, Segment, Base>, flags>,
+      nix::linux_error> {
+   constexpr path_os result_os = detail::path_deduce_os<os, Segment, Base>;
+   using path = manual::basic_file_path<result_os, flags>;
    str_view const value = detail::path_segment_view(segment);
-   if (value.size() != 0u && value[0] == '/') {
-      auto result = make_file_path<Allocator, flags>(allocator, value);
+
+   if (detail::path_parse_root<result_os>(value).is_absolute) {
+      auto result =
+         make_file_path<Allocator, result_os, flags>(allocator, value);
       if (result.is_empty()) {
          return nix::linux_error::nomem;
       }
+
       return detail::path_scaredy_value(move(result).value());
    }
 
    str_view const base_view = detail::path_segment_view(base);
-   auto prefix =
-      [&]() -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-      if (base_view.size() != 0u && base_view[0] == '/') {
-         auto result = make_file_path<Allocator, flags>(allocator, base_view);
+   auto prefix = [&]() -> scaredy<path, nix::linux_error> {
+      if (detail::path_parse_root<result_os>(base_view).is_absolute) {
+         auto result =
+            make_file_path<Allocator, result_os, flags>(allocator, base_view);
          if (result.is_empty()) {
             return nix::linux_error::nomem;
          }
+
          return detail::path_scaredy_value(move(result).value());
       }
 
-      auto cwd = make_file_path_current<flags, Allocator>(allocator);
+      auto cwd = make_file_path_current<result_os, flags, Allocator>(allocator);
       if (cwd.is_empty()) {
          return cwd.error();
       }
-      manual::basic_file_path<flags> result = move(cwd).value();
+
+      path result = move(cwd).value();
       $defer {
          result.free(allocator);
       };
       if (result.append(allocator, base_view).is_empty()) {
          return nix::linux_error::nomem;
       }
+
       return detail::path_scaredy_value(move(result));
    }();
-
    if (prefix.is_empty()) {
       return prefix.error();
    }
-   manual::basic_file_path<flags> result = move(prefix).value();
+
+   path result = move(prefix).value();
    $defer {
       result.free(allocator);
    };
    if (result.append(allocator, value).is_empty()) {
       return nix::linux_error::nomem;
    }
+
    return detail::path_scaredy_value(move(result));
 }
 
 template <
+   path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment,
    is_path_segment Base>
 [[nodiscard]]
@@ -1075,52 +1436,68 @@ auto
 make_file_path_absolute(
    Segment const& segment, Base const& base, allocator_dyn allocator
 ) noexcept(!__has_feature(cxx_exceptions))
-   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_absolute<flags, Segment, Base, allocator_dyn>(
+   -> scaredy<
+      manual::basic_file_path<detail::path_deduce_os<os, Segment, Base>, flags>,
+      nix::linux_error> {
+   return make_file_path_absolute<os, flags, Segment, Base, allocator_dyn>(
       segment, base, allocator
    );
 }
 
 template <
+   path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment,
    is_allocator Allocator>
 [[nodiscard]]
 auto
 make_file_path_absolute(
    Segment const& segment, allocator_ref<Allocator> allocator
-) noexcept -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_absolute<flags, Segment, str_view, Allocator>(
+) noexcept
+   -> scaredy<
+      manual::basic_file_path<detail::path_deduce_os<os, Segment>, flags>,
+      nix::linux_error> {
+   return make_file_path_absolute<os, flags, Segment, str_view, Allocator>(
       segment, str_view{}, allocator
    );
 }
 
 template <
+   path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 auto
 make_file_path_absolute(
    Segment const& segment, allocator_dyn allocator
-) noexcept -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_absolute<flags, Segment, allocator_dyn>(
+) noexcept
+   -> scaredy<
+      manual::basic_file_path<detail::path_deduce_os<os, Segment>, flags>,
+      nix::linux_error> {
+   return make_file_path_absolute<os, flags, Segment, allocator_dyn>(
       segment, allocator
    );
 }
 
 template <
+   path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_allocator Allocator,
    is_path_segment Model>
 [[nodiscard]]
 auto
 make_file_path_unique(allocator_ref<Allocator> allocator, Model const& model)
-   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   auto made = make_file_path<Allocator, flags>(allocator, model);
+   -> scaredy<
+      manual::basic_file_path<detail::path_deduce_os<os, Model>, flags>,
+      nix::linux_error> {
+   auto made = make_file_path<Allocator, os, flags>(allocator, model);
    if (made.is_empty()) {
       return nix::linux_error::nomem;
    }
-   manual::basic_file_path<flags> result = move(made).value();
+
+   manual::basic_file_path<detail::path_deduce_os<os, Model>, flags> result =
+      move(made).value();
    $defer {
       result.free(allocator);
    };
+
    constexpr char hex[] = "0123456789abcdef";
 
    idx search_start = 0u;
@@ -1131,9 +1508,11 @@ make_file_path_unique(allocator_ref<Allocator> allocator, Model const& model)
          ),
          '%'
       );
+
       if (found.is_empty()) {
          break;
       }
+
       idx const index = search_start + found.value();
       unsigned char random;
       while (true) {
@@ -1142,43 +1521,54 @@ make_file_path_unique(allocator_ref<Allocator> allocator, Model const& model)
             if (generated.value() == 0u) {
                continue;
             }
+
             break;
          }
+
          if (generated.error() != nix::linux_error::intr) {
             return generated.error();
          }
       }
+
       result[index] = hex[random & 0x0fu];
       search_start = index + 1u;
    }
+
    return detail::path_scaredy_value(move(result));
 }
 
 template <
+   path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_allocator Allocator>
 [[nodiscard]]
 auto
 make_file_path_unique(allocator_ref<Allocator> allocator) noexcept
-   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_unique<flags>(allocator, "%%%%-%%%%-%%%%-%%%%");
+   -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
+   return make_file_path_unique<os, flags>(allocator, "%%%%-%%%%-%%%%-%%%%");
 }
 
 template <
+   path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_path_segment Model>
 [[nodiscard]]
 auto
 make_file_path_unique(allocator_dyn allocator, Model const& model) noexcept(
    !__has_feature(cxx_exceptions)
-) -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_unique<flags, allocator_dyn>(allocator, model);
+)
+   -> scaredy<
+      manual::basic_file_path<detail::path_deduce_os<os, Model>, flags>,
+      nix::linux_error> {
+   return make_file_path_unique<os, flags, allocator_dyn>(allocator, model);
 }
 
-template <str_vec_flags flags = detail::path_default_flags>
+template <
+   path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 auto
 make_file_path_unique(allocator_dyn allocator) noexcept
-   -> scaredy<manual::basic_file_path<flags>, nix::linux_error> {
-   return make_file_path_unique<flags, allocator_dyn>(allocator);
+   -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
+   return make_file_path_unique<os, flags, allocator_dyn>(allocator);
 }
 
 }  // namespace cat
@@ -1202,16 +1592,20 @@ struct path_formatter : formatter_base<CharT> {
       if (p_it == context.end()) {
          return format_errors::unmatched_open_brace;
       }
+
       if (*p_it == '?') {
          set_debug_format();
          ++p_it;
       }
+
       if (p_it != context.end() && *p_it == 'g') {
          ++p_it;
       }
+
       if (p_it == context.end() || *p_it != '}') {
          return format_errors::unknown_format_specifier;
       }
+
       return p_it;
    }
 
@@ -1223,15 +1617,16 @@ struct path_formatter : formatter_base<CharT> {
       if (debug) {
          return append_escaped(context, value.view(), '"');
       }
+
       return context.append(value.view());
    }
 };
 
 }  // namespace detail
 
-template <str_vec_flags flags, typename CharT>
+template <path_os os, str_vec_flags flags, typename CharT>
    requires(is_same<CharT, char>)
-struct formatter<manual::basic_file_path<flags>, CharT>
+struct formatter<manual::basic_file_path<os, flags>, CharT>
     : detail::path_formatter<CharT> {};
 
 }  // namespace cat

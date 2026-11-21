@@ -62,11 +62,13 @@ concept has_patch = requires(T value) { value.patch(); };
 static_assert(kernel_version{6u, 17u, 3u}.major() == 6u);
 static_assert(kernel_version{6u, 17u, 3u}.minor() == 17u);
 static_assert(kernel_version{6u, 17u, 3u}.patch() == 3u);
-static_assert(cat::is_same<
-              decltype(cat::declval<kernel_version&>().major()), uint4&>);
-static_assert(cat::is_same<
-              decltype(cat::declval<kernel_version const&>().patch()),
-              uint4 const&>);
+static_assert(
+   cat::is_same<decltype(cat::declval<kernel_version&>().major()), uint4&>
+);
+static_assert(
+   cat::is_same<
+      decltype(cat::declval<kernel_version const&>().patch()), uint4 const&>
+);
 static_assert(has_minor<cat::version<int, int>>);
 static_assert(!has_patch<cat::version<int, int>>);
 static_assert(has_patch<cat::version<int, int, int, cat::str_view>>);
