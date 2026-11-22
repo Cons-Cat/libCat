@@ -92,8 +92,7 @@ locate_needle_anomalies(byte const* p_needle, idx length) -> needle_anomalies {
 inline auto
 subspan_matches(byte const* p_haystack, byte const* p_needle, idx bytes)
    -> bool {
-   return compare_memory_scalar(p_haystack, p_needle, bytes)
-          == std::strong_ordering::equal;
+   return is_memory_equal_scalar(p_haystack, p_needle, bytes);
 }
 
 template <typename Simd>

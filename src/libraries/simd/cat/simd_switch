@@ -721,11 +721,21 @@ struct simd_dispatch_cache {
 // to the user's `default:` only when every `$abi` entry rejects the host, which
 // can only happen if the file baseline is below all listed archs.
 #ifdef CAT_NO_CPUID
-#define CAT_SIMD_SWITCH(...)                                             \
-   _Pragma(                                                              \
-      "\"`$simd_switch` is unavailable when `CAT_NO_CPUID` is defined! " \
-      "Disable `CAT_NO_CPUID` to use this.\""                            \
-   )
+namespace cat::detail {
+// This converts to any type. When `$simd_switch` is used in an expression, but
+// it's unsupported, the below error message should print but we need this type
+// to silence noisy AST errors.
+struct simd_switch_unavailable {
+   template <typename T>
+   operator T() const noexcept;
+};
+}  // namespace cat::detail
+
+// clang-format off
+#define CAT_SIMD_SWITCH(...)                                                                                                 \
+   _Pragma("GCC error \"`$simd_switch` is unavailable when `CAT_NO_CPUID` is defined! Disable `CAT_NO_CPUID` to use this.\"") \
+   ::cat::detail::simd_switch_unavailable{}
+// clang-format on
 #else
 #define CAT_SIMD_SWITCH(...)                                                  \
    ([&]() -> decltype(auto) {                                                 \

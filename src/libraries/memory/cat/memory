@@ -47,17 +47,33 @@ copy_memory_scalar(
    void* _Nonnull __restrict p_destination, idx bytes
 );
 
+// Find the first byte offset from `p_lhs` that differs from the `p_rhs` array
+// of `bytes` length.
 [[nodiscard]]
 constexpr auto
-compare_memory(
+find_disjoint_memory(
    void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
-) noexcept -> std::strong_ordering;
+) noexcept -> idx;
+
+// Returns `true` if `p_lhs` and `p_rhs` arrays of `bytes` length hold identical
+// bytes.
+[[nodiscard]]
+constexpr auto
+is_memory_equal(
+   void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
+) noexcept -> bool;
 
 [[nodiscard]]
 constexpr auto
-compare_memory_scalar(
+find_disjoint_memory_scalar(
    void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
-) noexcept -> std::strong_ordering;
+) noexcept -> idx;
+
+[[nodiscard]]
+constexpr auto
+is_memory_equal_scalar(
+   void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, idx bytes
+) noexcept -> bool;
 
 // Find the first element equal to `needle`.
 template <is_equality_comparable T>
@@ -157,11 +173,17 @@ copy_memory_backward_impl(
    byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 );
 
-// Implement `compare_memory()` and `memcmp()`.
+// Implement `find_disjoint_memory()` and `memcmp()`.
 auto
-compare_memory_impl(
+find_disjoint_memory_impl(
    byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
-) noexcept(!__has_feature(cxx_exceptions)) -> std::strong_ordering;
+) noexcept(!__has_feature(cxx_exceptions)) -> idx;
+
+// Implement `is_memory_equal()` and `bcmp()`.
+auto
+is_memory_equal_impl(
+   byte const* _Nonnull p_lhs, byte const* _Nonnull p_rhs, idx bytes
+) noexcept(!__has_feature(cxx_exceptions)) -> bool;
 
 // Implement the representation-safe runtime path of `find_memory`.
 auto
@@ -373,7 +395,8 @@ relocate(T& source, T* _Nonnull p_destination) -> T* _Nonnull {
 
 }  // namespace cat
 
-#include "../implementations/compare_memory.tpp"
+#include "../implementations/find_disjoint_memory.tpp"
+#include "../implementations/is_memory_equal.tpp"
 #include "../implementations/copy_memory.tpp"
 #include "../implementations/copy_memory_backward.tpp"
 #include "../implementations/find_memory.tpp"

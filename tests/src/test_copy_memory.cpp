@@ -6,8 +6,11 @@
 #include <cat/bit>
 #include <cat/cpuid>
 #include <cat/memory>
+#include <cat/simd_switch>
 
-#include "../../src/libraries/memory/implementations/compare_memory_avx2.tpp"
+#include "../../src/libraries/memory/implementations/scan_memory_avx2.tpp"
+#include "../../src/libraries/memory/implementations/scan_memory.tpp"
+#include "../../src/libraries/memory/implementations/scan_memory_medium.tpp"
 #include "../unit_tests.hpp"
 
 namespace {
@@ -123,6 +126,20 @@ large_overlap_case(
    verify_buffer_result(expected.data(), page.data(), capacity);
 }
 
+// Order two ranges by the bytes where they first differ, like `memcmp`.
+auto
+memory_order(
+   cat::byte const* _Nonnull p_left, cat::byte const* _Nonnull p_right,
+   cat::idx bytes
+) -> std::strong_ordering {
+   cat::idx const offset = cat::find_disjoint_memory(p_left, p_right, bytes);
+   if (offset == bytes) {
+      return std::strong_ordering::equal;
+   }
+
+   return p_left[offset].value <=> p_right[offset].value;
+}
+
 void
 compare_equal_case(cat::idx bytes, cat::idx left_skew, cat::idx right_skew) {
    cat::array<cat::byte, 8_uki> left{};
@@ -135,11 +152,17 @@ compare_equal_case(cat::idx bytes, cat::idx left_skew, cat::idx right_skew) {
    }
 
    cat::verify(
-      cat::compare_memory(
+      cat::find_disjoint_memory(
          left.data() + left_skew, right.data() + right_skew, bytes
       )
-      == 0
+      == bytes
    );
+   cat::verify(cat::is_memory_equal(
+      left.data() + left_skew, right.data() + right_skew, bytes
+   ));
+   cat::verify(cat::is_memory_equal_scalar(
+      left.data() + left_skew, right.data() + right_skew, bytes
+   ));
 }
 
 void
@@ -147,13 +170,36 @@ compare_mismatch_case(cat::idx bytes, cat::idx mismatch_index, bool left_less) {
    cat::array<cat::byte, 8_uki> left{};
    cat::array<cat::byte, 8_uki> right{};
 
-   initialize_bytes(left.data(), left.size());
-   initialize_bytes(right.data(), right.size());
-   left[mismatch_index] = cat::byte(left_less ? 1u : 240u);
-   right[mismatch_index] = cat::byte(left_less ? 240u : 1u);
+   // Vary both ranges' alignment with the mismatch position.
+   cat::byte* _Nonnull const p_left = left.data() + (mismatch_index % 7u);
+   cat::byte* _Nonnull const p_right = right.data() + (mismatch_index % 5u);
+   initialize_bytes(left.data(), bytes + 8u);
+   for (cat::idx i = 0u; i < bytes; ++i) {
+      p_right[i] = p_left[i];
+   }
 
-   auto const result = cat::compare_memory(left.data(), right.data(), bytes);
-   cat::verify(left_less ? result < 0 : result > 0);
+   p_left[mismatch_index] = cat::byte(left_less ? 1u : 240u);
+   p_right[mismatch_index] = cat::byte(left_less ? 240u : 1u);
+   // Only one byte differs, so equality must notice it alone.
+   cat::verify(!cat::is_memory_equal(p_left, p_right, bytes));
+   cat::verify(!cat::is_memory_equal_scalar(p_left, p_right, bytes));
+
+   // A later difference ordered the other way must not be found instead.
+   cat::idx const last = previous_index(bytes);
+   if (mismatch_index != last) {
+      p_left[last] = cat::byte(left_less ? 255u : 0u);
+      p_right[last] = cat::byte(left_less ? 0u : 255u);
+   }
+
+   std::strong_ordering const order = memory_order(p_left, p_right, bytes);
+   cat::verify(left_less ? order < 0 : order > 0);
+   cat::verify(
+      cat::find_disjoint_memory(p_left, p_right, bytes) == mismatch_index
+   );
+   cat::verify(
+      cat::find_disjoint_memory_scalar(p_left, p_right, bytes)
+      == mismatch_index
+   );
 }
 
 void
@@ -161,14 +207,126 @@ compare_avx2_case(cat::idx bytes, cat::idx mismatch_index, bool left_less) {
    cat::array<cat::byte, 512> left{};
    cat::array<cat::byte, 512> right{};
 
-   initialize_bytes(left.data(), left.size());
-   initialize_bytes(right.data(), right.size());
+   initialize_bytes(left.data(), bytes);
+   initialize_bytes(right.data(), bytes);
+   using cat::detail::memory_scan;
+   cat::verify(!cat::detail::scan_memory_avx2<memory_scan::equality>(
+      left.data(), right.data(), bytes
+   ));
+   cat::verify(cat::detail::scan_memory_avx2<memory_scan::mismatch>(
+                  left.data(), right.data(), bytes
+   )
+                  .is_empty());
+
    left[mismatch_index] = cat::byte(left_less ? 1u : 240u);
    right[mismatch_index] = cat::byte(left_less ? 240u : 1u);
+   cat::verify(cat::detail::scan_memory_avx2<memory_scan::equality>(
+      left.data(), right.data(), bytes
+   ));
 
-   auto const result =
-      cat::detail::compare_memory_avx2(left.data(), right.data(), bytes);
-   cat::verify(left_less ? result < 0 : result > 0);
+   // A later difference must not be found instead.
+   if (mismatch_index != previous_index(bytes)) {
+      left[previous_index(bytes)] = cat::byte(0u);
+      right[previous_index(bytes)] = cat::byte(255u);
+   }
+
+   cat::maybe<cat::idx> const result =
+      cat::detail::scan_memory_avx2<memory_scan::mismatch>(
+         left.data(), right.data(), bytes
+      );
+   cat::verify(result.has_value());
+   cat::verify(result.value() == mismatch_index);
+   cat::verify((left[mismatch_index] < right[mismatch_index]) == left_less);
+}
+
+void
+compare_medium_case(cat::idx bytes, cat::idx mismatch_index) {
+   cat::array<cat::byte, 512> left{};
+   cat::array<cat::byte, 512> right{};
+
+   initialize_bytes(left.data(), left.size());
+   initialize_bytes(right.data(), right.size());
+   using cat::detail::memory_scan;
+   cat::verify(!cat::detail::scan_memory_medium<memory_scan::equality>(
+      left.data(), right.data(), bytes
+   ));
+   cat::verify(cat::detail::scan_memory_medium<memory_scan::mismatch>(
+                  left.data(), right.data(), bytes
+   )
+                  .is_empty());
+
+   left[mismatch_index] = cat::byte(1u);
+   right[mismatch_index] = cat::byte(240u);
+   cat::verify(cat::detail::scan_memory_medium<memory_scan::equality>(
+      left.data(), right.data(), bytes
+   ));
+
+   // A later difference must not be found instead.
+   left[previous_index(bytes)] = cat::byte(0u);
+   right[previous_index(bytes)] = cat::byte(255u);
+   cat::verify(
+      cat::detail::scan_memory_medium<memory_scan::mismatch>(
+         left.data(), right.data(), bytes
+      )
+         .value()
+      == mismatch_index
+   );
+}
+
+// Verify `scan_memory_large` with `Simd` in both modes. It is inlined, so the
+// `$simd_switch` arm that calls it supplies its `gnu::target`.
+template <typename Simd>
+[[gnu::always_inline]]
+inline void
+verify_large(
+   cat::byte const* _Nonnull p_left, cat::byte const* _Nonnull p_right,
+   cat::idx bytes, cat::maybe<cat::idx> mismatch
+) {
+   using cat::detail::memory_scan;
+   cat::verify(
+      cat::detail::scan_memory_large<memory_scan::equality, Simd>(
+         p_left, p_right, bytes
+      )
+      == mismatch.has_value()
+   );
+   cat::verify(
+      cat::detail::scan_memory_large<memory_scan::mismatch, Simd>(
+         p_left, p_right, bytes
+      )
+      == mismatch
+   );
+}
+
+template <typename Simd>
+[[gnu::always_inline]]
+inline void
+compare_large_case(cat::idx bytes, cat::idx mismatch_index) {
+   cat::array<cat::byte, 1_uki> left{};
+   cat::array<cat::byte, 1_uki> right{};
+
+   initialize_bytes(left.data(), bytes);
+   initialize_bytes(right.data(), bytes);
+   verify_large<Simd>(left.data(), right.data(), bytes, cat::nullopt);
+
+   left[mismatch_index] = cat::byte(1u);
+   right[mismatch_index] = cat::byte(240u);
+   verify_large<Simd>(left.data(), right.data(), bytes, mismatch_index);
+
+   // A later difference must not be found instead.
+   left[previous_index(bytes)] = cat::byte(0u);
+   right[previous_index(bytes)] = cat::byte(255u);
+   verify_large<Simd>(left.data(), right.data(), bytes, mismatch_index);
+}
+
+// Call `check` with SSE2 and AVX2 `Simd`s, each forced by a single `$abi`.
+template <typename Check>
+[[gnu::always_inline]]
+inline void
+for_each_large_simd(Check const& check) {
+   $simd_switch($abi(sse2, { check.template operator()<char1x_>(); }));
+   $simd_switch(
+      $abi(avx2, { check.template operator()<char1x_>(); }), default: break;
+   );
 }
 
 }  // namespace
@@ -386,7 +544,37 @@ $test(copy_memory_overlap_large_non_temporal_tiers) {
    large_overlap_case(bytes, 128u, 517u);
 }
 
-$test(compare_memory) {
+static_assert([] {
+   cat::array<unsigned char, 4u> const left = {1u, 2u, 3u, 4u};
+   cat::array<unsigned char, 4u> const right = {1u, 2u, 9u, 0u};
+   return cat::find_disjoint_memory(left.data(), right.data(), 4u) == 2u
+          && cat::find_disjoint_memory(left.data(), left.data(), 4u) == 4u
+          && cat::is_memory_equal(left.data(), left.data(), 4u)
+          && !cat::is_memory_equal(left.data(), right.data(), 4u);
+}());
+
+$test(memory_comparison_edges) {
+   cat::array<cat::byte, 4u> const left = {
+      cat::byte(1u), cat::byte(2u), cat::byte(3u), cat::byte(4u)
+   };
+   cat::array<cat::byte, 4u> const right = {
+      cat::byte(9u), cat::byte(9u), cat::byte(9u), cat::byte(9u)
+   };
+
+   // Zero bytes are equal whatever they point to.
+   cat::verify(cat::find_disjoint_memory(left.data(), right.data(), 0u) == 0u);
+   cat::verify(cat::is_memory_equal(left.data(), right.data(), 0u));
+   cat::verify(
+      cat::find_disjoint_memory_scalar(left.data(), right.data(), 0u) == 0u
+   );
+   cat::verify(cat::is_memory_equal_scalar(left.data(), right.data(), 0u));
+
+   // The same range is equal to itself.
+   cat::verify(cat::find_disjoint_memory(left.data(), left.data(), 4u) == 4u);
+   cat::verify(cat::is_memory_equal(left.data(), left.data(), 4u));
+}
+
+$test(find_disjoint_memory) {
    using namespace cat::literals;
 
    {
@@ -394,30 +582,31 @@ $test(compare_memory) {
       cat::array<cat::byte, 64> right{};
 
       // Zero-length compare is equal regardless of contents.
-      cat::verify(cat::compare_memory(left.data(), right.data(), 0u) == 0);
+      cat::verify(memory_order(left.data(), right.data(), 0u) == 0);
 
       initialize_bytes(left.data(), left.size(), cat::byte(0u));
       initialize_bytes(right.data(), right.size(), cat::byte(0u));
-      cat::verify(cat::compare_memory(left.data(), right.data(), 64u) == 0);
+      cat::verify(memory_order(left.data(), right.data(), 64u) == 0);
       right[10] = cat::byte(240u);
-      cat::verify(cat::compare_memory(left.data(), right.data(), 64u) < 0);
+      cat::verify(memory_order(left.data(), right.data(), 64u) < 0);
       right[10] = cat::byte(0u);
-      cat::verify(cat::compare_memory(left.data(), right.data(), 64u) > 0);
+      cat::verify(memory_order(left.data(), right.data(), 64u) > 0);
    }
 
-   // Large enough to run the SIMD pipeline in `detail::compare_memory_impl`
-   // (`bytes` greater than eight native `char1x_` vectors).
+   // Large enough to run the SIMD pipeline in
+   // `detail::find_disjoint_memory_impl` (`bytes` greater than eight native
+   // `char1x_` vectors).
    {
       constexpr idx n = 2'000;
       cat::array<cat::byte, n> left{};
       cat::array<cat::byte, n> right{};
       initialize_bytes(left.data(), n);
       initialize_bytes(right.data(), n);
-      cat::verify(cat::compare_memory(left.data(), right.data(), n) == 0);
+      cat::verify(memory_order(left.data(), right.data(), n) == 0);
       right[1'500] = cat::byte(0u);
-      cat::verify(cat::compare_memory(left.data(), right.data(), n) > 0);
+      cat::verify(memory_order(left.data(), right.data(), n) > 0);
       right[1'500] = cat::byte(255u);
-      cat::verify(cat::compare_memory(left.data(), right.data(), n) < 0);
+      cat::verify(memory_order(left.data(), right.data(), n) < 0);
    }
 }
 
@@ -447,6 +636,29 @@ $test(compare_memory_all_size_tiers_and_mismatch_positions) {
       compare_mismatch_case(bytes, previous_index(bytes), true);
    }
 
+   // Every position, so no byte between overlapping chunks goes unchecked.
+   // Sizes past 255 run the large path's batches and tail.
+   for (cat::idx bytes = 1u; bytes <= 600u; ++bytes) {
+      for (cat::idx mismatch = 0u; mismatch < bytes; ++mismatch) {
+         compare_mismatch_case(bytes, mismatch, mismatch % 2u == 0u);
+      }
+   }
+
+   // Equal ranges at every size, from unaligned addresses.
+   for (cat::idx bytes = 1u; bytes <= 300u; ++bytes) {
+      compare_equal_case(bytes, 1u, 3u);
+   }
+
+   // Positions around the large path's batches and its overlapping tail.
+   for (cat::idx bytes : {1'024_idx, 1'057_idx, 4'095_idx}) {
+      for (cat::idx mismatch = 0u; mismatch < 160u; ++mismatch) {
+         compare_mismatch_case(bytes, mismatch, true);
+         compare_mismatch_case(
+            bytes, cat::idx(previous_index(bytes) - mismatch), false
+         );
+      }
+   }
+
    compare_equal_case(257u, 3u, 5u);
 }
 
@@ -461,11 +673,33 @@ $test(compare_memory_large_non_temporal_size) {
 
    initialize_bytes(left.data(), bytes);
    initialize_bytes(right.data(), bytes);
-   cat::verify(cat::compare_memory(left.data(), right.data(), bytes) == 0);
+   cat::verify(memory_order(left.data(), right.data(), bytes) == 0);
    cat::idx const last = previous_index(bytes);
    left[last] = cat::byte(1u);
    right[last] = cat::byte(240u);
-   cat::verify(cat::compare_memory(left.data(), right.data(), bytes) < 0);
+   cat::verify(memory_order(left.data(), right.data(), bytes) < 0);
+}
+
+// The large path with each SIMD ISA.
+$test(compare_memory_direct_large_paths) {
+   for_each_large_simd([]<typename Simd>() [[gnu::always_inline]] {
+      // It needs at least four `Simd`s. Cover six batches and every tail.
+      for (cat::idx bytes = 4u * sizeof(Simd); bytes <= 24u * sizeof(Simd);
+           ++bytes) {
+         for (cat::idx mismatch = 0u; mismatch < bytes; ++mismatch) {
+            compare_large_case<Simd>(bytes, mismatch);
+         }
+      }
+   });
+}
+
+// The SSE2 path that runs when AVX2 is unavailable.
+$test(compare_memory_direct_medium_paths) {
+   for (cat::idx bytes = 33u; bytes <= 127u; ++bytes) {
+      for (cat::idx mismatch = 0u; mismatch < bytes; ++mismatch) {
+         compare_medium_case(bytes, mismatch);
+      }
+   }
 }
 
 $test(compare_memory_direct_avx2_paths_when_supported) {
@@ -473,19 +707,130 @@ $test(compare_memory_direct_avx2_paths_when_supported) {
       return;
    }
 
-   for (cat::idx bytes : {
-           17_idx,
-           32_idx,
-           33_idx,
-           63_idx,
-           64_idx,
-           95_idx,
-           96_idx,
-           127_idx,
-           160_idx,
-        }) {
-      compare_avx2_case(bytes, 0u, true);
-      compare_avx2_case(bytes, bytes / 2u, false);
-      compare_avx2_case(bytes, previous_index(bytes), true);
+   for (cat::idx bytes = 17u; bytes <= 255u; ++bytes) {
+      for (cat::idx mismatch = 0u; mismatch < bytes; ++mismatch) {
+         compare_avx2_case(bytes, mismatch, mismatch % 2u == 0u);
+      }
+   }
+}
+
+namespace {
+
+// Map a page between two inaccessible pages, and return its first byte.
+auto
+map_guarded_page() -> cat::byte* _Nonnull {
+   cat::byte* const p_mapping =
+      nix::sys_mmap(
+         nullptr, 3u * cat::page_size, nix::memory_protection_flags::read_write,
+         nix::memory_flags::privately | nix::memory_flags::anonymous,
+         nix::invalid_file_descriptor, 0
+      )
+         .verify();
+   nix::sys_mprotect(p_mapping, cat::page_size, nix::memory_protection_flags::none)
+      .verify();
+   nix::sys_mprotect(
+      p_mapping + 2u * cat::page_size, cat::page_size,
+      nix::memory_protection_flags::none
+   )
+      .verify();
+   return p_mapping + cat::page_size;
+}
+
+// Run every comparison over `[p_left, p_left + bytes)` and
+// `[p_right, p_right + bytes)`, which hold equal bytes.
+void
+verify_in_bounds(
+   cat::byte* _Nonnull p_left, cat::byte* _Nonnull p_right, cat::idx bytes
+) {
+   using cat::detail::memory_scan;
+   bool const has_avx2 = cat::detail::simd_dispatch_priority >= 80;
+
+   auto const verify_tiers = [&](cat::maybe<cat::idx> mismatch) {
+      if (bytes >= 33u && bytes <= 127u) {
+         cat::verify(
+            cat::detail::scan_memory_medium<memory_scan::equality>(
+               p_left, p_right, bytes
+            )
+            == mismatch.has_value()
+         );
+         cat::verify(
+            cat::detail::scan_memory_medium<memory_scan::mismatch>(
+               p_left, p_right, bytes
+            )
+            == mismatch
+         );
+      }
+
+      if (has_avx2 && bytes >= 17u && bytes <= 255u) {
+         cat::verify(
+            cat::detail::scan_memory_avx2<memory_scan::equality>(
+               p_left, p_right, bytes
+            )
+            == mismatch.has_value()
+         );
+         cat::verify(
+            cat::detail::scan_memory_avx2<memory_scan::mismatch>(
+               p_left, p_right, bytes
+            )
+            == mismatch
+         );
+      }
+
+      for_each_large_simd([&]<typename Simd>() [[gnu::always_inline]] {
+         if (bytes >= 4u * sizeof(Simd)) {
+            verify_large<Simd>(p_left, p_right, bytes, mismatch);
+         }
+      });
+   };
+
+   cat::verify(cat::find_disjoint_memory(p_left, p_right, bytes) == bytes);
+   cat::verify(cat::find_disjoint_memory_scalar(p_left, p_right, bytes) == bytes);
+   cat::verify(cat::is_memory_equal(p_left, p_right, bytes));
+   cat::verify(cat::is_memory_equal_scalar(p_left, p_right, bytes));
+   verify_tiers(cat::nullopt);
+
+   if (bytes == 0u) {
+      return;
+   }
+
+   // A difference in the first or last byte, next to an inaccessible page.
+   for (cat::idx const position : {0_idx, previous_index(bytes)}) {
+      cat::byte const original = p_right[position];
+      p_right[position] = cat::byte(original.value ^ 1u);
+      cat::verify(cat::find_disjoint_memory(p_left, p_right, bytes) == position);
+      cat::verify(!cat::is_memory_equal(p_left, p_right, bytes));
+      verify_tiers(position);
+      p_right[position] = original;
+   }
+}
+
+}  // namespace
+
+// Each range starts right after or ends right before an inaccessible page, so
+// reading outside it segfaults.
+$test(memory_comparison_stays_in_bounds) {
+   cat::byte* _Nonnull const p_left_page = map_guarded_page();
+   cat::byte* _Nonnull const p_right_page = map_guarded_page();
+   $defer {
+      nix::sys_munmap(p_left_page - cat::page_size, 3u * cat::page_size)
+         .verify();
+      nix::sys_munmap(p_right_page - cat::page_size, 3u * cat::page_size)
+         .verify();
+   };
+
+   for (cat::idx bytes = 0u; bytes <= cat::page_size; ++bytes) {
+      for (bool const is_left_at_end : {false, true}) {
+         for (bool const is_right_at_end : {false, true}) {
+            cat::byte* _Nonnull const p_left =
+               is_left_at_end ? p_left_page + cat::page_size - bytes
+                              : p_left_page;
+            cat::byte* _Nonnull const p_right =
+               is_right_at_end ? p_right_page + cat::page_size - bytes
+                               : p_right_page;
+            initialize_bytes(p_left, bytes);
+            initialize_bytes(p_right, bytes);
+            verify_in_bounds(p_left, p_right, bytes);
+         }
+      }
    }
 }

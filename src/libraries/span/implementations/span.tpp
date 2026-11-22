@@ -53,14 +53,14 @@ span<T, fixed_extent>::operator<=>(R const& rhs) const {
    if !consteval {
       if constexpr (is_trivially_lexicographically_comparable<remove_cv<T>>) {
          if (shared_size > 0u) {
-            signed int const comparison = __builtin_memcmp(
-               this->data(), rhs.data(), (shared_size * sizeof(T)).raw
-            );
-            if (comparison < 0) {
-               return category_type(std::strong_ordering::less);
-            }
-            if (comparison > 0) {
-               return category_type(std::strong_ordering::greater);
+            idx const bytes = shared_size * sizeof(T);
+            idx const offset =
+               find_disjoint_memory(this->data(), rhs.data(), bytes);
+            if (offset != bytes) {
+               return category_type(
+                  reinterpret_cast<unsigned char const*>(this->data())[offset]
+                  <=> reinterpret_cast<unsigned char const*>(rhs.data())[offset]
+               );
             }
          }
 
@@ -117,10 +117,9 @@ span<T, fixed_extent>::operator==(R const& rhs) const -> bool {
 
    if !consteval {
       if constexpr (is_trivially_equality_comparable<remove_cv<T>>) {
-         return __builtin_memcmp(
-                   this->data(), rhs.data(), (lhs_size * sizeof(T)).raw
-                )
-                == 0;
+         return is_memory_equal(
+            this->data(), rhs.data(), lhs_size * sizeof(T)
+         );
       }
    }
 

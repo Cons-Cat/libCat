@@ -82,36 +82,30 @@ using wzstr_span = basic_str_span<wchar_t, str_flags::null_terminated>;
 template <typename CharT>
 [[nodiscard]]
 constexpr auto
-compare_strings_scalar(
+compare_strings(
    basic_str_span<CharT const> string_1, basic_str_span<CharT const> string_2
-) noexcept(!__has_feature(cxx_exceptions)) -> bool {
+) noexcept -> bool {
    if (string_1.size() != string_2.size()) {
       return false;
    }
 
-   for (idx i = 0u; i < string_1.size(); ++i) {
-      if (string_1[i] != string_2[i]) {
-         return false;
+   // Constant evaluation cannot read these characters as bytes.
+   if consteval {
+      for (idx i = 0u; i < string_1.size(); ++i) {
+         if (string_1[i] != string_2[i]) {
+            return false;
+         }
       }
+
+      return true;
+   } else {
+      return string_1.size() == 0u
+             || is_memory_equal(
+                string_1.data(), string_2.data(),
+                string_1.size() * sizeof(CharT)
+             );
    }
-
-   return true;
 }
-
-template <typename CharT>
-[[nodiscard]]
-constexpr auto
-compare_strings(
-   basic_str_span<CharT const> string_1, basic_str_span<CharT const> string_2
-) noexcept -> bool {
-   return compare_strings_scalar(string_1, string_2);
-}
-
-[[nodiscard]]
-constexpr auto
-compare_strings(str_view string_1, str_view string_2) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> bool;
 
 template <typename String>
 concept is_safe_string = requires(String const& string) {

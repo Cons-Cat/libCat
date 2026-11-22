@@ -1,25 +1,6 @@
 #include <cat/memory>
 #include <cat/string>
 
-namespace {
-
-[[nodiscard]]
-auto
-compare_memory_as_memcmp_int(
-   void const* _Nonnull p_lhs, void const* _Nonnull p_rhs, __SIZE_TYPE__ bytes
-) -> int {
-   auto const order = cat::compare_memory(p_lhs, p_rhs, bytes);
-   if (order < 0) {
-      return -1;
-   }
-   if (order > 0) {
-      return 1;
-   }
-   return 0;
-}
-
-}  // namespace
-
 extern "C"
 #if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
    // ASan and TSan use their own `memcmp()` by DLL injection, so we must
@@ -27,16 +8,25 @@ extern "C"
    [[gnu::visibility("hidden")]]
 #endif
    auto
+   // NOLINTNEXTLINE(bugprone-std-namespace-modification)
    std::memcmp(
       void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
       __SIZE_TYPE__ bytes
-   ) -> int {
-   return compare_memory_as_memcmp_int(p_lhs, p_rhs, bytes);
+   ) noexcept -> int {
+   cat::idx const offset = cat::find_disjoint_memory(p_lhs, p_rhs, bytes);
+   if (offset == bytes) {
+      return 0;
+   }
+
+   unsigned char const left =
+      static_cast<unsigned char const* _Nonnull>(p_lhs)[offset];
+   unsigned char const right =
+      static_cast<unsigned char const* _Nonnull>(p_rhs)[offset];
+   return left < right ? -1 : 1;
 }
 
 // Clang lowers equality-only comparisons such as `__builtin_memcmp(...) == 0`
-// into `bcmp` in optimized builds. `bcmp` returns zero when the regions are
-// equal and any non-zero value otherwise.
+// into `bcmp`, so it's implemented too.
 extern "C"
 #if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
    [[gnu::visibility("hidden")]]
@@ -45,6 +35,6 @@ extern "C"
    bcmp(
       void const* _Nonnull p_lhs, void const* _Nonnull p_rhs,
       __SIZE_TYPE__ bytes
-   ) -> int {
-   return compare_memory_as_memcmp_int(p_lhs, p_rhs, bytes) != 0;
+   ) noexcept -> int {
+   return cat::is_memory_equal(p_lhs, p_rhs, bytes) ? 0 : 1;
 }

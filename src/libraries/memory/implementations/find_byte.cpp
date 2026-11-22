@@ -172,10 +172,9 @@ find_grouped_element_large(
 
    for (; position < size; ++position) {
       if (
-         compare_memory_scalar(
+         is_memory_equal_scalar(
             p_haystack + position * element_bytes, p_needle, element_bytes
          )
-         == std::strong_ordering::equal
       ) {
          return position;
       }
@@ -224,10 +223,9 @@ detail::find_memory_impl(
       default:
          for (idx position = 0u; position < size; ++position) {
             if (
-               compare_memory_scalar(
+               is_memory_equal_scalar(
                   p_haystack + position * element_bytes, p_needle, element_bytes
                )
-               == std::strong_ordering::equal
             ) {
                return maybe<idx>{position};
             }

@@ -90,7 +90,8 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/bit/implementations/popcount.cpp
   ${CATLIB}/memory/implementations/copy_memory.cpp
   ${CATLIB}/memory/implementations/copy_memory_backward.cpp
-  ${CATLIB}/memory/implementations/compare_memory.cpp
+  ${CATLIB}/memory/implementations/find_disjoint_memory.cpp
+  ${CATLIB}/memory/implementations/is_memory_equal.cpp
   ${CATLIB}/memory/implementations/find_byte.cpp
   ${CATLIB}/memory/implementations/find_memory_substr.cpp
   ${CATLIB}/memory/implementations/fill_memory_impl.cpp
@@ -522,11 +523,13 @@ set(CAT_HEADER_FILES
   ${CATLIB}/maybe/implementations/narrow_cast.tpp
   ${CATLIB}/memory/cat/memory
   ${CATLIB}/memory/cat/detail/movsb.hpp
-  ${CATLIB}/memory/implementations/compare_memory.tpp
-  ${CATLIB}/memory/implementations/compare_memory_avx2.tpp
-  ${CATLIB}/memory/implementations/compare_memory_chunk.tpp
-  ${CATLIB}/memory/implementations/compare_memory_medium.tpp
-  ${CATLIB}/memory/implementations/compare_memory_small.tpp
+  ${CATLIB}/memory/implementations/find_disjoint_memory.tpp
+  ${CATLIB}/memory/implementations/is_memory_equal.tpp
+  ${CATLIB}/memory/implementations/scan_memory.tpp
+  ${CATLIB}/memory/implementations/scan_memory_avx2.tpp
+  ${CATLIB}/memory/implementations/scan_memory_chunk.tpp
+  ${CATLIB}/memory/implementations/scan_memory_medium.tpp
+  ${CATLIB}/memory/implementations/scan_memory_small.tpp
   ${CATLIB}/memory/implementations/copy_memory.tpp
   ${CATLIB}/memory/implementations/copy_memory_backward.tpp
   ${CATLIB}/memory/implementations/copy_memory_backward_large.tpp
@@ -701,7 +704,6 @@ set(CAT_HEADER_FILES
   ${CATLIB}/linux/implementations/futex.tpp
   ${CATLIB}/meta/implementations/constant_evaluate.tpp
   ${CATLIB}/meta/implementations/common_reference.tpp
-  ${CATLIB}/string/implementations/string_ops.tpp
   ${CATLIB}/string/implementations/format_str_vec.tpp
   ${CATLIB}/version/cat/version
   ${CATLIB}/string/implementations/format_str_inplace.tpp

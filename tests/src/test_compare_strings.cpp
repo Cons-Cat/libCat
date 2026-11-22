@@ -18,12 +18,12 @@ verify_string_equality_matrix(Strings const&... strings) {
 }  // namespace
 
 $test(compare_strings) {
-   // The runtime SIMD `cat::compare_strings_detail` is bounded by the
-   // compared strings' size, but constructing a `cat::str_view` from a small
-   // string literal goes through `cat::string_length`, whose 16-byte SIMD
-   // over-read trips ASan on `.rodata` redzones. Tests that rely on small
-   // literals are commented out below until `string_length` learns to handle
-   // small inputs without over-reading.
+   // The runtime SIMD `cat::is_memory_equal` is bounded by the compared
+   // strings' size, but constructing a `cat::str_view` from a small string
+   // literal goes through `cat::string_length`, whose 16-byte SIMD over-read
+   // trips ASan on `.rodata` redzones. Tests that rely on small literals are
+   // commented out below until `string_length` learns to handle small inputs
+   // without over-reading.
    //
    // // char const* p_string_1 = "Hello!";
    // // cat::str_view string_1 = "Hello!";
