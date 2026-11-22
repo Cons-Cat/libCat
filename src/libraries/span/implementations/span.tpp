@@ -117,9 +117,7 @@ span<T, fixed_extent>::operator==(R const& rhs) const -> bool {
 
    if !consteval {
       if constexpr (is_trivially_equality_comparable<remove_cv<T>>) {
-         return is_memory_equal(
-            this->data(), rhs.data(), lhs_size * sizeof(T)
-         );
+         return is_memory_equal(this->data(), rhs.data(), lhs_size * sizeof(T));
       }
    }
 

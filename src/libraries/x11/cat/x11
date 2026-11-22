@@ -1186,9 +1186,10 @@ class connection : detail::connection_state {
          cat::uint2 name_length;
          cat::uint2 _ = 0u;
       } request{
-         .header =
-            {.operation = operation_code::intern_atom,
-                     .data = as_flag(only_if_exists)},
+         .header = {
+                    .operation = operation_code::intern_atom,
+                    .data = as_flag(only_if_exists)
+         },
          .name_length = name_length.value(),
       };
 
@@ -1218,11 +1219,10 @@ class connection : detail::connection_state {
          cat::uint1 _[3] = {};  // NOLINT
          cat::uint4 length;
       } request{
-         .header =
-            {
-                     .operation = operation_code::change_property,
-                     .data = cat::to_underlying(mode),
-                     },
+         .header = {
+                    .operation = operation_code::change_property,
+                    .data = cat::to_underlying(mode),
+                    },
          .target = target,
          .property = property,
          .type = type,
@@ -1260,11 +1260,10 @@ class connection : detail::connection_state {
          x11::atom property, type;
          cat::uint4 offset, length;
       } request{
-         .header =
-            {
-                     .operation = operation_code::get_property,
-                     .data = as_flag(delete_after),
-                     },
+         .header = {
+                    .operation = operation_code::get_property,
+                    .data = as_flag(delete_after),
+                    },
          .target = target,
          .property = property,
          .type = type,
@@ -1287,11 +1286,10 @@ class connection : detail::connection_state {
          event_mask mask;
          cat::array<cat::byte, 32u> event;
       } request{
-         .header =
-            {
-                     .operation = operation_code::send_event,
-                     .data = as_flag(propagate),
-                     },
+         .header = {
+                    .operation = operation_code::send_event,
+                    .data = as_flag(propagate),
+                    },
          .destination = destination,
          .mask = mask,
          .event = {                                      },
@@ -1312,8 +1310,9 @@ class connection : detail::connection_state {
          x11::window focus;
          cat::uint4 time;
       } request{
-         .header =
-            {.operation = operation_code::set_input_focus, .data = revert_to},
+         .header = {
+                    .operation = operation_code::set_input_focus, .data = revert_to
+         },
          .focus = focus,
          .time = time,
       };

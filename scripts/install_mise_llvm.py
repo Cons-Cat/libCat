@@ -3,8 +3,9 @@
 # Download and stage the pinned Clang toolchain from the `lilian` branch of
 # Cons-Cat/llvm-project. Each GitHub Release there is built by
 # `lilian/build-release.sh` in manylinux_2_28, so it runs on any distribution
-# with GlibC 2.28 or newer. `CAT_LLVM_VERSION` (the release tag) and
-# `CAT_LLVM_SHA256` are pinned in `mise.toml`.
+# with GlibC 2.28 or newer. It is compiled with full LTO and PGO, and
+# optimized with BOLT, from profiles of building libCat. `CAT_LLVM_VERSION`
+# (the release tag) and `CAT_LLVM_SHA256` are pinned in `mise.toml`.
 
 import hashlib
 import os
@@ -30,6 +31,10 @@ REQUIRED_TOOLS = (
     "lld",
     "ld.lld",
     "lld-link",
+    "llvm-lib",
+    "llvm-mt",
+    "llvm-rc",
+    "llvm-bolt",
     "opt",
     "llvm-ar",
     "llvm-ranlib",
@@ -100,7 +105,8 @@ def main() -> int:
         )
         missing = [tool for tool in REQUIRED_TOOLS if not (root / "bin" / tool).exists()]
         if missing:
-            raise SystemExit(f"missing expected tool(s): {', '.join(missing)}")        (root / "VERSION").write_text(tag + "\n", encoding="utf-8")
+            raise SystemExit(f"missing expected tool(s): {', '.join(missing)}")
+        (root / "VERSION").write_text(tag + "\n", encoding="utf-8")
 
     for tool in ("clang++", "clangd", "ld.lld", "clang-format"):
         subprocess.run([str(root / "bin" / tool), "--version"], check=True)

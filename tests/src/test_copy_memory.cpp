@@ -8,8 +8,8 @@
 #include <cat/memory>
 #include <cat/simd_switch>
 
-#include "../../src/libraries/memory/implementations/scan_memory_avx2.tpp"
 #include "../../src/libraries/memory/implementations/scan_memory.tpp"
+#include "../../src/libraries/memory/implementations/scan_memory_avx2.tpp"
 #include "../../src/libraries/memory/implementations/scan_memory_medium.tpp"
 #include "../unit_tests.hpp"
 
@@ -157,12 +157,16 @@ compare_equal_case(cat::idx bytes, cat::idx left_skew, cat::idx right_skew) {
       )
       == bytes
    );
-   cat::verify(cat::is_memory_equal(
-      left.data() + left_skew, right.data() + right_skew, bytes
-   ));
-   cat::verify(cat::is_memory_equal_scalar(
-      left.data() + left_skew, right.data() + right_skew, bytes
-   ));
+   cat::verify(
+      cat::is_memory_equal(
+         left.data() + left_skew, right.data() + right_skew, bytes
+      )
+   );
+   cat::verify(
+      cat::is_memory_equal_scalar(
+         left.data() + left_skew, right.data() + right_skew, bytes
+      )
+   );
 }
 
 void
@@ -197,8 +201,7 @@ compare_mismatch_case(cat::idx bytes, cat::idx mismatch_index, bool left_less) {
       cat::find_disjoint_memory(p_left, p_right, bytes) == mismatch_index
    );
    cat::verify(
-      cat::find_disjoint_memory_scalar(p_left, p_right, bytes)
-      == mismatch_index
+      cat::find_disjoint_memory_scalar(p_left, p_right, bytes) == mismatch_index
    );
 }
 
@@ -213,16 +216,20 @@ compare_avx2_case(cat::idx bytes, cat::idx mismatch_index, bool left_less) {
    cat::verify(!cat::detail::scan_memory_avx2<memory_scan::equality>(
       left.data(), right.data(), bytes
    ));
-   cat::verify(cat::detail::scan_memory_avx2<memory_scan::mismatch>(
-                  left.data(), right.data(), bytes
-   )
-                  .is_empty());
+   cat::verify(
+      cat::detail::scan_memory_avx2<memory_scan::mismatch>(
+         left.data(), right.data(), bytes
+      )
+         .is_empty()
+   );
 
    left[mismatch_index] = cat::byte(left_less ? 1u : 240u);
    right[mismatch_index] = cat::byte(left_less ? 240u : 1u);
-   cat::verify(cat::detail::scan_memory_avx2<memory_scan::equality>(
-      left.data(), right.data(), bytes
-   ));
+   cat::verify(
+      cat::detail::scan_memory_avx2<memory_scan::equality>(
+         left.data(), right.data(), bytes
+      )
+   );
 
    // A later difference must not be found instead.
    if (mismatch_index != previous_index(bytes)) {
@@ -250,16 +257,20 @@ compare_medium_case(cat::idx bytes, cat::idx mismatch_index) {
    cat::verify(!cat::detail::scan_memory_medium<memory_scan::equality>(
       left.data(), right.data(), bytes
    ));
-   cat::verify(cat::detail::scan_memory_medium<memory_scan::mismatch>(
-                  left.data(), right.data(), bytes
-   )
-                  .is_empty());
+   cat::verify(
+      cat::detail::scan_memory_medium<memory_scan::mismatch>(
+         left.data(), right.data(), bytes
+      )
+         .is_empty()
+   );
 
    left[mismatch_index] = cat::byte(1u);
    right[mismatch_index] = cat::byte(240u);
-   cat::verify(cat::detail::scan_memory_medium<memory_scan::equality>(
-      left.data(), right.data(), bytes
-   ));
+   cat::verify(
+      cat::detail::scan_memory_medium<memory_scan::equality>(
+         left.data(), right.data(), bytes
+      )
+   );
 
    // A later difference must not be found instead.
    left[previous_index(bytes)] = cat::byte(0u);
@@ -324,9 +335,8 @@ template <typename Check>
 inline void
 for_each_large_simd(Check const& check) {
    $simd_switch($abi(sse2, { check.template operator()<char1x_>(); }));
-   $simd_switch(
-      $abi(avx2, { check.template operator()<char1x_>(); }), default: break;
-   );
+   $simd_switch($abi(avx2, { check.template operator()<char1x_>(); }),
+                default : break;);
 }
 
 }  // namespace
@@ -726,7 +736,9 @@ map_guarded_page() -> cat::byte* _Nonnull {
          nix::invalid_file_descriptor, 0
       )
          .verify();
-   nix::sys_mprotect(p_mapping, cat::page_size, nix::memory_protection_flags::none)
+   nix::sys_mprotect(
+      p_mapping, cat::page_size, nix::memory_protection_flags::none
+   )
       .verify();
    nix::sys_mprotect(
       p_mapping + 2u * cat::page_size, cat::page_size,
@@ -784,7 +796,9 @@ verify_in_bounds(
    };
 
    cat::verify(cat::find_disjoint_memory(p_left, p_right, bytes) == bytes);
-   cat::verify(cat::find_disjoint_memory_scalar(p_left, p_right, bytes) == bytes);
+   cat::verify(
+      cat::find_disjoint_memory_scalar(p_left, p_right, bytes) == bytes
+   );
    cat::verify(cat::is_memory_equal(p_left, p_right, bytes));
    cat::verify(cat::is_memory_equal_scalar(p_left, p_right, bytes));
    verify_tiers(cat::nullopt);
@@ -797,7 +811,9 @@ verify_in_bounds(
    for (cat::idx const position : {0_idx, previous_index(bytes)}) {
       cat::byte const original = p_right[position];
       p_right[position] = cat::byte(original.value ^ 1u);
-      cat::verify(cat::find_disjoint_memory(p_left, p_right, bytes) == position);
+      cat::verify(
+         cat::find_disjoint_memory(p_left, p_right, bytes) == position
+      );
       cat::verify(!cat::is_memory_equal(p_left, p_right, bytes));
       verify_tiers(position);
       p_right[position] = original;

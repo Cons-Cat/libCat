@@ -603,12 +603,16 @@ static_assert(
 // Compute floor(e * c - s).
 enum class [[clang::enum_extensibility(closed)]] multiply : uint4::raw_type {
 };
+
 enum class [[clang::enum_extensibility(closed)]] subtract : uint4::raw_type {
 };
+
 enum class [[clang::enum_extensibility(closed)]] shift : uword::raw_type {
 };
+
 enum class [[clang::enum_extensibility(closed)]] min_exponent : int4::raw_type {
 };
+
 enum class [[clang::enum_extensibility(closed)]] max_exponent : int4::raw_type {
 };
 

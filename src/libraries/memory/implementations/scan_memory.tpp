@@ -83,8 +83,7 @@ scan_memory_large(
          return true;
       } else {
          return scan_memory_at<scan>(
-            scan_memory_first_mismatch_in_batch(left_simds, right_simds),
-            offset
+            scan_memory_first_mismatch_in_batch(left_simds, right_simds), offset
          );
       }
    }

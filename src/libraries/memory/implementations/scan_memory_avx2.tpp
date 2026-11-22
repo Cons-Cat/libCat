@@ -34,16 +34,13 @@ scan_memory_strided(
       }
 
       return scan_memory_at<scan>(
-         scan_memory_compare_chunk<Simd>(p_left + tail, p_right + tail),
-         tail
+         scan_memory_compare_chunk<Simd>(p_left + tail, p_right + tail), tail
       );
    } else {
-      auto equal =
-         scan_memory_equal_lanes<Simd>(p_left + tail, p_right + tail);
+      auto equal = scan_memory_equal_lanes<Simd>(p_left + tail, p_right + tail);
       for (idx offset = 0u; offset < tail; offset += simd_size) {
-         equal &= scan_memory_equal_lanes<Simd>(
-            p_left + offset, p_right + offset
-         );
+         equal &=
+            scan_memory_equal_lanes<Simd>(p_left + offset, p_right + offset);
       }
 
       return !equal.all_of();

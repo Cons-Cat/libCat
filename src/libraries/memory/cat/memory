@@ -395,9 +395,9 @@ relocate(T& source, T* _Nonnull p_destination) -> T* _Nonnull {
 
 }  // namespace cat
 
-#include "../implementations/find_disjoint_memory.tpp"
-#include "../implementations/is_memory_equal.tpp"
 #include "../implementations/copy_memory.tpp"
 #include "../implementations/copy_memory_backward.tpp"
+#include "../implementations/find_disjoint_memory.tpp"
 #include "../implementations/find_memory.tpp"
+#include "../implementations/is_memory_equal.tpp"
 #include "../implementations/is_memory_overlapping.tpp"

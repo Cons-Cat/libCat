@@ -495,6 +495,7 @@ $test(meta_function_enum_and_common_type) {
 
    enum enum_type : int {
    };
+
    enum class enum_class_type : int {
    };
 

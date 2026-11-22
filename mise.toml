@@ -9,8 +9,8 @@ sccache = "0.18.0"
 experimental = true
 
 [env]
-CAT_LLVM_VERSION = "lilian-d4c6c69e0d00"
-CAT_LLVM_SHA256 = "24fd86e8736255cece7558a0a12277de8ac95afde8aaf626cfc30a293eed42ee"
+CAT_LLVM_VERSION = "lilian-b4be4c22943e"
+CAT_LLVM_SHA256 = "a2c7b3e34aa0ddedf469474c00679eca320fbfaf924048219567f7ca4f3feef5"
 CC = "clang"
 CXX = "clang++"
 CMAKE_CXX_FLAGS = "-fdiagnostics-color=always"
