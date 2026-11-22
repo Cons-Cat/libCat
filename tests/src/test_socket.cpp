@@ -69,9 +69,9 @@ $test(socket_handle_lifecycle_and_nonblocking) {
 
    auto adopted = cat::socket_handle::adopt(cat::move(released));
    cat::verify(!released.is_valid());
-   adopted.close().verify();
+   adopted.close();
    cat::verify(!adopted.is_open());
-   adopted.close().verify();
+   adopted.close();
 }
 
 $test(unix_socket_stream_round_trip) {
@@ -128,9 +128,9 @@ $test(unix_socket_stream_round_trip) {
    cat::verify(response[0] == 'o');
    cat::verify(response[1] == 'k');
 
-   accepted.close().verify();
-   client.close().verify();
-   server.close().verify();
+   accepted.close();
+   client.close();
+   server.close();
    nix::sys_unlink(socket_path.native_handle()).verify();
 }
 

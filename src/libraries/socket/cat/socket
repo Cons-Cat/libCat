@@ -317,8 +317,8 @@ class socket_handle {
       return move(m_handle);
    }
 
-   auto
-   close() noexcept(!__has_feature(cxx_exceptions)) -> scaredy<void, io_error>;
+   void
+   close() noexcept;
 
    auto
    bind(unix_socket_address const& address) const noexcept(

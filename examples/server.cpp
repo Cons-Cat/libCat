@@ -63,7 +63,4 @@ main() -> int {
          cat::println(input).or_exit();
       }
    }
-
-   receiving_socket.close().verify();
-   listening_socket.close().verify();
 }

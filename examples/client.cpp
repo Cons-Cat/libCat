@@ -35,6 +35,4 @@ main(int argc, char* _Nonnull p_argv[]) -> int {
          socket.send(" ").verify();
       }
    }
-
-   socket.close().verify();
 }

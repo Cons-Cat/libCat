@@ -170,13 +170,13 @@ socket_handle::operator=(socket_handle&& other) -> socket_handle& {
    if (this == __builtin_addressof(other)) {
       return *this;
    }
-   auto _ = close();
+   close();
    m_handle = other.release();
    return *this;
 }
 
 socket_handle::~socket_handle() {
-   auto _ = close();
+   close();
 }
 
 auto
@@ -201,18 +201,19 @@ socket_handle::create(
    return static_cast<io_error>(-to_underlying(result.error()));
 }
 
-auto
-socket_handle::close() noexcept(!__has_feature(cxx_exceptions))
-   -> scaredy<void, io_error> {
+void
+socket_handle::close() noexcept {
    if (!is_open()) {
-      return {};
+      return;
    }
    cat::native_handle const handle = release();
    iword const value = detail::native_handle_access::value(handle);
    nix::file_descriptor const descriptor =
       value == -1 ? nix::invalid_file_descriptor
                   : nix::file_descriptor(uint4(value));
-   return expand_socket_result<void>(nix::sys_close(descriptor));
+
+   // `sys_close()` never fails on a valid socket, so ignore the result.
+   auto _ = nix::sys_close(descriptor);
 }
 
 auto
