@@ -30,19 +30,15 @@ copy_memory_large(
    constexpr idx l3_cache_size = 2_umi;
    constexpr idx step_size = sizeof(Simd) * 8u;
 
-   constexpr ualign simd_align = alignof(Simd);
-   constexpr uword simd_align_bytes = simd_align;
-   uword const dest_mod =
-      (p_destination_handle & simd_align_bytes) % simd_align_bytes;
-   uword const src_mod =
-      (p_source_handle & simd_align_bytes) % simd_align_bytes;
-
+   constexpr ualign alignment = alignof(Simd);
+   // Pad the destination to be SIMD-aligned.
    uword const padding =
-      src_mod == dest_mod
-         ? (simd_align_bytes - dest_mod) % simd_align_bytes
-         : align_up(p_destination_handle, simd_align) - p_destination_handle;
+      align_up(p_destination_handle, alignment) - p_destination_handle;
 
-   cat::copy_memory_scalar(p_source, p_destination, padding.to_idx().assert());
+   // `memmove` copies forward through here when `p_destination < p_source`.
+   cat::copy_memory_backward_scalar(
+      p_source, p_destination, padding.to_idx().assert()
+   );
 
    p_source_handle += padding;
    p_destination_handle += padding;
@@ -62,7 +58,7 @@ copy_memory_large(
    }
 
    bool const dest_simd_aligned =
-      cat::is_aligned(p_destination_handle.get(), simd_align);
+      cat::is_aligned(p_destination_handle.get(), alignment);
 
    Simd vectors[8];
 

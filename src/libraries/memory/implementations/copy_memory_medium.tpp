@@ -5,7 +5,7 @@
 #include <cat/arithmetic>
 #include <cat/simd>
 
-#include "copy_memory_small.tpp"
+#include "copy_memory_backward_small.tpp"
 
 namespace cat::detail {
 
@@ -14,8 +14,7 @@ namespace cat::detail {
 [[clang::no_builtin("memcpy")]]
 inline void
 copy_memory_medium(
-   byte const* _Nonnull __restrict p_source,
-   byte* _Nonnull __restrict p_destination, idx bytes
+   byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 ) noexcept(!__has_feature(cxx_exceptions)) {
    char* p_dest = reinterpret_cast<char*>(p_destination);
    char const* p_src = reinterpret_cast<char const*>(p_source);
@@ -49,9 +48,11 @@ copy_memory_medium(
       byte_offset += 64u;
    }
 
+   // `memmove` copies forward through here when `p_destination < p_source`,
+   // so the tail must load all of its bytes before storing any.
    idx const tail_bytes = (byte_count - byte_offset).to_idx().assert();
    if (tail_bytes > 0u) {
-      copy_memory_small(
+      copy_memory_backward_small(
          p_source + byte_offset, p_destination + byte_offset, tail_bytes
       );
    }

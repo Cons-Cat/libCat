@@ -136,8 +136,11 @@ copy_memory_backward_scalar(
       static_cast<unsigned char* _Nonnull>(p_destination);
 
    if (p_dest <= p_src) {
-      // When the copy is forwards, we wrap `copy_memory_scalar` instead.
-      copy_memory_scalar(p_src, p_dest, bytes);
+#pragma clang loop vectorize(disable)
+#pragma unroll 4
+      for (idx i = 0u; i < bytes; ++i) {
+         p_dest[i] = p_src[i];
+      }
    } else {
 #pragma clang loop vectorize(disable)
 #pragma unroll 4

@@ -8,6 +8,8 @@
 #include <cat/memory>
 #include <cat/simd_switch>
 
+#include "../../src/libraries/memory/implementations/copy_memory_backward_large.tpp"
+#include "../../src/libraries/memory/implementations/copy_memory_large.tpp"
 #include "../../src/libraries/memory/implementations/scan_memory.tpp"
 #include "../../src/libraries/memory/implementations/scan_memory_avx2.tpp"
 #include "../../src/libraries/memory/implementations/scan_memory_medium.tpp"
@@ -333,7 +335,7 @@ compare_large_case(cat::idx bytes, cat::idx mismatch_index) {
 template <typename Check>
 [[gnu::always_inline]]
 inline void
-for_each_large_simd(Check const& check) {
+for_each_simd(Check const& check) {
    $simd_switch($abi(sse2, { check.template operator()<char1x_>(); }));
    $simd_switch($abi(avx2, { check.template operator()<char1x_>(); }),
                 default : break;);
@@ -692,7 +694,7 @@ $test(compare_memory_large_non_temporal_size) {
 
 // The large path with each SIMD ISA.
 $test(compare_memory_direct_large_paths) {
-   for_each_large_simd([]<typename Simd>() [[gnu::always_inline]] {
+   for_each_simd([]<typename Simd>() [[gnu::always_inline]] {
       // It needs at least four `Simd`s. Cover six batches and every tail.
       for (cat::idx bytes = 4u * sizeof(Simd); bytes <= 24u * sizeof(Simd);
            ++bytes) {
@@ -727,6 +729,14 @@ $test(compare_memory_direct_avx2_paths_when_supported) {
 namespace {
 
 // Map a page between two inaccessible pages, and return its first byte.
+// Every size up to 1100 covers every tier and tail length. Past that, sizes
+// near each 64-byte multiple still reach both ends of a page.
+auto
+is_guarded_size(cat::idx bytes) -> bool {
+   cat::idx const remainder = bytes % 64u;
+   return bytes <= 1'100u || remainder <= 2u || remainder >= 62u;
+}
+
 auto
 map_guarded_page() -> cat::byte* _Nonnull {
    cat::byte* const p_mapping =
@@ -788,7 +798,7 @@ verify_in_bounds(
          );
       }
 
-      for_each_large_simd([&]<typename Simd>() [[gnu::always_inline]] {
+      for_each_simd([&]<typename Simd>() [[gnu::always_inline]] {
          if (bytes >= 4u * sizeof(Simd)) {
             verify_large<Simd>(p_left, p_right, bytes, mismatch);
          }
@@ -835,6 +845,10 @@ $test(memory_comparison_stays_in_bounds) {
    };
 
    for (cat::idx bytes = 0u; bytes <= cat::page_size; ++bytes) {
+      if (!is_guarded_size(bytes)) {
+         continue;
+      }
+
       for (bool const is_left_at_end : {false, true}) {
          for (bool const is_right_at_end : {false, true}) {
             cat::byte* _Nonnull const p_left =
@@ -847,6 +861,336 @@ $test(memory_comparison_stays_in_bounds) {
             initialize_bytes(p_right, bytes);
             verify_in_bounds(p_left, p_right, bytes);
          }
+      }
+   }
+}
+
+namespace {
+
+// Bytes around a destination that a copy must not change.
+inline constexpr cat::byte copy_canary = cat::byte(0xa5u);
+inline constexpr cat::idx copy_margin = 64u;
+
+// Copy `bytes` between buffers skewed by `source_skew` and `destination_skew`
+// with `copy`, and verify the destination and the bytes around it.
+template <typename Copy>
+[[gnu::always_inline]]
+inline void
+verify_copy_with(
+   Copy const& copy, cat::idx bytes, cat::idx source_skew,
+   cat::idx destination_skew
+) {
+   cat::array<cat::byte, 4_uki> source;
+   cat::array<cat::byte, 4_uki> destination;
+   initialize_bytes(source.data(), source_skew + bytes);
+   fill_bytes(
+      destination.data(), destination_skew + bytes + copy_margin, copy_canary
+   );
+
+   copy(
+      source.data() + source_skew, destination.data() + destination_skew, bytes
+   );
+
+   for (cat::idx i = 0u; i < destination_skew; ++i) {
+      cat::verify(destination[i] == copy_canary);
+   }
+
+   verify_copy_result(
+      source.data() + source_skew, destination.data() + destination_skew, bytes
+   );
+   for (cat::idx i = 0u; i < copy_margin; ++i) {
+      cat::verify(destination[destination_skew + bytes + i] == copy_canary);
+   }
+}
+
+void
+verify_copy(cat::idx bytes, cat::idx source_skew, cat::idx destination_skew) {
+   verify_copy_with(
+      [](cat::byte const* p_source, cat::byte* p_destination, cat::idx size) {
+         cat::copy_memory(p_source, p_destination, size);
+      },
+      bytes, source_skew, destination_skew
+   );
+   verify_copy_with(
+      [](cat::byte const* p_source, cat::byte* p_destination, cat::idx size) {
+         cat::copy_memory_scalar(p_source, p_destination, size);
+      },
+      bytes, source_skew, destination_skew
+   );
+}
+
+// Move `bytes` from `source_offset` to `destination_offset` within one buffer
+// with `move`, and verify the whole buffer.
+template <typename Move>
+[[gnu::always_inline]]
+inline void
+verify_move_with(
+   Move const& move, cat::idx bytes, cat::idx source_offset,
+   cat::idx destination_offset
+) {
+   cat::idx const size =
+      max(source_offset, destination_offset) + bytes + copy_margin;
+   cat::array<cat::byte, 4_uki> buffer;
+   cat::array<cat::byte, 4_uki> expected;
+   initialize_bytes(buffer.data(), size);
+   initialize_bytes(expected.data(), size);
+   for (cat::idx i = 0u; i < bytes; ++i) {
+      expected[destination_offset + i] = buffer[source_offset + i];
+   }
+
+   move(
+      buffer.data() + source_offset, buffer.data() + destination_offset, bytes
+   );
+   verify_buffer_result(expected.data(), buffer.data(), size);
+}
+
+void
+verify_move(
+   cat::idx bytes, cat::idx source_offset, cat::idx destination_offset
+) {
+   verify_move_with(
+      [](cat::byte const* p_source, cat::byte* p_destination, cat::idx size) {
+         cat::copy_memory_backward(p_source, p_destination, size);
+      },
+      bytes, source_offset, destination_offset
+   );
+   verify_move_with(
+      [](cat::byte const* p_source, cat::byte* p_destination, cat::idx size) {
+         cat::copy_memory_backward_scalar(p_source, p_destination, size);
+      },
+      bytes, source_offset, destination_offset
+   );
+}
+
+// Overlap distances around every chunk width the copies use.
+inline constexpr cat::array move_distances = {
+   1_idx,   2_idx,   3_idx,   4_idx,   7_idx,   8_idx,   9_idx,   15_idx,
+   16_idx,  17_idx,  31_idx,  32_idx,  33_idx,  63_idx,  64_idx,  65_idx,
+   127_idx, 128_idx, 129_idx, 255_idx, 256_idx, 257_idx, 511_idx, 512_idx,
+};
+
+// Move `bytes` by every distance in both directions, from varied alignments.
+void
+verify_moves(cat::idx bytes) {
+   for (cat::idx const distance : move_distances) {
+      cat::idx const base = distance % 13u;
+      verify_move(bytes, base, base + distance);
+      verify_move(bytes, base + distance, base);
+   }
+
+   // Moves that overlap by exactly one byte, or not at all.
+   if (bytes != 0u) {
+      verify_move(bytes, 5u, 5u + previous_index(bytes));
+      verify_move(bytes, 5u + previous_index(bytes), 5u);
+   }
+
+   verify_move(bytes, 5u, 5u + bytes);
+   verify_move(bytes, 5u + bytes, 5u);
+   verify_move(bytes, 5u, 5u);
+}
+
+// Run `check` with and without `rep movsb`, so both copy paths are tested.
+template <typename Check>
+void
+for_each_rep_string_support(Check const& check) {
+   auto const saved = cat::detail::memory_rep_string_support;
+   $defer {
+      cat::detail::memory_rep_string_support = saved;
+   };
+
+   cat::detail::memory_rep_string_support = {};
+   check();
+   cat::detail::memory_rep_string_support = {
+      .has_erms = true, .has_fsrm = true
+   };
+   check();
+}
+
+}  // namespace
+
+$test(copy_memory_every_size) {
+   for_each_rep_string_support([] {
+      for (cat::idx bytes = 0u; bytes <= 1'100u; ++bytes) {
+         verify_copy(bytes, 0u, 0u);
+         verify_copy(bytes, 1u, 0u);
+         verify_copy(bytes, 0u, 1u);
+         verify_copy(bytes, 3u, 17u);
+         verify_copy(bytes, 15u, 16u);
+         verify_copy(bytes, 31u, 1u);
+      }
+   });
+}
+
+$test(copy_memory_every_skew) {
+   for_each_rep_string_support([] {
+      for (cat::idx bytes :
+           {127_idx, 128_idx, 255_idx, 256_idx, 1'023_idx, 1'024_idx}) {
+         for (cat::idx source_skew = 0u; source_skew <= 32u; ++source_skew) {
+            for (cat::idx destination_skew = 0u; destination_skew <= 32u;
+                 ++destination_skew) {
+               verify_copy(bytes, source_skew, destination_skew);
+            }
+         }
+      }
+   });
+}
+
+$test(copy_memory_backward_every_size_and_distance) {
+   for (cat::idx bytes = 0u; bytes <= 1'100u; ++bytes) {
+      verify_moves(bytes);
+   }
+}
+
+// `copy_memory_large` and `copy_memory_backward_large` with each SIMD ISA.
+$test(copy_memory_direct_large_paths) {
+   for_each_simd([]<typename Simd>() [[gnu::always_inline]] {
+      auto const forward =
+         [](cat::byte const* p_source, cat::byte* p_destination, cat::idx size)
+            [[gnu::always_inline]]
+      {
+         cat::detail::copy_memory_large<Simd>(p_source, p_destination, size);
+      };
+      auto const backward =
+         [](cat::byte const* p_source, cat::byte* p_destination, cat::idx size)
+            [[gnu::always_inline]]
+      {
+         cat::detail::copy_memory_backward_large<Simd>(
+            p_source, p_destination, size
+         );
+      };
+
+      // `copy_memory_large` first copies up to one `Simd` of alignment padding.
+      for (cat::idx bytes = 64u; bytes <= 1'100u; ++bytes) {
+         verify_copy_with(forward, bytes, 0u, 0u);
+         verify_copy_with(forward, bytes, 3u, 17u);
+         verify_copy_with(backward, bytes, 0u, 0u);
+         verify_copy_with(backward, bytes, 17u, 3u);
+         for (cat::idx const distance : {1_idx, 33_idx, 300_idx}) {
+            cat::idx const base = distance % 13u;
+            verify_move_with(forward, bytes, base + distance, base);
+            verify_move_with(backward, bytes, base, base + distance);
+         }
+      }
+   });
+}
+
+// Copies and moves past 2 MiB use non-temporal stores.
+$test(copy_memory_non_temporal_sizes) {
+   for_each_rep_string_support([] {
+      cat::idx const bytes = 2_umi + 129u;
+      cat::span source =
+         g_tests_alloc.alloc_multi<cat::byte>(bytes + 64u).or_exit();
+      cat::span destination =
+         g_tests_alloc.alloc_multi<cat::byte>(bytes + 64u).or_exit();
+      $defer {
+         g_tests_alloc.free(source);
+         g_tests_alloc.free(destination);
+      };
+
+      initialize_bytes(source.data(), source.size());
+      for (cat::idx const skew : {0_idx, 1_idx, 31_idx}) {
+         fill_bytes(destination.data(), destination.size(), copy_canary);
+         cat::copy_memory(source.data() + 7u, destination.data() + skew, bytes);
+         verify_copy_result(
+            source.data() + 7u, destination.data() + skew, bytes
+         );
+         cat::verify(destination[skew + bytes] == copy_canary);
+      }
+   });
+
+   for (cat::idx const distance : {1_idx, 31_idx, 32_idx, 33_idx, 4'096_idx}) {
+      large_overlap_case(2_umi + 129u, distance, 0u);
+      large_overlap_case(2_umi + 129u, 0u, distance);
+   }
+}
+
+namespace {
+
+// Copy and move within guarded pages, so that touching a byte outside a range
+// segfaults. `p_source_page` and `p_destination_page` are guarded pages.
+void
+verify_copies_in_bounds(
+   cat::byte* _Nonnull p_source_page, cat::byte* _Nonnull p_destination_page,
+   cat::idx bytes
+) {
+   for (bool const is_source_at_end : {false, true}) {
+      for (bool const is_destination_at_end : {false, true}) {
+         cat::byte* _Nonnull const p_source =
+            is_source_at_end ? p_source_page + cat::page_size - bytes
+                             : p_source_page;
+         cat::byte* _Nonnull const p_destination =
+            is_destination_at_end ? p_destination_page + cat::page_size - bytes
+                                  : p_destination_page;
+         initialize_bytes(p_source, bytes);
+         for_each_rep_string_support([&] {
+            fill_bytes(p_destination, bytes, copy_canary);
+            cat::copy_memory(p_source, p_destination, bytes);
+            verify_copy_result(p_source, p_destination, bytes);
+         });
+         fill_bytes(p_destination, bytes, copy_canary);
+         cat::copy_memory_backward(p_source, p_destination, bytes);
+         verify_copy_result(p_source, p_destination, bytes);
+
+         if (bytes >= 64u) {
+            for_each_simd([&]<typename Simd>() [[gnu::always_inline]] {
+               fill_bytes(p_destination, bytes, copy_canary);
+               cat::detail::copy_memory_large<Simd>(
+                  p_source, p_destination, bytes
+               );
+               verify_copy_result(p_source, p_destination, bytes);
+               fill_bytes(p_destination, bytes, copy_canary);
+               cat::detail::copy_memory_backward_large<Simd>(
+                  p_source, p_destination, bytes
+               );
+               verify_copy_result(p_source, p_destination, bytes);
+            });
+         }
+      }
+   }
+
+   // Overlapping moves whose ranges start or end at a guard.
+   for (cat::idx const distance : {1_idx, 33_idx, 300_idx}) {
+      if (bytes + distance > cat::page_size) {
+         continue;
+      }
+
+      for (bool const is_at_end : {false, true}) {
+         cat::byte* _Nonnull const p_low =
+            is_at_end ? p_source_page + cat::page_size - bytes - distance
+                      : p_source_page;
+         for (bool const is_forward : {false, true}) {
+            cat::byte* _Nonnull const p_source =
+               is_forward ? p_low + distance : p_low;
+            cat::byte* _Nonnull const p_destination =
+               is_forward ? p_low : p_low + distance;
+            initialize_bytes(p_low, bytes + distance);
+            cat::array<cat::byte, 4_uki> expected{};
+            for (cat::idx i = 0u; i < bytes; ++i) {
+               expected[i] = p_source[i];
+            }
+
+            cat::copy_memory_backward(p_source, p_destination, bytes);
+            verify_copy_result(expected.data(), p_destination, bytes);
+         }
+      }
+   }
+}
+
+}  // namespace
+
+$test(copy_memory_stays_in_bounds) {
+   cat::byte* _Nonnull const p_source_page = map_guarded_page();
+   cat::byte* _Nonnull const p_destination_page = map_guarded_page();
+   $defer {
+      nix::sys_munmap(p_source_page - cat::page_size, 3u * cat::page_size)
+         .verify();
+      nix::sys_munmap(p_destination_page - cat::page_size, 3u * cat::page_size)
+         .verify();
+   };
+
+   for (cat::idx bytes = 0u; bytes <= cat::page_size; ++bytes) {
+      if (is_guarded_size(bytes)) {
+         verify_copies_in_bounds(p_source_page, p_destination_page, bytes);
       }
    }
 }

@@ -43,11 +43,13 @@ void
 copy_memory_backward_impl(
    byte const* _Nonnull p_source, byte* _Nonnull p_destination, idx bytes
 ) {
+   // Ranges that do not overlap can be copied in either order.
+   if (!is_memory_overlapping(p_source, bytes, p_destination, bytes)) {
+      copy_memory_impl(p_source, p_destination, bytes);
+      return;
+   }
+
    if (p_destination <= p_source) {
-      if (p_source + bytes <= p_destination) {
-         copy_memory_impl(p_source, p_destination, bytes);
-         return;
-      }
       copy_memory_forward_overlap_impl(p_source, p_destination, bytes);
       return;
    }
