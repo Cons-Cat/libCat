@@ -545,6 +545,8 @@ set(CAT_HEADER_FILES
   ${CATLIB}/meta/cat/meta
   ${CATLIB}/notype/cat/notype
   ${CATLIB}/path/cat/file_path
+  ${CATLIB}/path/cat/file_path_inplace
+  ${CATLIB}/path/cat/file_path_view
   ${CATLIB}/path/cat/raii_file_path
   ${CATLIB}/random/cat/random
   ${CATLIB}/random/cat/splitmix

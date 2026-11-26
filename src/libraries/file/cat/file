@@ -72,12 +72,10 @@ class file_handle {
       return file_handle(move(handle));
    }
 
-   template <path_os os>
    [[nodiscard]]
    static auto
    open(
-      basic_file_path<os> const& file_path,
-      file_access access = file_access::read,
+      file_path_view file_path, file_access access = file_access::read,
       file_creation creation = file_creation::open_existing,
       file_flags flags = file_flags::none,
       file_permissions permissions = file_permissions::user_read
@@ -86,11 +84,10 @@ class file_handle {
                                      | file_permissions::other_read
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy<file_handle, io_error>;
 
-   template <path_os os>
    [[nodiscard]]
    static auto
    open_at(
-      file_handle const& directory, basic_file_path<os> const& file_path,
+      file_handle const& directory, file_path_view file_path,
       file_access access = file_access::read,
       file_creation creation = file_creation::open_existing,
       file_flags flags = file_flags::none,
@@ -166,11 +163,10 @@ class file_handle {
        : m_handle(move(handle)) {
    }
 
-   template <path_os os>
    [[nodiscard]]
    static auto
    open_from(
-      cat::native_handle directory, basic_file_path<os> const& file_path,
+      cat::native_handle directory, file_path_view file_path,
       file_access access, file_creation creation, file_flags flags,
       file_permissions permissions
    ) -> scaredy<file_handle, io_error>;
@@ -204,12 +200,10 @@ class [[gsl::Owner]] mapped_file_handle {
 
    ~mapped_file_handle();
 
-   template <path_os os>
    [[nodiscard]]
    static auto
    open(
-      basic_file_path<os> const& file_path,
-      file_access access = file_access::read,
+      file_path_view file_path, file_access access = file_access::read,
       file_creation creation = file_creation::open_existing,
       file_flags flags = file_flags::none,
       file_permissions permissions = file_permissions::user_read
@@ -218,11 +212,10 @@ class [[gsl::Owner]] mapped_file_handle {
                                      | file_permissions::other_read
    ) -> scaredy<mapped_file_handle, io_error>;
 
-   template <path_os os>
    [[nodiscard]]
    static auto
    open_at(
-      file_handle const& directory, basic_file_path<os> const& file_path,
+      file_handle const& directory, file_path_view file_path,
       file_access access = file_access::read,
       file_creation creation = file_creation::open_existing,
       file_flags flags = file_flags::none,

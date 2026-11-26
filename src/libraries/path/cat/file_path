@@ -16,8 +16,10 @@
 //
 // Path joining and decomposition are lexical. They do not access the
 // filesystem, resolve symbolic links, or normalize `.` and `..` components.
+// `make_file_path_lexically_normal` removes those components lexically.
 // `make_file_path_absolute` accesses the current working directory only when
-// its base path is relative. `make_file_path_unique` replaces percent signs
+// its base path is relative. `make_file_path_canonical` reads the filesystem
+// to follow symbolic links. `make_file_path_unique` replaces percent signs
 // with random hexadecimal digits without creating a filesystem entry.
 //
 // It is parameterized by `cat::str_vec_flags`. Path storage is always
@@ -44,8 +46,7 @@
 // this tradeoff ideal.
 // TODO: Furthor research that.
 // TODO: Provide a `cat::file_path_small[_fixed]` alias.
-// TODO: Provide a `cat::file_path_inplace` container.
-// TODO: Document the `path_os` field.
+// TODO: Document the `path_os` field here.
 //
 // When `inline_storage` is disabled, `file_path`s grow from 0 to a capacity of
 // their `initial_growth` count in their initial allocation. Reallocations grow
@@ -63,12 +64,12 @@
 
 namespace cat {
 
-// The syntax that a `cat::basic_file_path` is decomposed and joined with.
+// This tag determines a `file_path`'s encoding.
 // NOLINTNEXTLINE
 enum class [[clang::enum_extensibility(closed)]] path_os : unsigned char {
-   portable,
-   nix,
-   nt,
+   portable,  // (UTF-8)
+   nix,       // Linux/Unix (UTF-8)
+   nt,        // Windows NT (UTF-16)
 #ifdef _WIN32
    native = nt,
 #else
@@ -93,37 +94,58 @@ path_initial_capacity(str_vec_flags flags) noexcept -> idx {
              : vector.initial_growth_count;
 }
 
-template <typename Segment>
-concept is_char_safe_string =
-   is_safe_string<Segment>
-   && is_same<__typeof_unqual(typename Segment::value_type), char>;
+// The character type that a `path_os` stores and accepts.
+// TODO: Transcode between `char` and `char16_t` paths.
+template <path_os os>
+using path_char = conditional<os == path_os::nt, char16_t, char>;
+
+template <path_os os>
+using path_view = basic_str_span<path_char<os> const>;
+
+template <path_os os>
+using path_native_view =
+   basic_str_span<path_char<os> const, str_flags::null_terminated>;
+
+template <path_os os>
+using path_native_span =
+   basic_str_span<path_char<os>, str_flags::null_terminated>;
+
+template <typename CharT>
+concept is_path_char = is_same<CharT, char> || is_same<CharT, char16_t>;
 
 template <typename Segment>
-   requires(is_char_safe_string<Segment>)
+concept is_path_safe_string =
+   is_safe_string<Segment>
+   && is_path_char<__typeof_unqual(typename Segment::value_type)>;
+
+template <typename Segment>
+   requires(is_path_safe_string<Segment>)
 [[nodiscard]]
 constexpr auto
 path_segment_view(Segment const& segment [[clang::lifetimebound]]) noexcept
-   -> str_view {
-   return str_view(segment);
+   -> basic_str_span<__typeof_unqual(typename Segment::value_type) const> {
+   return segment;
 }
 
-template <idx extent>
+template <is_path_char CharT, idx extent>
 [[nodiscard]]
 constexpr auto
-path_segment_view(char const (&segment)[extent]) noexcept -> str_view {
+path_segment_view(CharT const (&segment)[extent]) noexcept
+   -> basic_str_span<CharT const> {
    return {segment, idx(extent - 1u)};
 }
 
-template <idx extent>
+template <is_path_char CharT, idx extent>
 [[nodiscard]]
 constexpr auto
-path_segment_view(char (&segment)[extent]) noexcept -> str_view {
+path_segment_view(CharT (&segment)[extent]) noexcept
+   -> basic_str_span<CharT const> {
    return {segment, idx(extent - 1u)};
 }
 
 template <typename Segment>
    requires(
-      !is_char_safe_string<Segment> && !is_array<Segment>
+      !is_path_safe_string<Segment> && !is_array<Segment>
       && requires(Segment const& segment) { str_view(segment); }
    )
 [[nodiscard]]
@@ -132,9 +154,11 @@ path_segment_view(Segment const& segment) noexcept -> str_view {
    return str_view(segment);
 }
 
+template <typename CharT>
 [[nodiscard]]
 constexpr auto
-path_slice(str_view value, idx first, idx last) noexcept -> str_view {
+path_slice(basic_str_span<CharT const> value, idx first, idx last) noexcept
+   -> basic_str_span<CharT const> {
    if (first == last) {
       return {};
    }
@@ -143,146 +167,155 @@ path_slice(str_view value, idx first, idx last) noexcept -> str_view {
 }
 
 // Find the first character that is (or isn't) either `first` or `second`.
-// TODO: UTF-16?
-template <bool equal>
+template <bool equal, typename CharT>
 [[nodiscard]]
 constexpr auto
-path_find_first(str_view value, char first, char second) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<idx> {
-   if consteval {
-      for (idx position = 0u; position < value.size(); ++position) {
-         char const character = value[position];
+path_find_first(
+   basic_str_span<CharT const> value, char first, char second
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<idx> {
+   // TODO: Vectorize `char16_t` paths.
+   if !consteval {
+      if constexpr (is_same<CharT, char>) {
+         return $simd_switch($abi((avx2, sse2), {
+            constexpr idx lanes = char1x_::size();
+            idx position = 0u;
+            char1x_ firsts;
+            firsts.fill(first);
+            char1x_ seconds;
+            seconds.fill(second);
 
-         if ((character == first || character == second) == equal) {
-            return position;
-         }
-      }
+            while (value.size() - position >= lanes) {
+               char1x_ chunk;
+               chunk.load(value.data() + position);
 
-      return nullopt;
-   } else {
-      return $simd_switch($abi((avx2, sse2), {
-         constexpr idx lanes = char1x_::size();
-         idx position = 0u;
-         char1x_ firsts;
-         firsts.fill(first);
-         char1x_ seconds;
-         seconds.fill(second);
+               auto const matches =
+                  chunk.equal_lanes(firsts) || chunk.equal_lanes(seconds);
 
-         while (value.size() - position >= lanes) {
-            char1x_ chunk;
-            chunk.load(value.data() + position);
+               auto const mask = [&] {
+                  if constexpr (equal) {
+                     return matches;
+                  } else {
+                     return !matches;
+                  }
+               }();
 
-            auto const matches =
-               chunk.equal_lanes(firsts) || chunk.equal_lanes(seconds);
-
-            auto const mask = [&] {
-               if constexpr (equal) {
-                  return matches;
-               } else {
-                  return !matches;
+               if (mask.any_of()) {
+                  return maybe<idx>(position + mask.find_if_true());
                }
-            }();
 
-            if (mask.any_of()) {
-               return maybe<idx>(position + mask.find_if_true());
+               position += lanes;
             }
 
-            position += lanes;
-         }
+            while (position < value.size()) {
+               char const character = value[position];
 
-         while (position < value.size()) {
-            char const character = value[position];
+               if ((character == first || character == second) == equal) {
+                  return maybe<idx>(position);
+               }
 
-            if ((character == first || character == second) == equal) {
-               return maybe<idx>(position);
+               ++position;
             }
 
-            ++position;
-         }
-
-         return maybe<idx>(nullopt);
-      }));
+            return maybe<idx>(nullopt);
+         }));
+      }
    }
+
+   for (idx position = 0u; position < value.size(); ++position) {
+      CharT const character = value[position];
+
+      if ((character == first || character == second) == equal) {
+         return position;
+      }
+   }
+
+   return nullopt;
 }
 
 // Find the last character that is (or isn't) either `first` or `second`.
-template <bool equal>
+template <bool equal, typename CharT>
 [[nodiscard]]
 constexpr auto
-path_find_last(str_view value, char first, char second) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<idx> {
-   if consteval {
-      idx position = value.size();
+path_find_last(
+   basic_str_span<CharT const> value, char first, char second
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<idx> {
+   // TODO: Vectorize `char16_t` paths.
+   if !consteval {
+      if constexpr (is_same<CharT, char>) {
+         return $simd_switch($abi((avx2, sse2), {
+            constexpr idx lanes = char1x_::size();
+            idx end = value.size();
+            char1x_ firsts;
+            firsts.fill(first);
+            char1x_ seconds;
+            seconds.fill(second);
 
-      while (position > 0u) {
-         position = idx(position - 1u);
-         char const character = value[position];
+            while (end >= lanes) {
+               idx const position = idx(end - lanes);
 
-         if ((character == first || character == second) == equal) {
-            return position;
-         }
-      }
+               char1x_ chunk;
+               chunk.load(value.data() + position);
 
-      return nullopt;
-   } else {
-      return $simd_switch($abi((avx2, sse2), {
-         constexpr idx lanes = char1x_::size();
-         idx end = value.size();
-         char1x_ firsts;
-         firsts.fill(first);
-         char1x_ seconds;
-         seconds.fill(second);
+               auto const matches =
+                  chunk.equal_lanes(firsts) || chunk.equal_lanes(seconds);
 
-         while (end >= lanes) {
-            idx const position = idx(end - lanes);
+               auto const mask = [&] {
+                  if constexpr (equal) {
+                     return matches;
+                  } else {
+                     return !matches;
+                  }
+               }();
 
-            char1x_ chunk;
-            chunk.load(value.data() + position);
-
-            auto const matches =
-               chunk.equal_lanes(firsts) || chunk.equal_lanes(seconds);
-
-            auto const mask = [&] {
-               if constexpr (equal) {
-                  return matches;
-               } else {
-                  return !matches;
+               if (mask.any_of()) {
+                  return maybe<idx>(position + mask.find_last_if_true());
                }
-            }();
 
-            if (mask.any_of()) {
-               return maybe<idx>(position + mask.find_last_if_true());
+               end = position;
             }
 
-            end = position;
-         }
+            while (end > 0u) {
+               end = idx(end - 1u);
+               char const character = value[end];
 
-         while (end > 0u) {
-            end = idx(end - 1u);
-            char const character = value[end];
-
-            if ((character == first || character == second) == equal) {
-               return maybe<idx>(end);
+               if ((character == first || character == second) == equal) {
+                  return maybe<idx>(end);
+               }
             }
-         }
 
-         return maybe<idx>(nullopt);
-      }));
+            return maybe<idx>(nullopt);
+         }));
+      }
    }
+
+   idx position = value.size();
+
+   while (position > 0u) {
+      position = idx(position - 1u);
+      CharT const character = value[position];
+
+      if ((character == first || character == second) == equal) {
+         return position;
+      }
+   }
+
+   return nullopt;
 }
 
+template <typename Segment>
 [[nodiscard]]
 constexpr auto
-path_find_first_equal(str_view value, char character) noexcept -> maybe<idx> {
-   return path_find_first<true>(value, character, character);
+path_find_first_equal(Segment const& value, char character) noexcept
+   -> maybe<idx> {
+   return path_find_first<true>(path_segment_view(value), character, character);
 }
 
+template <typename Segment>
 [[nodiscard]]
 constexpr auto
-path_find_last_equal(str_view value, char character) noexcept -> maybe<idx> {
-   return path_find_last<true>(value, character, character);
+path_find_last_equal(Segment const& value, char character) noexcept
+   -> maybe<idx> {
+   return path_find_last<true>(path_segment_view(value), character, character);
 }
 
 // On most platforms, paths are separated by `/`, but Windows also accepts `\`.
@@ -304,40 +337,56 @@ inline constexpr path_separators path_nt_verbatim_separators = {
    .second = '\\',
 };
 
+template <typename CharT>
 [[nodiscard]]
 constexpr auto
-path_is_separator(path_separators separators, char character) noexcept -> bool {
+path_is_separator(path_separators separators, CharT character) noexcept
+   -> bool {
    return character == separators.first || character == separators.second;
 }
 
+template <typename Segment>
 [[nodiscard]]
 constexpr auto
-path_find_first_separator(str_view value, path_separators separators) noexcept
-   -> maybe<idx> {
-   return path_find_first<true>(value, separators.first, separators.second);
+path_find_first_separator(
+   Segment const& value, path_separators separators
+) noexcept -> maybe<idx> {
+   return path_find_first<true>(
+      path_segment_view(value), separators.first, separators.second
+   );
 }
 
+template <typename Segment>
 [[nodiscard]]
 constexpr auto
 path_find_first_not_separator(
-   str_view value, path_separators separators
+   Segment const& value, path_separators separators
 ) noexcept -> maybe<idx> {
-   return path_find_first<false>(value, separators.first, separators.second);
+   return path_find_first<false>(
+      path_segment_view(value), separators.first, separators.second
+   );
 }
 
+template <typename Segment>
 [[nodiscard]]
 constexpr auto
-path_find_last_separator(str_view value, path_separators separators) noexcept
-   -> maybe<idx> {
-   return path_find_last<true>(value, separators.first, separators.second);
+path_find_last_separator(
+   Segment const& value, path_separators separators
+) noexcept -> maybe<idx> {
+   return path_find_last<true>(
+      path_segment_view(value), separators.first, separators.second
+   );
 }
 
+template <typename Segment>
 [[nodiscard]]
 constexpr auto
 path_find_last_not_separator(
-   str_view value, path_separators separators
+   Segment const& value, path_separators separators
 ) noexcept -> maybe<idx> {
-   return path_find_last<false>(value, separators.first, separators.second);
+   return path_find_last<false>(
+      path_segment_view(value), separators.first, separators.second
+   );
 }
 
 struct path_root {
@@ -349,7 +398,7 @@ struct path_root {
 
 [[nodiscard]]
 constexpr auto
-path_starts_with(str_view value, idx position, str_view prefix) noexcept
+path_starts_with(u16str_view value, idx position, u16str_view prefix) noexcept
    -> bool {
    return value.size() >= position + prefix.size()
           && path_slice(value, position, position + prefix.size()) == prefix;
@@ -357,21 +406,22 @@ path_starts_with(str_view value, idx position, str_view prefix) noexcept
 
 [[nodiscard]]
 constexpr auto
-path_is_drive(str_view value, idx position) noexcept -> bool {
+path_is_drive(u16str_view value, idx position) noexcept -> bool {
    if (position + 1u >= value.size()) {
       return false;
    }
 
-   char const letter = value[position];
-   return ((letter >= 'a' && letter <= 'z') || (letter >= 'A' && letter <= 'Z'))
-          && value[position + 1u] == ':';
+   char16_t const letter = value[position];
+   return ((letter >= u'a' && letter <= u'z')
+           || (letter >= u'A' && letter <= u'Z'))
+          && value[position + 1u] == u':';
 }
 
 // The end of the component that begins at `position`.
 [[nodiscard]]
 constexpr auto
 path_component_end(
-   str_view value, idx position, path_separators separators
+   u16str_view value, idx position, path_separators separators
 ) noexcept -> idx {
    if (position >= value.size()) {
       return value.size();
@@ -391,7 +441,7 @@ path_component_end(
 // Parse an `nt` root name like Rust's `std::path::Prefix`.
 [[nodiscard]]
 constexpr auto
-path_parse_nt_root(str_view value) noexcept -> path_root {
+path_parse_nt_root(u16str_view value) noexcept -> path_root {
    idx const size = value.size();
    auto const make_root = [&](
                              idx name_end, path_separators separators,
@@ -411,8 +461,8 @@ path_parse_nt_root(str_view value) noexcept -> path_root {
       size >= 2u && path_is_separator(path_nt_separators, value[0])
       && path_is_separator(path_nt_separators, value[1])
    ) {
-      if (path_starts_with(value, 0u, R"(\\?\)")) {
-         if (path_starts_with(value, 4u, "UNC\\")) {
+      if (path_starts_with(value, 0u, uR"(\\?\)")) {
+         if (path_starts_with(value, 4u, u"UNC\\")) {
             idx const server_end =
                path_component_end(value, 8u, path_nt_verbatim_separators);
             return make_root(
@@ -423,7 +473,7 @@ path_parse_nt_root(str_view value) noexcept -> path_root {
             );
          }
 
-         if (path_is_drive(value, 4u) && (size == 6u || value[6] == '\\')) {
+         if (path_is_drive(value, 4u) && (size == 6u || value[6] == u'\\')) {
             return make_root(6u, path_nt_verbatim_separators, true);
          }
 
@@ -434,7 +484,7 @@ path_parse_nt_root(str_view value) noexcept -> path_root {
       }
 
       if (
-         size >= 4u && value[2] == '.'
+         size >= 4u && value[2] == u'.'
          && path_is_separator(path_nt_separators, value[3])
       ) {
          return make_root(
@@ -466,7 +516,7 @@ path_parse_nt_root(str_view value) noexcept -> path_root {
 template <path_os os>
 [[nodiscard]]
 constexpr auto
-path_parse_root(str_view value) noexcept -> path_root {
+path_parse_root(path_view<os> value) noexcept -> path_root {
    if constexpr (os == path_os::nt) {
       return path_parse_nt_root(value);
    } else {
@@ -480,9 +530,11 @@ path_parse_root(str_view value) noexcept -> path_root {
    }
 }
 
+template <typename CharT>
 [[nodiscard]]
 constexpr auto
-path_relative_start(str_view value, path_root root) noexcept -> idx {
+path_relative_start(basic_str_span<CharT const> value, path_root root) noexcept
+   -> idx {
    maybe<idx> const found = path_find_first_not_separator(
       path_slice(value, root.name_end, value.size()), root.separators
    );
@@ -494,10 +546,13 @@ path_relative_start(str_view value, path_root root) noexcept -> idx {
    return value.size();
 }
 
+template <typename CharT>
 [[nodiscard]]
 constexpr auto
-path_parent(str_view value, path_root root) noexcept -> str_view {
-   str_view const root_path = path_slice(value, 0u, root.end);
+path_parent(basic_str_span<CharT const> value, path_root root) noexcept
+   -> basic_str_span<CharT const> {
+   basic_str_span<CharT const> const root_path =
+      path_slice(value, 0u, root.end);
    maybe<idx> const last = path_find_last_not_separator(
       path_slice(value, root.end, value.size()), root.separators
    );
@@ -526,10 +581,13 @@ path_parent(str_view value, path_root root) noexcept -> str_view {
    return path_slice(value, 0u, root.end + parent_end.value() + 1u);
 }
 
+template <typename CharT>
 [[nodiscard]]
 constexpr auto
-path_filename(str_view value, path_root root) noexcept -> str_view {
-   str_view const relative = path_slice(value, root.name_end, value.size());
+path_filename(basic_str_span<CharT const> value, path_root root) noexcept
+   -> basic_str_span<CharT const> {
+   basic_str_span<CharT const> const relative =
+      path_slice(value, root.name_end, value.size());
    if (
       relative.size() == 0u
       || path_is_separator(root.separators, relative[idx(relative.size() - 1u)])
@@ -546,25 +604,33 @@ path_filename(str_view value, path_root root) noexcept -> str_view {
    return relative;
 }
 
+// Whether `name` is `.` or `..`, which have no stem or extension.
+template <typename CharT>
+[[nodiscard]]
+constexpr auto
+path_is_dot_or_dot_dot(basic_str_span<CharT const> name) noexcept -> bool {
+   return (name.size() == 1u || name.size() == 2u)
+          && path_find_first<false>(name, '.', '.').is_empty();
+}
+
+template <path_os os>
+inline constexpr path_char<os> path_preferred_separator =
+   os == path_os::nt ? '\\' : '/';
+
 // Identifies `basic_file_path` types and their `path_os`.
 template <typename T>
 struct path_os_trait {
    static constexpr bool is_file_path = false;
-   static constexpr path_os os = path_os::portable;
+   static constexpr path_os value = path_os::portable;
 };
-
-// Whether `Segment` can be joined onto a path of `os`.
-template <path_os os, typename Segment>
-inline constexpr bool path_segment_has_os =
-   !path_os_trait<Segment>::is_file_path || path_os_trait<Segment>::os == os;
 
 // The `path_os` that a factory produces. That is `os` when it is given,
 // otherwise the `path_os` of `Segment` or `Base`, if either is a path.
 template <path_os os, typename Segment, typename Base = void>
 inline constexpr path_os path_deduce_os =
    os != path_os::portable                ? os
-   : path_os_trait<Segment>::is_file_path ? path_os_trait<Segment>::os
-                                          : path_os_trait<Base>::os;
+   : path_os_trait<Segment>::is_file_path ? path_os_trait<Segment>::value
+                                          : path_os_trait<Base>::value;
 
 }  // namespace detail
 
@@ -572,37 +638,386 @@ template <typename Segment>
 concept is_path_segment =
    requires(Segment const& segment) { detail::path_segment_view(segment); };
 
-class [[gsl::Pointer(char const)]] path_component_stepanov_iterator
+namespace detail {
+
+// Strings of a character type that paths of `os` do not store.
+template <typename Segment, path_os os>
+concept is_foreign_encoding_segment =
+   is_path_segment<Segment>
+   && !is_same<
+      __typeof_unqual(path_segment_view(declval<Segment const&>())),
+      path_view<os>>;
+
+// Paths of a different `path_os` that store the same character type as `os`.
+template <typename Segment, path_os os>
+concept is_foreign_os_path = !is_foreign_encoding_segment<Segment, os>
+                             && path_os_trait<Segment>::is_file_path
+                             && path_os_trait<Segment>::value != os;
+
+// Strings and paths that a path of `os` can join.
+template <typename Segment, path_os os>
+concept is_path_segment_for =
+   is_path_segment<Segment> && !is_foreign_encoding_segment<Segment, os>
+   && !is_foreign_os_path<Segment, os>;
+
+// View `segment` as a string of `os`'s characters.
+template <path_os os, is_path_segment_for<os> Segment>
+[[nodiscard]]
+constexpr auto
+path_segment_view_for(Segment const& segment [[clang::lifetimebound]]) noexcept
+   -> path_view<os> {
+   return path_segment_view(segment);
+}
+
+template <path_os os, is_foreign_encoding_segment<os> Segment>
+constexpr auto
+path_segment_view_for(Segment const&) -> path_view<os> = delete (
+   "A `cat::path_os::nt` path only joins `char16_t` strings, and other paths "
+   "only join `char` strings!"
+);
+
+template <path_os os, is_foreign_os_path<os> Segment>
+constexpr auto
+path_segment_view_for(Segment const&) -> path_view<os> = delete (
+   "A path cannot be joined with a path of a different `cat::path_os`! Join "
+   "its `.view()` instead."
+);
+
+// Joining a segment like `std::filesystem::path::operator/=` keeps the first
+// `keep` characters of the left path, then appends an optional separator and
+// `tail`.
+template <path_os os>
+struct path_join {
+   idx keep;
+   bool needs_separator;
+   path_view<os> tail;
+};
+
+template <path_os os>
+[[nodiscard]]
+constexpr auto
+path_plan_join(path_view<os> left, path_view<os> right) noexcept
+   -> path_join<os> {
+   if (right.size() == 0u) {
+      return {.keep = left.size(), .needs_separator = false, .tail = {}};
+   }
+
+   path_root const left_root = path_parse_root<os>(left);
+   path_root const right_root = path_parse_root<os>(right);
+   path_view<os> const right_name = path_slice(right, 0u, right_root.name_end);
+
+   if (right_root.is_absolute
+       || (right_name.size() != 0u
+           && right_name != path_slice(left, 0u, left_root.name_end))) {
+      return {.keep = 0u, .needs_separator = false, .tail = right};
+   }
+
+   path_view<os> const tail =
+      path_slice(right, right_root.name_end, right.size());
+   if (right_root.end != right_root.name_end) {
+      return {
+         .keep = left_root.name_end, .needs_separator = false, .tail = tail
+      };
+   }
+
+   return {
+      .keep = left.size(),
+      .needs_separator =
+         path_filename(left, left_root).size() != 0u
+         || (left_root.end == left_root.name_end && left_root.is_absolute),
+      .tail = tail,
+   };
+}
+
+// Order two filenames like `std::char_traits` does. One-byte characters are
+// compared as unsigned bytes, so `find_disjoint_memory` orders them. That is
+// not true of `char16_t` on a little-endian machine.
+template <typename CharT>
+[[nodiscard]]
+constexpr auto
+path_compare_name(
+   basic_str_span<CharT const> left, basic_str_span<CharT const> right
+) noexcept -> std::strong_ordering {
+   idx const size = min(left.size(), right.size());
+   if constexpr (sizeof(CharT) == 1u) {
+      if (size != 0u) {
+         idx const offset =
+            find_disjoint_memory(left.data(), right.data(), size);
+         if (offset != size) {
+            return static_cast<unsigned char>(left[offset])
+                   <=> static_cast<unsigned char>(right[offset]);
+         }
+      }
+   } else {
+      for (idx i = 0u; i < size; ++i) {
+         if (left[i] != right[i]) {
+            return left[i] < right[i] ? std::strong_ordering::less
+                                      : std::strong_ordering::greater;
+         }
+      }
+   }
+
+   if (left.size() == right.size()) {
+      return std::strong_ordering::equal;
+   }
+
+   return left.size() < right.size() ? std::strong_ordering::less
+                                     : std::strong_ordering::greater;
+}
+
+// Walks the filenames of a relative path like `std::filesystem::path`'s
+// iterator. Separator runs divide filenames, and a trailing separator is
+// followed by one empty filename.
+template <typename CharT>
+struct path_filename_cursor {
+   basic_str_span<CharT const> value;
+   path_separators separators;
+   idx position = 0u;
+   bool is_done = value.size() == 0u;
+
+   constexpr auto
+   next() noexcept -> basic_str_span<CharT const> {
+      idx const start = position;
+      basic_str_span<CharT const> const rest =
+         path_slice(value, start, value.size());
+      maybe<idx> const separator = path_find_first_separator(rest, separators);
+      if (separator.is_empty()) {
+         is_done = true;
+         position = value.size();
+         return rest;
+      }
+
+      idx const end = start + separator.value();
+      maybe<idx> const following = path_find_first_not_separator(
+         path_slice(value, end, value.size()), separators
+      );
+      position =
+         following.has_value() ? idx(end + following.value()) : value.size();
+      return path_slice(value, start, end);
+   }
+};
+
+// Normalize the path at `p_value` in place like
+// `std::filesystem::path::lexically_normal`, and return its new size, which is
+// never larger. Verbatim `nt` paths are unchanged, because `.` and `..` are
+// ordinary names in them.
+template <path_os os>
+constexpr auto
+path_lexically_normalize(path_char<os>* _Nullable p_value, idx size) noexcept(
+   !__has_feature(cxx_exceptions)
+) -> idx {
+   path_view<os> const value = {p_value, size};
+   path_root const root = path_parse_root<os>(value);
+   if (size == 0u || (os == path_os::nt && root.separators.second == '\\')) {
+      return size;
+   }
+
+   constexpr path_char<os> separator = path_preferred_separator<os>;
+   bool const has_root_directory = root.end != root.name_end;
+   bool const ends_in_separator =
+      size > root.end
+      && path_is_separator(root.separators, value[idx(size - 1u)]);
+   for (idx i = 0u; i < root.name_end; ++i) {
+      if (path_is_separator(root.separators, p_value[i])) {
+         p_value[i] = separator;
+      }
+   }
+
+   idx end = root.name_end;
+   if (has_root_directory) {
+      p_value[end] = separator;
+      ++end;
+   }
+
+   // Output is written behind the input that is still being read, so this
+   // never overwrites an unread character. `[base, dot_dot_end)` holds only
+   // `..` components, which cannot be removed.
+   idx const base = end;
+   idx dot_dot_end = base;
+   bool ends_in_dot = false;
+   auto const push = [&](path_view<os> component) {
+      if (end != base) {
+         p_value[end] = separator;
+         ++end;
+      }
+
+      for (path_char<os> const character : component) {
+         p_value[end] = character;
+         ++end;
+      }
+   };
+
+   path_filename_cursor<path_char<os>> cursor = {
+      .value = path_slice(value, path_relative_start(value, root), size),
+      .separators = root.separators,
+   };
+   while (!cursor.is_done) {
+      path_view<os> const component = cursor.next();
+      // Skip the empty filename after a trailing separator.
+      if (component.size() == 0u) {
+         continue;
+      }
+
+      ends_in_dot = path_is_dot_or_dot_dot(component);
+      if (!ends_in_dot) {
+         push(component);
+      } else if (component.size() == 2u) {
+         if (end != dot_dot_end) {
+            maybe<idx> const previous = path_find_last_separator(
+               path_slice(value, dot_dot_end, end), root.separators
+            );
+            end = previous.has_value() ? idx(dot_dot_end + previous.value())
+                                       : dot_dot_end;
+         } else if (!has_root_directory) {
+            push(component);
+            dot_dot_end = end;
+         }
+      }
+   }
+
+   // A trailing `..` loses its separator. Any other last filename keeps one if
+   // it was followed by a separator, `.`, or a removed `..`.
+   if (end != dot_dot_end && (ends_in_dot || ends_in_separator)) {
+      p_value[end] = separator;
+      ++end;
+   }
+
+   if (end == 0u) {
+      p_value[0] = '.';
+      end = 1u;
+   }
+
+   return end;
+}
+
+}  // namespace detail
+
+// The kinds of `basic_path_component`, like Rust's `std::path::Component`.
+// NOLINTNEXTLINE
+enum class [[clang::enum_extensibility(
+   closed
+)]] path_component_kind : unsigned char {
+   // A root name such as `C:` or `\\server\share`, like Rust's `Prefix`.
+   root_name,
+   // The root directory, even when an `nt` root name implies it.
+   root_directory,
+   // A `.` at the start of a relative path. A `.` elsewhere is skipped,
+   // except in verbatim `nt` paths, where it is an ordinary name.
+   current_directory,
+   // A `..`.
+   parent_directory,
+   // A filename.
+   normal,
+};
+
+// One component of a path. `text` views its spelling in the path. It is empty
+// for a root directory that an `nt` root name implies.
+template <typename CharT>
+struct basic_path_component {
+   path_component_kind kind;
+   basic_str_span<CharT const> text;
+
+   // Directory components are equal whatever separator spells them.
+   [[nodiscard]]
+   constexpr auto
+   operator==(basic_path_component const& other) const noexcept -> bool {
+      if (kind != other.kind) {
+         return false;
+      }
+
+      return (kind != path_component_kind::root_name
+              && kind != path_component_kind::normal)
+             || text == other.text;
+   }
+
+   // Order by kind in declaration order, then by spelling, like Rust's
+   // `std::path::Component`.
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(basic_path_component const& other) const noexcept
+      -> std::strong_ordering {
+      if (kind != other.kind) {
+         return kind < other.kind ? std::strong_ordering::less
+                                  : std::strong_ordering::greater;
+      }
+
+      if (
+         kind == path_component_kind::root_name
+         || kind == path_component_kind::normal
+      ) {
+         return detail::path_compare_name(text, other.text);
+      }
+
+      return std::strong_ordering::equal;
+   }
+};
+
+using path_component = basic_path_component<char>;
+
+// Iterates a path's components like Rust's `std::path::Components`. Repeated
+// separators, a trailing separator, and `.` after the start are skipped.
+template <typename CharT>
+class [[gsl::Pointer(CharT const)]] path_component_stepanov_iterator
     : public proxy_stepanov_iterator_interface<
-         forward_iterator_tag, str_view, str_view> {
+         forward_iterator_tag, basic_path_component<CharT>,
+         basic_path_component<CharT>> {
  public:
-   using value_type = str_view;
-   using reference = str_view;
-   using const_reference = str_view;
+   using value_type = basic_path_component<CharT>;
+   using reference = value_type;
+   using const_reference = value_type;
 
    constexpr path_component_stepanov_iterator() = default;
 
+   // Begin iterating `value`, whose root is `root`.
    constexpr path_component_stepanov_iterator(
-      str_view value [[clang::lifetimebound]], idx position,
-      detail::path_separators separators
+      basic_str_span<CharT const> value [[clang::lifetimebound]],
+      detail::path_root root
    ) noexcept(!__has_feature(cxx_exceptions))
-       : m_value(value),
-         m_start(position),
-         m_end(position),
-         m_separators(separators) {
+       : m_value(value), m_root(root) {
       seek();
+   }
+
+   // Resume iterating `value` at the filename that starts at `position`.
+   [[nodiscard]]
+   static constexpr auto
+   resume_at(
+      basic_str_span<CharT const> value [[clang::lifetimebound]],
+      detail::path_root root, idx position
+   ) noexcept(!__has_feature(cxx_exceptions))
+      -> path_component_stepanov_iterator {
+      path_component_stepanov_iterator result;
+      result.m_value = value;
+      result.m_root = root;
+      result.m_position = position;
+      result.m_state = state::body;
+      result.seek();
+      return result;
+   }
+
+   // The end of iterating `value`.
+   [[nodiscard]]
+   static constexpr auto
+   end_of(
+      basic_str_span<CharT const> value [[clang::lifetimebound]],
+      detail::path_root root
+   ) noexcept -> path_component_stepanov_iterator {
+      path_component_stepanov_iterator result;
+      result.m_value = value;
+      result.m_root = root;
+      result.m_position = value.size();
+      result.m_state = state::done;
+      return result;
    }
 
    [[nodiscard]]
    constexpr auto
-   dereference() const noexcept -> str_view {
-      return detail::path_slice(m_value, m_start, m_end);
+   dereference() const noexcept -> value_type {
+      return m_current;
    }
 
    constexpr auto
    increment() noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
    -> path_component_stepanov_iterator& {
-      m_start = m_end;
       seek();
       return *this;
    }
@@ -613,47 +1028,122 @@ class [[gsl::Pointer(char const)]] path_component_stepanov_iterator
       -> bool {
       return m_value.data() == other.m_value.data()
              && m_value.size() == other.m_value.size()
-             && m_start == other.m_start;
+             && m_position == other.m_position && m_state == other.m_state;
    }
 
  private:
+   enum class state : unsigned char {
+      root_name,
+      root_directory,
+      body,
+      done,
+   };
+
+   [[nodiscard]]
+   constexpr auto
+   is_verbatim() const noexcept -> bool {
+      return m_root.separators.second == '\\';
+   }
+
+   // Read the component after the current one.
    constexpr void
    seek() {
-      str_view remaining = detail::path_slice(m_value, m_start, m_value.size());
-      maybe<idx> const start =
-         detail::path_find_first_not_separator(remaining, m_separators);
-
-      if (start.is_empty()) {
-         m_start = m_value.size();
-         m_end = m_start;
-         return;
+      if (m_state == state::root_name) {
+         m_state = state::root_directory;
+         if (m_root.name_end != 0u) {
+            m_current = {
+               path_component_kind::root_name,
+               detail::path_slice(m_value, 0u, m_root.name_end),
+            };
+            return;
+         }
       }
 
-      m_start += start.value();
-      remaining = detail::path_slice(m_value, m_start, m_value.size());
-      maybe<idx> const end =
-         detail::path_find_first_separator(remaining, m_separators);
+      if (m_state == state::root_directory) {
+         m_state = state::body;
+         m_position = m_root.end;
+         if (m_root.is_absolute || m_root.end != m_root.name_end) {
+            m_current = {
+               path_component_kind::root_directory,
+               detail::path_slice(m_value, m_root.name_end, m_root.end),
+            };
+            return;
+         }
 
-      if (end.has_value()) {
-         m_end = m_start + end.value();
-      } else {
-         m_end = m_value.size();
+         // Only a leading `.` of a relative path is kept.
+         idx const dot = m_root.name_end;
+         if (
+            dot < m_value.size() && m_value[dot] == '.'
+            && (dot + 1u == m_value.size() || detail::path_is_separator(m_root.separators, m_value[dot + 1u]))
+         ) {
+            m_position = dot + 1u;
+            m_current = {
+               path_component_kind::current_directory,
+               detail::path_slice(m_value, dot, m_position),
+            };
+            return;
+         }
+      }
+
+      while (m_state == state::body) {
+         basic_str_span<CharT const> const rest =
+            detail::path_slice(m_value, m_position, m_value.size());
+         maybe<idx> const start =
+            detail::path_find_first_not_separator(rest, m_root.separators);
+         if (start.is_empty()) {
+            m_state = state::done;
+            m_position = m_value.size();
+            m_current = {};
+            return;
+         }
+
+         idx const first = m_position + start.value();
+         maybe<idx> const end = detail::path_find_first_separator(
+            detail::path_slice(m_value, first, m_value.size()),
+            m_root.separators
+         );
+         m_position =
+            end.has_value() ? idx(first + end.value()) : m_value.size();
+         basic_str_span<CharT const> const text =
+            detail::path_slice(m_value, first, m_position);
+
+         if (!detail::path_is_dot_or_dot_dot(text)) {
+            m_current = {path_component_kind::normal, text};
+            return;
+         }
+
+         if (text.size() == 2u) {
+            m_current = {path_component_kind::parent_directory, text};
+            return;
+         }
+
+         if (is_verbatim()) {
+            m_current = {path_component_kind::current_directory, text};
+            return;
+         }
       }
    }
 
-   str_view m_value;
-   idx m_start;
-   idx m_end;
-   detail::path_separators m_separators = detail::path_slash_separators;
+   basic_str_span<CharT const> m_value;
+   detail::path_root m_root = {
+      .name_end = 0u,
+      .end = 0u,
+      .separators = detail::path_slash_separators,
+      .is_absolute = false,
+   };
+   idx m_position;
+   state m_state = state::root_name;
+   value_type m_current = {};
 };
 
+template <typename CharT>
 class path_component_iteration_context {
  public:
-   using element_type = str_view;
+   using element_type = basic_path_component<CharT>;
 
    constexpr path_component_iteration_context(
-      path_component_stepanov_iterator current [[clang::lifetimebound]],
-      path_component_stepanov_iterator end [[clang::lifetimebound]]
+      path_component_stepanov_iterator<CharT> current [[clang::lifetimebound]],
+      path_component_stepanov_iterator<CharT> end [[clang::lifetimebound]]
    ) noexcept
        : m_current(current), m_end(end) {
    }
@@ -685,36 +1175,38 @@ class path_component_iteration_context {
    }
 
  private:
-   path_component_stepanov_iterator m_current;
-   path_component_stepanov_iterator m_end;
+   path_component_stepanov_iterator<CharT> m_current;
+   path_component_stepanov_iterator<CharT> m_end;
 };
 
-// The components of a path after its root name, separated by `separators`.
-class path_components : public iterable_interface<path_components> {
+// The components of a path, like Rust's `std::path::Components`.
+template <typename CharT>
+class basic_path_components
+    : public iterable_interface<basic_path_components<CharT>> {
  public:
-   using value_type = str_view;
-   using iterator = path_component_stepanov_iterator;
-   using const_iterator = path_component_stepanov_iterator;
+   using value_type = basic_path_component<CharT>;
+   using iterator = path_component_stepanov_iterator<CharT>;
+   using const_iterator = iterator;
 
-   constexpr path_components() = default;
+   constexpr basic_path_components() = default;
 
-   constexpr path_components(
-      str_view value [[clang::lifetimebound]],
-      detail::path_separators separators = detail::path_slash_separators
+   constexpr basic_path_components(
+      basic_str_span<CharT const> value [[clang::lifetimebound]],
+      detail::path_root root
    ) noexcept
-       : m_value(value), m_separators(separators) {
+       : m_value(value), m_root(root) {
    }
 
    [[nodiscard]]
    constexpr auto
    begin() const noexcept -> iterator {
-      return {m_value, 0u, m_separators};
+      return {m_value, m_root};
    }
 
    [[nodiscard]]
    constexpr auto
    end() const noexcept -> iterator {
-      return {m_value, m_value.size(), m_separators};
+      return iterator::end_of(m_value, m_root);
    }
 
    [[nodiscard]]
@@ -731,13 +1223,292 @@ class path_components : public iterable_interface<path_components> {
 
    [[nodiscard]]
    constexpr auto
-   iterate() const noexcept -> path_component_iteration_context {
+   iterate() const noexcept -> path_component_iteration_context<CharT> {
       return {begin(), end()};
    }
 
  private:
-   str_view m_value;
-   detail::path_separators m_separators = detail::path_slash_separators;
+   basic_str_span<CharT const> m_value;
+   detail::path_root m_root = {
+      .name_end = 0u,
+      .end = 0u,
+      .separators = detail::path_slash_separators,
+      .is_absolute = false,
+   };
+};
+
+using path_components = basic_path_components<char>;
+
+namespace detail {
+
+// Order two paths by their components like Rust's `std::path::Path`, so
+// redundant separators, a trailing separator, and `.` after the start do not
+// matter.
+template <path_os os>
+[[nodiscard]]
+constexpr auto
+path_compare(path_view<os> left, path_view<os> right) noexcept
+   -> std::strong_ordering {
+   using iterator = path_component_stepanov_iterator<path_char<os>>;
+   path_root const left_root = path_parse_root<os>(left);
+   path_root const right_root = path_parse_root<os>(right);
+   basic_path_components<path_char<os>> const left_components(left, left_root);
+   basic_path_components<path_char<os>> const right_components(
+      right, right_root
+   );
+   iterator left_it = left_components.begin();
+   iterator right_it = right_components.begin();
+   iterator const left_end = left_components.end();
+   iterator const right_end = right_components.end();
+
+   // Like Rust, skip a shared spelling when neither path has a root name. Its
+   // components up to the last separator before the first difference are
+   // equal, so comparing resumes at the filename after that separator.
+   idx const shared = min(left.size(), right.size());
+   if (left_root.name_end == 0u && right_root.name_end == 0u && shared != 0u) {
+      idx const first_difference =
+         find_disjoint_memory(
+            left.data(), right.data(), shared * sizeof(path_char<os>)
+         )
+         / sizeof(path_char<os>);
+      if (first_difference == shared && left.size() == right.size()) {
+         return std::strong_ordering::equal;
+      }
+
+      maybe<idx> const separator = path_find_last_separator(
+         path_slice(left, 0u, first_difference), left_root.separators
+      );
+      if (separator.has_value()) {
+         idx const resume = separator.value() + 1u;
+         left_it = iterator::resume_at(left, left_root, resume);
+         right_it = iterator::resume_at(right, right_root, resume);
+      }
+   } else if (
+      left.size() == right.size() && shared != 0u
+      && is_memory_equal(
+         left.data(), right.data(), shared * sizeof(path_char<os>)
+      )
+   ) {
+      return std::strong_ordering::equal;
+   }
+
+   while (left_it != left_end && right_it != right_end) {
+      std::strong_ordering const order = *left_it <=> *right_it;
+      if (order != 0) {
+         return order;
+      }
+
+      ++left_it;
+      ++right_it;
+   }
+
+   bool const is_left_done = left_it == left_end;
+   bool const is_right_done = right_it == right_end;
+   if (is_left_done == is_right_done) {
+      return std::strong_ordering::equal;
+   }
+
+   return is_left_done ? std::strong_ordering::less
+                       : std::strong_ordering::greater;
+}
+
+}  // namespace detail
+
+// Lexical path queries shared by every file path type. They only read
+// `.view()` of the derived path.
+template <path_os os>
+class file_path_interface {
+ public:
+   // Order paths by their components, like Rust's `std::path::Path`.
+   template <detail::is_path_segment_for<os> Other>
+   [[nodiscard]]
+   constexpr auto
+   compare(this auto const& self, Other const& other) noexcept
+      -> std::strong_ordering {
+      return detail::path_compare<os>(
+         self.view(), detail::path_segment_view_for<os>(other)
+      );
+   }
+
+   template <detail::is_path_segment_for<os> Other>
+   [[nodiscard]]
+   constexpr auto
+   operator==(this auto const& self, Other const& other) noexcept -> bool {
+      return self.compare(other) == 0;
+   }
+
+   template <detail::is_path_segment_for<os> Other>
+   [[nodiscard]]
+   constexpr auto
+   operator<=>(this auto const& self, Other const& other) noexcept
+      -> std::strong_ordering {
+      return self.compare(other);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_absolute(this auto const& self) noexcept -> bool {
+      return detail::path_parse_root<os>(self.view()).is_absolute;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_relative(this auto const& self) noexcept -> bool {
+      return !self.is_absolute();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_name(this auto const& self [[clang::lifetimebound]]) noexcept
+      -> detail::path_view<os> {
+      detail::path_view<os> const value = self.view();
+      return detail::path_slice(
+         value, 0u, detail::path_parse_root<os>(value).name_end
+      );
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_directory(this auto const& self [[clang::lifetimebound]]) noexcept
+      -> detail::path_view<os> {
+      detail::path_view<os> const value = self.view();
+      detail::path_root const root = detail::path_parse_root<os>(value);
+      return detail::path_slice(value, root.name_end, root.end);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   root_path(this auto const& self [[clang::lifetimebound]]) noexcept
+      -> detail::path_view<os> {
+      detail::path_view<os> const value = self.view();
+      return detail::path_slice(
+         value, 0u, detail::path_parse_root<os>(value).end
+      );
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   relative_path(this auto const& self [[clang::lifetimebound]]) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> detail::path_view<os> {
+      detail::path_view<os> const value = self.view();
+      idx const first =
+         detail::path_relative_start(value, detail::path_parse_root<os>(value));
+      return detail::path_slice(value, first, value.size());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   parent_path(this auto const& self [[clang::lifetimebound]])
+      -> detail::path_view<os> {
+      detail::path_view<os> const value = self.view();
+      return detail::path_parent(value, detail::path_parse_root<os>(value));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   filename(this auto const& self [[clang::lifetimebound]])
+      -> detail::path_view<os> {
+      detail::path_view<os> const value = self.view();
+      return detail::path_filename(value, detail::path_parse_root<os>(value));
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   stem(this auto const& self [[clang::lifetimebound]])
+      -> detail::path_view<os> {
+      detail::path_view<os> const name = self.filename();
+      if (detail::path_is_dot_or_dot_dot(name)) {
+         return name;
+      }
+
+      maybe<idx> const dot = detail::path_find_last_equal(name, '.');
+      if (dot.is_empty() || dot.value() == 0u) {
+         return name;
+      }
+
+      return detail::path_slice(name, 0u, dot.value());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   extension(this auto const& self [[clang::lifetimebound]])
+      -> detail::path_view<os> {
+      detail::path_view<os> const name = self.filename();
+      if (detail::path_is_dot_or_dot_dot(name)) {
+         return {};
+      }
+
+      maybe<idx> const dot = detail::path_find_last_equal(name, '.');
+      if (dot.is_empty() || dot.value() == 0u) {
+         return {};
+      }
+
+      return detail::path_slice(name, dot.value(), name.size());
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_name(this auto const& self) noexcept -> bool {
+      return detail::path_parse_root<os>(self.view()).name_end != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_directory(this auto const& self) noexcept -> bool {
+      detail::path_root const root = detail::path_parse_root<os>(self.view());
+      return root.end != root.name_end;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_root_path(this auto const& self) noexcept -> bool {
+      return detail::path_parse_root<os>(self.view()).end != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_relative_path(this auto const& self) noexcept -> bool {
+      return self.relative_path().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_parent_path(this auto const& self) noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> bool {
+      return self.parent_path().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_filename(this auto const& self) noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
+      return self.filename().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_stem(this auto const& self) noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
+      return self.stem().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   has_extension(this auto const& self) noexcept(!__has_feature(cxx_exceptions))
+      -> bool {
+      return self.extension().size() != 0u;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   components(this auto const& self [[clang::lifetimebound]]) noexcept
+      -> basic_path_components<detail::path_char<os>> {
+      detail::path_view<os> const value = self.view();
+      detail::path_root const root = detail::path_parse_root<os>(value);
+      return {value, root};
+   }
 };
 
 namespace raii {
@@ -754,7 +1525,7 @@ template <
    str_vec_flags flags = detail::path_default_flags>
 class basic_file_path;
 
-using file_path = basic_file_path<>;
+using file_path = basic_file_path<path_os::portable>;
 
 template <str_vec_flags flags = detail::path_default_flags>
 using file_path_fixed =
@@ -771,10 +1542,10 @@ template <path_os os, str_vec_flags flags>
 constexpr auto
 maybe_file_path_nullopt() -> basic_file_path<os, flags>;
 
-template <path_os path_os_value, str_vec_flags flags>
-struct path_os_trait<manual::basic_file_path<path_os_value, flags>> {
+template <path_os os, str_vec_flags flags>
+struct path_os_trait<manual::basic_file_path<os, flags>> {
    static constexpr bool is_file_path = true;
-   static constexpr path_os os = path_os_value;
+   static constexpr path_os value = os;
 };
 }  // namespace detail
 
@@ -782,8 +1553,11 @@ inline namespace manual {
 
 template <path_os os, str_vec_flags flags>
 class [[clang::preferred_name(file_path), gsl::Owner]]
-basic_file_path : public container_interface<basic_file_path<os, flags>, char>,
-                  public random_access_stepanov_iterable_interface<char> {
+basic_file_path
+    : public container_interface<
+         basic_file_path<os, flags>, detail::path_char<os>>,
+      public random_access_stepanov_iterable_interface<detail::path_char<os>>,
+      public file_path_interface<os> {
  private:
    static constexpr str_vec_flags m_flags =
       str_flags::null_terminated
@@ -813,61 +1587,15 @@ basic_file_path : public container_interface<basic_file_path<os, flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   operator==(basic_file_path const& other) const noexcept -> bool {
-      return view() == other.view();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   operator==(str_view other) const noexcept -> bool {
-      return view() == other;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   operator!=(str_view other) const noexcept -> bool {
-      return !(*this == other);
-   }
-
-   template <idx extent>
-   [[nodiscard]]
-   constexpr auto
-   operator==(char const (&other)[extent]) const noexcept -> bool {
-      return *this == str_view(other, extent - 1u);
-   }
-
-   template <idx extent>
-   [[nodiscard]]
-   constexpr auto
-   operator!=(char const (&other)[extent]) const noexcept -> bool {
-      return !(*this == other);
-   }
-
-   template <idx extent>
-   [[nodiscard]]
-   friend constexpr auto
-   operator==(char const (&left)[extent], basic_file_path const& right) noexcept
-      -> bool {
-      return right == left;
-   }
-
-   template <idx extent>
-   [[nodiscard]]
-   friend constexpr auto
-   operator!=(char const (&left)[extent], basic_file_path const& right) noexcept
-      -> bool {
-      return !(right == left);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   data() noexcept [[clang::lifetimebound]] -> char* _Nullable {
+   data() noexcept [[clang::lifetimebound]]
+   -> detail::path_char<os>* _Nullable {
       return m_storage.data();
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const noexcept [[clang::lifetimebound]] -> char const* _Nullable {
+   data() const noexcept [[clang::lifetimebound]]
+   -> detail::path_char<os> const* _Nullable {
       return m_storage.data();
    }
 
@@ -891,32 +1619,21 @@ basic_file_path : public container_interface<basic_file_path<os, flags>, char>,
 
    [[nodiscard]]
    constexpr auto
-   view() const noexcept [[clang::lifetimebound]] -> str_view {
-      return m_storage.view();
+   view() const noexcept [[clang::lifetimebound]] -> detail::path_view<os> {
+      return detail::path_view<os>(m_storage);
    }
 
    [[nodiscard]]
-   constexpr auto
-   native_handle() noexcept [[clang::lifetimebound]] -> zstr_span {
-      return m_storage.span();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   native_handle() const noexcept [[clang::lifetimebound]] -> zstr_view {
+   constexpr
+   operator detail::path_native_span<os>() noexcept [[clang::lifetimebound]] {
       return m_storage.span();
    }
 
    [[nodiscard]]
    constexpr
-   operator zstr_span() noexcept [[clang::lifetimebound]] {
-      return native_handle();
-   }
-
-   [[nodiscard]]
-   constexpr
-   operator zstr_view() const noexcept [[clang::lifetimebound]] {
-      return native_handle();
+   operator detail::path_native_view<os>() const noexcept
+      [[clang::lifetimebound]] {
+      return m_storage.span();
    }
 
    template <is_allocator Allocator>
@@ -1003,195 +1720,29 @@ basic_file_path : public container_interface<basic_file_path<os, flags>, char>,
       return clone<allocator_dyn>(allocator);
    }
 
-   [[nodiscard]]
-   constexpr auto
-   is_absolute() const noexcept -> bool {
-      return parse_root().is_absolute;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   is_relative() const noexcept -> bool {
-      return !is_absolute();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_name() const noexcept -> str_view {
-      return detail::path_slice(view(), 0u, parse_root().name_end);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_directory() const noexcept -> str_view {
-      detail::path_root const root = parse_root();
-      return detail::path_slice(view(), root.name_end, root.end);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_path() const noexcept -> str_view {
-      return detail::path_slice(view(), 0u, parse_root().end);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   relative_path() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
-      idx const first = detail::path_relative_start(view(), parse_root());
-      return detail::path_slice(view(), first, size());
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   parent_path() const -> str_view {
-      return detail::path_parent(view(), parse_root());
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   filename() const [[clang::lifetimebound]] -> str_view {
-      return detail::path_filename(view(), parse_root());
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   stem() const [[clang::lifetimebound]] -> str_view {
-      str_view const name = filename();
-      if (name == "." || name == "..") {
-         return name;
-      }
-
-      maybe<idx> const dot = detail::path_find_last_equal(name, '.');
-      if (dot.is_empty() || dot.value() == 0u) {
-         return name;
-      }
-
-      return detail::path_slice(name, 0u, dot.value());
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   extension() const -> str_view {
-      str_view const name = filename();
-      if (name == "." || name == "..") {
-         return {};
-      }
-
-      maybe<idx> const dot = detail::path_find_last_equal(name, '.');
-      if (dot.is_empty() || dot.value() == 0u) {
-         return {};
-      }
-
-      return detail::path_slice(name, dot.value(), name.size());
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_name() const noexcept -> bool {
-      return parse_root().name_end != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_directory() const noexcept -> bool {
-      detail::path_root const root = parse_root();
-      return root.end != root.name_end;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_path() const noexcept -> bool {
-      return parse_root().end != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_relative_path() const noexcept -> bool {
-      return relative_path().size() != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_parent_path() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      return parent_path().size() != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_filename() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      return filename().size() != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_stem() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      return stem().size() != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_extension() const noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      return extension().size() != 0u;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   components() const noexcept [[clang::lifetimebound]] -> path_components {
-      detail::path_root const root = parse_root();
-      return {
-         detail::path_slice(view(), root.name_end, size()),
-         root.separators,
-      };
-   }
-
    // Join `segment` like `std::filesystem::path::operator/=`.
-   template <is_allocator Allocator, is_path_segment Segment>
+   template <is_allocator Allocator, detail::is_path_segment_for<os> Segment>
    [[nodiscard]]
    constexpr auto
    append(allocator_ref<Allocator> allocator, Segment const& segment)
       -> maybe<void> {
-      static_assert(
-         detail::path_segment_has_os<os, Segment>,
-         "A path cannot be joined with a path of a different `cat::path_os`! "
-         "Join its `.view()` instead."
-      );
-      str_view const right = detail::path_segment_view(segment);
+      detail::path_join const join =
+         detail::path_plan_join<os>(view(), detail::path_segment_view(segment));
 
-      if (right.size() == 0u) {
-         return monostate;
+      if (join.keep != size()) {
+         $prop(m_storage.resize(allocator, join.keep));
       }
 
-      detail::path_root const left_root = parse_root();
-      detail::path_root const right_root = detail::path_parse_root<os>(right);
-      str_view const right_name =
-         detail::path_slice(right, 0u, right_root.name_end);
-
-      if (right_root.is_absolute
-          || (right_name.size() != 0u
-              && right_name
-                    != detail::path_slice(view(), 0u, left_root.name_end))) {
-         clear();
-         return m_storage.append(allocator, right);
+      if (join.needs_separator) {
+         $prop(
+            m_storage.push_back(allocator, detail::path_preferred_separator<os>)
+         );
       }
 
-      str_view const right_tail =
-         detail::path_slice(right, right_root.name_end, right.size());
-      if (right_root.end != right_root.name_end) {
-         $prop(m_storage.resize(allocator, left_root.name_end));
-         return m_storage.append(allocator, right_tail);
-      }
-
-      if (
-         has_filename()
-         || (left_root.end == left_root.name_end && left_root.is_absolute)
-      ) {
-         $prop(m_storage.push_back(allocator, os == path_os::nt ? '\\' : '/'));
-      }
-
-      return m_storage.append(allocator, right_tail);
+      return m_storage.append(allocator, join.tail);
    }
 
-   template <is_path_segment Segment>
+   template <detail::is_path_segment_for<os> Segment>
    [[nodiscard]]
    constexpr auto
    append(allocator_dyn allocator, Segment const& segment) noexcept(
@@ -1200,13 +1751,22 @@ basic_file_path : public container_interface<basic_file_path<os, flags>, char>,
       return append<allocator_dyn>(allocator, segment);
    }
 
- private:
-   [[nodiscard]]
+   template <
+      typename Allocator, detail::is_foreign_encoding_segment<os> Segment>
    constexpr auto
-   parse_root() const noexcept -> detail::path_root {
-      return detail::path_parse_root<os>(view());
-   }
+   append(Allocator const&, Segment const&) -> maybe<void> = delete (
+      "A `cat::path_os::nt` path only joins `char16_t` strings, and other "
+      "paths only join `char` strings!"
+   );
 
+   template <typename Allocator, detail::is_foreign_os_path<os> Segment>
+   constexpr auto
+   append(Allocator const&, Segment const&) -> maybe<void> = delete (
+      "A path cannot be joined with a path of a different `cat::path_os`! "
+      "Join its `.view()` instead."
+   );
+
+ private:
    template <path_os other_os, str_vec_flags other_flags>
    friend constexpr auto
    detail::maybe_file_path_has_value(
@@ -1217,7 +1777,7 @@ basic_file_path : public container_interface<basic_file_path<os, flags>, char>,
    friend constexpr auto
    detail::maybe_file_path_nullopt() -> basic_file_path<other_os, other_flags>;
 
-   basic_str_vec<char, m_flags> m_storage;
+   basic_str_vec<detail::path_char<os>, m_flags> m_storage;
 };
 
 }  // namespace manual
@@ -1233,8 +1793,8 @@ template <path_os os, str_vec_flags flags>
 constexpr auto
 maybe_file_path_nullopt() -> basic_file_path<os, flags> {
    basic_file_path<os, flags> value;
-   value.m_storage =
-      maybe_str_vec_nullopt<char, basic_file_path<os, flags>::m_flags>();
+   value.m_storage = maybe_str_vec_nullopt<
+      path_char<os>, basic_file_path<os, flags>::m_flags>();
    return value;
 }
 }  // namespace detail
@@ -1260,12 +1820,17 @@ make_file_path(allocator_ref<Allocator> allocator, Segment const& segment)
       result.free(allocator);
    };
 
-   str_view const value = detail::path_segment_view(segment);
+   auto const value = detail::path_segment_view(segment);
    $prop(result.reserve(
       allocator, max(value.size(), detail::path_initial_capacity(flags))
    ));
    $prop(result.resize(allocator, 0u));
-   $prop(result.append(allocator, segment));
+   $prop(result.append(
+      allocator,
+      detail::path_segment_view_for<detail::path_deduce_os<os, Segment>>(
+         segment
+      )
+   ));
    return move(result);
 }
 
@@ -1288,7 +1853,9 @@ constexpr auto
 make_file_path(allocator_ref<Allocator> allocator) noexcept(
    !__has_feature(cxx_exceptions)
 ) -> maybe<basic_file_path<os, flags>> {
-   return make_file_path<Allocator, os, flags>(allocator, str_view{});
+   return make_file_path<Allocator, os, flags>(
+      allocator, detail::path_view<os>{}
+   );
 }
 
 template <
@@ -1303,7 +1870,7 @@ make_file_path(allocator_dyn allocator) noexcept
 
 template <
    is_allocator Allocator, path_os os, str_vec_flags flags,
-   is_path_segment Segment>
+   detail::is_path_segment_for<os> Segment>
 [[nodiscard]]
 constexpr auto
 make_file_path_joined(
@@ -1319,7 +1886,8 @@ make_file_path_joined(
    return move(result);
 }
 
-template <path_os os, str_vec_flags flags, is_path_segment Segment>
+template <
+   path_os os, str_vec_flags flags, detail::is_path_segment_for<os> Segment>
 [[nodiscard]]
 constexpr auto
 make_file_path_joined(
@@ -1328,6 +1896,69 @@ make_file_path_joined(
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<basic_file_path<os, flags>> {
    return make_file_path_joined<allocator_dyn>(allocator, left, right);
+}
+
+template <
+   typename Allocator, path_os os, str_vec_flags flags,
+   detail::is_foreign_encoding_segment<os> Segment>
+constexpr auto
+make_file_path_joined(
+   Allocator const&, basic_file_path<os, flags> const&, Segment const&
+) -> maybe<basic_file_path<os, flags>> =
+   delete ("A `cat::path_os::nt` path only joins `char16_t` strings, and other "
+           "paths "
+           "only join `char` strings!");
+
+template <
+   typename Allocator, path_os os, str_vec_flags flags,
+   detail::is_foreign_os_path<os> Segment>
+constexpr auto
+make_file_path_joined(
+   Allocator const&, basic_file_path<os, flags> const&, Segment const&
+)
+   -> maybe<basic_file_path<os, flags>> = delete (
+      "A path cannot be joined with a path of a different `cat::path_os`! Join "
+      "its `.view()` instead."
+   );
+
+// Copy `segment` with `.` and `..` components removed and separators collapsed
+// like `std::filesystem::path::lexically_normal`. Unlike canonicalization, this
+// does not access the filesystem, so it neither resolves symbolic links nor
+// requires the path to exist.
+template <
+   is_allocator Allocator, path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_file_path_lexically_normal(
+   allocator_ref<Allocator> allocator, Segment const& segment
+) -> maybe<basic_file_path<detail::path_deduce_os<os, Segment>, flags>> {
+   constexpr path_os result_os = detail::path_deduce_os<os, Segment>;
+   basic_file_path<result_os, flags> result =
+      $prop((make_file_path<Allocator, os, flags>(allocator, segment)));
+   $defer {
+      result.free(allocator);
+   };
+
+   $prop(result.resize(
+      allocator,
+      detail::path_lexically_normalize<result_os>(result.data(), result.size())
+   ));
+   return move(result);
+}
+
+template <
+   path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_file_path_lexically_normal(
+   allocator_dyn allocator, Segment const& segment
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<basic_file_path<detail::path_deduce_os<os, Segment>, flags>> {
+   return manual::make_file_path_lexically_normal<allocator_dyn, os, flags>(
+      allocator, segment
+   );
 }
 
 }  // namespace manual
@@ -1354,6 +1985,10 @@ template <
 auto
 make_file_path_current(allocator_ref<Allocator> allocator) noexcept(false)
    -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
+   // TODO: Transcode the working directory for `nt` paths.
+   static_assert(
+      os != path_os::nt, "The working directory cannot be an `nt` path yet!"
+   );
    auto made = manual::make_file_path<Allocator, os, flags>(allocator);
    if (made.is_empty()) {
       return nix::linux_error::nomem;
@@ -1415,7 +2050,8 @@ make_file_path_absolute(
       nix::linux_error> {
    constexpr path_os result_os = detail::path_deduce_os<os, Segment, Base>;
    using path = manual::basic_file_path<result_os, flags>;
-   str_view const value = detail::path_segment_view(segment);
+   detail::path_view<result_os> const value =
+      detail::path_segment_view_for<result_os>(segment);
 
    if (detail::path_parse_root<result_os>(value).is_absolute) {
       auto result =
@@ -1427,7 +2063,8 @@ make_file_path_absolute(
       return detail::path_scaredy_value(move(result).value());
    }
 
-   str_view const base_view = detail::path_segment_view(base);
+   detail::path_view<result_os> const base_view =
+      detail::path_segment_view_for<result_os>(base);
    auto prefix = [&]() -> scaredy<path, nix::linux_error> {
       if (detail::path_parse_root<result_os>(base_view).is_absolute) {
          auto result =
@@ -1519,6 +2156,204 @@ make_file_path_absolute(
    );
 }
 
+// Resolve `segment` like `std::filesystem::canonical`. A relative `segment` is
+// resolved from the current working directory. Every component must exist.
+// Symbolic links are followed, then `.` and `..` components are removed.
+template <
+   path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment,
+   is_allocator Allocator>
+[[nodiscard]]
+auto
+make_file_path_canonical(
+   Segment const& segment, allocator_ref<Allocator> allocator
+)
+   -> scaredy<
+      manual::basic_file_path<detail::path_deduce_os<os, Segment>, flags>,
+      nix::linux_error> {
+   constexpr path_os result_os = detail::path_deduce_os<os, Segment>;
+   // TODO: Canonicalize `nt` paths with `GetFinalPathNameByHandleW`.
+   static_assert(
+      result_os != path_os::nt, "An `nt` path cannot be canonicalized yet!"
+   );
+   using path = manual::basic_file_path<result_os, flags>;
+   // Linux's `MAXSYMLINKS`.
+   constexpr idx max_links = 40u;
+
+   auto absolute = make_file_path_absolute<os, flags, Segment, Allocator>(
+      segment, allocator
+   );
+   if (absolute.is_empty()) {
+      return absolute.error();
+   }
+
+   // `pending` holds the components left to resolve, and `target` holds the
+   // last symbolic link that was read.
+   path pending = move(absolute).value();
+   auto made_resolved = make_file_path<Allocator, result_os, flags>(
+      allocator, detail::path_view<result_os>("/")
+   );
+   auto made_target = make_file_path<Allocator, result_os, flags>(allocator);
+   if (made_resolved.is_empty() || made_target.is_empty()) {
+      return nix::linux_error::nomem;
+   }
+
+   path resolved = move(made_resolved).value();
+   path target = move(made_target).value();
+   $defer {
+      pending.free(allocator);
+      resolved.free(allocator);
+      target.free(allocator);
+   };
+
+   auto const pop = [&] {
+      maybe<idx> const separator =
+         detail::path_find_last_equal(resolved.view(), '/');
+      resolved.resize(allocator, max(separator.value(), 1u)).verify();
+   };
+
+   // A name followed by `.`, `..`, or a trailing separator must be a
+   // directory. A following name is checked by the kernel instead.
+   auto const require_directory = [&]() -> scaredy<void, nix::linux_error> {
+      nix::file_status status;
+      auto result = nix::sys_newfstatat(nix::at_fdcwd, resolved, status);
+      if (result.is_empty()) {
+         return result.error();
+      }
+
+      if (!status.is_directory()) {
+         return nix::linux_error::notdir;
+      }
+
+      return {};
+   };
+
+   idx position = 0u;
+   idx links = 0u;
+   bool is_unchecked = false;
+   while (true) {
+      detail::path_view<result_os> const value = pending.view();
+      while (position < value.size() && value[position] == '/') {
+         ++position;
+      }
+
+      if (position == value.size()) {
+         if (
+            is_unchecked && value.size() != 0u
+            && value[idx(value.size() - 1u)] == '/'
+         ) {
+            $prop(require_directory());
+         }
+
+         return detail::path_scaredy_value(move(resolved));
+      }
+
+      maybe<idx> const separator = detail::path_find_first_equal(
+         detail::path_slice(value, position, value.size()), '/'
+      );
+      idx const end = separator.has_value() ? idx(position + separator.value())
+                                            : value.size();
+      detail::path_view<result_os> const name =
+         detail::path_slice(value, position, end);
+      position = end;
+
+      if (detail::path_is_dot_or_dot_dot(name)) {
+         if (is_unchecked) {
+            $prop(require_directory());
+            is_unchecked = false;
+         }
+
+         if (name.size() == 2u) {
+            pop();
+         }
+
+         continue;
+      }
+
+      if (resolved.append(allocator, name).is_empty()) {
+         return nix::linux_error::nomem;
+      }
+
+      idx length;
+      while (true) {
+         idx const capacity =
+            max(target.capacity(), detail::path_initial_capacity(flags));
+         if (target.resize(allocator, capacity).is_empty()) {
+            return nix::linux_error::nomem;
+         }
+
+         auto read = nix::sys_readlink(
+            resolved, span<char>(target.data(), target.size())
+         );
+         if (read.is_empty()) {
+            if (read.error() != nix::linux_error::inval) {
+               return read.error();
+            }
+
+            length = 0u;
+            break;
+         }
+
+         // A full buffer may have truncated the link.
+         if (read.value() < target.size()) {
+            length = read.value();
+            break;
+         }
+
+         if (target.reserve(allocator, capacity * 2u).is_empty()) {
+            return nix::linux_error::nomem;
+         }
+      }
+
+      // `inval` means that this name is not a symbolic link.
+      if (length == 0u) {
+         is_unchecked = true;
+         continue;
+      }
+
+      if (++links > max_links) {
+         return nix::linux_error::loop;
+      }
+
+      // Resolve the link's text followed by the unresolved remainder.
+      detail::path_view<result_os> const rest =
+         detail::path_slice(value, position, value.size());
+      if (target.resize(allocator, length + rest.size()).is_empty()) {
+         return nix::linux_error::nomem;
+      }
+
+      if (rest.size() != 0u) {
+         copy_memory(rest.data(), target.data() + length, rest.size());
+      }
+
+      if (target.data()[0] == '/') {
+         resolved.resize(allocator, 1u).verify();
+      } else {
+         pop();
+      }
+
+      swap(pending, target);
+      position = 0u;
+      is_unchecked = false;
+   }
+}
+
+template <
+   path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
+[[nodiscard]]
+auto
+make_file_path_canonical(
+   Segment const& segment, allocator_dyn allocator
+) noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy<
+      manual::basic_file_path<detail::path_deduce_os<os, Segment>, flags>,
+      nix::linux_error> {
+   return make_file_path_canonical<os, flags, Segment, allocator_dyn>(
+      segment, allocator
+   );
+}
+
 template <
    path_os os = path_os::portable,
    str_vec_flags flags = detail::path_default_flags, is_allocator Allocator,
@@ -1545,10 +2380,7 @@ make_file_path_unique(allocator_ref<Allocator> allocator, Model const& model)
    idx search_start = 0u;
    while (search_start < result.size()) {
       maybe<idx> const found = detail::path_find_first_equal(
-         str_view(
-            result.data() + search_start, idx(result.size() - search_start)
-         ),
-         '%'
+         detail::path_slice(result.view(), search_start, result.size()), '%'
       );
 
       if (found.is_empty()) {
@@ -1586,7 +2418,13 @@ template <
 auto
 make_file_path_unique(allocator_ref<Allocator> allocator) noexcept
    -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
-   return make_file_path_unique<os, flags>(allocator, "%%%%-%%%%-%%%%-%%%%");
+   if constexpr (os == path_os::nt) {
+      return make_file_path_unique<os, flags>(
+         allocator, u"%%%%-%%%%-%%%%-%%%%"
+      );
+   } else {
+      return make_file_path_unique<os, flags>(allocator, "%%%%-%%%%-%%%%-%%%%");
+   }
 }
 
 template <
@@ -1666,11 +2504,14 @@ struct path_formatter : formatter_base<CharT> {
 
 }  // namespace detail
 
+// TODO: Format `nt` paths once they can be transcoded.
 template <path_os os, str_vec_flags flags, typename CharT>
-   requires(is_same<CharT, char>)
+   requires(is_same<CharT, char> && os != path_os::nt)
 struct formatter<manual::basic_file_path<os, flags>, CharT>
     : detail::path_formatter<CharT> {};
 
 }  // namespace cat
 
+#include <cat/file_path_inplace>
+#include <cat/file_path_view>
 #include <cat/raii_file_path>

@@ -1,0 +1,173 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/file_path>
+
+namespace cat {
+
+template <idx inline_capacity, path_os os = path_os::portable>
+class [[clang::trivial_abi, gsl::Owner]]
+basic_file_path_inplace
+    : public container_interface<
+         basic_file_path_inplace<inline_capacity, os>, detail::path_char<os>>,
+      public random_access_stepanov_iterable_interface<detail::path_char<os>>,
+      public file_path_interface<os> {
+ public:
+   constexpr basic_file_path_inplace() = default;
+
+   [[nodiscard, gnu::returns_nonnull]]
+   constexpr auto
+   data() noexcept [[clang::lifetimebound]] -> detail::path_char<os>* _Nonnull {
+      return m_storage.data();
+   }
+
+   [[nodiscard, gnu::returns_nonnull]]
+   constexpr auto
+   data() const noexcept [[clang::lifetimebound]]
+   -> detail::path_char<os> const* _Nonnull {
+      return m_storage.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const noexcept -> idx {
+      return m_storage.size();
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   capacity() noexcept -> idx {
+      return inline_capacity;
+   }
+
+   [[nodiscard]]
+   static constexpr auto
+   max_size() noexcept -> idx {
+      return inline_capacity;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_null_terminated() const noexcept -> bool {
+      return true;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   view() const noexcept [[clang::lifetimebound]] -> detail::path_view<os> {
+      return m_storage;
+   }
+
+   [[nodiscard]]
+   constexpr
+   operator detail::path_native_span<os>() noexcept [[clang::lifetimebound]] {
+      return m_storage;
+   }
+
+   [[nodiscard]]
+   constexpr
+   operator detail::path_native_view<os>() const noexcept
+      [[clang::lifetimebound]] {
+      return m_storage;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   reserve(idx minimum_capacity) const noexcept -> maybe<void> {
+      return m_storage.reserve(minimum_capacity);
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   resize(idx new_size) noexcept -> maybe<void> {
+      return m_storage.resize(new_size);
+   }
+
+   constexpr void
+   clear() noexcept {
+      m_storage.clear();
+   }
+
+   // Join `segment` like `std::filesystem::path::operator/=`. If it does not
+   // fit, the path is unchanged.
+   template <detail::is_path_segment_for<os> Segment>
+   [[nodiscard]]
+   constexpr auto
+   append(Segment const& segment) noexcept(!__has_feature(cxx_exceptions))
+      -> maybe<void> {
+      detail::path_join const join =
+         detail::path_plan_join<os>(view(), detail::path_segment_view(segment));
+      if (
+         join.tail.size() + idx(join.needs_separator)
+         > inline_capacity - join.keep
+      ) {
+         return nullopt;
+      }
+
+      m_storage.resize(join.keep).verify();
+      if (join.needs_separator) {
+         m_storage.unchecked_push_back(detail::path_preferred_separator<os>);
+      }
+
+      return m_storage.append_range(join.tail);
+   }
+
+   template <detail::is_foreign_encoding_segment<os> Segment>
+   constexpr auto
+   append(Segment const&) -> maybe<void> = delete (
+      "A `cat::path_os::nt` path only joins `char16_t` strings, and other "
+      "paths only join `char` strings!"
+   );
+
+   template <detail::is_foreign_os_path<os> Segment>
+   constexpr auto
+   append(Segment const&) -> maybe<void> = delete (
+      "A path cannot be joined with a path of a different `cat::path_os`! "
+      "Join its `.view()` instead."
+   );
+
+ private:
+   basic_str_inplace<
+      detail::path_char<os>, inline_capacity, str_flags::null_terminated>
+      m_storage;
+};
+
+template <idx inline_capacity>
+using file_path_inplace =
+   basic_file_path_inplace<inline_capacity, path_os::portable>;
+
+namespace detail {
+template <idx inline_capacity, path_os os>
+struct path_os_trait<basic_file_path_inplace<inline_capacity, os>> {
+   static constexpr bool is_file_path = true;
+   static constexpr path_os value = os;
+};
+}  // namespace detail
+
+template <
+   idx inline_capacity, path_os os = path_os::portable, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_file_path_inplace(Segment const& segment) noexcept(
+   !__has_feature(cxx_exceptions)
+)
+   -> maybe<basic_file_path_inplace<
+      inline_capacity, detail::path_deduce_os<os, Segment>>> {
+   basic_file_path_inplace<inline_capacity, detail::path_deduce_os<os, Segment>>
+      result;
+   $prop(result.append(
+      detail::path_segment_view_for<detail::path_deduce_os<os, Segment>>(
+         segment
+      )
+   ));
+   return result;
+}
+
+// TODO: Format `nt` paths once they can be transcoded.
+template <idx inline_capacity, path_os os, typename CharT>
+   requires(is_same<CharT, char> && os != path_os::nt)
+struct formatter<basic_file_path_inplace<inline_capacity, os>, CharT>
+    : detail::path_formatter<CharT> {};
+
+}  // namespace cat

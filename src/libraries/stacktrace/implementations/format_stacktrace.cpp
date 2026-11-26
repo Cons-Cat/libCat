@@ -3,6 +3,7 @@
 #include <cat/defer>
 #include <cat/demangle>
 #include <cat/file>
+#include <cat/file_path_inplace>
 #include <cat/format>
 #include <cat/linux>
 #include <cat/stacktrace>
@@ -683,19 +684,15 @@ format_source_line(
 }
 
 auto
-open_source(
-   cat::detail::source_location source, cat::str_view object_path,
-   cat::array<char, 4'096u>& path
-) -> cat::maybe<nix::file_descriptor> {
-   if (source.file.size() >= path.size()) {
+open_source(cat::detail::source_location source, cat::str_view object_path)
+   -> cat::maybe<nix::file_descriptor> {
+   cat::file_path_inplace<4'095u> path;
+   if (path.append(source.file).is_empty()) {
       return cat::nullopt;
    }
 
-   cat::copy_memory(source.file.data(), path.data(), source.file.size());
-   path[source.file.size()] = '\0';
-
    nix::scaredy_nix<nix::file_descriptor> opened =
-      nix::sys_open(path.data(), nix::open_mode::read_only);
+      nix::sys_open(path, nix::open_mode::read_only);
 
    if (opened.has_value()) {
       return opened.value();
@@ -716,20 +713,15 @@ open_source(
          break;
       }
 
-      cat::idx const path_size = prefix + 1u + source.file.size();
-      if (path_size >= path.size()) {
+      path.clear();
+      if (
+         path.append(cat::str_view(object_path.data(), prefix)).is_empty()
+         || path.append(source.file).is_empty()
+      ) {
          continue;
       }
 
-      cat::copy_memory(object_path.data(), path.data(), prefix);
-      path[prefix] = '/';
-
-      cat::copy_memory(
-         source.file.data(), path.data() + prefix + 1u, source.file.size()
-      );
-
-      path[path_size] = '\0';
-      opened = nix::sys_open(path.data(), nix::open_mode::read_only);
+      opened = nix::sys_open(path, nix::open_mode::read_only);
       if (opened.has_value()) {
          return opened.value();
       }
@@ -743,9 +735,8 @@ format_source_snippet(
    cat::detail::source_location source, cat::str_view object_path,
    cat::format_context& context
 ) -> cat::scaredy_format<void> {
-   cat::array<char, 4'096u> path;
    cat::maybe<nix::file_descriptor> const opened =
-      open_source(source, object_path, path);
+      open_source(source, object_path);
 
    if (opened.is_empty()) {
       return cat::monostate;

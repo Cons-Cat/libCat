@@ -1,7 +1,5 @@
 #include <cat/array>
-#include <cat/defer>
-#include <cat/file_path>
-#include <cat/allocator_inplace>
+#include <cat/file_path_inplace>
 #include <cat/linux>
 #include <cat/memory>
 #include <cat/socket>
@@ -9,26 +7,21 @@
 
 auto
 main() -> int {
-   // This leading \0 denotes the abstract namespace.
-   constexpr cat::zstr_view socket_name = "\0/tmp/temp.sock";
-
-   // TODO: We should have a `file_path_inplace`.
-   auto allocator = cat::make_allocator_inplace<64u>();
-   cat::file_path socket_path =
-      cat::make_file_path(allocator, socket_name).verify();
-   $defer {
-      socket_path.free(allocator);
-   };
+   cat::file_path_inplace<16u> const socket_path =
+      // This leading \0 denotes the abstract namespace.
+      cat::make_file_path_inplace<16u>("\0/tmp/temp.sock").verify();
 
    cat::socket_handle listening_socket =
       cat::socket_handle::create(
          cat::socket_domain::local, cat::socket_type::stream
       )
          .verify();
+
    listening_socket.bind(socket_path).verify();
    listening_socket.listen(20).verify();
 
    cat::socket_handle receiving_socket;
+
    // A fixed-size string's `.size()` is its whole capacity, so this offers
    // every byte of the buffer to `.receive()`.
    cat::str_inplace_fixed<108> message_buffer;

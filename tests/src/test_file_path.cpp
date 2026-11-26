@@ -1,5 +1,6 @@
 #include <cat/allocator_page>
 #include <cat/file_path>
+#include <cat/file_path_inplace>
 
 #include "../unit_tests.hpp"
 
@@ -185,15 +186,20 @@ $test(path_decomposition_and_components) {
    cat::verify(value.has_stem());
    cat::verify(value.has_extension());
 
-   cat::str_view expected[] = {"alpha", "beta", "file.tar.gz"};
+   cat::array<cat::path_component, 4u> const expected = {
+      cat::path_component{cat::path_component_kind::root_directory, "/"          },
+      cat::path_component{cat::path_component_kind::normal,         "alpha"      },
+      cat::path_component{cat::path_component_kind::normal,         "beta"       },
+      cat::path_component{cat::path_component_kind::normal,         "file.tar.gz"},
+   };
    cat::idx index = 0u;
-   for (cat::str_view component : value.components()) {
-      cat::verify(index < 3u);
+   for (cat::path_component component : value.components()) {
+      cat::verify(index < 4u);
       cat::verify(component == expected[index]);
       ++index;
    }
 
-   cat::verify(index == 3u);
+   cat::verify(index == 4u);
 
    cat::idx character_count = 0u;
    cat::iterate(value).run_while([&](char character) {
@@ -206,25 +212,43 @@ $test(path_decomposition_and_components) {
 
    auto components = value.components();
    index = 0u;
-   cat::iterate(components).run_while([&](cat::str_view component) {
+   cat::iterate(components).run_while([&](cat::path_component component) {
       cat::verify(component == expected[index]);
       ++index;
       return true;
    });
 
-   cat::verify(index == 3u);
+   cat::verify(index == 4u);
 
+   // Like Rust, only a leading `.` is a component.
    auto dots =
-      cat::raii::make_file_path(g_tests_alloc, "a/./../.profile").verify();
-   cat::str_view dot_expected[] = {"a", ".", "..", ".profile"};
+      cat::raii::make_file_path(g_tests_alloc, "./a/./../.profile").verify();
+   cat::array<cat::path_component, 4u> const dot_expected = {
+      cat::path_component{cat::path_component_kind::current_directory, "."       },
+      cat::path_component{cat::path_component_kind::normal,            "a"       },
+      cat::path_component{cat::path_component_kind::parent_directory,  ".."      },
+      cat::path_component{cat::path_component_kind::normal,            ".profile"},
+   };
    index = 0u;
 
-   for (cat::str_view component : dots.components()) {
+   for (cat::path_component component : dots.components()) {
+      cat::verify(index < 4u);
       cat::verify(component == dot_expected[index]);
       ++index;
    }
 
    cat::verify(index == 4u);
+
+   // A trailing separator is not a component.
+   auto trailing = cat::raii::make_file_path(g_tests_alloc, "a//").verify();
+   auto trailing_components = trailing.components();
+   auto trailing_component = trailing_components.begin();
+   cat::verify(
+      *trailing_component
+      == cat::path_component{cat::path_component_kind::normal, "a"}
+   );
+   ++trailing_component;
+   cat::verify(trailing_component == trailing_components.end());
    cat::verify(dots.stem() == ".profile");
    cat::verify(dots.extension().size() == 0u);
 }
@@ -268,18 +292,20 @@ $test(path_simd_scan_boundaries) {
    cat::verify(value.extension() == ".gz");
 
    cat::idx component = 0u;
-   for (cat::str_view part : value.components()) {
+   for (cat::path_component part : value.components()) {
       if (component == 0u) {
-         cat::verify(part.size() == 65u);
+         cat::verify(part.kind == cat::path_component_kind::root_directory);
+      } else if (component == 1u) {
+         cat::verify(part.text.size() == 65u);
       } else {
-         cat::verify(component == 1u);
-         cat::verify(part.size() == 74u);
+         cat::verify(component == 2u);
+         cat::verify(part.text.size() == 74u);
       }
 
       ++component;
    }
 
-   cat::verify(component == 2u);
+   cat::verify(component == 3u);
 
    char slashes[65];
    for (char& character : slashes) {
@@ -292,7 +318,13 @@ $test(path_simd_scan_boundaries) {
    cat::verify(root.relative_path().size() == 0u);
    cat::verify(root.parent_path() == "/");
    cat::verify(root.filename().size() == 0u);
-   cat::verify(root.components().begin() == root.components().end());
+   auto root_components = root.components();
+   auto root_component = root_components.begin();
+   cat::verify(
+      (*root_component).kind == cat::path_component_kind::root_directory
+   );
+   ++root_component;
+   cat::verify(root_component == root_components.end());
 
    char trailing[106];
    trailing[0] = '/';
@@ -429,17 +461,17 @@ using nt_path =
    cat::raii::basic_file_path<cat::allocator_dyn, cat::path_os::nt>;
 
 static_assert(cat::path_os::native == cat::path_os::nix);
-static_assert(cat::detail::path_find_first_equal("ab\\c/", '/').value() == 4u);
+static_assert(cat::detail::path_find_first_equal(u"ab\\c/", '/').value() == 4u);
 static_assert(
    cat::detail::path_find_first_separator(
-      "ab\\c/", cat::detail::path_nt_separators
+      u"ab\\c/", cat::detail::path_nt_separators
    )
       .value()
    == 2u
 );
 static_assert(
    cat::detail::path_find_last_not_separator(
-      "a\\/\\/", cat::detail::path_nt_separators
+      u"a\\/\\/", cat::detail::path_nt_separators
    )
       .value()
    == 0u
@@ -448,7 +480,7 @@ static_assert(
 // Check the root of an `nt` path at compile time.
 consteval auto
 nt_root(
-   cat::str_view value, cat::str_view name, cat::str_view directory,
+   cat::u16str_view value, cat::u16str_view name, cat::u16str_view directory,
    bool is_absolute
 ) -> bool {
    cat::detail::path_root const root =
@@ -459,90 +491,110 @@ nt_root(
           && root.is_absolute == is_absolute;
 }
 
-static_assert(nt_root("", "", "", false));
-static_assert(nt_root("foo\\bar", "", "", false));
-static_assert(nt_root("\\foo", "", "\\", false));
-static_assert(nt_root("/foo", "", "/", false));
-static_assert(nt_root("C:", "C:", "", false));
-static_assert(nt_root("c:foo", "c:", "", false));
-static_assert(nt_root("C:\\foo", "C:", "\\", true));
-static_assert(nt_root("C:/foo", "C:", "/", true));
-static_assert(nt_root("1:\\foo", "", "", false));
-static_assert(nt_root("\\\\server\\share", "\\\\server\\share", "", true));
-static_assert(nt_root("//server/share/x", "//server/share", "/", true));
+static_assert(nt_root(u"", u"", u"", false));
+static_assert(nt_root(u"foo\\bar", u"", u"", false));
+static_assert(nt_root(u"\\foo", u"", u"\\", false));
+static_assert(nt_root(u"/foo", u"", u"/", false));
+static_assert(nt_root(u"C:", u"C:", u"", false));
+static_assert(nt_root(u"c:foo", u"c:", u"", false));
+static_assert(nt_root(u"C:\\foo", u"C:", u"\\", true));
+static_assert(nt_root(u"C:/foo", u"C:", u"/", true));
+static_assert(nt_root(u"1:\\foo", u"", u"", false));
+static_assert(nt_root(u"\\\\server\\share", u"\\\\server\\share", u"", true));
+static_assert(nt_root(u"//server/share/x", u"//server/share", u"/", true));
 // Without a share name, `\\server` is only a root directory and a name.
-static_assert(nt_root("\\\\server", "", "\\", false));
-static_assert(nt_root("\\\\server\\", "", "\\", false));
-static_assert(nt_root("\\\\.\\COM1", "\\\\.\\COM1", "", true));
-static_assert(nt_root("//./COM1/x", "//./COM1", "/", true));
-static_assert(nt_root("\\\\?\\C:", "\\\\?\\C:", "", true));
-static_assert(nt_root("\\\\?\\C:\\x", "\\\\?\\C:", "\\", true));
+static_assert(nt_root(u"\\\\server", u"", u"\\", false));
+static_assert(nt_root(u"\\\\server\\", u"", u"\\", false));
+static_assert(nt_root(u"\\\\.\\COM1", u"\\\\.\\COM1", u"", true));
+static_assert(nt_root(u"//./COM1/x", u"//./COM1", u"/", true));
+static_assert(nt_root(u"\\\\?\\C:", u"\\\\?\\C:", u"", true));
+static_assert(nt_root(u"\\\\?\\C:\\x", u"\\\\?\\C:", u"\\", true));
 // `/` is not a separator in verbatim paths.
-static_assert(nt_root("\\\\?\\C:/x", "\\\\?\\C:/x", "", true));
+static_assert(nt_root(u"\\\\?\\C:/x", u"\\\\?\\C:/x", u"", true));
 static_assert(nt_root(
-   "\\\\?\\UNC\\server\\share\\x", "\\\\?\\UNC\\server\\share", "\\", true
+   u"\\\\?\\UNC\\server\\share\\x", u"\\\\?\\UNC\\server\\share", u"\\", true
 ));
-static_assert(nt_root("\\\\?\\pictures\\x", "\\\\?\\pictures", "\\", true));
+static_assert(nt_root(u"\\\\?\\pictures\\x", u"\\\\?\\pictures", u"\\", true));
 // A verbatim prefix spelled with `/` is a share named `?`.
-static_assert(nt_root("//?/C:/x", "//?/C:", "/", true));
+static_assert(nt_root(u"//?/C:/x", u"//?/C:", u"/", true));
 
 }  // namespace
 
 $test(path_nt_decomposition) {
    auto drive = cat::raii::make_file_path<cat::path_os::nt>(
-                   g_tests_alloc, "C:\\alpha/beta\\\\file.tar.gz"
+                   g_tests_alloc, u"C:\\alpha/beta\\\\file.tar.gz"
    )
                    .verify();
    static_assert(cat::is_same<__typeof_unqual(drive), nt_path>);
    cat::verify(drive.is_absolute());
-   cat::verify(drive.root_name() == "C:");
-   cat::verify(drive.root_directory() == "\\");
-   cat::verify(drive.root_path() == "C:\\");
-   cat::verify(drive.relative_path() == "alpha/beta\\\\file.tar.gz");
-   cat::verify(drive.parent_path() == "C:\\alpha/beta");
-   cat::verify(drive.filename() == "file.tar.gz");
-   cat::verify(drive.stem() == "file.tar");
-   cat::verify(drive.extension() == ".gz");
+   cat::verify(drive.root_name() == u"C:");
+   cat::verify(drive.root_directory() == u"\\");
+   cat::verify(drive.root_path() == u"C:\\");
+   cat::verify(drive.relative_path() == u"alpha/beta\\\\file.tar.gz");
+   cat::verify(drive.parent_path() == u"C:\\alpha/beta");
+   cat::verify(drive.filename() == u"file.tar.gz");
+   cat::verify(drive.stem() == u"file.tar");
+   cat::verify(drive.extension() == u".gz");
    cat::verify(drive.has_root_name());
    cat::verify(drive.has_root_directory());
 
-   cat::str_view expected[] = {"alpha", "beta", "file.tar.gz"};
+   using nt_component = cat::basic_path_component<char16_t>;
+   cat::array<nt_component, 5u> const expected = {
+      nt_component{cat::path_component_kind::root_name,      u"C:"         },
+      nt_component{cat::path_component_kind::root_directory, u"/"          },
+      nt_component{cat::path_component_kind::normal,         u"alpha"      },
+      nt_component{cat::path_component_kind::normal,         u"beta"       },
+      nt_component{cat::path_component_kind::normal,         u"file.tar.gz"},
+   };
    cat::idx index = 0u;
-   for (cat::str_view component : drive.components()) {
-      cat::verify(index < 3u);
+   for (nt_component component : drive.components()) {
+      cat::verify(index < 5u);
       cat::verify(component == expected[index]);
       ++index;
    }
 
-   cat::verify(index == 3u);
+   cat::verify(index == 5u);
 
    auto drive_relative =
-      cat::raii::make_file_path<cat::path_os::nt>(g_tests_alloc, "C:foo")
+      cat::raii::make_file_path<cat::path_os::nt>(g_tests_alloc, u"C:foo")
          .verify();
    cat::verify(drive_relative.is_relative());
-   cat::verify(drive_relative.root_name() == "C:");
+   cat::verify(drive_relative.root_name() == u"C:");
    cat::verify(!drive_relative.has_root_directory());
-   cat::verify(drive_relative.relative_path() == "foo");
-   cat::verify(drive_relative.parent_path() == "C:");
-   cat::verify(drive_relative.filename() == "foo");
+   cat::verify(drive_relative.relative_path() == u"foo");
+   cat::verify(drive_relative.parent_path() == u"C:");
+   cat::verify(drive_relative.filename() == u"foo");
 
    auto share = cat::raii::make_file_path<cat::path_os::nt>(
-                   g_tests_alloc, "\\\\server\\share"
+                   g_tests_alloc, u"\\\\server\\share"
    )
                    .verify();
    cat::verify(share.is_absolute());
-   cat::verify(share.root_name() == "\\\\server\\share");
-   cat::verify(share.parent_path() == "\\\\server\\share");
+   cat::verify(share.root_name() == u"\\\\server\\share");
+   cat::verify(share.parent_path() == u"\\\\server\\share");
    cat::verify(share.filename().size() == 0u);
-   cat::verify(share.components().begin() == share.components().end());
+   // A share's root directory is implicit.
+   auto share_components = share.components();
+   auto share_component = share_components.begin();
+   cat::verify(
+      *share_component
+      == nt_component{cat::path_component_kind::root_name, u"\\\\server\\share"}
+   );
+   ++share_component;
+   cat::verify(
+      (*share_component).kind == cat::path_component_kind::root_directory
+   );
+   cat::verify((*share_component).text.size() == 0u);
+   ++share_component;
+   cat::verify(share_component == share_components.end());
 
    auto verbatim = cat::raii::make_file_path<cat::path_os::nt>(
-                      g_tests_alloc, "\\\\?\\C:\\a/b\\c"
+                      g_tests_alloc, u"\\\\?\\C:\\a/b\\c"
    )
                       .verify();
-   cat::verify(verbatim.root_name() == "\\\\?\\C:");
-   cat::verify(verbatim.parent_path() == "\\\\?\\C:\\a/b");
-   cat::verify(verbatim.filename() == "c");
+   cat::verify(verbatim.root_name() == u"\\\\?\\C:");
+   cat::verify(verbatim.parent_path() == u"\\\\?\\C:\\a/b");
+   cat::verify(verbatim.filename() == u"c");
 
    // `\` is an ordinary character in `portable` paths.
    auto portable =
@@ -555,46 +607,47 @@ $test(path_nt_decomposition) {
 
 $test(path_nt_join) {
    auto path =
-      cat::raii::make_file_path<cat::path_os::nt>(g_tests_alloc, "C:\\a")
+      cat::raii::make_file_path<cat::path_os::nt>(g_tests_alloc, u"C:\\a")
          .verify();
-   path.append("b").verify();
-   cat::verify(path == "C:\\a\\b");
-   path.append("c/").verify();
-   path.append("d").verify();
-   cat::verify(path == "C:\\a\\b\\c/d");
+   path.append(u"b").verify();
+   cat::verify(path == u"C:\\a\\b");
+   path.append(u"c/").verify();
+   path.append(u"d").verify();
+   cat::verify(path == u"C:\\a\\b\\c/d");
    // A root directory keeps the root name.
-   path.append("\\rooted").verify();
-   cat::verify(path == "C:\\rooted");
+   path.append(u"\\rooted").verify();
+   cat::verify(path == u"C:\\rooted");
    // The same root name keeps the relative path.
-   path.append("C:e").verify();
-   cat::verify(path == "C:\\rooted\\e");
+   path.append(u"C:e").verify();
+   cat::verify(path == u"C:\\rooted\\e");
    // A different root name replaces the path.
-   path.append("D:f").verify();
-   cat::verify(path == "D:f");
+   path.append(u"D:f").verify();
+   cat::verify(path == u"D:f");
    // Drive-relative paths do not gain a separator.
    auto drive =
-      cat::raii::make_file_path<cat::path_os::nt>(g_tests_alloc, "C:").verify();
-   drive.append("g").verify();
-   cat::verify(drive == "C:g");
+      cat::raii::make_file_path<cat::path_os::nt>(g_tests_alloc, u"C:")
+         .verify();
+   drive.append(u"g").verify();
+   cat::verify(drive == u"C:g");
    // Shares have an implicit root directory, so they gain one.
    auto share = cat::raii::make_file_path<cat::path_os::nt>(
-                   g_tests_alloc, "\\\\server\\share"
+                   g_tests_alloc, u"\\\\server\\share"
    )
                    .verify();
-   auto joined = (share / "h").verify();
-   cat::verify(joined == "\\\\server\\share\\h");
-   joined.append("\\\\other\\place\\i").verify();
-   cat::verify(joined == "\\\\other\\place\\i");
+   auto joined = (share / u"h").verify();
+   cat::verify(joined == u"\\\\server\\share\\h");
+   joined.append(u"\\\\other\\place\\i").verify();
+   cat::verify(joined == u"\\\\other\\place\\i");
 
    // Factories deduce `nt` from an `nt` path.
    auto copy = cat::raii::make_file_path(g_tests_alloc, joined).verify();
    static_assert(cat::is_same<__typeof_unqual(copy), nt_path>);
-   cat::verify(copy == "\\\\other\\place\\i");
+   cat::verify(copy == u"\\\\other\\place\\i");
 
    auto manual =
-      cat::make_file_path<cat::path_os::nt>(g_tests_alloc, "x").verify();
+      cat::make_file_path<cat::path_os::nt>(g_tests_alloc, u"x").verify();
    auto manual_joined =
-      cat::make_file_path_joined(g_tests_alloc, manual, "y").verify();
+      cat::make_file_path_joined(g_tests_alloc, manual, u"y").verify();
    $defer {
       manual_joined.free(g_tests_alloc);
       manual.free(g_tests_alloc);
@@ -604,8 +657,7 @@ $test(path_nt_join) {
       cat::is_same<
          __typeof_unqual(manual_joined), cat::basic_file_path<cat::path_os::nt>>
    );
-   cat::verify(manual_joined == "x\\y");
-   cat::verify(cat::fmt(g_tests_alloc, "{}", manual_joined).verify() == "x\\y");
+   cat::verify(manual_joined == u"x\\y");
 }
 
 $test(path_nix) {
@@ -635,4 +687,240 @@ $test(path_nix) {
          __typeof_unqual(absolute), cat::basic_file_path<cat::path_os::nix>>
    );
    cat::verify(absolute == "/alpha\\beta/gamma");
+}
+
+$test(path_lexically_normal) {
+   struct normal_case {
+      cat::str_view input;
+      cat::str_view expected;
+   };
+
+   cat::array const cases = {
+      normal_case{"",                ""       },
+      normal_case{".",               "."      },
+      normal_case{"./",              "."      },
+      normal_case{"a/..",            "."      },
+      normal_case{"a/../",           "."      },
+      normal_case{"foo/./bar/..",    "foo/"   },
+      normal_case{"foo/.///bar/../", "foo/"   },
+      normal_case{"a//b",            "a/b"    },
+      normal_case{"a/./b/",          "a/b/"   },
+      normal_case{"a/.",             "a/"     },
+      normal_case{"../a/..",         ".."     },
+      normal_case{"../../a",         "../../a"},
+      normal_case{"a/../../b",       "../b"   },
+      normal_case{"/..",             "/"      },
+      normal_case{"//a/../b",        "/b"     },
+      normal_case{"/a/",             "/a/"    },
+   };
+
+   for (normal_case const& test_case : cases) {
+      auto manual =
+         cat::make_file_path_lexically_normal(g_tests_alloc, test_case.input)
+            .verify();
+      $defer {
+         manual.free(g_tests_alloc);
+      };
+
+      cat::verify(manual == test_case.expected);
+      cat::verify(manual.data()[manual.size()] == '\0');
+   }
+
+   auto managed =
+      cat::raii::make_file_path_lexically_normal(g_tests_alloc, "x/./y/../z")
+         .verify();
+   cat::verify(managed == "x/z");
+
+   auto drive = cat::raii::make_file_path_lexically_normal<cat::path_os::nt>(
+                   g_tests_alloc, u"C:/a/./b/..\\c"
+   )
+                   .verify();
+   cat::verify(drive == u"C:\\a\\c");
+
+   auto drive_relative =
+      cat::raii::make_file_path_lexically_normal<cat::path_os::nt>(
+         g_tests_alloc, u"C:a\\..\\.."
+      )
+         .verify();
+   cat::verify(drive_relative == u"C:..");
+
+   auto verbatim = cat::raii::make_file_path_lexically_normal<cat::path_os::nt>(
+                      g_tests_alloc, u"\\\\?\\C:\\a\\..\\."
+   )
+                      .verify();
+   cat::verify(verbatim == u"\\\\?\\C:\\a\\..\\.");
+}
+
+$test(path_canonical) {
+   auto unique =
+      cat::make_file_path_unique(g_tests_alloc, "/tmp/libcat-canonical-%%%%")
+         .verify();
+   $defer {
+      unique.free(g_tests_alloc);
+   };
+
+   nix::file_permissions const permissions =
+      nix::file_permissions::user_read
+      | nix::file_permissions::user_write
+      | nix::file_permissions::user_execute;
+   nix::sys_mkdir(unique, permissions).verify();
+
+   // `/tmp` may itself be a symbolic link.
+   auto made_root =
+      cat::make_file_path_canonical(unique, g_tests_alloc).verify();
+   auto root = cat::raii::make_file_path(g_tests_alloc, made_root).verify();
+   made_root.free(g_tests_alloc);
+   auto directory = (root / "dir").verify();
+   auto file = (directory / "file").verify();
+   auto link_directory = (root / "link_dir").verify();
+   auto up = (directory / "up").verify();
+   auto absolute = (root / "absolute").verify();
+   auto loop = (root / "loop").verify();
+   $defer {
+      auto _ = nix::sys_unlink(loop);
+      _ = nix::sys_unlink(absolute);
+      _ = nix::sys_unlink(up);
+      _ = nix::sys_unlink(link_directory);
+      _ = nix::sys_unlink(file);
+      _ = nix::sys_rmdir(directory);
+      _ = nix::sys_rmdir(root);
+   };
+
+   nix::sys_mkdir(directory, permissions).verify();
+   nix::sys_close(
+      nix::sys_openat(
+         nix::at_fdcwd, file, nix::open_mode::write_only,
+         nix::open_flags::create, permissions
+      )
+         .verify()
+   )
+      .verify();
+   nix::sys_symlink("dir", link_directory).verify();
+   nix::sys_symlink("..", up).verify();
+   nix::sys_symlink(file, absolute).verify();
+   nix::sys_symlink("loop", loop).verify();
+
+   auto const verify_canonical =
+      [&](cat::str_view input, cat::str_view expected) {
+         auto joined = (root / input).verify();
+         auto canonical =
+            cat::make_file_path_canonical(joined, g_tests_alloc).verify();
+         $defer {
+            canonical.free(g_tests_alloc);
+         };
+
+         auto expected_path = (root / expected).verify();
+         cat::verify(canonical == expected_path);
+      };
+   verify_canonical("link_dir/file", "dir/file");
+   verify_canonical("dir/up/link_dir/./file", "dir/file");
+   verify_canonical("absolute", "dir/file");
+   verify_canonical("link_dir/", "dir");
+   verify_canonical("dir/up/dir", "dir");
+   verify_canonical(".//dir/../link_dir", "dir");
+
+   auto const verify_error = [&](cat::str_view input, nix::linux_error error) {
+      auto joined = (root / input).verify();
+      auto canonical = cat::make_file_path_canonical(joined, g_tests_alloc);
+      cat::verify(canonical.is_empty());
+      cat::verify(canonical.error() == error);
+   };
+   verify_error("missing", nix::linux_error::noent);
+   verify_error("dir/file/", nix::linux_error::notdir);
+   verify_error("dir/file/..", nix::linux_error::notdir);
+   verify_error("dir/file/x", nix::linux_error::notdir);
+   verify_error("loop", nix::linux_error::loop);
+
+   auto slash = cat::make_file_path_canonical("/", g_tests_alloc).verify();
+   $defer {
+      slash.free(g_tests_alloc);
+   };
+
+   cat::verify(slash == "/");
+}
+
+$test(path_compare) {
+   struct compare_case {
+      cat::str_view left;
+      cat::str_view right;
+      int order;
+   };
+
+   // These orders come from Rust's `std::path::Path::cmp`.
+   cat::array const cases = {
+      compare_case{"a//b",                      "a/b",                       0 },
+      compare_case{"a/b",                       "a/b/",                      0 },
+      compare_case{"a/b/",                      "a/b//",                     0 },
+      compare_case{"a-",                        "a/",                        1 },
+      compare_case{"a/-",                       "a//b",                      -1},
+      compare_case{"ab/x",                      "a/x",                       1 },
+      compare_case{"a",                         "/a",                        1 },
+      compare_case{"/a",                        "//a",                       0 },
+      compare_case{"",                          "",                          0 },
+      compare_case{"",                          "a",                         -1},
+      compare_case{"a/b",                       "a/c",                       -1},
+      compare_case{"a/./b",                     "a/b",                       0 },
+      compare_case{"\xff",                      "a",                         1 },
+      compare_case{"a/b/",                      "a/b/c",                     -1},
+      compare_case{"./a",                       "a",                         -1},
+      compare_case{"..",                        "a",                         -1},
+      // These share a spelling before their first difference.
+      compare_case{"/usr/lib/x86_64/libfoo.so", "/usr/lib/x86_64/libbar.so", 1 },
+      compare_case{"/a/b/./c",                  "/a/b/c",                    0 },
+      compare_case{"a/bc",                      "a/b/c",                     1 },
+      compare_case{"a/b",                       "a/b/.",                     0 },
+      compare_case{"/a/b//c",                   "/a/b/c/",                   0 },
+      compare_case{"./x/y",                     "./x/z",                     -1},
+      compare_case{"/a/..",                     "/a/..",                     0 },
+      compare_case{"/a/../b",                   "/a/./b",                    -1},
+      compare_case{"x/yy/z",                    "x/y",                       1 },
+   };
+
+   for (compare_case const& test_case : cases) {
+      auto left =
+         cat::raii::make_file_path(g_tests_alloc, test_case.left).verify();
+      auto right =
+         cat::raii::make_file_path(g_tests_alloc, test_case.right).verify();
+      std::strong_ordering const order = left <=> right;
+      cat::verify((order < 0) == (test_case.order < 0));
+      cat::verify((order > 0) == (test_case.order > 0));
+      cat::verify((left == right) == (test_case.order == 0));
+      // Strings compare as paths on either side.
+      cat::verify((left == test_case.right) == (test_case.order == 0));
+      cat::verify((test_case.right == left) == (test_case.order == 0));
+   }
+
+   auto manual = cat::make_file_path(g_tests_alloc, "x//y/").verify();
+   $defer {
+      manual.free(g_tests_alloc);
+   };
+
+   cat::file_path_view const view = manual;
+   cat::verify(manual == "x/y/");
+   cat::verify("x/y//" == manual);
+   cat::verify(view == "x/y/");
+   cat::verify(manual == "x/./y");
+   cat::verify(manual != "x/y/z");
+   cat::verify(manual < "x/z");
+   cat::verify(cat::str_view("x/z") > manual);
+   cat::verify(cat::str_view("x//y") == manual);
+
+   // Like P3698's `inplace_vector`, paths of any storage and capacity compare.
+   auto small = cat::make_file_path_inplace<8u>("x/y//").verify();
+   auto large = cat::make_file_path_inplace<64u>("x//y/").verify();
+   auto managed = cat::raii::make_file_path(g_tests_alloc, "x/z").verify();
+   cat::verify(small == large);
+   cat::verify(large == manual);
+   cat::verify(view == small);
+   cat::verify(small < managed);
+   cat::verify(managed > view);
+
+   auto drive =
+      cat::raii::make_file_path<cat::path_os::nt>(g_tests_alloc, u"C:\\a/b")
+         .verify();
+   cat::verify(drive == u"C:/a\\\\b");
+   cat::verify(drive != u"c:\\a\\b");
+   // A root directory orders before a filename.
+   cat::verify(drive < u"C:a\\b");
+   cat::verify(drive < u"C:\\a\\c");
 }

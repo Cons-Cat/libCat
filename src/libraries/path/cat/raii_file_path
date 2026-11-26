@@ -40,7 +40,6 @@
 // this tradeoff ideal.
 // TODO: Furthor research that.
 // TODO: Provide a `cat::file_path_small[_fixed]` alias.
-// TODO: Provide a `cat::file_path_inplace` container.
 //
 // When `inline_storage` is disabled, `file_path`s grow from 0 to a capacity of
 // their `initial_growth` count in their initial allocation. Reallocations grow
@@ -63,10 +62,10 @@ constexpr auto
 raii_file_path_nullopt() noexcept(false)
    -> raii::basic_file_path<allocator_dyn, os, flags>;
 
-template <is_allocator Allocator, path_os path_os_value, str_vec_flags flags>
-struct path_os_trait<raii::basic_file_path<Allocator, path_os_value, flags>> {
+template <is_allocator Allocator, path_os os, str_vec_flags flags>
+struct path_os_trait<raii::basic_file_path<Allocator, os, flags>> {
    static constexpr bool is_file_path = true;
-   static constexpr path_os os = path_os_value;
+   static constexpr path_os value = os;
 };
 }  // namespace cat::detail
 
@@ -80,8 +79,10 @@ using file_path = basic_file_path<Allocator, path_os::portable, flags>;
 template <is_allocator Allocator, path_os os, str_vec_flags flags>
 class [[clang::preferred_name(file_path<Allocator>), gsl::Owner]]
 basic_file_path
-    : public container_interface<basic_file_path<Allocator, os, flags>, char>,
-      public random_access_stepanov_iterable_interface<char> {
+    : public container_interface<
+         basic_file_path<Allocator, os, flags>, detail::path_char<os>>,
+      public random_access_stepanov_iterable_interface<detail::path_char<os>>,
+      public file_path_interface<os> {
    static constexpr str_vec_flags m_flags = detail::path_default_flags | flags;
 
  public:
@@ -124,61 +125,15 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   operator==(basic_file_path const& other) const noexcept -> bool {
-      return m_path == other.m_path;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   operator==(str_view other) const noexcept -> bool {
-      return m_path == other;
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   operator!=(str_view other) const noexcept -> bool {
-      return !(*this == other);
-   }
-
-   template <idx extent>
-   [[nodiscard]]
-   constexpr auto
-   operator==(char const (&other)[extent]) const noexcept -> bool {
-      return *this == str_view(other, extent - 1u);
-   }
-
-   template <idx extent>
-   [[nodiscard]]
-   constexpr auto
-   operator!=(char const (&other)[extent]) const noexcept -> bool {
-      return !(*this == other);
-   }
-
-   template <idx extent>
-   [[nodiscard]]
-   friend constexpr auto
-   operator==(char const (&left)[extent], basic_file_path const& right) noexcept
-      -> bool {
-      return right == left;
-   }
-
-   template <idx extent>
-   [[nodiscard]]
-   friend constexpr auto
-   operator!=(char const (&left)[extent], basic_file_path const& right) noexcept
-      -> bool {
-      return !(right == left);
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   data() noexcept [[clang::lifetimebound]] -> char* _Nullable {
+   data() noexcept [[clang::lifetimebound]]
+   -> detail::path_char<os>* _Nullable {
       return m_path.data();
    }
 
    [[nodiscard]]
    constexpr auto
-   data() const noexcept [[clang::lifetimebound]] -> char const* _Nullable {
+   data() const noexcept [[clang::lifetimebound]]
+   -> detail::path_char<os> const* _Nullable {
       return m_path.data();
    }
 
@@ -202,32 +157,21 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   view() const noexcept [[clang::lifetimebound]] -> str_view {
+   view() const noexcept [[clang::lifetimebound]] -> detail::path_view<os> {
       return m_path.view();
    }
 
    [[nodiscard]]
-   constexpr auto
-   native_handle() noexcept [[clang::lifetimebound]] -> zstr_span {
-      return m_path.native_handle();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   native_handle() const noexcept [[clang::lifetimebound]] -> zstr_view {
-      return m_path.native_handle();
+   constexpr
+   operator detail::path_native_span<os>() noexcept [[clang::lifetimebound]] {
+      return m_path;
    }
 
    [[nodiscard]]
    constexpr
-   operator zstr_span() noexcept [[clang::lifetimebound]] {
-      return native_handle();
-   }
-
-   [[nodiscard]]
-   constexpr
-   operator zstr_view() const noexcept [[clang::lifetimebound]] {
-      return native_handle();
+   operator detail::path_native_view<os>() const noexcept
+      [[clang::lifetimebound]] {
+      return m_path;
    }
 
    [[nodiscard]]
@@ -292,129 +236,27 @@ basic_file_path
       return move(m_path);
    }
 
-   [[nodiscard]]
-   constexpr auto
-   is_absolute() const noexcept -> bool {
-      return m_path.is_absolute();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   is_relative() const noexcept -> bool {
-      return m_path.is_relative();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_name() const noexcept -> str_view {
-      return m_path.root_name();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_directory() const noexcept -> str_view {
-      return m_path.root_directory();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   root_path() const noexcept -> str_view {
-      return m_path.root_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   relative_path() const noexcept -> str_view {
-      return m_path.relative_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   parent_path() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
-      return m_path.parent_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   filename() const noexcept(!__has_feature(cxx_exceptions))
-      [[clang::lifetimebound]] -> str_view {
-      return m_path.filename();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   stem() const noexcept(!__has_feature(cxx_exceptions))
-      [[clang::lifetimebound]] -> str_view {
-      return m_path.stem();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   extension() const noexcept(!__has_feature(cxx_exceptions)) -> str_view {
-      return m_path.extension();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_name() const noexcept -> bool {
-      return m_path.has_root_name();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_directory() const noexcept -> bool {
-      return m_path.has_root_directory();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_root_path() const noexcept -> bool {
-      return m_path.has_root_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_relative_path() const noexcept -> bool {
-      return m_path.has_relative_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_parent_path() const noexcept -> bool {
-      return m_path.has_parent_path();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_filename() const noexcept -> bool {
-      return m_path.has_filename();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_stem() const noexcept -> bool {
-      return m_path.has_stem();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   has_extension() const noexcept -> bool {
-      return m_path.has_extension();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   components() const noexcept [[clang::lifetimebound]] -> path_components {
-      return m_path.components();
-   }
-
-   template <is_path_segment Segment>
+   template <detail::is_path_segment_for<os> Segment>
    [[nodiscard]]
    constexpr auto
    append(Segment const& segment) noexcept(!__has_feature(cxx_exceptions))
       -> maybe<void> {
       return m_path.append(m_allocator, segment);
    }
+
+   template <detail::is_foreign_encoding_segment<os> Segment>
+   constexpr auto
+   append(Segment const&) -> maybe<void> = delete (
+      "A `cat::path_os::nt` path only joins `char16_t` strings, and other "
+      "paths only join `char` strings!"
+   );
+
+   template <detail::is_foreign_os_path<os> Segment>
+   constexpr auto
+   append(Segment const&) -> maybe<void> = delete (
+      "A path cannot be joined with a path of a different `cat::path_os`! "
+      "Join its `.view()` instead."
+   );
 
  private:
    template <
@@ -491,12 +333,16 @@ make_file_path(
       basic_file_path<Allocator, detail::path_deduce_os<os, Segment>, flags>> {
    basic_file_path<Allocator, detail::path_deduce_os<os, Segment>, flags>
       result(allocator);
-   str_view const value = detail::path_segment_view(segment);
+   auto const value = detail::path_segment_view(segment);
    $prop(
       result.reserve(max(value.size(), detail::path_initial_capacity(flags)))
    );
    $prop(result.resize(0u));
-   $prop(result.append(segment));
+   $prop(result.append(
+      detail::path_segment_view_for<detail::path_deduce_os<os, Segment>>(
+         segment
+      )
+   ));
    return result;
 }
 
@@ -521,7 +367,9 @@ constexpr auto
 make_file_path(
    allocator_ref<Allocator> allocator [[clang::lifetimebound]]
 ) noexcept -> maybe<basic_file_path<Allocator, os, flags>> {
-   return raii::make_file_path<Allocator, os, flags>(allocator, str_view{});
+   return raii::make_file_path<Allocator, os, flags>(
+      allocator, detail::path_view<os>{}
+   );
 }
 
 template <
@@ -535,8 +383,43 @@ make_file_path(allocator_dyn allocator [[clang::lifetimebound]]) noexcept
 }
 
 template <
+   is_allocator Allocator, path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_file_path_lexically_normal(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Segment const& segment
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<
+      basic_file_path<Allocator, detail::path_deduce_os<os, Segment>, flags>> {
+   constexpr path_os result_os = detail::path_deduce_os<os, Segment>;
+   basic_file_path<Allocator, result_os, flags> result =
+      $prop((raii::make_file_path<Allocator, os, flags>(allocator, segment)));
+   $prop(result.resize(
+      detail::path_lexically_normalize<result_os>(result.data(), result.size())
+   ));
+   return result;
+}
+
+template <
+   path_os os = path_os::portable,
+   str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
+[[nodiscard]]
+constexpr auto
+make_file_path_lexically_normal(
+   allocator_dyn allocator [[clang::lifetimebound]], Segment const& segment
+) noexcept
+   -> maybe<basic_file_path<
+      allocator_dyn, detail::path_deduce_os<os, Segment>, flags>> {
+   return raii::make_file_path_lexically_normal<allocator_dyn, os, flags>(
+      allocator, segment
+   );
+}
+
+template <
    is_allocator Allocator, path_os os, str_vec_flags flags,
-   is_path_segment Segment>
+   detail::is_path_segment_for<os> Segment>
 [[nodiscard]]
 constexpr auto
 operator/(
@@ -548,13 +431,34 @@ operator/(
    return result;
 }
 
+template <
+   is_allocator Allocator, path_os os, str_vec_flags flags,
+   detail::is_foreign_encoding_segment<os> Segment>
+constexpr auto
+operator/(basic_file_path<Allocator, os, flags> const&, Segment const&)
+   -> maybe<basic_file_path<Allocator, os, flags>> = delete (
+      "A `cat::path_os::nt` path only joins `char16_t` strings, and other "
+      "paths only join `char` strings!"
+   );
+
+template <
+   is_allocator Allocator, path_os os, str_vec_flags flags,
+   detail::is_foreign_os_path<os> Segment>
+constexpr auto
+operator/(basic_file_path<Allocator, os, flags> const&, Segment const&)
+   -> maybe<basic_file_path<Allocator, os, flags>> = delete (
+      "A path cannot be joined with a path of a different `cat::path_os`! "
+      "Join its `.view()` instead."
+   );
+
 }  // namespace cat::raii
 
 namespace cat {
 
+// TODO: Format `nt` paths once they can be transcoded.
 template <
    is_allocator Allocator, path_os os, str_vec_flags flags, typename CharT>
-   requires(is_same<CharT, char>)
+   requires(is_same<CharT, char> && os != path_os::nt)
 struct formatter<raii::basic_file_path<Allocator, os, flags>, CharT>
     : detail::path_formatter<CharT> {};
 

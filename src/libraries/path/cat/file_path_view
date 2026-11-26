@@ -1,0 +1,79 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+#include <cat/file_path>
+
+namespace cat {
+
+template <path_os os = path_os::portable>
+class [[gsl::Pointer(detail::path_char<os> const)]]
+basic_file_path_view
+    : public container_interface<
+         basic_file_path_view<os>, detail::path_char<os> const>,
+      public random_access_stepanov_iterable_interface<
+         detail::path_char<os> const>,
+      public file_path_interface<os> {
+ public:
+   template <typename Path>
+      requires(
+         detail::path_os_trait<Path>::is_file_path
+         && (detail::path_os_trait<Path>::value == os || detail::path_os_trait<Path>::value == path_os::portable)
+      )
+   constexpr basic_file_path_view(
+      Path const& path [[clang::lifetimebound]]
+   ) noexcept
+       : m_value(path) {
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   data() const noexcept -> detail::path_char<os> const* _Nullable {
+      return m_value.data();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   size() const noexcept -> idx {
+      return view().size();
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   is_null_terminated() const noexcept -> bool {
+      return true;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   view() const noexcept -> detail::path_view<os> {
+      return m_value;
+   }
+
+   [[nodiscard]]
+   constexpr
+   operator detail::path_native_view<os>() const noexcept {
+      return m_value;
+   }
+
+ private:
+   detail::path_native_view<os> m_value;
+};
+
+using file_path_view = basic_file_path_view<path_os::portable>;
+
+namespace detail {
+template <path_os os>
+struct path_os_trait<basic_file_path_view<os>> {
+   static constexpr bool is_file_path = true;
+   static constexpr path_os value = os;
+};
+}  // namespace detail
+
+// TODO: Format `nt` paths once they can be transcoded.
+template <path_os os, typename CharT>
+   requires(is_same<CharT, char> && os != path_os::nt)
+struct formatter<basic_file_path_view<os>, CharT>
+    : detail::path_formatter<CharT> {};
+
+}  // namespace cat

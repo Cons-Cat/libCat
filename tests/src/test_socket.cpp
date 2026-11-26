@@ -79,10 +79,10 @@ $test(unix_socket_stream_round_trip) {
       cat::make_file_path_unique(g_tests_alloc, "/tmp/libcat-socket-%%%%")
          .verify();
    $defer {
-      auto _ = nix::sys_unlink(socket_path.native_handle());
+      auto _ = nix::sys_unlink(socket_path);
       socket_path.free(g_tests_alloc);
    };
-   auto _ = nix::sys_unlink(socket_path.native_handle());
+   auto _ = nix::sys_unlink(socket_path);
 
    cat::unix_socket_address const address(socket_path);
    cat::verify(!address.is_abstract());
@@ -131,7 +131,7 @@ $test(unix_socket_stream_round_trip) {
    accepted.close();
    client.close();
    server.close();
-   nix::sys_unlink(socket_path.native_handle()).verify();
+   nix::sys_unlink(socket_path).verify();
 }
 
 $test(ipv4_socket_port_zero) {

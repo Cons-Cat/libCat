@@ -126,19 +126,17 @@ socket_disposition(socket_flags flags) -> native_handle_disposition {
 
 }  // namespace
 
-template <path_os os>
-unix_socket_address::unix_socket_address(
-   basic_file_path<os> const& socket_path
-) noexcept(!__has_feature(cxx_exceptions)) {
+unix_socket_address::unix_socket_address(file_path_view socket_path) noexcept(
+   !__has_feature(cxx_exceptions)
+) {
    cat::assert(path_fits(socket_path));
    if (path_fits(socket_path)) {
       assign(socket_path);
    }
 }
 
-template <path_os os>
 auto
-unix_socket_address::create(basic_file_path<os> const& socket_path) noexcept(
+unix_socket_address::create(file_path_view socket_path) noexcept(
    !__has_feature(cxx_exceptions)
 ) -> scaredy<unix_socket_address, io_error> {
    if (!path_fits(socket_path)) {
@@ -149,9 +147,8 @@ unix_socket_address::create(basic_file_path<os> const& socket_path) noexcept(
    return result;
 }
 
-template <path_os os>
 void
-unix_socket_address::assign(basic_file_path<os> const& socket_path) {
+unix_socket_address::assign(file_path_view socket_path) {
    for (idx index = 0u; index < socket_path.size(); ++index) {
       m_path[index] = socket_path[index];
    }
@@ -249,9 +246,8 @@ socket_handle::bind(ipv6_socket_address const& address) const noexcept(
    return bind_address(__builtin_addressof(address), sizeof(address));
 }
 
-template <path_os os>
 auto
-socket_handle::bind(basic_file_path<os> const& socket_path) const
+socket_handle::bind(file_path_view socket_path) const
    -> scaredy<void, io_error> {
    auto address = unix_socket_address::create(socket_path);
    if (address.has_value()) {
@@ -293,9 +289,8 @@ socket_handle::connect(ipv6_socket_address const& address) const noexcept(
    return connect_address(__builtin_addressof(address), sizeof(address));
 }
 
-template <path_os os>
 auto
-socket_handle::connect(basic_file_path<os> const& socket_path) const
+socket_handle::connect(file_path_view socket_path) const
    -> scaredy<void, io_error> {
    auto address = unix_socket_address::create(socket_path);
    if (address.has_value()) {
@@ -575,43 +570,5 @@ socket_handle::getpeername(ipv6_socket_address& address) const noexcept(
    iword size = sizeof(address);
    return get_peer_name(__builtin_addressof(address), size);
 }
-
-template unix_socket_address::unix_socket_address(
-   basic_file_path<path_os::portable> const& socket_path
-) noexcept(!__has_feature(cxx_exceptions));
-
-template auto
-unix_socket_address::create(
-   basic_file_path<path_os::portable> const& socket_path
-) noexcept(!__has_feature(cxx_exceptions))
-   -> scaredy<unix_socket_address, io_error>;
-
-template auto
-socket_handle::bind(basic_file_path<path_os::portable> const& socket_path) const
-   -> scaredy<void, io_error>;
-
-template auto
-socket_handle::connect(
-   basic_file_path<path_os::portable> const& socket_path
-) const -> scaredy<void, io_error>;
-
-template unix_socket_address::unix_socket_address(
-   basic_file_path<path_os::native> const& socket_path
-) noexcept(!__has_feature(cxx_exceptions));
-
-template auto
-unix_socket_address::create(
-   basic_file_path<path_os::native> const& socket_path
-) noexcept(!__has_feature(cxx_exceptions))
-   -> scaredy<unix_socket_address, io_error>;
-
-template auto
-socket_handle::bind(basic_file_path<path_os::native> const& socket_path) const
-   -> scaredy<void, io_error>;
-
-template auto
-socket_handle::connect(
-   basic_file_path<path_os::native> const& socket_path
-) const -> scaredy<void, io_error>;
 
 }  // namespace cat
