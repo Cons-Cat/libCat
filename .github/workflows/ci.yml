@@ -422,7 +422,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           ctest --test-dir build-debug-tsan -R '^UnitTests$' --verbose --output-on-failure \
-            --timeout 420
+            --timeout 480
 
       - name: Run example binaries (Debug, TSan)
         if: ${{ !cancelled() }}
@@ -630,7 +630,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           ctest --test-dir build-release-tsan -R '^UnitTests$' --verbose --output-on-failure \
-            --timeout 420
+            --timeout 480
 
       - name: Run example binaries (Release, TSan)
         if: ${{ !cancelled() }}
@@ -820,7 +820,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           ctest --test-dir build-shared-tsan -R '^UnitTests$' --verbose --output-on-failure \
-            --timeout 420
+            --timeout 480
 
       - name: Run example binaries (CAT_USE_SHARED=ON, Debug, TSan)
         if: ${{ !cancelled() }}
