@@ -2064,7 +2064,7 @@ make_maybe() -> maybe<void> {
 }
 
 template <typename T>
-auto
+constexpr auto
 propagate_error(maybe<T> const& /*maybe*/) -> detail::nullopt_type {
    return nullopt;
 }

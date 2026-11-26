@@ -1122,7 +1122,7 @@ concept is_scaredy = requires(T scaredy) {
                         cat::maybe<decltype(scaredy.value())>();
                      } && !requires(T scaredy) { scaredy = cat::nullopt; };
 
-auto
+constexpr auto
 propagate_error(is_scaredy auto const& scaredy) {
    return scaredy.error();
 }
