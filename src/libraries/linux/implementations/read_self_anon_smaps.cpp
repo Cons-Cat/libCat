@@ -34,14 +34,14 @@ smaps_field(cat::str_view header, cat::idx index) -> cat::str_view {
    cat::idx field = 0u;
    cat::idx start = 0u;
    for (cat::idx i = 0u; i <= header.size(); ++i) {
-      if (i == header.size() || header[i] == ' ' || header[i] == '\t') {
+      if (i == header.size() || cat::is_whitespace(header[i])) {
          if (i > start) {
             if (field == index) {
                return header.substring(start, cat::idx(i - start));
             }
             ++field;
          }
-         while (i < header.size() && (header[i] == ' ' || header[i] == '\t')) {
+         while (i < header.size() && cat::is_whitespace(header[i])) {
             ++i;
          }
          start = i;
@@ -70,7 +70,7 @@ parse_kb_value(cat::str_view line) -> cat::idx {
 
 auto
 is_region_header(cat::str_view line) -> bool {
-   return line.size() != 0u && line[0] != ' ' && line[0] != '\t'
+   return line.size() != 0u && !cat::is_whitespace(line[0])
           && line.find('-').has_value();
 }
 

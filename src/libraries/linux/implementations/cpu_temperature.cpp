@@ -58,10 +58,7 @@ nix::cpu_temperature() -> cat::maybe<cat::int4> {
       return cat::nullopt;
    }
 
-   while (
-      cursor < length
-      // TODO: Something like `is_whitespace` would be better.
-      && (buffer[cursor] == '\n' || buffer[cursor] == '\r' || buffer[cursor] == ' ' || buffer[cursor] == '\t')) {
+   while (cursor < length && cat::is_whitespace(buffer[cursor])) {
       ++cursor;
    }
    if (cursor != length) {

@@ -304,3 +304,14 @@ $test(wstr_view_find_wchar_past_first_simd_chunk) {
 
 static_assert(cat::is_nothrow_default_constructible<cat::str_view>);
 static_assert(cat::is_nothrow_copy_assignable<cat::str_view>);
+
+static_assert(cat::is_whitespace(' '));
+static_assert(cat::is_whitespace('\t'));
+static_assert(cat::is_whitespace('\n'));
+static_assert(cat::is_whitespace('\v'));
+static_assert(cat::is_whitespace('\f'));
+static_assert(cat::is_whitespace('\r'));
+static_assert(cat::is_whitespace(u8' '));
+static_assert(!cat::is_whitespace('a'));
+static_assert(!cat::is_whitespace('\0'));
+static_assert(!cat::is_whitespace('\x0e'));

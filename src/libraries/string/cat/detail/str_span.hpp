@@ -46,6 +46,15 @@ string_length(CharT const* _Nonnull p_string) noexcept -> idx {
    }
 }
 
+// TODO: Where is the best file to put this?
+template <typename CharT>
+[[nodiscard]]
+constexpr auto
+is_whitespace(CharT character) -> bool {
+   return character == CharT(' ')
+          || (character >= CharT('\t') && character <= CharT('\r'));
+}
+
 template <typename CharT, str_flags flags = {}>
 class basic_str_span;
 
