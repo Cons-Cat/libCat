@@ -53,12 +53,10 @@ class [[gsl::Owner]] connection {
    static auto
    open(
       cat::allocator_dyn allocator [[clang::lifetimebound]],
-      nix::manual::io_uring& ring [[clang::lifetimebound]],
-      char const* _Nullable const* _Nonnull pp_environment
+      nix::manual::io_uring& ring [[clang::lifetimebound]]
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection> {
       return connection(
-         $prop(manual::connection::open(allocator, ring, pp_environment)),
-         allocator
+         $prop(manual::connection::open(allocator, ring)), allocator
       );
    }
 

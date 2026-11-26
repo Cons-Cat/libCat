@@ -72,9 +72,16 @@ decimal_digit(cat::uint4 value) -> char {
 // https://www.evanjones.ca/setenv-is-not-thread-safe.html
 [[nodiscard]]
 auto
-find_environment(
-   char const* _Nullable const* _Nonnull pp_environment, cat::str_view name
-) -> cat::str_view {
+find_environment(cat::str_view name) -> cat::str_view {
+   char const* _Nonnull const* _Nullable const pp_arguments =
+      cat::detail::pp_command_arguments;
+   if (pp_arguments == nullptr) {
+      return {"", 0u};
+   }
+
+   // The environment follows `argv`'s null terminator.
+   char const* _Nullable const* _Nonnull pp_environment =
+      pp_arguments + cat::detail::command_arguments_count + 1u;
    for (; *pp_environment != nullptr; ++pp_environment) {
       char const* p_entry = *pp_environment;
       cat::idx i = 0u;
@@ -398,10 +405,9 @@ x11::manual::connection::reject(error_code code, cat::idx bad_value) noexcept {
 
 auto
 x11::manual::connection::open(
-   cat::allocator_dyn allocator, nix::manual::io_uring& ring,
-   char const* _Nullable const* _Nonnull pp_environment
+   cat::allocator_dyn allocator, nix::manual::io_uring& ring
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection> {
-   cat::str_view const display = find_environment(pp_environment, "DISPLAY");
+   cat::str_view const display = find_environment("DISPLAY");
 
    // Build a null-terminated path to the Xauthority file.
    cat::array<char, 4_uki> path;
@@ -415,12 +421,11 @@ x11::manual::connection::open(
       path_size += size;
    };
 
-   cat::str_view const authority =
-      find_environment(pp_environment, "XAUTHORITY");
+   cat::str_view const authority = find_environment("XAUTHORITY");
    if (authority.size() != 0u) {
       append(authority);
    } else {
-      cat::str_view const home = find_environment(pp_environment, "HOME");
+      cat::str_view const home = find_environment("HOME");
       if (home.size() != 0u) {
          append(home);
          append("/.Xauthority");

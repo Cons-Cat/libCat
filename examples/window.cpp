@@ -9,7 +9,7 @@ alignas(
 ) cat::allocator_inplace<cat::page_size * 2u> allocator;
 
 auto
-main(int argc, char* const* pp_argv) -> int {
+main() -> int {
    cat::allocator_page pager;
 
    // `x11::raii::connection` submits its socket operations to this ring.
@@ -21,16 +21,11 @@ main(int argc, char* const* pp_argv) -> int {
                   | nix::io_uring_setup_flags::no_sq_array;
 
    nix::raii::io_uring ring =
-      nix::raii::make_io_uring(cat::allocator_dyn(allocator), 64u, params)
-         .verify();
+      nix::raii::make_io_uring(allocator, 64u, params).verify();
    ring.register_file_table(64u).verify();
 
-   // TODO: We should streamline away the environment parameter.
    x11::raii::connection display =
-      x11::raii::connection::open(
-         cat::allocator_dyn(pager), ring, pp_argv + argc + 1
-      )
-         .verify();
+      x11::raii::connection::open(pager, ring).verify();
    x11::screen const& screen = display.default_screen();
 
    cat::array<x11::window, 2u> windows;

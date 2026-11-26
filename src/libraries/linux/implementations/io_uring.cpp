@@ -33,6 +33,7 @@ nix::manual::io_uring::operator=(io_uring&& other) noexcept -> io_uring& {
       "nix::manual::io_uring move-assigned over while still owning a ring! "
       "Call .free(allocator) first."
    );
+
    swap(other);
    return *this;
 }
@@ -48,6 +49,7 @@ nix::manual::io_uring::layout(
    if (entries == 0u || (entries > max_entries && !is_clamped)) {
       return linux_error::inval;
    }
+
    cat::uint4 const sq_entries = cat::bit_ceil(cat::min(entries, max_entries));
    cat::uint4 cq_entries = sq_entries * 2u;
    if (has_flag(params.flags, io_uring_setup_flags::completion_size)) {
@@ -57,6 +59,7 @@ nix::manual::io_uring::layout(
       ) {
          return linux_error::inval;
       }
+
       cq_entries =
          cat::bit_ceil(cat::min(params.cq_entries, max_completion_entries));
    }
@@ -71,9 +74,11 @@ nix::manual::io_uring::layout(
    constexpr cat::idx header_size = 128u;
    cat::idx ring_size =
       header_size + cat::idx(cq_entries) * cat::idx(sizeof(io_uring_cqe));
+
    if (has_flag(params.flags, io_uring_setup_flags::cqe_32)) {
       ring_size *= 2u;
    }
+
    ring_size = cat::align_up(ring_size, header_size);
    if (!has_flag(params.flags, io_uring_setup_flags::no_sq_array)) {
       ring_size += sq_entries * cat::idx(sizeof(cat::uint4));
@@ -92,6 +97,7 @@ nix::manual::io_uring::setup(
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_nix<void> {
    cat::byte* const p_sqes = memory.data();
    cat::byte* const p_rings = p_sqes + layout.sqe_size;
+
    params.flags |= io_uring_setup_flags::no_mmap;
    params.sq_off.user_address = __builtin_bit_cast(cat::uword, p_sqes);
    params.cq_off.user_address = __builtin_bit_cast(cat::uword, p_rings);
@@ -102,10 +108,12 @@ nix::manual::io_uring::setup(
    io_uring_params attempt = params;
    attempt.flags |= io_uring_setup_flags::registered_fd_only;
    scaredy_nix<file_descriptor> made = sys_io_uring_setup(entries, attempt);
+
    if (made.is_empty() && made.error() == linux_error::busy) {
       attempt = params;
       made = sys_io_uring_setup(entries, attempt);
    }
+
    m_ring = $prop(made);
    m_enter_flags =
       has_flag(attempt.flags, io_uring_setup_flags::registered_fd_only)
@@ -119,6 +127,7 @@ nix::manual::io_uring::setup(
          ? sizeof(io_uring_cqe) * 2u
          : sizeof(io_uring_cqe);
    cat::idx ring_end = attempt.cq_off.cqes + attempt.cq_entries * cqe_size;
+
    if (!has_flag(attempt.flags, io_uring_setup_flags::no_sq_array)) {
       ring_end = cat::max(
          ring_end, attempt.sq_off.array
@@ -133,6 +142,7 @@ nix::manual::io_uring::setup(
    }
 
    cat::span<cat::byte> const rings(p_rings, layout.ring_size);
+
    io_uring_submission_queue& submission_queue = m_submission_queue;
    submission_queue.m_p_head =
       ring_field<cat::uint4>(rings, attempt.sq_off.head);
@@ -152,6 +162,7 @@ nix::manual::io_uring::setup(
       has_flag(attempt.flags, io_uring_setup_flags::sqe_128)
          ? sizeof(io_uring_sqe) * 2u
          : sizeof(io_uring_sqe);
+
    submission_queue.m_p_sqes = p_sqes;
    submission_queue.m_sqe_stride = sqe_size;
    submission_queue.m_ring_mask =
@@ -179,6 +190,7 @@ nix::manual::io_uring::setup(
       cat::atomic<cat::uint4&>(*completion_queue.m_p_head)
          .load(cat::memory_order::relaxed);
    completion_queue.m_setup_flags = attempt.flags;
+
    return cat::monostate;
 }
 
@@ -201,6 +213,7 @@ nix::manual::io_uring::register_with_ring(
          | cat::to_underlying(io_uring_register_op::use_registered_ring)
       );
    }
+
    return sys_io_uring_register(m_ring, operation, p_argument, count);
 }
 
@@ -261,6 +274,7 @@ nix::manual::io_uring::destroy() noexcept(!__has_feature(cxx_exceptions))
          .offset = m_ring.value,
          .data = 0u,
       };
+
       register_with_ring(io_uring_register_op::unregister_ring_fds, &update, 1u)
          .assert();
    } else if (m_ring.value != invalid_file_descriptor.value) {
@@ -298,6 +312,7 @@ nix::manual::io_uring::dispatch(cat::uint4 minimum_complete) noexcept
    ) {
       return submitted.error();
    }
+
    while (io_uring_cqe const* p_completion = m_completion_queue.peek()) {
       // Copy the CQE, so that its slot is released before the handler might
       // submit and wait again.
@@ -320,9 +335,11 @@ nix::manual::io_uring::register_file_table(cat::uint4 count) noexcept
       .data = 0u,
       .tags = 0u,
    };
+
    $prop(register_with_ring(
       io_uring_register_op::register_files2, &registration, sizeof(registration)
    ));
+
    return cat::monostate;
 }
 
@@ -394,8 +411,10 @@ nix::manual::io_uring::unregister_file(cat::uint4 index) noexcept
       .offset = index,
       .file_descriptors = __builtin_bit_cast(cat::uword, &empty),
    };
+
    $prop(register_with_ring(
       io_uring_register_op::register_files_update, &update, 1u
    ));
+
    return cat::monostate;
 }

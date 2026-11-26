@@ -99,6 +99,7 @@ class io_uring_submission_queue {
       cat::uint4 const head =
          cat::atomic<cat::uint4&>(*m_p_head).load(cat::memory_order::acquire);
       cat::uint4 const index = m_sqe_tail & m_ring_mask;
+
       if (index == m_ring_mask) {
          if (m_sqe_tail.wrap() + 2u - head >= m_ring_entries) {
             return nullptr;
@@ -115,6 +116,7 @@ class io_uring_submission_queue {
       auto* p_sqe = __builtin_bit_cast(
          io_uring_sqe* _Nonnull, m_p_sqes + large_index * sizeof(io_uring_sqe)
       );
+
       __builtin_memset_inline(p_sqe, 0, sizeof(io_uring_sqe) * 2u);
       m_sqe_tail = m_sqe_tail.wrap() + 2u;
       return p_sqe;
@@ -245,6 +247,7 @@ class io_uring_completion_queue {
          cat::uint4 const tail = cat::atomic<cat::uint4&>(*m_p_tail).load(
             cat::memory_order::acquire
          );
+
          if (m_cqe_head == tail) {
             return nullptr;
          }
@@ -526,13 +529,15 @@ class [[gsl::Owner]] io_uring {
       cat::uint4 count
    ) noexcept -> scaredy_nix<cat::idx>;
 
-   // A registered ring index, unless `m_enter_flags` is `none`, in which case
-   // this is a plain descriptor.
+   // Either a registered ring index or, if `m_enter_flags` is `none`, a
+   // `file_descriptor`.
    file_descriptor m_ring = invalid_file_descriptor;
+
    io_uring_enter_flags m_enter_flags = io_uring_enter_flags::none;
    io_uring_params m_params{};
    io_uring_submission_queue m_submission_queue;
    io_uring_completion_queue m_completion_queue;
+
    cat::span<cat::byte> m_memory = nullptr;
 };
 
@@ -548,18 +553,22 @@ make_io_uring(
    -> cat::scaredy<io_uring, linux_error> {
    io_uring::memory_layout const layout =
       $prop(io_uring::layout(entries, params));
+
    cat::span<cat::byte> const memory = $prop_as(
       allocator.template align_alloc_multi<cat::byte>(
          cat::page_size, layout.sqe_size + layout.ring_size
       ),
       linux_error::nomem
    );
+
    io_uring ring;
    scaredy_nix<void> const set_up = ring.setup(memory, layout, entries, params);
+
    if (set_up.is_empty()) {
       allocator.free_multi(memory);
       return set_up.error();
    }
+
    return cat::move(ring);
 }
 

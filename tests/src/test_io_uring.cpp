@@ -21,6 +21,7 @@ make_ring(cat::uint4 entries = 8u, nix::io_uring_params params = {})
          || made.error() == nix::linux_error::nosys
       );
    }
+
    return made;
 }
 
@@ -85,6 +86,7 @@ $test(syscall_io_uring) {
    nix::io_uring_params params{};
    params.flags = nix::io_uring_setup_flags::ring_disabled;
    auto setup_result = nix::sys_io_uring_setup(4u, params);
+
    if (setup_result.is_empty()) {
       // Sandboxes can deny setup after a successful probe.
       cat::verify(
@@ -93,6 +95,7 @@ $test(syscall_io_uring) {
       );
       return;
    }
+
    nix::file_descriptor const ring = setup_result.value();
 
    auto enter_result =
@@ -110,6 +113,7 @@ $test(io_uring_factory_and_queues) {
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> ring = cat::move(made).value();
 
    verify_setup(ring, nix::io_uring_setup_flags::none);
@@ -139,6 +143,7 @@ $test(io_uring_factory_and_queues) {
       cat::verify(submission_queue.ready_count() == index + 1u);
       cat::verify(submission_queue.space_left() == entries - index - 1u);
    }
+
    cat::verify(submission_queue.get_sqe() == nullptr);
    cat::verify(submission_queue.get_sqe_128() == nullptr);
 
@@ -158,6 +163,7 @@ $test(io_uring_factory_and_queues) {
       verify_nop_completion(ring, 200u);
       cat::verify(completion_queue.ready_count() == entries - index - 1u);
    }
+
    cat::verify(completion_queue.peek() == nullptr);
    cat::verify(completion_queue.overflow() == 0u);
    cat::verify(submission_queue.dropped_count() == 0u);
@@ -172,6 +178,7 @@ $test(io_uring_submit_paths) {
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> ring = cat::move(made).value();
 
    cat::verify(ring.submit().verify() == 0u);
@@ -198,9 +205,11 @@ $test(io_uring_extended_entries) {
    params.flags =
       nix::io_uring_setup_flags::sqe_128 | nix::io_uring_setup_flags::cqe_32;
    auto made = make_ring(4u, params);
+
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> ring = cat::move(made).value();
 
    verify_setup(ring, params.flags);
@@ -231,9 +240,11 @@ $test(io_uring_no_sq_array) {
    nix::io_uring_params params{};
    params.flags = nix::io_uring_setup_flags::no_sq_array;
    auto made = make_ring(4u, params);
+
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> ring = cat::move(made).value();
 
    verify_setup(ring, params.flags);
@@ -249,9 +260,11 @@ $test(io_uring_completion_overflow) {
    params.flags = nix::io_uring_setup_flags::completion_size;
    params.cq_entries = 4u;
    auto made = make_ring(2u, params);
+
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> ring = cat::move(made).value();
    cat::verify(
       (ring.params().features & nix::io_uring_features::no_drop)
@@ -288,9 +301,11 @@ $test(io_uring_sq_poll_wakeup) {
    params.flags = nix::io_uring_setup_flags::sq_poll;
    params.sq_thread_idle = 1u;
    auto made = make_ring(4u, params);
+
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> ring = cat::move(made).value();
 
    for (cat::idx attempt = 0u;
@@ -298,6 +313,7 @@ $test(io_uring_sq_poll_wakeup) {
         ++attempt) {
       nix::sys_sched_yield().verify();
    }
+
    cat::verify(ring.submission_queue().needs_wakeup());
 
    queue_nop(ring, 601u);
@@ -312,12 +328,14 @@ $test(io_uring_multiple_pages) {
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> ring = cat::move(made).value();
    cat::verify(ring.params().sq_entries == 4'096u);
 
    for (cat::idx index = 0u; index < 4'096u; ++index) {
       queue_nop(ring, 801u);
    }
+
    cat::verify(ring.submit_and_wait(4'096u).verify() == 4'096u);
    for (cat::idx index = 0u; index < 4'096u; ++index) {
       verify_nop_completion(ring, 801u);
@@ -333,12 +351,14 @@ $test(io_uring_registered_slots_fallback) {
          rings[index].free(cat::allocator_dyn(ring_pager));
       }
    };
+
    for (nix::manual::io_uring& ring : rings) {
       auto made =
          nix::manual::make_io_uring(cat::allocator_dyn(ring_pager), 4u);
       if (made.is_empty()) {
          return;
       }
+
       ring = cat::move(made).value();
       ++made_count;
    }
@@ -364,6 +384,7 @@ $test(io_uring_free_and_destruct) {
       if (made.is_empty()) {
          return;
       }
+
       nix::raii::io_uring<> const ring = cat::move(made).value();
       verify_setup(ring, nix::io_uring_setup_flags::none);
    }
@@ -372,6 +393,7 @@ $test(io_uring_free_and_destruct) {
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> ring = cat::move(made).value();
    queue_nop(ring, 151u);
    complete_nop(ring, 151u);
@@ -386,6 +408,7 @@ $test(io_uring_move_construct) {
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> source = cat::move(made).value();
    queue_nop(source, 101u);
 
@@ -404,11 +427,13 @@ $test(io_uring_move_assign) {
    if (source_made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> source = cat::move(source_made).value();
    auto destination_made = make_ring(8u);
    if (destination_made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> destination = cat::move(destination_made).value();
    queue_nop(source, 102u);
 
@@ -424,6 +449,7 @@ $test(io_uring_self_move_assign) {
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> ring = cat::move(made).value();
    cat::uint4 const entries = ring.params().sq_entries;
    queue_nop(ring, 103u);
@@ -442,11 +468,13 @@ $test(io_uring_swap) {
    if (left_made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> left = cat::move(left_made).value();
    auto right_made = make_ring(8u);
    if (right_made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> right = cat::move(right_made).value();
    queue_nop(left, 104u);
    queue_nop(right, 105u);
@@ -481,6 +509,7 @@ $test(io_uring_dispatch_and_files) {
    if (made.is_empty()) {
       return;
    }
+
    nix::raii::io_uring<> ring = cat::move(made).value();
    ring.register_file_table(4u).verify();
 
@@ -499,6 +528,7 @@ $test(io_uring_dispatch_and_files) {
       p_submission->opcode = nix::io_uring_opcode::nop;
       p_submission->user_data = __builtin_bit_cast(cat::uword, p_operation);
    }
+
    ring.dispatch(2u).verify();
    cat::verify(first.completions == 1u && first.result == 0);
    cat::verify(second.completions == 1u && second.result == 0);

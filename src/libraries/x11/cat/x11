@@ -1036,16 +1036,14 @@ class connection : detail::connection_state {
    operator=(connection const&) -> connection& = delete;
 
    // Connect to `$DISPLAY`, authenticating with `$XAUTHORITY` or
-   // `$HOME/.Xauthority`. `pp_environment` is the null-terminated environment
-   // array, which follows `argv`'s null terminator. Socket operations go
-   // through `ring`, which must outlive this connection. Buffers come from
-   // `allocator`, which later calls must pass too.
+   // `$HOME/.Xauthority`. Socket operations go through `ring`, which must
+   // outlive this connection. Buffers come from `allocator`, which later calls
+   // must pass too.
    [[nodiscard]]
    static auto
    open(
       cat::allocator_dyn allocator,
-      nix::manual::io_uring& ring [[clang::lifetimebound]],
-      char const* _Nullable const* _Nonnull pp_environment
+      nix::manual::io_uring& ring [[clang::lifetimebound]]
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection>;
 
    // Connect to `display`, authenticating with the Xauthority file at
