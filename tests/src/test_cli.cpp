@@ -259,15 +259,16 @@ static_assert(cat::cli(2, empty_bool)
                  .is_empty());
 
 // Every libCat bool parses a bool flag.
-constexpr char const* wide_bools[] = {"program", "-e", "--quiet=false", nullptr};
+constexpr char const* wide_bools[] = {
+   "program", "-e", "--quiet=false", nullptr
+};
 static_assert(cat::cli(3, wide_bools)
                  .add_bool<"e,enable">()
                  .parse<bool2>("enable")
                  .verify());
-static_assert(!cat::cli(3, wide_bools)
-                 .add_bool<"q,quiet">()
-                 .parse<bool4>("quiet")
-                 .verify());
+static_assert(
+   !cat::cli(3, wide_bools).add_bool<"q,quiet">().parse<bool4>("quiet").verify()
+);
 
 // A short bool flag never takes a value.
 constexpr char const* short_bool_equals[] = {"program", "-e=false", nullptr};
