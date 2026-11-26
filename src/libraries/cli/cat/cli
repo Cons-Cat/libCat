@@ -351,6 +351,25 @@ class [[gsl::Pointer(char const*)]] cli {
       return scan_str<T>($prop(find_value(name)));
    }
 
+   // Parse the value of `name` as a `T` that allocates from `allocator`.
+
+   template <typename T, is_allocator Allocator>
+   [[nodiscard]]
+   constexpr auto
+   parse(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]], flag name
+   ) const -> maybe<T> {
+      return scan_str<T, Allocator>(allocator, $prop(find_value(name)));
+   }
+
+   template <typename T>
+   [[nodiscard]]
+   constexpr auto
+   parse(allocator_dyn allocator [[clang::lifetimebound]], flag name) const
+      -> maybe<T> {
+      return scan_str<T>(allocator, $prop(find_value(name)));
+   }
+
  private:
    constexpr cli(arguments_span arguments [[clang::lifetimebound]])
        : m_arguments(arguments) {

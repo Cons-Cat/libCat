@@ -25,28 +25,6 @@ valid_cli_parse(int argc, char const* const* pp_argv) -> cat::maybe<int4> {
    return cat::cli(argc, pp_argv).add_flag<"n">().parse<int4>("n");
 }
 
-// Owning results that do not hold onto the allocator may outlive it.
-
-auto
-valid_cli_parse_int_with_allocator(
-   cat::span<cat::byte> arena, int argc, char const* const* pp_argv
-) -> cat::maybe<int4> {
-   cat::allocator_linear linear = cat::make_allocator_linear(arena);
-   return cat::cli(argc, pp_argv)
-      .add_flag<"n">()
-      .parse<int4>("n", cat::allocator_dyn(linear));
-}
-
-auto
-valid_cli_parse_str_vec(
-   cat::span<cat::byte> arena, int argc, char const* const* pp_argv
-) -> cat::maybe<cat::str_vec> {
-   cat::allocator_linear linear = cat::make_allocator_linear(arena);
-   return cat::cli(argc, pp_argv)
-      .add_flag<"f">()
-      .parse<cat::str_vec>("f", cat::allocator_dyn(linear));
-}
-
 // Negative cases: a `cli` outlives `argv`.
 
 auto
@@ -71,7 +49,29 @@ dangling_cli_argv_local() {
    return cli;
 }
 
-// Negative cases: a `raii` str vec from `.parse()` outlives its allocator.
+// Negative cases: a result from `.parse()` outlives its allocator.
+
+auto
+dangling_cli_parse_int_allocator_dyn(
+   cat::span<cat::byte> arena, int argc, char const* const* pp_argv
+) -> cat::maybe<int4> {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+3 1+ {{local variable 'linear'}}
+   return cat::cli(argc, pp_argv)
+      .add_flag<"n">()
+      .parse<int4>(cat::allocator_dyn(linear), "n");
+}
+
+auto
+dangling_cli_str_vec_allocator_dyn(
+   cat::span<cat::byte> arena, int argc, char const* const* pp_argv
+) -> cat::maybe<cat::str_vec> {
+   cat::allocator_linear linear = cat::make_allocator_linear(arena);
+   // expected-warning@+3 1+ {{local variable 'linear'}}
+   return cat::cli(argc, pp_argv)
+      .add_flag<"f">()
+      .parse<cat::str_vec>(cat::allocator_dyn(linear), "f");
+}
 
 auto
 dangling_cli_raii_str_vec_allocator_dyn(
@@ -81,7 +81,7 @@ dangling_cli_raii_str_vec_allocator_dyn(
    // expected-warning@+3 1+ {{local variable 'linear'}}
    return cat::cli(argc, pp_argv)
       .add_flag<"f">()
-      .parse<cat::raii::str_vec<>>("f", cat::allocator_dyn(linear));
+      .parse<cat::raii::str_vec<>>(cat::allocator_dyn(linear), "f");
 }
 
 auto
@@ -93,6 +93,6 @@ dangling_cli_raii_str_vec_allocator(
    return cat::cli(argc, pp_argv)
       .add_flag<"f">()
       .parse<cat::raii::str_vec<cat::allocator_linear>, cat::allocator_linear>(
-         "f", linear
+         linear, "f"
       );
 }

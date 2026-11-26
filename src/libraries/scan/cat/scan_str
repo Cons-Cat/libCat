@@ -28,11 +28,6 @@ namespace cat {
 template <typename T>
 struct scanner;
 
-namespace detail {
-template <typename T>
-concept is_raii_allocated = requires(T const& value) { value.get_allocator(); };
-}  // namespace detail
-
 // A `scanner` that never allocates also provides `.scan()` without an
 // allocator.
 template <typename T>
@@ -131,25 +126,8 @@ scan_str(str_view input) -> maybe<T> {
    return scanner<T>{}.scan(input);
 }
 
+// The result may hold onto `allocator`, so it must not outlive it.
 template <typename T, is_allocator Allocator>
-   requires(!detail::is_raii_allocated<T>)
-[[nodiscard]]
-constexpr auto
-scan_str(allocator_ref<Allocator> allocator, str_view input) -> maybe<T> {
-   return scanner<T>{}.scan(allocator, input);
-}
-
-template <typename T>
-   requires(!detail::is_raii_allocated<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-constexpr auto
-scan_str(allocator_dyn allocator, str_view input) -> maybe<T> {
-   return scan_str<T, allocator_dyn>(allocator, input);
-}
-
-// A `raii` result holds onto `allocator`, so it must not outlive it.
-template <typename T, is_allocator Allocator>
-   requires(detail::is_raii_allocated<T>)
 [[nodiscard]]
 constexpr auto
 scan_str(
@@ -159,7 +137,6 @@ scan_str(
 }
 
 template <typename T>
-   requires(detail::is_raii_allocated<T>)
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 scan_str(allocator_dyn allocator [[clang::lifetimebound]], str_view input)
