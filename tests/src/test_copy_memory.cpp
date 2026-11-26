@@ -173,8 +173,8 @@ compare_equal_case(cat::idx bytes, cat::idx left_skew, cat::idx right_skew) {
 
 void
 compare_mismatch_case(cat::idx bytes, cat::idx mismatch_index, bool left_less) {
-   cat::array<cat::byte, 8_uki> left{};
-   cat::array<cat::byte, 8_uki> right{};
+   cat::array<cat::byte, 8_uki> left;
+   cat::array<cat::byte, 8_uki> right;
 
    // Vary both ranges' alignment with the mismatch position.
    cat::byte* _Nonnull const p_left = left.data() + (mismatch_index % 7u);
@@ -209,8 +209,8 @@ compare_mismatch_case(cat::idx bytes, cat::idx mismatch_index, bool left_less) {
 
 void
 compare_avx2_case(cat::idx bytes, cat::idx mismatch_index, bool left_less) {
-   cat::array<cat::byte, 512> left{};
-   cat::array<cat::byte, 512> right{};
+   cat::array<cat::byte, 512> left;
+   cat::array<cat::byte, 512> right;
 
    initialize_bytes(left.data(), bytes);
    initialize_bytes(right.data(), bytes);
@@ -314,13 +314,11 @@ template <typename Simd>
 [[gnu::always_inline]]
 inline void
 compare_large_case(cat::idx bytes, cat::idx mismatch_index) {
-   cat::array<cat::byte, 1_uki> left{};
-   cat::array<cat::byte, 1_uki> right{};
+   cat::array<cat::byte, 1_uki> left;
+   cat::array<cat::byte, 1_uki> right;
 
    initialize_bytes(left.data(), bytes);
    initialize_bytes(right.data(), bytes);
-   verify_large<Simd>(left.data(), right.data(), bytes, cat::nullopt);
-
    left[mismatch_index] = cat::byte(1u);
    right[mismatch_index] = cat::byte(240u);
    verify_large<Simd>(left.data(), right.data(), bytes, mismatch_index);
@@ -698,6 +696,12 @@ $test(compare_memory_direct_large_paths) {
       // It needs at least four `Simd`s. Cover six batches and every tail.
       for (cat::idx bytes = 4u * sizeof(Simd); bytes <= 24u * sizeof(Simd);
            ++bytes) {
+         // Equal ranges only depend on the size, so check them once here.
+         cat::array<cat::byte, 1_uki> left;
+         cat::array<cat::byte, 1_uki> right;
+         initialize_bytes(left.data(), bytes);
+         initialize_bytes(right.data(), bytes);
+         verify_large<Simd>(left.data(), right.data(), bytes, cat::nullopt);
          for (cat::idx mismatch = 0u; mismatch < bytes; ++mismatch) {
             compare_large_case<Simd>(bytes, mismatch);
          }
