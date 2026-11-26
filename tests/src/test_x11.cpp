@@ -57,11 +57,11 @@ $test(x11_display_name) {
    cat::verify(name.display == 0u && name.screen == 0u);
 
    name = x11::parse_display_name("unix:12.3").verify();
-   cat::verify(name.host == cat::str_view("unix"));
+   cat::verify(name.host == "unix");
    cat::verify(name.display == 12u && name.screen == 3u);
 
    name = x11::parse_display_name("example.com:1").verify();
-   cat::verify(name.host == cat::str_view("example.com"));
+   cat::verify(name.host == "example.com");
 
    cat::verify(!x11::parse_display_name("").has_value());
    cat::verify(!x11::parse_display_name("0").has_value());
@@ -184,8 +184,8 @@ $test(x11_authorization) {
 
    x11::authorization const found =
       x11::find_authorization(bytes, "cat", 7u).verify();
-   cat::verify(found.name == cat::str_view("MIT-MAGIC-COOKIE-1"));
-   cat::verify(found.data == cat::str_view("cd"));
+   cat::verify(found.name == "MIT-MAGIC-COOKIE-1");
+   cat::verify(found.data == "cd");
 
    cat::verify(!x11::find_authorization(bytes, "dog", 7u).has_value());
    cat::verify(!x11::find_authorization(bytes, "cat", 9u).has_value());

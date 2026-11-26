@@ -429,14 +429,51 @@ class
       }
    }
 
-   friend constexpr auto
-   operator==(
-      basic_str_span const& this_string, basic_str_span const& other_string
-   ) noexcept -> bool {
-      using char_type = remove_const<CharT>;
-      using view_type = basic_str_span<char_type const>;
-      return compare_strings(view_type(this_string), view_type(other_string));
+   [[nodiscard]]
+   constexpr auto
+   operator==(basic_str_span<CharT const> other) const noexcept -> bool {
+      return compare_strings(basic_str_span<CharT const>(*this), other);
    }
+
+   [[nodiscard]]
+   constexpr auto
+   operator!=(basic_str_span<CharT const> other) const noexcept -> bool {
+      return !(*this == other);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   operator==(CharT const (&other)[extent]) const noexcept -> bool {
+      return *this == basic_str_span<CharT const>(other, extent - 1u);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   operator!=(CharT const (&other)[extent]) const noexcept -> bool {
+      return !(*this == other);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(CharT const (&left)[extent], basic_str_span const& right) noexcept
+      -> bool {
+      return right == left;
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator!=(CharT const (&left)[extent], basic_str_span const& right) noexcept
+      -> bool {
+      return !(right == left);
+   }
+
+   auto
+   operator<=>(basic_str_span<CharT const>) const =
+      delete ("Strings have no ordering!");
 
    constexpr auto
    fill(remove_const<CharT> value) [[clang::lifetimebound]] -> basic_str_span&
@@ -538,33 +575,5 @@ template <typename String>
 concept is_string_utf8_interconvertible =
    is_safe_string<String>
    && is_char_utf8_interconvertible<typename String::value_type>;
-
-template <is_safe_string Left, is_safe_string Right>
-   requires(
-      !is_same<remove_cvref<Left>, remove_cvref<Right>>
-      && is_same_unqual<
-         typename remove_cvref<Left>::value_type,
-         typename remove_cvref<Right>::value_type>
-   )
-[[nodiscard]]
-constexpr auto
-operator==(Left const& left, Right const& right) noexcept -> bool {
-   using char_type = remove_const<typename remove_cvref<Left>::value_type>;
-   using view_type = basic_str_span<char_type const>;
-   return compare_strings(view_type(left), view_type(right));
-}
-
-template <typename String, typename CharT, idx extent>
-   requires(
-      is_safe_string<String>
-      && is_same_unqual<typename remove_cvref<String>::value_type, CharT>
-   )
-[[nodiscard]]
-constexpr auto
-operator==(String const& left, CharT const (&right)[extent]) noexcept -> bool {
-   using char_type = remove_const<CharT>;
-   using view_type = basic_str_span<char_type const>;
-   return compare_strings(view_type(left), view_type(right, extent - 1u));
-}
 
 }  // namespace cat

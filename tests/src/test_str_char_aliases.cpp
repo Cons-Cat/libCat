@@ -137,23 +137,23 @@ $test(str_vec_character_aliases) {
 
    cat::u8str_vec utf8;
    utf8.append(arena.alloc, "भारत").verify();
-   cat::verify(utf8.view() == cat::u8str_view(u8"भारत"));
+   cat::verify(utf8 == u8"भारत");
    utf8.free(arena.alloc);
 
    cat::u16str_vec utf16;
    utf16.append(arena.alloc, cat::u16str_view(u"भारत")).verify();
-   cat::verify(utf16.view() == cat::u16str_view(u"भारत"));
+   cat::verify(utf16 == u"भारत");
    utf16.free(arena.alloc);
 
    cat::raii::u32str_vec<cat::allocator_linear> managed(arena.alloc);
    managed.append(cat::u32str_view(U"भारत")).verify();
-   cat::verify(managed.view() == cat::u32str_view(U"भारत"));
+   cat::verify(managed == U"भारत");
 
    cat::raii::zu8str_vec<cat::allocator_linear> zmanaged(arena.alloc);
    zmanaged.append(cat::u8str_view(u8"भारत")).verify();
    cat::verify(zmanaged.size() == 12u);
    cat::verify(zmanaged.data()[zmanaged.size()] == u8'\0');
-   cat::verify(cat::u8str_view(zmanaged) == cat::u8str_view(u8"भारत"));
+   cat::verify(zmanaged == u8"भारत");
 }
 
 // Like `span`, a string view may add `const` but never remove it, and its

@@ -130,6 +130,48 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
+   operator==(str_view other) const noexcept -> bool {
+      return m_path == other;
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator!=(str_view other) const noexcept -> bool {
+      return !(*this == other);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   operator==(char const (&other)[extent]) const noexcept -> bool {
+      return *this == str_view(other, extent - 1u);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   operator!=(char const (&other)[extent]) const noexcept -> bool {
+      return !(*this == other);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(char const (&left)[extent], basic_file_path const& right) noexcept
+      -> bool {
+      return right == left;
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator!=(char const (&left)[extent], basic_file_path const& right) noexcept
+      -> bool {
+      return !(right == left);
+   }
+
+   [[nodiscard]]
+   constexpr auto
    data() noexcept [[clang::lifetimebound]] -> char* _Nullable {
       return m_path.data();
    }

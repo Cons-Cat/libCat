@@ -240,23 +240,6 @@ class
    template <idx other_capacity, str_vec_flags other_flags>
    [[nodiscard]]
    constexpr auto
-   operator==(
-      basic_str_inplace<CharT, other_capacity, other_flags> const& other
-   ) const noexcept(!__has_feature(cxx_exceptions)) -> bool {
-      if (size() != other.size()) {
-         return false;
-      }
-      for (idx index; index < size(); ++index) {
-         if (m_data[index] != other[index]) {
-            return false;
-         }
-      }
-      return true;
-   }
-
-   template <idx other_capacity, str_vec_flags other_flags>
-   [[nodiscard]]
-   constexpr auto
    operator<=>(
       basic_str_inplace<CharT, other_capacity, other_flags> const& other
    ) const noexcept {
@@ -264,20 +247,35 @@ class
              <=> span<CharT const>(other.data(), other.size());
    }
 
+   [[nodiscard]]
+   constexpr auto
+   operator==(basic_str_span<CharT const, str_flags{}> other) const noexcept
+      -> bool {
+      return compare_strings(
+         basic_str_span<CharT const, str_flags{}>(*this), other
+      );
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator!=(basic_str_span<CharT const, str_flags{}> other) const noexcept
+      -> bool {
+      return !(*this == other);
+   }
+
    template <idx extent>
    [[nodiscard]]
    constexpr auto
    operator==(CharT const (&other)[extent]) const noexcept -> bool {
-      idx const other_size = idx(extent - 1u);
-      if (size() != other_size) {
-         return false;
-      }
-      for (idx index; index < size(); ++index) {
-         if (m_data[index] != other[index]) {
-            return false;
-         }
-      }
-      return true;
+      return *this
+             == basic_str_span<CharT const, str_flags{}>(other, extent - 1u);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   operator!=(CharT const (&other)[extent]) const noexcept -> bool {
+      return !(*this == other);
    }
 
    template <idx extent>
@@ -287,6 +285,15 @@ class
       CharT const (&left)[extent], basic_str_inplace const& right
    ) noexcept -> bool {
       return right == left;
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator!=(
+      CharT const (&left)[extent], basic_str_inplace const& right
+   ) noexcept -> bool {
+      return !(right == left);
    }
 
    constexpr auto

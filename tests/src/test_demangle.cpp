@@ -16,7 +16,7 @@ verify_cases(cat::span<demangle_case const> cases) {
       cat::maybe<cat::demangled_name> const result =
          cat::demangle(g_tests_alloc, current.mangled);
       cat::verify(result.has_value());
-      cat::verify(result.value().view() == current.expected);
+      cat::verify(current.expected == result.value());
    }
 }
 

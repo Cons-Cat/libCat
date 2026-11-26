@@ -66,7 +66,7 @@ $test(string_length) {
    cat::verify(cat::string_length(L"Hello") == 5u);
    cat::wstr_inplace<5u> wide_inplace = L"Hello";
    cat::verify(wide_inplace.size() == 5u);
-   cat::verify(cat::wstr_view(wide_inplace) == cat::wstr_view(L"Hello"));
+   cat::verify(wide_inplace == L"Hello");
 
    cat::wzstr_inplace<5u> wide_inplace_z =
       cat::make_wzstr_inplace<5u>(L"Hello");

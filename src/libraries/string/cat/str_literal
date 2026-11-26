@@ -68,7 +68,6 @@ class
    using const_iterator = CharT const*;
    using size_type = __SIZE_TYPE__;
    using difference_type = __PTRDIFF_TYPE__;
-   using view_type = basic_str_span<CharT const, str_flags{}>;
 
    // NOLINTNEXTLINE(readability-identifier-naming)
    CharT data_[fixed_size + 1]{};
@@ -226,12 +225,9 @@ class
    }
 
    [[nodiscard]]
-   constexpr auto
-   view() const noexcept [[clang::lifetimebound]] -> view_type;
-
-   [[nodiscard]]
    constexpr
-   operator view_type() const [[clang::lifetimebound]];
+   operator basic_str_span<CharT const, str_flags{}>() const
+      [[clang::lifetimebound]];
 
    [[nodiscard]]
    static constexpr auto
@@ -313,23 +309,53 @@ class
       return joined;
    }
 
-   template <__SIZE_TYPE__ other_size>
+   [[nodiscard]]
+   constexpr auto
+   operator==(basic_str_span<CharT const, str_flags{}> other) const noexcept
+      -> bool {
+      return compare_strings(
+         basic_str_span<CharT const, str_flags{}>(*this), other
+      );
+   }
+
+   [[nodiscard]]
+   constexpr auto
+   operator!=(basic_str_span<CharT const, str_flags{}> other) const noexcept
+      -> bool {
+      return !(*this == other);
+   }
+
+   template <__SIZE_TYPE__ extent>
+   [[nodiscard]]
+   constexpr auto
+   operator==(CharT const (&other)[extent]) const noexcept -> bool {
+      return *this
+             == basic_str_span<CharT const, str_flags{}>(other, extent - 1u);
+   }
+
+   template <__SIZE_TYPE__ extent>
+   [[nodiscard]]
+   constexpr auto
+   operator!=(CharT const (&other)[extent]) const noexcept -> bool {
+      return !(*this == other);
+   }
+
+   template <__SIZE_TYPE__ extent>
    [[nodiscard]]
    friend constexpr auto
    operator==(
-      basic_str_literal const& left,
-      basic_str_literal<CharT, other_size> const& right
+      CharT const (&left)[extent], basic_str_literal const& right
    ) noexcept -> bool {
-      if constexpr (fixed_size != other_size) {
-         return false;
-      } else {
-         for (__SIZE_TYPE__ index = 0; index < fixed_size; ++index) {
-            if (left[index] != right[index]) {
-               return false;
-            }
-         }
-         return true;
-      }
+      return right == left;
+   }
+
+   template <__SIZE_TYPE__ extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator!=(
+      CharT const (&left)[extent], basic_str_literal const& right
+   ) noexcept -> bool {
+      return !(right == left);
    }
 
    template <__SIZE_TYPE__ other_size>

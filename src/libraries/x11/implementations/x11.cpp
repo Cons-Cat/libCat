@@ -196,10 +196,7 @@ x11::find_authorization(
          || (family == family_local && address == host_name);
       bool const display_matches =
          number.size() == 0u || number == display_string;
-      if (
-         host_matches && display_matches
-         && name == cat::str_view("MIT-MAGIC-COOKIE-1")
-      ) {
+      if (host_matches && display_matches && name == "MIT-MAGIC-COOKIE-1") {
          return authorization{.name = name, .data = data};
       }
    }
@@ -449,10 +446,7 @@ x11::manual::connection::open(
 
    // TCP displays are not supported yet. Connecting to one only needs a TCP
    // socket here, and `FamilyInternet` host matching in `find_authorization()`.
-   if (
-      parsed.value().host.size() != 0u
-      && !(parsed.value().host == cat::str_view("unix"))
-   ) {
+   if (parsed.value().host.size() != 0u && !(parsed.value().host == "unix")) {
       return error_packet(nix::linux_error::afnosupport);
    }
 

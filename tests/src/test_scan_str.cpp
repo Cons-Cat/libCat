@@ -83,23 +83,23 @@ $test(scan_str_strings) {
 
    cat::str_inplace<16u> inplace =
       cat::scan_str<cat::str_inplace<16u>>(allocator, input).verify();
-   cat::verify(cat::str_view(inplace) == input);
+   cat::verify(inplace == input);
    cat::verify(
       cat::scan_str<cat::str_inplace<4u>>(allocator, input).is_empty()
    );
 
    cat::str_vec manual = cat::scan_str<cat::str_vec>(allocator, input).verify();
-   cat::verify(cat::str_view(manual) == input);
+   cat::verify(manual == input);
    manual.free(allocator);
 
    cat::zstr_vec terminated =
       cat::scan_str<cat::zstr_vec>(allocator, input).verify();
-   cat::verify(cat::str_view(terminated) == input);
+   cat::verify(terminated == input);
    terminated.free(allocator);
 
    cat::raii::str_vec<> owning =
       cat::scan_str<cat::raii::str_vec<>>(allocator, input).verify();
-   cat::verify(cat::str_view(owning) == input);
+   cat::verify(owning == input);
 
    cat::raii::str_vec<cat::allocator_linear> typed =
       cat::scan_str<
@@ -107,7 +107,7 @@ $test(scan_str_strings) {
          linear, input
       )
          .verify();
-   cat::verify(cat::str_view(typed) == input);
+   cat::verify(typed == input);
 
    g_tests_alloc.free(page);
 }

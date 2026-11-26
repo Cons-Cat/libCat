@@ -29,14 +29,8 @@ class demangled_name {
    ~demangled_name() noexcept(!__has_feature(cxx_exceptions));
 
    [[nodiscard]]
-   auto
-   view() const noexcept [[clang::lifetimebound]] -> str_view {
-      return {m_p_data, m_size};
-   }
-
-   [[nodiscard]]
    operator str_view() const noexcept [[clang::lifetimebound]] {
-      return view();
+      return {m_p_data, m_size};
    }
 
  private:

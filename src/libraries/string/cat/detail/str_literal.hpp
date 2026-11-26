@@ -10,17 +10,10 @@
 namespace cat {
 
 template <typename CharT, __SIZE_TYPE__ fixed_size>
-constexpr auto
-basic_str_literal<CharT, fixed_size>::view() const noexcept
-   [[clang::lifetimebound]] -> basic_str_literal<CharT, fixed_size>::view_type {
-   return {data_, fixed_size};
-}
-
-template <typename CharT, __SIZE_TYPE__ fixed_size>
 constexpr basic_str_literal<CharT, fixed_size>::
-operator typename basic_str_literal<CharT, fixed_size>::view_type() const
+operator basic_str_span<CharT const, str_flags{}>() const
    [[clang::lifetimebound]] {
-   return view();
+   return {data_, fixed_size};
 }
 
 template <typename CharT, idx size>

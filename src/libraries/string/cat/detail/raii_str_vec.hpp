@@ -688,16 +688,44 @@ class
 
    [[nodiscard]]
    constexpr auto
-   operator==(basic_str_vec const& rhs) const noexcept -> bool {
-      return m_core == rhs.m_core;
+   operator==(basic_str_span<CharT const> other) const noexcept -> bool {
+      return compare_strings(basic_str_span<CharT const>(*this), other);
    }
 
-   template <str_flags other_flags>
    [[nodiscard]]
    constexpr auto
-   operator==(basic_str_span<CharT const, other_flags> rhs) const noexcept
+   operator!=(basic_str_span<CharT const> other) const noexcept -> bool {
+      return !(*this == other);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   operator==(CharT const (&other)[extent]) const noexcept -> bool {
+      return *this == basic_str_span<CharT const>(other, extent - 1u);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   operator!=(CharT const (&other)[extent]) const noexcept -> bool {
+      return !(*this == other);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(CharT const (&left)[extent], basic_str_vec const& right) noexcept
       -> bool {
-      return m_core == rhs;
+      return right == left;
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator!=(CharT const (&left)[extent], basic_str_vec const& right) noexcept
+      -> bool {
+      return !(right == left);
    }
 
    constexpr void
@@ -734,13 +762,6 @@ class
    constexpr auto
    capacity() const noexcept -> idx {
       return m_core.capacity();
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   view() const noexcept [[clang::lifetimebound]]
-   -> basic_str_span<CharT const> {
-      return m_core.view();
    }
 
    [[nodiscard]]

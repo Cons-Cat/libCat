@@ -160,7 +160,7 @@ class demangle_parser {
             return cat::nullopt;
          }
       }
-      if (!append(m_name.view())) {
+      if (!append(m_name)) {
          return cat::nullopt;
       }
 
@@ -271,7 +271,7 @@ class demangle_parser {
    [[nodiscard]]
    auto
    output_slice(cat::idx start) -> cat::str_view {
-      cat::str_view output = m_output->view();
+      cat::str_view output = *m_output;
       return output.substring(start, cat::idx(output.size() - start));
    }
 
@@ -307,7 +307,7 @@ class demangle_parser {
       if (m_substitution_count > 0u) {
          text_reference const last =
             m_substitutions[cat::idx(m_substitution_count - 1u).raw];
-         cat::str_view storage = m_substitution_text.view();
+         cat::str_view storage = m_substitution_text;
          if (storage.substring(last.offset, last.size) == text) {
             return true;
          }
@@ -321,7 +321,7 @@ class demangle_parser {
    auto
    reference_text(string_type& storage, text_reference const& reference)
       -> cat::str_view {
-      cat::str_view view = storage.view();
+      cat::str_view view = storage;
       return view.substring(reference.offset, reference.size);
    }
 

@@ -634,7 +634,7 @@ format_signature(cat::str_view symbol, cat::format_context& context)
    cat::maybe<cat::demangled_name> const demangled =
       cat::demangle(context.allocator.get_allocator(), symbol);
    cat::str_view const name =
-      demangled.has_value() ? demangled.value().view() : symbol;
+      demangled.has_value() ? cat::str_view(demangled.value()) : symbol;
    return context.append(name).and_then([&] {
       return has_parentheses(name) ? cat::scaredy_format<void>(cat::monostate)
                                    : context.append("()");

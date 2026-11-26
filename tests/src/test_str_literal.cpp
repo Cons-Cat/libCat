@@ -25,7 +25,7 @@ $test(str_literal_construction_and_access) {
    static_assert(text.at(1u) == 'a');
    static_assert(text.c_str()[3] == '\0');
    static_assert(text.data() == text.c_str());
-   static_assert(text.view() == cat::str_view("cat"));
+   static_assert(text == "cat");
    static_assert(cat::is_same<decltype(text.data()), char const*>);
    static_assert(!cat::is_default_constructible<cat::str_literal<0>>);
    static_assert(!cat::is_default_constructible<cat::str_literal<3>>);
@@ -105,7 +105,7 @@ $test(str_literal_wide_char) {
    static_assert(text.front() == L'w');
    static_assert(text.back() == L'e');
    static_assert(text.c_str()[4] == L'\0');
-   static_assert(text.view() == cat::wstr_view(L"wide"));
+   static_assert(text == L"wide");
    static_assert(wrapped == L"[wide]");
    static_assert(cat::basic_str_literal(L"wide") < L"wider");
 

@@ -470,16 +470,44 @@ class
 
    [[nodiscard]]
    constexpr auto
-   operator==(basic_str_vec const& rhs) const noexcept -> bool {
-      return compare_strings(this->view(), rhs.view());
+   operator==(basic_str_span<CharT const> other) const noexcept -> bool {
+      return compare_strings(basic_str_span<CharT const>(*this), other);
    }
 
-   template <str_flags other_flags>
    [[nodiscard]]
    constexpr auto
-   operator==(basic_str_span<CharT const, other_flags> rhs) const noexcept
+   operator!=(basic_str_span<CharT const> other) const noexcept -> bool {
+      return !(*this == other);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   operator==(CharT const (&other)[extent]) const noexcept -> bool {
+      return *this == basic_str_span<CharT const>(other, extent - 1u);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   constexpr auto
+   operator!=(CharT const (&other)[extent]) const noexcept -> bool {
+      return !(*this == other);
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator==(CharT const (&left)[extent], basic_str_vec const& right) noexcept
       -> bool {
-      return compare_strings(this->view(), basic_str_span<CharT const>(rhs));
+      return right == left;
+   }
+
+   template <idx extent>
+   [[nodiscard]]
+   friend constexpr auto
+   operator!=(CharT const (&left)[extent], basic_str_vec const& right) noexcept
+      -> bool {
+      return !(right == left);
    }
 
    constexpr void
@@ -527,16 +555,6 @@ class
       } else {
          return m_core.capacity() == 0u ? 0u : idx(m_core.capacity() - 1u);
       }
-   }
-
-   [[nodiscard]]
-   constexpr auto
-   view() const noexcept [[clang::lifetimebound]]
-   -> basic_str_span<CharT const> {
-      if (m_core.data() == nullptr || size() == 0u) {
-         return {};
-      }
-      return {m_core.data(), size()};
    }
 
    [[nodiscard]]
