@@ -88,6 +88,14 @@ $test(cli_repeated_and_missing_values) {
    cat::verify(cli.parse<int4>("absent").is_empty());
 }
 
+$test(cli_positional_keeps_earlier_values) {
+   char const* argv[] = {"program", "-n", "3", "file.txt", "-m", "4", nullptr};
+   auto cli = cat::cli(6, argv).add_flag<"n">().add_flag<"m">();
+   cat::verify(cli.parse<int4>("n").verify() == 3);
+   // Flags after a positional argument are not parsed yet.
+   cat::verify(cli.parse<int4>("m").is_empty());
+}
+
 $test(cli_skips_program_name) {
    char const* argv[] = {"--number=1", nullptr};
    auto cli = cat::cli(1, argv).add_flag<"number">();
@@ -171,3 +179,101 @@ $test(cli_version_without_flag) {
    auto cli = cat::cli(3, argv).add_flag<"n">().add_version<cat::version{1}>();
    cat::verify(cli.parse<int4>("n").value() == 3);
 }
+
+$test(cli_bool_flags) {
+   char const* argv[] = {"program", "-ab",           "--enable", "-n",
+                         "3",       "--quiet=false", "-xyz",     nullptr};
+   int const argc = 7;
+
+   auto cli = cat::cli(argc, argv)
+                 .add_bool<"a">()
+                 .add_bool<"b">()
+                 .add_bool<"c">()
+                 .add_bool<"e,enable">()
+                 .add_bool<"q,quiet">()
+                 .add_bool<"x">()
+                 .add_flag<"n,number">();
+
+   cat::verify(cli.parse<bool>("a").verify());
+   cat::verify(cli.parse<bool>("b").verify());
+   cat::verify(cli.parse<bool>("c").is_empty());
+   // `--enable` does not take `-n` as its value.
+   cat::verify(cli.parse<bool>("e").verify());
+   cat::verify(cli.parse<int4>("number").verify() == 3);
+   cat::verify(!cli.parse<bool>("quiet").verify());
+   // `y` and `z` are not bool flags, so `-xyz` is not a cluster.
+   cat::verify(cli.parse<bool>("x").is_empty());
+}
+
+$test(cli_bool_flag_after_value_flag) {
+   // `-e` is the value of `-f`, and a bool flag does not step over `-f`.
+   char const* argv[] = {"program", "-f", "-e", "-e", "-f", "x", nullptr};
+   auto cli = cat::cli(6, argv).add_flag<"f">().add_bool<"e">();
+   cat::verify(cli.parse<bool>("e").verify());
+   cat::verify(cli.parse<cat::str_inplace<4u>>("f").verify() == "x");
+}
+
+$test(cli_bool_flag_takes_no_attached_value) {
+   char const* argv[] = {"program", "-o1", nullptr};
+   auto cli = cat::cli(2, argv).add_bool<"o">();
+   cat::verify(cli.parse<bool>("o").is_empty());
+}
+
+namespace {
+
+// How `=` is handled in every spelling.
+constexpr char const* equals_in_value[] = {"program", "--file=a=b", nullptr};
+static_assert(
+   cat::cli(2, equals_in_value)
+      .add_flag<"f,file">()
+      .parse<cat::str_inplace<4u>>("file")
+      .verify()
+   == "a=b"
+);
+
+// A separate value is taken whole.
+constexpr char const* separate_equals[] = {"program", "--file", "=x", nullptr};
+static_assert(
+   cat::cli(3, separate_equals)
+      .add_flag<"f,file">()
+      .parse<cat::str_inplace<4u>>("file")
+      .verify()
+   == "=x"
+);
+
+// A short flag takes everything after it, like `getopt()`.
+constexpr char const* short_equals[] = {"program", "-f=x", nullptr};
+static_assert(
+   cat::cli(2, short_equals)
+      .add_flag<"f,file">()
+      .parse<cat::str_inplace<4u>>("f")
+      .verify()
+   == "=x"
+);
+
+// An empty bool value is not a bool.
+constexpr char const* empty_bool[] = {"program", "--enable=", nullptr};
+static_assert(cat::cli(2, empty_bool)
+                 .add_bool<"e,enable">()
+                 .parse<bool>("enable")
+                 .is_empty());
+
+// Every libCat bool parses a bool flag.
+constexpr char const* wide_bools[] = {"program", "-e", "--quiet=false", nullptr};
+static_assert(cat::cli(3, wide_bools)
+                 .add_bool<"e,enable">()
+                 .parse<bool2>("enable")
+                 .verify());
+static_assert(!cat::cli(3, wide_bools)
+                 .add_bool<"q,quiet">()
+                 .parse<bool4>("quiet")
+                 .verify());
+
+// A short bool flag never takes a value.
+constexpr char const* short_bool_equals[] = {"program", "-e=false", nullptr};
+static_assert(cat::cli(2, short_bool_equals)
+                 .add_bool<"e,enable">()
+                 .parse<bool>("enable")
+                 .is_empty());
+
+}  // namespace

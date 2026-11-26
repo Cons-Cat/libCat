@@ -7,20 +7,24 @@
 // most use cases with extremely low overhead. It is heavily compile-time
 // oriented and lazily evaluated, so you generally only pay for what you use.
 //
+// Its design attempts to facilitate the guidelines of https://clig.dev/.
+//
 // It is used like this:
 //    auto cli = cat::cli(argc, p_argv)
 //                  .add_flag<"f,file">()
 //                  .add_flag<"number">()
+//                  .add_bool<"e,enable">()
 //                  .add_version<{1, 2, 3}>();
 //
 //    cat::maybe<int4> number = cli.parse<int4>("number");
 //    cat::maybe<cat::str_view> file = cli.parse<cat::str_view>("f");
+//    cat::maybe<bool> enable = cli.parse<bool>("enable");
 //
 // TODO: Elaborate usage.
 //
 // TODO: Distinguish an absent flag from a malformed value.
 // TODO: Richer error handling.
-// TODO: GNU-style `bool` flags, which permit clustered short flags like `-abc`.
+// TODO: Let a cluster end in a flag that takes a value, like `-abf value`.
 // TODO: Positional arguments and subcommands. We need a trie?
 // TODO: Runtime `.add_flag()`?
 // TODO: `.add_help()` auto-generated menu.
@@ -50,6 +54,8 @@ cli_error_flag_is_not_registered();
 
 // A spelling such as `"f,file"`, split into its short and long name.
 struct cli_names {
+   // Registered by `.add_bool()`.
+   bool is_bool = false;
    // `'\0'` when there is no short name.
    char short_name = '\0';
    // Empty when there is no long name.
@@ -68,11 +74,13 @@ parse_cli_names() -> cli_names {
    cli_names names;
    idx begin = 0u;
    idx length = 0u;
+
    for (idx end = 0u; end <= spelling.size(); ++end) {
       if (end != spelling.size() && spelling[end] != ',') {
          if (!is_valid_cli_name_character(spelling[end])) {
             cli_error_malformed_flag_spelling();
          }
+
          ++length;
          continue;
       }
@@ -86,16 +94,21 @@ parse_cli_names() -> cli_names {
          if (names.short_name != '\0') {
             cli_error_malformed_flag_spelling();
          }
+
          names.short_name = spelling[begin];
+
       } else {
          if (!names.long_name.is_empty()) {
             cli_error_malformed_flag_spelling();
          }
+
          names.long_name = {spelling.data() + begin, length};
       }
+
       begin = end + 1u;
       length = 0u;
    }
+
    return names;
 }
 
@@ -104,11 +117,13 @@ cli_name_equals(str_view left, str_view right) -> bool {
    if (left.size() != right.size()) {
       return false;
    }
+
    for (idx i = 0u; i < left.size(); ++i) {
       if (left[i] != right[i]) {
          return false;
       }
    }
+
    return true;
 }
 
@@ -128,9 +143,27 @@ cli_names_collide(cli_names left, cli_names right) -> bool {
               && cli_name_equals(left.long_name, right.long_name));
 }
 
+// `.add_bool()` registers its spelling wrapped in this.
+template <typename CharT, __SIZE_TYPE__ size>
+struct cli_bool_spelling {
+   basic_str_literal<CharT, size> text;
+};
+
+template <auto spelling>
+consteval auto
+make_cli_names() -> cli_names {
+   if constexpr (requires { spelling.text; }) {
+      cli_names names = parse_cli_names<spelling.text>();
+      names.is_bool = true;
+      return names;
+   } else {
+      return parse_cli_names<spelling>();
+   }
+}
+
 // Every option's names are parsed once per spelling.
-template <basic_str_literal spelling>
-inline constexpr cli_names cli_names_of = parse_cli_names<spelling>();
+template <auto spelling>
+inline constexpr cli_names cli_names_of = make_cli_names<spelling>();
 
 // If `p_argument` begins with `--name`, where `name` is a compile-time
 // constant. The `&&` fold short-circuits on the first mismatch, so this never
@@ -140,6 +173,7 @@ template <cli_names const& names, idx... indices>
 constexpr auto
 cli_has_long_prefix(
    char const* _Nonnull p_argument, index_list_type<indices...>
+   /*unused*/
 ) -> bool {
    return p_argument[1] == '-'
           && ((p_argument[indices + 2u] == names.long_name[indices]) && ...);
@@ -153,37 +187,96 @@ struct cli_match {
    bool takes_next = false;
 };
 
-// Match `p_argument`, which must begin with `-`, against the flag `names`.
-// This takes a pointer rather than a `zstr_view` so that arguments are never
-// measured unless they match.
-template <cli_names const& names>
+// The short names of every bool flag in `spellings`, padded with `'\0'`.
+template <auto... spellings>
+inline constexpr char cli_bool_short_names[] = {
+   (cli_names_of<spellings>.is_bool ? cli_names_of<spellings>.short_name
+                                    : '\0')...,
+   '\0',
+};
+
+template <auto... spellings>
+constexpr auto
+cli_is_bool_short_name(char character) -> bool {
+   for (char const name : cli_bool_short_names<spellings...>) {
+      if (name != '\0' && name == character) {
+         return true;
+      }
+   }
+   return false;
+}
+
+// Match `p_argument`, which must begin with `-`, against the flag's potential
+// `names`.
+template <cli_names const& names, auto... spellings>
 [[gnu::always_inline, gnu::nodebug]]
 constexpr auto
 cli_match_flag(char const* _Nonnull p_argument) -> cli_match {
+   if constexpr (names.is_bool) {
+      if constexpr (names.short_name != '\0') {
+         // Every character of a cluster must be a bool flag, otherwise this is
+         // a flag holding a value like `-fvalue`.
+         bool is_found = false;
+         idx i = 1u;
+
+         for (; p_argument[i] != '\0'; ++i) {
+            if (!cli_is_bool_short_name<spellings...>(p_argument[i])) {
+               break;
+            }
+
+            is_found = is_found || p_argument[i] == names.short_name;
+         }
+
+         if (is_found && p_argument[i] == '\0') {
+            return {.value = zstr_view("true")};
+         }
+      }
+
+      if constexpr (!names.long_name.is_empty()) {
+         constexpr idx length = names.long_name.size();
+
+         if (cli_has_long_prefix<names>(p_argument, index_sequence<length>)) {
+            if (p_argument[length + 2u] == '\0') {
+               return {.value = zstr_view("true")};
+            }
+
+            if (p_argument[length + 2u] == '=') {
+               return {.value = zstr_view(p_argument + length + 3u)};
+            }
+         }
+      }
+
+      return {};
+   }
+
    if constexpr (names.short_name != '\0') {
       if (p_argument[1] == names.short_name) {
          if (p_argument[2] == '\0') {
             return {.value = nullopt, .takes_next = true};
          }
+
          return {.value = zstr_view(p_argument + 2)};
       }
    }
+
    if constexpr (!names.long_name.is_empty()) {
       constexpr idx length = names.long_name.size();
       if (cli_has_long_prefix<names>(p_argument, index_sequence<length>)) {
          if (p_argument[length + 2u] == '\0') {
             return {.value = nullopt, .takes_next = true};
          }
+
          if (p_argument[length + 2u] == '=') {
             return {.value = zstr_view(p_argument + length + 3u)};
          }
       }
    }
+
    return {};
 }
 
 // The version flag's names, less any that a registered flag already spells.
-template <basic_str_literal version_spelling, basic_str_literal... spellings>
+template <basic_str_literal version_spelling, auto... spellings>
 consteval auto
 make_cli_version_names() -> cli_names {
    cli_names names = cli_names_of<version_spelling>;
@@ -200,14 +293,14 @@ make_cli_version_names() -> cli_names {
    return names;
 }
 
-template <basic_str_literal version_spelling, basic_str_literal... spellings>
+template <basic_str_literal version_spelling, auto... spellings>
 inline constexpr cli_names cli_version_names_of =
    make_cli_version_names<version_spelling, spellings...>();
 
 // If `arguments` hold the flag `names` before any positional argument or `--`.
 // The values of registered flags are stepped over, so `-f -v` is not a request
 // for the version.
-template <cli_names const& names, basic_str_literal... spellings>
+template <cli_names const& names, auto... spellings>
 constexpr auto
 cli_has_bool_flag(span<char const* _Nonnull const> arguments) -> bool {
    for (idx i = 0u; i < arguments.size(); ++i) {
@@ -255,16 +348,15 @@ make_cli_version_text(index_list_type<indices...> /*unused*/) {
 }  // namespace detail
 
 template <
-   auto version_value, basic_str_literal version_spelling,
-   basic_str_literal... spellings>
+   auto version_value, basic_str_literal version_spelling, auto... spellings>
 class versioned_cli;
 
-template <basic_str_literal... spellings>
+template <auto... spellings>
 class [[gsl::Pointer(char const*)]] cli {
-   template <basic_str_literal...>
+   template <auto...>
    friend class cli;
 
-   template <auto, basic_str_literal, basic_str_literal...>
+   template <auto, basic_str_literal, auto...>
    friend class versioned_cli;
 
    using arguments_span = span<char const* _Nonnull const>;
@@ -332,6 +424,19 @@ class [[gsl::Pointer(char const*)]] cli {
       return cli<spellings..., add_spelling>(self.m_arguments);
    }
 
+   // Register a flag spelled like `"e,enable"` that takes no value. Parse it
+   // with `.parse<bool>()`.
+   template <basic_str_literal add_spelling>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   add_bool(this cli self [[clang::lifetimebound]]) {
+      // Validate `add_spelling` like any other flag.
+      auto _ = self.template add_flag<add_spelling>();
+      return cli<spellings..., detail::cli_bool_spelling{add_spelling}>(
+         self.m_arguments
+      );
+   }
+
    template <
       version version_value, basic_str_literal version_spelling = "v,version">
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
@@ -348,7 +453,12 @@ class [[gsl::Pointer(char const*)]] cli {
    [[nodiscard]]
    constexpr auto
    parse(flag name) const -> maybe<T> {
-      return scan_str<T>($prop(find_value(name)));
+      // `$prop` cannot return early in constant evaluation.
+      maybe<zstr_view> const value = find_value(name);
+      if (!value.has_value()) {
+         return nullopt;
+      }
+      return scan_str<T>(value.value());
    }
 
    // Parse the value of `name` as a `T` that allocates from `allocator`.
@@ -359,7 +469,11 @@ class [[gsl::Pointer(char const*)]] cli {
    parse(
       allocator_ref<Allocator> allocator [[clang::lifetimebound]], flag name
    ) const -> maybe<T> {
-      return scan_str<T, Allocator>(allocator, $prop(find_value(name)));
+      maybe<zstr_view> const value = find_value(name);
+      if (!value.has_value()) {
+         return nullopt;
+      }
+      return scan_str<T, Allocator>(allocator, value.value());
    }
 
    template <typename T>
@@ -367,7 +481,11 @@ class [[gsl::Pointer(char const*)]] cli {
    constexpr auto
    parse(allocator_dyn allocator [[clang::lifetimebound]], flag name) const
       -> maybe<T> {
-      return scan_str<T>(allocator, $prop(find_value(name)));
+      maybe<zstr_view> const value = find_value(name);
+      if (!value.has_value()) {
+         return nullopt;
+      }
+      return scan_str<T>(allocator, value.value());
    }
 
  private:
@@ -394,16 +512,17 @@ class [[gsl::Pointer(char const*)]] cli {
       return value;
    }
 
-   template <basic_str_literal spelling>
+   template <auto spelling>
    [[nodiscard]]
    constexpr auto
    find_value() const -> maybe<zstr_view> {
       maybe<zstr_view> value;
       for (idx i = 0u; i < m_arguments.size(); ++i) {
          char const* _Nonnull const p_argument = m_arguments[i];
+         // A positional argument ends flag parsing, like POSIX `getopt()`.
          // TODO: Positional arguments.
          if (p_argument[0] != '-') {
-            return nullopt;
+            break;
          }
 
          // `--` ends flag parsing, and everything after it is positional.
@@ -411,8 +530,8 @@ class [[gsl::Pointer(char const*)]] cli {
             break;
          }
 
-         detail::cli_match const match =
-            detail::cli_match_flag<detail::cli_names_of<spelling>>(p_argument);
+         detail::cli_match const match = detail::cli_match_flag<
+            detail::cli_names_of<spelling>, spellings...>(p_argument);
          if (match.value.has_value()) {
             value = match.value;
             continue;
@@ -453,8 +572,7 @@ cli(int, char const* _Nonnull const* _Nonnull) -> cli<>;
 // The `cli` that `.add_version()` returns. Its constructor handles the version
 // flag, so no flags may be registered after it.
 template <
-   auto version_value, basic_str_literal version_spelling,
-   basic_str_literal... spellings>
+   auto version_value, basic_str_literal version_spelling, auto... spellings>
 class [[gsl::Pointer(char const*)]]
 versioned_cli : public cli<spellings...> {
    friend class cli<spellings...>;
@@ -477,6 +595,11 @@ versioned_cli : public cli<spellings...> {
    template <basic_str_literal>
    void
    add_flag() =
+      delete ("`.add_version()` must be the last call to a `cat::cli`!");
+
+   template <basic_str_literal>
+   void
+   add_bool() =
       delete ("`.add_version()` must be the last call to a `cat::cli`!");
 
    template <auto, basic_str_literal = "">

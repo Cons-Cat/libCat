@@ -111,3 +111,15 @@ $test(scan_str_strings) {
 
    g_tests_alloc.free(page);
 }
+
+static_assert(cat::scan_str<bool>("true").verify());
+static_assert(!cat::scan_str<bool>("false").verify());
+static_assert(cat::scan_str<bool>("1").is_empty());
+static_assert(cat::scan_str<bool>("True").is_empty());
+static_assert(cat::scan_str<bool>("").is_empty());
+static_assert(cat::scan_str<bool2>("true").verify());
+static_assert(!cat::scan_str<bool2>("false").verify());
+static_assert(cat::scan_str<bool2>("1").is_empty());
+static_assert(cat::scan_str<bool4>("true").verify());
+static_assert(!cat::scan_str<bool4>("false").verify());
+static_assert(cat::scan_str<bool4>("1").is_empty());

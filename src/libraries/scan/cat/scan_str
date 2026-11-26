@@ -17,7 +17,7 @@
 
 // TODO: Take a format string, like `fmt()`/`std::scan()`, to control how values
 // are scanned and make this variadic.
-// TODO: Scan floating point values, `bool`, and non-`char` strings.
+// TODO: Scan floating point values and non-`char` strings.
 // TODO: Input encoding and locale.
 
 namespace cat {
@@ -51,6 +51,31 @@ struct scanner<T> {
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
    scan(allocator_ref<Allocator> /*unused*/, str_view input) const -> maybe<T> {
+      return scan(input);
+   }
+};
+
+// Only `"true"` and `"false"` are booleans.
+template <typename T>
+   requires(is_same<T, bool> || is_same<T, bool2> || is_same<T, bool4>)
+struct scanner<T> {
+   [[nodiscard]]
+   constexpr auto
+   scan(str_view input) const -> maybe<T> {
+      if (input == "true") {
+         return T(true);
+      }
+      if (input == "false") {
+         return T(false);
+      }
+      return nullopt;
+   }
+
+   template <is_allocator Allocator>
+   [[nodiscard, gnu::always_inline, gnu::nodebug]]
+   constexpr auto
+   scan(allocator_ref<Allocator> /*unused*/, str_view input) const
+      -> maybe<T> {
       return scan(input);
    }
 };
