@@ -4468,7 +4468,7 @@ inline constexpr uint16 uint16_max = limits<uint16>::max();
 }  // namespace arithmetic
 
 // Implementing this here is a circular dependency. The implementation can be
-// found in <cat/arithmetic/implementations/format_bool2.tpp>.
+// found in <cat/format/implementations/format_bool.tpp>.
 template <typename CharT>
 struct formatter<bool2, CharT>;
 

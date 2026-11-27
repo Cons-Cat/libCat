@@ -398,8 +398,6 @@ set(CAT_HEADER_FILES
   ${CATLIB}/quantity/cat/typographic_units
   ${CATLIB}/quantity/cat/us_customary_units
   ${CATLIB}/quantity/cat/time_units
-  ${CATLIB}/arithmetic/implementations/format_bool2.tpp
-  ${CATLIB}/arithmetic/implementations/format_bool4.tpp
   ${CATLIB}/arithmetic/implementations/format_overflow_reference.tpp
   ${CATLIB}/arithmetic/implementations/format_precision_reference.tpp
   ${CATLIB}/array/cat/array
@@ -440,8 +438,21 @@ set(CAT_HEADER_FILES
   ${CATLIB}/format/cat/detail/ftoa_dragonbox.hpp
   ${CATLIB}/format/cat/detail/ftoa_dragonbox_fwd.hpp
   ${CATLIB}/format/cat/detail/itoa_jeaiii.hpp
+  ${CATLIB}/format/implementations/format_bool.tpp
+  ${CATLIB}/format/implementations/format_c_string.tpp
+  ${CATLIB}/format/implementations/format_char.tpp
+  ${CATLIB}/format/implementations/format_char_array.tpp
+  ${CATLIB}/format/implementations/format_enum.tpp
+  ${CATLIB}/format/implementations/format_float.tpp
+  ${CATLIB}/format/implementations/format_integer.tpp
+  ${CATLIB}/format/implementations/format_iterable.tpp
+  ${CATLIB}/format/implementations/format_maybe_void.tpp
   ${CATLIB}/format/implementations/format_monostate.tpp
+  ${CATLIB}/format/implementations/format_pointer.tpp
   ${CATLIB}/format/implementations/format_quantity.tpp
+  ${CATLIB}/format/implementations/format_string.tpp
+  ${CATLIB}/format/implementations/format_tuple.tpp
+  ${CATLIB}/format/implementations/format_variant.tpp
   ${CATLIB}/format/implementations/to_chars_integer.tpp
   ${CATLIB}/iterable/cat/iterable
   ${CATLIB}/iterable/cat/detail/iterable_interface.hpp

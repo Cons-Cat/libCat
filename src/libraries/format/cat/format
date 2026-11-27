@@ -784,557 +784,6 @@ struct formatter : formatter_base<CharT> {
    }
 };
 
-template <typename T, typename CharT>
-   requires(
-      is_integral<T> && !is_same<__typeof_unqual(T), bool>
-      && !is_same<__typeof_unqual(T), char> && is_same<CharT, char>
-   )
-struct formatter<T, CharT> : formatter_base<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, T const& value,
-      format_context context
-   ) const -> scaredy_format<void> {
-      $prop(detail::append_arithmetic(context, +make_raw_arithmetic(value)));
-
-      if constexpr (has_quantity<T>) {
-         return detail::append_arithmetic_quantity_symbol<T>(context);
-      }
-
-      return monostate;
-   }
-
-   auto
-   format(allocator_dyn allocator, T const& value, format_context context) const
-      -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename T, typename CharT>
-   requires(is_enum<T> && is_same<CharT, char>)
-struct formatter<T, CharT> : formatter_base<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> allocator, T value, format_context context
-   ) const -> scaredy_format<void> {
-      return formatter<underlying_type<T>, CharT>{}.format(
-         allocator, static_cast<underlying_type<T>>(value), context
-      );
-   }
-
-   auto
-   format(allocator_dyn allocator, T value, format_context context) const
-      -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename T, typename CharT>
-   requires(is_floating_point<T> && is_same<CharT, char>)
-struct formatter<T, CharT> : formatter_base<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, T const& value,
-      format_context context
-   ) const -> scaredy_format<void> {
-      $prop(detail::append_arithmetic(context, make_raw_arithmetic(value)));
-      if constexpr (has_quantity<T>) {
-         return detail::append_arithmetic_quantity_symbol<T>(context);
-      }
-      return monostate;
-   }
-
-   auto
-   format(allocator_dyn allocator, T const& value, format_context context) const
-      -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename CharT>
-struct formatter<bool, CharT> : formatter_base<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, bool value, format_context context
-   ) const -> scaredy_format<void> {
-      return context.append(value ? str_view("true") : str_view("false"));
-   }
-
-   auto
-   format(allocator_dyn allocator, bool value, format_context context) const
-      -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename CharT>
-struct formatter<char, CharT> : debug_formatter<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, char value, format_context context
-   ) const -> scaredy_format<void> {
-      if (this->debug) {
-         return detail::append_escaped(context, str_view(&value, 1u), '\'');
-      }
-      return context.append(value);
-   }
-
-   auto
-   format(allocator_dyn allocator, char value, format_context context) const
-      -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename CharT>
-struct formatter<char8_t, CharT> : debug_formatter<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, char8_t value, format_context context
-   ) const -> scaredy_format<void> {
-      char const code_unit = static_cast<char>(value);
-      if (this->debug) {
-         return detail::append_escaped(context, str_view(&code_unit, 1u), '\'');
-      }
-      return context.append(code_unit);
-   }
-
-   auto
-   format(allocator_dyn allocator, char8_t value, format_context context) const
-      -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename T, typename CharT>
-   requires(
-      is_pointer<T> && is_char_utf8_interconvertible<remove_pointer<T>>
-      && is_same<CharT, char>
-   )
-struct formatter<T, CharT> : debug_formatter<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, T value, format_context context
-   ) const -> scaredy_format<void> {
-      if (value == nullptr) {
-         return context.append("(null)");
-      }
-      using element = remove_const<remove_pointer<T>>;
-      str_view const string = str_view(basic_str_span<element const>(value));
-      if (this->debug) {
-         return detail::append_escaped(context, string, '"');
-      }
-      return context.append(string);
-   }
-
-   auto
-   format(allocator_dyn allocator, T value, format_context context) const
-      -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename T, typename CharT>
-   requires(
-      is_pointer<T> && !is_char_utf8_interconvertible<remove_pointer<T>>
-      && is_same<CharT, char>
-   )
-struct formatter<T, CharT> : formatter_base<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, T value, format_context context
-   ) const -> scaredy_format<void> {
-      __UINTPTR_TYPE__ integer = reinterpret_cast<__UINTPTR_TYPE__>(value);
-      char digits[sizeof(integer) * 2u];
-      idx length;
-
-      do {
-         auto const digit = integer & 0xfu;
-         digits[length.raw] =
-            static_cast<char>(digit < 10u ? digit + '0' : digit - 10u + 'a');
-         ++length;
-         integer >>= 4u;
-      } while (integer != 0u);
-
-      scaredy_format<void> result = context.append("0x");
-      if (result.is_empty()) {
-         return result;
-      }
-
-      iword position = make_signed(length);
-      while (position > 0) {
-         --position;
-         result = context.append(digits[position.raw]);
-         if (result.is_empty()) {
-            return result;
-         }
-      }
-
-      return monostate;
-   }
-
-   auto
-   format(allocator_dyn allocator, T value, format_context context) const
-      -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <idx extent, typename CharT>
-struct formatter<char[extent], CharT> : debug_formatter<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, char const (&value)[extent],
-      format_context context
-   ) const -> scaredy_format<void> {
-      str_view const string(value, extent - 1u);
-      if (this->debug) {
-         return detail::append_escaped(context, string, '"');
-      }
-      return context.append(string);
-   }
-
-   auto
-   format(
-      allocator_dyn allocator, char const (&value)[extent],
-      format_context context
-   ) const -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <idx extent, typename CharT>
-struct formatter<char const[extent], CharT> : debug_formatter<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, char const (&value)[extent],
-      format_context context
-   ) const -> scaredy_format<void> {
-      str_view const string(value, extent - 1u);
-      if (this->debug) {
-         return detail::append_escaped(context, string, '"');
-      }
-      return context.append(string);
-   }
-
-   auto
-   format(
-      allocator_dyn allocator, char const (&value)[extent],
-      format_context context
-   ) const -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <idx extent, typename CharT>
-struct formatter<char8_t[extent], CharT> : debug_formatter<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, char8_t const (&value)[extent],
-      format_context context
-   ) const -> scaredy_format<void> {
-      str_view const string = str_view(u8str_view(value, extent - 1u));
-      if (this->debug) {
-         return detail::append_escaped(context, string, '"');
-      }
-      return context.append(string);
-   }
-
-   auto
-   format(
-      allocator_dyn allocator, char8_t const (&value)[extent],
-      format_context context
-   ) const -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <idx extent, typename CharT>
-struct formatter<char8_t const[extent], CharT> : debug_formatter<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, char8_t const (&value)[extent],
-      format_context context
-   ) const -> scaredy_format<void> {
-      str_view const string = str_view(u8str_view(value, extent - 1u));
-      if (this->debug) {
-         return detail::append_escaped(context, string, '"');
-      }
-      return context.append(string);
-   }
-
-   auto
-   format(
-      allocator_dyn allocator, char8_t const (&value)[extent],
-      format_context context
-   ) const -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename T, typename CharT>
-   requires(is_string_utf8_interconvertible<T> && is_same<CharT, char>)
-struct formatter<T, CharT> : debug_formatter<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, T const& value,
-      format_context context
-   ) const -> scaredy_format<void> {
-      using element = remove_const<typename T::value_type>;
-      str_view const string = str_view(basic_str_span<element const>(value));
-      if (this->debug) {
-         return detail::append_escaped(context, string, '"');
-      }
-      return context.append(string);
-   }
-
-   auto
-   format(allocator_dyn allocator, T const& value, format_context context) const
-      -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename T, typename CharT>
-   requires(is_iterable<T const> && !is_safe_string<T> && is_same<CharT, char>)
-struct formatter<T, CharT> : formatter_base<CharT> {
-   using element_type = iterable_value_type<T const>;
-   formatter<element_type> underlying;
-
-   constexpr void
-   set_debug_format(bool set = true)
-      requires(requires { underlying.set_debug_format(set); })
-   {
-      underlying.set_debug_format(set);
-   }
-
-   constexpr auto
-   parse(format_parse_context& context)
-      -> scaredy_format<format_parse_context::const_iterator> {
-      scaredy_format<format_parse_context::const_iterator> result =
-         formatter_base<CharT>::parse(context);
-      if (result.is_empty()) {
-         return result;
-      }
-
-      detail::maybe_set_debug_format(underlying);
-      return result;
-   }
-
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> allocator, T const& value, format_context context
-   ) const -> scaredy_format<void> {
-      scaredy_format<void> result = context.append('[');
-
-      if (result.is_empty()) {
-         return result;
-      }
-
-      bool first = true;
-
-      iterate(value).run_while([&](auto const& element) {
-         if (!first) {
-            result = context.append(", ");
-            if (result.is_empty()) {
-               return false;
-            }
-         }
-
-         first = false;
-         result = underlying.format(allocator, element, context);
-         return !result.is_empty();
-      });
-
-      if (result.is_empty()) {
-         return result;
-      }
-
-      return context.append(']');
-   }
-
-   auto
-   format(allocator_dyn allocator, T const& value, format_context context) const
-      -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename CharT>
-struct formatter<maybe<void>, CharT> : formatter_base<CharT> {
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> /*unused*/, maybe<void> const& value,
-      format_context context
-   ) const -> scaredy_format<void> {
-      if (value.has_value()) {
-         return context.append("[void]");
-      }
-      return context.append("[]");
-   }
-
-   auto
-   format(
-      allocator_dyn allocator, maybe<void> const& value, format_context context
-   ) const -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename... Types, typename CharT>
-struct formatter<tuple<Types...>, CharT> : formatter_base<CharT> {
- private:
-   tuple<formatter<Types>...> m_underlying;
-
-   template <idx... indices>
-   constexpr void
-   set_element_debug_format(index_list_type<indices...> /*unused*/, bool set) {
-      auto set_one = [&]<idx index> {
-         detail::maybe_set_debug_format(
-            m_underlying.template get<index>(), set
-         );
-      };
-      (set_one.template operator()<indices>(), ...);
-   }
-
-   template <idx... indices, is_allocator Allocator>
-   auto
-   format_elements(
-      allocator_ref<Allocator> allocator, tuple<Types...> const& value,
-      format_context context, index_list_type<indices...>
-      /*unused*/
-   ) const -> scaredy_format<void> {
-      scaredy_format<void> result = monostate;
-
-      auto format_one = [&]<idx index> {
-         if (result.is_empty()) {
-            return;
-         }
-
-         if constexpr (index != 0u) {
-            result = context.append(", ");
-         }
-
-         if (!result.is_empty()) {
-            result = m_underlying.template get<index>().format(
-               allocator, value.template get<index>(), context
-            );
-         }
-      };
-
-      (format_one.template operator()<indices>(), ...);
-
-      return result;
-   }
-
- public:
-   constexpr void
-   set_debug_format(bool set = true) {
-      set_element_debug_format(index_sequence_over_types<Types...>{}, set);
-   }
-
-   constexpr auto
-   parse(format_parse_context& context)
-      -> scaredy_format<format_parse_context::const_iterator> {
-      scaredy_format<format_parse_context::const_iterator> result =
-         formatter_base<CharT>::parse(context);
-      if (result.is_empty()) {
-         return result;
-      }
-
-      set_debug_format();
-      return result;
-   }
-
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> allocator, tuple<Types...> const& value,
-      format_context context
-   ) const -> scaredy_format<void> {
-      scaredy_format<void> result = context.append('(');
-      if (result.is_empty()) {
-         return result;
-      }
-
-      result = format_elements(
-         allocator, value, context, index_sequence_over_types<Types...>{}
-      );
-
-      if (result.is_empty()) {
-         return result;
-      }
-
-      return context.append(')');
-   }
-
-   auto
-   format(
-      allocator_dyn allocator, tuple<Types...> const& value,
-      format_context context
-   ) const -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
-template <typename... Types, typename CharT>
-struct formatter<variant<Types...>, CharT> : formatter_base<CharT> {
- private:
-   template <idx index = 0u, is_allocator Allocator>
-   static auto
-   format_active(
-      allocator_ref<Allocator> allocator, variant<Types...> const& value,
-      format_context context
-   ) -> scaredy_format<void> {
-      if constexpr (index < sizeof...(Types)) {
-         if (value.holds_alternative(index)) {
-            return formatter<__typeof_unqual(value.template get<index>())>{}
-               .format(allocator, value.template get<index>(), context);
-         }
-         return format_active<index + 1u>(allocator, value, context);
-      } else {
-         return format_errors::cannot_format_argument;
-      }
-   }
-
- public:
-   template <is_allocator Allocator>
-   auto
-   format(
-      allocator_ref<Allocator> allocator, variant<Types...> const& value,
-      format_context context
-   ) const -> scaredy_format<void> {
-      if (value.is_empty()) {
-         return context.append("<empty>");
-      }
-      return format_active(allocator, value, context);
-   }
-
-   auto
-   format(
-      allocator_dyn allocator, variant<Types...> const& value,
-      format_context context
-   ) const -> scaredy_format<void> {
-      return format<allocator_dyn>(allocator, value, context);
-   }
-};
-
 namespace detail {
 
 template <is_allocator Allocator, typename T>
@@ -1370,6 +819,7 @@ format_custom_arg(
 }  // namespace detail
 
 namespace detail {
+
 // Format `arguments` into `context` as directed by `format`.
 template <is_allocator Allocator>
 auto
@@ -1382,8 +832,6 @@ parse_format_string(
    // The start of the pending run of literal text yet to be flushed.
    idx literal_start;
 
-   // Flush literal text in `[literal_start, end_index)` as one copy, like
-   // `{fmt}`'s `on_text`.
    auto flush = [&](idx end_index) -> scaredy_format<void> {
       if (end_index > literal_start) {
          return context.append(str_view(
@@ -1416,16 +864,20 @@ parse_format_string(
          idx const field_start = index + 1u;
          idx close_index = field_start;
          bool found_close = false;
+
          while (close_index < format.size()) {
             if (format[close_index] == '{') {
                return format_errors::unmatched_open_brace;
             }
+
             if (format[close_index] == '}') {
                found_close = true;
                break;
             }
+
             ++close_index;
          }
+
          if (!found_close) {
             return format_errors::unmatched_open_brace;
          }
@@ -1452,6 +904,7 @@ parse_format_string(
          str_view const parse_view(
             format.data() + spec_begin.raw, idx(format.size() - spec_begin)
          );
+
          format_parse_context parse_context(
             parse_view, arguments.m_argument_count
          );
@@ -1483,10 +936,12 @@ parse_format_string(
             if (escaped.is_empty()) {
                return escaped;
             }
+
             index += 2u;
             literal_start = index;
             continue;
          }
+
          return format_errors::unmatched_open_brace;
       }
 
@@ -1501,8 +956,10 @@ parse_format_string(
    if (current_argument != arguments.m_argument_count) {
       return format_errors::argument_type_mismatch;
    }
+
    return monostate;
 }
+
 }  // namespace detail
 
 template <is_allocator Allocator>
@@ -1527,7 +984,7 @@ vfmt_to_sink(
    detail::format_args<Allocator> arguments
 ) -> scaredy_format<void> {
    detail::format_sink_buffer buffer(p_sink, p_flush);
-   scaredy_format<void> const result =
+   scaredy_format<void> result =
       vfmt_to_buffer(allocator, buffer, format, arguments);
 
    if (result.is_empty()) {
@@ -1843,11 +1300,28 @@ eprintln_fmt(
 
 }  // namespace cat
 
+// Core formatters come first, because the formatters below name some of them
+// non-dependently.
+#include "../implementations/format_bool.tpp"
+#include "../implementations/format_c_string.tpp"
+#include "../implementations/format_char.tpp"
+#include "../implementations/format_char_array.tpp"
+#include "../implementations/format_enum.tpp"
+#include "../implementations/format_float.tpp"
+#include "../implementations/format_integer.tpp"
+#include "../implementations/format_iterable.tpp"
+#include "../implementations/format_maybe_void.tpp"
+#include "../implementations/format_monostate.tpp"
+#include "../implementations/format_pointer.tpp"
+#include "../implementations/format_quantity.tpp"
+#include "../implementations/format_string.tpp"
+#include "../implementations/format_tuple.tpp"
+#include "../implementations/format_variant.tpp"
+#include "../implementations/to_chars_integer.tpp"
+
 // Formatters for types on this header's include graph. Declared under those
 // types and defined in `.tpp` after `formatter_base` exists.
 #include "../../allocator/implementations/format_allocator.tpp"
-#include "../../arithmetic/implementations/format_bool2.tpp"
-#include "../../arithmetic/implementations/format_bool4.tpp"
 #include "../../arithmetic/implementations/format_overflow_reference.tpp"
 #include "../../arithmetic/implementations/format_precision_reference.tpp"
 #include "../../bit/implementations/format_bit_reference.tpp"
@@ -1863,6 +1337,3 @@ eprintln_fmt(
 #include "../../string/implementations/format_raii_str_vec.tpp"
 #include "../../string/implementations/format_str_inplace.tpp"
 #include "../../string/implementations/format_str_vec.tpp"
-#include "../implementations/format_monostate.tpp"
-#include "../implementations/format_quantity.tpp"
-#include "../implementations/to_chars_integer.tpp"
