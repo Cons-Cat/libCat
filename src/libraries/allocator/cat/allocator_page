@@ -253,14 +253,24 @@ make_allocator_page() noexcept -> allocator_page {
 
 template <typename CharT>
 struct formatter<allocator_page, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
    format(
-      allocator_page const& /*value*/, format_context& context
+      allocator_ref<Allocator> allocator, allocator_page const& /*value*/,
+      format_context context
    ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
       return detail::format_allocator_usage(
-         context, allocator_page::bytes_used(),
+         allocator, context, allocator_page::bytes_used(),
          allocator_page::bytes_capacity(), {}
       );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, allocator_page const& value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

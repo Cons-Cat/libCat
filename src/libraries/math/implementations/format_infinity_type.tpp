@@ -13,11 +13,22 @@ namespace cat {
 
 template <typename CharT>
 struct formatter<detail::infinity_type, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(detail::infinity_type value, format_context& context) const
-      -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> /*unused*/, detail::infinity_type value,
+      format_context context
+   ) const -> scaredy_format<void> {
       float8 const as_float = value;
       return context.append(as_float < 0. ? str_view("-inf") : str_view("inf"));
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, detail::infinity_type value,
+      format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

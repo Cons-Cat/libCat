@@ -108,11 +108,11 @@ struct formatter<version<Fields...>, CharT> : formatter_base<CharT> {
       return separators;
    }
 
-   template <idx... indices>
+   template <idx... indices, is_allocator Allocator>
    auto
    format_fields(
-      version<Fields...> const& value, format_context& context,
-      index_list_type<indices...> /*unused*/
+      allocator_ref<Allocator> allocator, version<Fields...> const& value,
+      format_context context, index_list_type<indices...> /*unused*/
    ) const -> scaredy_format<void> {
       scaredy_format<void> result = monostate;
       auto format_one = [&]<idx index> {
@@ -124,7 +124,7 @@ struct formatter<version<Fields...>, CharT> : formatter_base<CharT> {
          }
 
          result = m_underlying.template get<index>().format(
-            value.template get<index>(), context
+            allocator, value.template get<index>(), context
          );
          return !result.is_empty();
       };
@@ -152,12 +152,23 @@ struct formatter<version<Fields...>, CharT> : formatter_base<CharT> {
       return p_it;
    }
 
+   template <is_allocator Allocator>
    auto
-   format(version<Fields...> const& value, format_context& context) const
-      -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> allocator, version<Fields...> const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
       return format_fields(
-         value, context, index_sequence_over_types<Fields...>{}
+         allocator, value, context, index_sequence_over_types<Fields...>{}
       );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, version<Fields...> const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

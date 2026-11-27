@@ -15,16 +15,27 @@ template <typename CharT, str_vec_flags flags, is_allocator Allocator>
    requires(is_char_utf8_interconvertible<CharT>)
 struct formatter<raii::basic_str_vec<CharT, flags, Allocator>, char>
     : debug_formatter<char> {
+   template <is_allocator FormatAllocator>
    auto
    format(
+      allocator_ref<FormatAllocator> /*unused*/,
       raii::basic_str_vec<CharT, flags, Allocator> const& value,
-      format_context& context
+      format_context context
    ) const -> scaredy_format<void> {
       str_view const string = str_view(basic_str_span<CharT const>(value));
       if (this->debug) {
          return detail::append_escaped(context, string, '"');
       }
       return context.append(string);
+   }
+
+   auto
+   format(
+      allocator_dyn allocator,
+      raii::basic_str_vec<CharT, flags, Allocator> const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

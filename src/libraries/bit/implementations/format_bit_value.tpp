@@ -13,10 +13,22 @@ namespace cat {
 
 template <typename CharT>
 struct formatter<bit_value, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(bit_value value, format_context& context) const
-      -> scaredy_format<void> {
-      return formatter<bool, CharT>{}.format(value.is_set(), context);
+   format(
+      allocator_ref<Allocator> allocator, bit_value value,
+      format_context context
+   ) const -> scaredy_format<void> {
+      return formatter<bool, CharT>{}.format(
+         allocator, value.is_set(), context
+      );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, bit_value value, format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

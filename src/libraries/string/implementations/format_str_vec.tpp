@@ -14,15 +14,25 @@ namespace cat {
 template <typename CharT, str_vec_flags flags>
    requires(is_char_utf8_interconvertible<CharT>)
 struct formatter<basic_str_vec<CharT, flags>, char> : debug_formatter<char> {
+   template <is_allocator Allocator>
    auto
    format(
-      basic_str_vec<CharT, flags> const& value, format_context& context
+      allocator_ref<Allocator> /*unused*/,
+      basic_str_vec<CharT, flags> const& value, format_context context
    ) const -> scaredy_format<void> {
       str_view const string = str_view(basic_str_span<CharT const>(value));
       if (this->debug) {
          return detail::append_escaped(context, string, '"');
       }
       return context.append(string);
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, basic_str_vec<CharT, flags> const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

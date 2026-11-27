@@ -302,22 +302,44 @@ sleep_until(time_point<Clock, Duration> const& point) noexcept(
 
 template <typename CharT>
 struct formatter<thread::id, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(thread::id const& value, format_context& context) const noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> allocator, thread::id const& value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
       return formatter<uint4, CharT>{}.format(
-         value.native_handle().value, context
+         allocator, value.native_handle().value, context
       );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, thread::id const& value, format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 
 template <typename CharT>
 struct formatter<manual::thread, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(manual::thread const& value, format_context& context) const noexcept
-      -> scaredy_format<void> {
-      return formatter<thread::id, CharT>{}.format(value.get_id(), context);
+   format(
+      allocator_ref<Allocator> allocator, manual::thread const& value,
+      format_context context
+   ) const noexcept -> scaredy_format<void> {
+      return formatter<thread::id, CharT>{}.format(
+         allocator, value.get_id(), context
+      );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, manual::thread const& value,
+      format_context context
+   ) const noexcept -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

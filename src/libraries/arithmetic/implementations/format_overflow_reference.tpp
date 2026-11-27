@@ -14,12 +14,24 @@ namespace cat {
 template <typename Int, overflow_policies policy, typename CharT>
 struct formatter<overflow_reference<Int, policy>, CharT>
     : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
    format(
-      overflow_reference<Int, policy> const& value, format_context& context
+      allocator_ref<Allocator> allocator,
+      overflow_reference<Int, policy> const& value, format_context context
    ) const -> scaredy_format<void> {
       auto temporary = value.view();
-      return detail::format_nested(context, temporary);
+      return formatter<decltype(temporary)>{}.format(
+         allocator, temporary, context
+      );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, overflow_reference<Int, policy> const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

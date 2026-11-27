@@ -13,9 +13,12 @@ namespace cat {
 
 template <typename CharT>
 struct formatter<source_location, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(source_location const& value, format_context& context) const
-      -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> allocator, source_location const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
       scaredy_format<void> result = context.append(value.file_name());
       if (result.is_empty()) {
          return result;
@@ -24,7 +27,9 @@ struct formatter<source_location, CharT> : formatter_base<CharT> {
       if (result.is_empty()) {
          return result;
       }
-      result = detail::format_nested(context, value.line());
+      result = formatter<__typeof_unqual(value.line())>{}.format(
+         allocator, value.line(), context
+      );
       if (result.is_empty()) {
          return result;
       }
@@ -32,7 +37,9 @@ struct formatter<source_location, CharT> : formatter_base<CharT> {
       if (result.is_empty()) {
          return result;
       }
-      result = detail::format_nested(context, value.column());
+      result = formatter<__typeof_unqual(value.column())>{}.format(
+         allocator, value.column(), context
+      );
       if (result.is_empty()) {
          return result;
       }
@@ -41,6 +48,14 @@ struct formatter<source_location, CharT> : formatter_base<CharT> {
          return result;
       }
       return context.append(value.function_name());
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, source_location const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

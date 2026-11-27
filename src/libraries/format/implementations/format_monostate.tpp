@@ -12,10 +12,20 @@ namespace cat {
 
 template <typename CharT>
 struct formatter<monostate_type, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(monostate_type /*value*/, format_context& context) const
-      -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> /*unused*/, monostate_type /*value*/,
+      format_context context
+   ) const -> scaredy_format<void> {
       return context.append("monostate");
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, monostate_type value, format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

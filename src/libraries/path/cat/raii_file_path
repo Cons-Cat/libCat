@@ -455,11 +455,10 @@ operator/(basic_file_path<Allocator, os, flags> const&, Segment const&)
 
 namespace cat {
 
-// TODO: Format `nt` paths once they can be transcoded.
 template <
    is_allocator Allocator, path_os os, str_vec_flags flags, typename CharT>
-   requires(is_same<CharT, char> && os != path_os::nt)
+   requires(is_same<CharT, char>)
 struct formatter<raii::basic_file_path<Allocator, os, flags>, CharT>
-    : detail::path_formatter<CharT> {};
+    : detail::path_formatter<os, CharT> {};
 
 }  // namespace cat

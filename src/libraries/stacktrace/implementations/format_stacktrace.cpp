@@ -626,14 +626,16 @@ has_parentheses(cat::str_view name) -> bool {
 }
 
 auto
-format_signature(cat::str_view symbol, cat::format_context& context)
-   -> cat::scaredy_format<void> {
+format_signature(
+   cat::allocator_dyn allocator, cat::str_view symbol,
+   cat::format_context context
+) -> cat::scaredy_format<void> {
    if (symbol.is_empty()) {
       return context.append("<unknown-symbol>");
    }
 
    cat::maybe<cat::demangled_name> const demangled =
-      cat::demangle(context.allocator.get_allocator(), symbol);
+      cat::demangle(allocator, symbol);
    cat::str_view const name =
       demangled.has_value() ? cat::str_view(demangled.value()) : symbol;
    return context.append(name).and_then([&] {
@@ -655,8 +657,8 @@ decimal_width(cat::uint8 value) -> cat::idx {
 
 auto
 format_source_line(
-   cat::uint8 line_number, cat::str_view line, cat::uint8 target,
-   cat::idx width, cat::format_context& context
+   cat::allocator_dyn allocator, cat::uint8 line_number, cat::str_view line,
+   cat::uint8 target, cat::idx width, cat::format_context context
 ) -> cat::scaredy_format<void> {
    cat::scaredy_format<void> result = context.append(
       line_number == target ? cat::str_view("   > ") : cat::str_view("     ")
@@ -670,7 +672,9 @@ format_source_line(
 
    return cat::move(result)
       .and_then([&] {
-         return cat::detail::format_nested(context, line_number);
+         return cat::formatter<__typeof_unqual(line_number)>{}.format(
+            allocator, line_number, context
+         );
       })
       .and_then([&] {
          return context.append(": ");
@@ -732,8 +736,8 @@ open_source(cat::detail::source_location source, cat::str_view object_path)
 
 auto
 format_source_snippet(
-   cat::detail::source_location source, cat::str_view object_path,
-   cat::format_context& context
+   cat::allocator_dyn allocator, cat::detail::source_location source,
+   cat::str_view object_path, cat::format_context context
 ) -> cat::scaredy_format<void> {
    cat::maybe<nix::file_descriptor> const opened =
       open_source(source, object_path);
@@ -796,7 +800,7 @@ format_source_snippet(
          }
 
          $prop(format_source_line(
-            line_number,
+            allocator, line_number,
             cat::str_view(
                contents.data() + line_begin, cat::idx(line_end - line_begin)
             ),
@@ -817,11 +821,14 @@ format_source_snippet(
 
 auto
 format_short_frame(
-   cat::idx index, resolved_frame resolved, cat::format_context& context
+   cat::allocator_dyn allocator, cat::idx index, resolved_frame resolved,
+   cat::format_context context
 ) -> cat::scaredy_format<void> {
    return context.append('#')
       .and_then([&] {
-         return cat::detail::format_nested(context, index);
+         return cat::formatter<__typeof_unqual(index)>{}.format(
+            allocator, index, context
+         );
       })
       .and_then([&] {
          return context.append(' ');
@@ -835,14 +842,15 @@ format_short_frame(
                return context.append(':');
             })
             .and_then([&] {
-               return cat::detail::format_nested(context, resolved.source.line);
+               return cat::formatter<__typeof_unqual(resolved.source.line)>{}
+                  .format(allocator, resolved.source.line, context);
             });
       })
       .and_then([&] {
          return context.append(' ');
       })
       .and_then([&] {
-         return format_signature(resolved.symbol.name, context);
+         return format_signature(allocator, resolved.symbol.name, context);
       })
       .and_then([&] {
          return context.append('\n');
@@ -851,13 +859,15 @@ format_short_frame(
 
 auto
 format_context_frame(
-   cat::idx index, cat::detail::symbolizer const& symbols,
-   resolved_frame resolved, cat::stacktrace_entry entry,
-   cat::format_context& context
+   cat::allocator_dyn allocator, cat::idx index,
+   cat::detail::symbolizer const& symbols, resolved_frame resolved,
+   cat::stacktrace_entry entry, cat::format_context context
 ) -> cat::scaredy_format<void> {
    return context.append('#')
       .and_then([&] {
-         return cat::detail::format_nested(context, index);
+         return cat::formatter<__typeof_unqual(index)>{}.format(
+            allocator, index, context
+         );
       })
       .and_then([&] {
          return context.append(" Object \"");
@@ -869,13 +879,15 @@ format_context_frame(
          return context.append("\", at ");
       })
       .and_then([&] {
-         return cat::detail::format_nested(context, entry.native_handle());
+         return cat::formatter<__typeof_unqual(entry.native_handle())>{}.format(
+            allocator, entry.native_handle(), context
+         );
       })
       .and_then([&] {
          return context.append(", in ");
       })
       .and_then([&] {
-         return format_signature(resolved.symbol.name, context);
+         return format_signature(allocator, resolved.symbol.name, context);
       })
       .and_then([&] {
          return context.append('\n');
@@ -892,20 +904,23 @@ format_context_frame(
                return context.append("\", line ");
             })
             .and_then([&] {
-               return cat::detail::format_nested(context, resolved.source.line);
+               return cat::formatter<__typeof_unqual(resolved.source.line)>{}
+                  .format(allocator, resolved.source.line, context);
             })
             .and_then([&] {
                return context.append(", in ");
             })
             .and_then([&] {
-               return format_signature(resolved.symbol.name, context);
+               return format_signature(
+                  allocator, resolved.symbol.name, context
+               );
             })
             .and_then([&] {
                return context.append('\n');
             })
             .and_then([&] {
                return format_source_snippet(
-                  resolved.source, symbols.path.view(), context
+                  allocator, resolved.source, symbols.path.view(), context
                );
             });
       });
@@ -969,26 +984,29 @@ resolve_stacktrace_frame(
 
 auto
 format_stacktrace_frame(
-   symbolizer const* _Nullable p_symbolizer, idx number, stacktrace_entry entry,
-   format_context& context, bool debug
+   allocator_dyn allocator, symbolizer const* _Nullable p_symbolizer,
+   idx number, stacktrace_entry entry, format_context context, bool debug
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
    symbolizer const unloaded{};
    symbolizer const& symbols =
       p_symbolizer != nullptr ? *p_symbolizer : unloaded;
    resolved_frame const resolved = resolve(symbols, entry);
    if (debug) {
-      return format_context_frame(number, symbols, resolved, entry, context);
+      return format_context_frame(
+         allocator, number, symbols, resolved, entry, context
+      );
    }
-   return format_short_frame(number, resolved, context);
+   return format_short_frame(allocator, number, resolved, context);
 }
 
 auto
 format_stacktrace_entry_context(
-   stacktrace_entry entry, format_context& context
+   allocator_dyn allocator, stacktrace_entry entry, format_context context
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
    symbolizer* _Nullable const p_symbolizer = load_symbolizer();
-   scaredy_format<void> const result =
-      format_stacktrace_frame(p_symbolizer, 1u, entry, context, true);
+   scaredy_format<void> const result = format_stacktrace_frame(
+      allocator, p_symbolizer, 1u, entry, context, true
+   );
    unload_symbolizer(p_symbolizer);
    return result;
 }

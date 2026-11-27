@@ -225,35 +225,50 @@ resolve_stacktrace_frame(
 [[nodiscard]]
 auto
 format_stacktrace_frame(
-   symbolizer const* _Nullable p_symbolizer, idx number, stacktrace_entry entry,
-   format_context& context, bool debug
+   allocator_dyn allocator, symbolizer const* _Nullable p_symbolizer,
+   idx number, stacktrace_entry entry, format_context context, bool debug
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void>;
 
 [[nodiscard]]
 auto
 format_stacktrace_entry_context(
-   stacktrace_entry entry, format_context& context
+   allocator_dyn allocator, stacktrace_entry entry, format_context context
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void>;
 
 [[nodiscard]]
 inline auto
 format_stacktrace_entry(
-   stacktrace_entry entry, format_context& context, bool debug
+   allocator_dyn allocator, stacktrace_entry entry, format_context context,
+   bool debug
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
    if (!debug) {
-      return format_nested(context, entry.native_handle());
+      return formatter<__typeof_unqual(entry.native_handle())>{}.format(
+         allocator, entry.native_handle(), context
+      );
    }
-   return format_stacktrace_entry_context(entry, context);
+   return format_stacktrace_entry_context(allocator, entry, context);
 }
 }  // namespace detail
 
 template <typename CharT>
    requires(is_same<CharT, char>)
 struct formatter<stacktrace_entry, CharT> : debug_formatter<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(stacktrace_entry value, format_context& context) const noexcept
-      -> scaredy_format<void> {
-      return detail::format_stacktrace_entry(value, context, this->debug);
+   format(
+      allocator_ref<Allocator> allocator, stacktrace_entry value,
+      format_context context
+   ) const noexcept -> scaredy_format<void> {
+      return detail::format_stacktrace_entry(
+         allocator.get_allocator(), value, context, this->debug
+      );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, stacktrace_entry value, format_context context
+   ) const noexcept -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 
@@ -265,10 +280,12 @@ template <typename Frames>
       && is_same<iterable_value_type<Frames const>, stacktrace_entry>
    )
 struct formatter<Frames, char> : debug_formatter<char> {
+   template <is_allocator Allocator>
    auto
-   format(Frames const& value, format_context& context) const noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> allocator, Frames const& value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
       scaredy_format<void> result = context.append("Stack trace:\n");
       if (result.is_empty()) {
          return result;
@@ -284,12 +301,20 @@ struct formatter<Frames, char> : debug_formatter<char> {
          }
          ++number;
          result = detail::format_stacktrace_frame(
-            p_symbolizer, number, entry, context, this->debug
+            allocator.get_allocator(), p_symbolizer, number, entry, context,
+            this->debug
          );
          return result.has_value();
       });
       detail::unload_symbolizer(p_symbolizer);
       return result;
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, Frames const& value, format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

@@ -2454,9 +2454,13 @@ make_file_path_unique(allocator_dyn allocator) noexcept
 }  // namespace cat
 
 namespace cat {
+
+template <path_os os>
+class basic_file_path_view;
+
 namespace detail {
 
-template <typename CharT>
+template <path_os os, typename CharT>
 struct path_formatter : formatter_base<CharT> {
    bool debug = false;
 
@@ -2489,26 +2493,55 @@ struct path_formatter : formatter_base<CharT> {
       return p_it;
    }
 
-   template <typename Path>
+   template <is_allocator Allocator>
    auto
-   format(Path const& value, format_context& context) const noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> /*unused*/, basic_file_path_view<os> value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
       if (debug) {
          return append_escaped(context, value.view(), '"');
       }
 
       return context.append(value.view());
    }
+
+   auto
+   format(
+      allocator_dyn allocator, basic_file_path_view<os> value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
+   }
+};
+
+// TODO: Implement this properly.
+template <typename CharT>
+struct path_formatter<path_os::nt, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
+   auto
+   format(
+      allocator_ref<Allocator> allocator,
+      basic_file_path_view<path_os::nt> value, format_context context
+   ) const -> scaredy_format<void> =
+      delete ("TODO: `nt` paths cannot be formatted until they can be "
+              "transcoded or `fmt()` supports `char16_t`!");
+
+   auto
+   format(
+      allocator_dyn allocator, basic_file_path_view<path_os::nt> value,
+      format_context context
+   ) const -> scaredy_format<void> =
+      delete ("TODO: `nt` paths cannot be formatted until they can be "
+              "transcoded or `fmt()` supports `char16_t`!");
 };
 
 }  // namespace detail
 
-// TODO: Format `nt` paths once they can be transcoded.
 template <path_os os, str_vec_flags flags, typename CharT>
-   requires(is_same<CharT, char> && os != path_os::nt)
+   requires(is_same<CharT, char>)
 struct formatter<manual::basic_file_path<os, flags>, CharT>
-    : detail::path_formatter<CharT> {};
+    : detail::path_formatter<os, CharT> {};
 
 }  // namespace cat
 

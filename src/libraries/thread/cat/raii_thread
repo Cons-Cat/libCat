@@ -101,11 +101,23 @@ namespace cat {
 
 template <typename Allocator, typename CharT>
 struct formatter<raii::basic_thread<Allocator>, CharT> : formatter_base<CharT> {
+   template <is_allocator FormatAllocator>
    auto
    format(
-      raii::basic_thread<Allocator> const& value, format_context& context
+      allocator_ref<FormatAllocator> allocator,
+      raii::basic_thread<Allocator> const& value, format_context context
    ) const noexcept -> scaredy_format<void> {
-      return formatter<thread::id, CharT>{}.format(value.get_id(), context);
+      return formatter<thread::id, CharT>{}.format(
+         allocator, value.get_id(), context
+      );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, raii::basic_thread<Allocator> const& value,
+      format_context context
+   ) const noexcept -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

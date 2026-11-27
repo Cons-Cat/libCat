@@ -70,10 +70,9 @@ struct path_os_trait<basic_file_path_view<os>> {
 };
 }  // namespace detail
 
-// TODO: Format `nt` paths once they can be transcoded.
 template <path_os os, typename CharT>
-   requires(is_same<CharT, char> && os != path_os::nt)
+   requires(is_same<CharT, char>)
 struct formatter<basic_file_path_view<os>, CharT>
-    : detail::path_formatter<CharT> {};
+    : detail::path_formatter<os, CharT> {};
 
 }  // namespace cat

@@ -25,18 +25,29 @@ struct large_format_value {
 namespace cat {
 template <typename CharT>
 struct formatter<::large_format_value, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(::large_format_value const& value, format_context& context) const
-      -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> allocator, ::large_format_value const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
       scaredy_format<void> result = context.append("large(");
       if (result.is_empty()) {
          return result;
       }
-      result = formatter<int, CharT>{}.format(value.value, context);
+      result = formatter<int, CharT>{}.format(allocator, value.value, context);
       if (result.is_empty()) {
          return result;
       }
       return context.append(')');
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, ::large_format_value const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 }  // namespace cat
@@ -50,7 +61,7 @@ $test(format_strings) {
    auto allocator = make_allocator_linear(page);
 
    // Test `int4` conversion.
-   cat::str_view int_string = cat::fmt(allocator, "{}", 10).verify();
+   cat::str_vec int_string = cat::fmt(allocator, "{}", 10).verify();
    cat::verify(int_string == "10");
    cat::verify(int_string.size() == 2);
 
@@ -95,7 +106,7 @@ $test(format_strings) {
 
    // Test formatting `int`.
    allocator.reset();
-   cat::str_view formatted_string_int =
+   cat::str_vec formatted_string_int =
       cat::fmt(allocator, "bb{}aa{}cc", 52, 130).verify();
    // TODO: `formatted_string_int` has an incorrect `.size()`, but the content
    // is correct.
@@ -104,45 +115,19 @@ $test(format_strings) {
 
    // Test formatting `float`.
    allocator.reset();
-   cat::str_view string_float = cat::fmt(allocator, "{}", 1.234f).verify();
+   cat::str_vec string_float = cat::fmt(allocator, "{}", 1.234f).verify();
    cat::verify(string_float == "1.234E0", string_float);
    // cat::println(string_float);
 
-   cat::str_view formatted_string_float =
+   cat::str_vec formatted_string_float =
       cat::fmt(allocator, "a{}b", 1.234f).verify();
    cat::verify(formatted_string_float == "a1.234E0b");
    // cat::println(formatted_string_float);
 
-   cat::str_view formatted_string_double =
+   cat::str_vec formatted_string_double =
       cat::fmt(allocator, "a{}b", 1.234).verify();
    cat::verify(formatted_string_double == "a1.234E0b");
    // cat::println(formatted_string_double);
-
-   // Test `cat::to_string_at()`.
-   cat::array<char, 100u> array;
-   cat::span<char> array_span{array.data(), array.size()};
-
-   // TODO: This segfaulted with optimizations enabled.
-   // cat::string string_int_13 =
-   //     cat::to_string_at(int4{13}, array_span).verify();
-   // cat::verify(string_int_13.size() == 4);
-   // cat::verify(string_int_13 == "13");
-
-   // TODO: These stopped working for some reason.
-
-   // cat::string string_neg_13 =
-   //     cat::to_string_at(int4{-13}, array_span).verify();
-   // cat::verify(string_neg_13.size() == 4);
-   // cat::verify(string_neg_13 == "-13");
-
-   // Test `cat::to_string_at()` in a `constexpr` context.
-   // auto make_hi_in_const = [](int4 value) constexpr->cat::string {
-   //     cat::array<char, 100> array{};
-   //     cat::span<char> array_span{array.data(), array.size()};
-   //     auto _ = cat::to_string_at(value, array_span).value();
-   //     return "Hi";
-   // };
-   // [[maybe_unused]] constexpr auto hi = make_hi_in_const(1);
 }
 
 $test(format_classes) {
@@ -407,7 +392,7 @@ $test(fmt_long_pattern_substitutes) {
    };
    auto allocator = make_allocator_linear(page);
 
-   cat::str_view const formatted =
+   cat::str_vec const formatted =
       cat::fmt(
          allocator,
          "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:"
@@ -424,15 +409,18 @@ $test(fmt_long_pattern_substitutes) {
 }
 
 $test(fmt_growth_failure) {
-   // The arena holds the initial buffer but is too small to reallocate it
-   // large enough for all 20 digits, so appending the number fails.
+   // 20 digits fit in a `str_vec`'s inline storage, so this needs no arena.
    cat::span storage = g_tests_alloc.alloc_multi<cat::byte>(24u).verify();
    $defer {
       g_tests_alloc.free(storage);
    };
    auto allocator = make_allocator_linear(storage);
+   cat::verify(cat::fmt(allocator, "{}", uint8::max()).has_value());
 
-   auto result = cat::fmt(allocator, "{}", uint8::max());
+   // 40 digits do not fit inline, and the arena is too small to hold them,
+   // so growing the `str_vec` fails.
+   allocator.reset();
+   auto result = cat::fmt(allocator, "{}{}", uint8::max(), uint8::max());
    cat::verify(result.is_empty());
 }
 
@@ -468,9 +456,9 @@ $test(fmt_public_type_families) {
 
    allocator.reset();
    cat::source_location const location = cat::source_location::current();
-   cat::str_view const location_text =
+   cat::str_vec const location_text =
       cat::fmt(allocator, "{}", location).verify();
-   cat::str_view const location_expected =
+   cat::str_vec const location_expected =
       cat::fmt(
          allocator, "{}:{}:{}:{}", location.file_name(), location.line(),
          location.column(), location.function_name()
@@ -493,7 +481,7 @@ $test(fmt_public_type_families) {
    );
 
    allocator.reset();
-   cat::str_view const linear_text =
+   cat::str_vec const linear_text =
       cat::fmt(allocator, "{}", allocator).verify();
    cat::verify(linear_text.size() >= 11u);
    cat::verify(linear_text[0] == 'a');
@@ -510,7 +498,7 @@ $test(fmt_public_type_families) {
    cat::verify(cat::fmt(allocator, "{}", worker.get_id()).verify() == "0");
    cat::thread::id const null_id;
    cat::verify(cat::fmt(allocator, "{}", null_id).verify() == "0");
-   cat::str_view const this_id =
+   cat::str_vec const this_id =
       cat::fmt(allocator, "{}", cat::this_thread::get_id()).verify();
    cat::verify(this_id != "0");
 
@@ -527,16 +515,16 @@ $test(fmt_public_type_families) {
 
    allocator.reset();
    cat::bernoulli_distribution bernoulli(0.25);
-   cat::str_view const bernoulli_text =
+   cat::str_vec const bernoulli_text =
       cat::fmt(allocator, "{}", bernoulli).verify();
-   cat::str_view const bernoulli_expected =
+   cat::str_vec const bernoulli_expected =
       cat::fmt(allocator, "(p={})", bernoulli.p()).verify();
    cat::verify(bernoulli_text == bernoulli_expected);
 
    allocator.reset();
    cat::normal_distribution normal(1.5, 0.5);
-   cat::str_view const normal_text = cat::fmt(allocator, "{}", normal).verify();
-   cat::str_view const normal_expected =
+   cat::str_vec const normal_text = cat::fmt(allocator, "{}", normal).verify();
+   cat::str_vec const normal_expected =
       cat::fmt(
          allocator, "(mean={}, stddev={})", normal.mean(), normal.stddev()
       )
@@ -545,9 +533,9 @@ $test(fmt_public_type_families) {
 
    allocator.reset();
    cat::poisson_distribution poisson(3.0);
-   cat::str_view const poisson_text =
+   cat::str_vec const poisson_text =
       cat::fmt(allocator, "{}", poisson).verify();
-   cat::str_view const poisson_expected =
+   cat::str_vec const poisson_expected =
       cat::fmt(allocator, "(mean={})", poisson.mean()).verify();
    cat::verify(poisson_text == poisson_expected);
 
@@ -612,9 +600,9 @@ $test(fmt_bit_containers_and_proxies) {
 
    allocator.reset();
    cat::float4 floating = 1.5f;
-   cat::str_view const precise_text =
+   cat::str_vec const precise_text =
       cat::fmt(allocator, "{}", floating.precise()).verify();
-   cat::str_view const precise_expected =
+   cat::str_vec const precise_expected =
       cat::fmt(allocator, "{}", floating).verify();
    cat::verify(precise_text == precise_expected);
 
@@ -632,9 +620,9 @@ $test(fmt_bit_containers_and_proxies) {
    );
    allocator.reset();
    cat::fixed_size_simd<cat::float4, 2u> floats(1.25f, 2.5f);
-   cat::str_view const simd_precise =
+   cat::str_vec const simd_precise =
       cat::fmt(allocator, "{}", floats.precise()).verify();
-   cat::str_view const simd_expected =
+   cat::str_vec const simd_expected =
       cat::fmt(allocator, "{}", floats).verify();
    cat::verify(simd_precise == simd_expected);
 }
@@ -689,6 +677,75 @@ $test(fmt_to_streams_past_staging_buffer) {
    cat::verify(output[301u] == ']');
 }
 
+$test(fmt_into_str_vec_storage) {
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(16_uki).verify();
+   $defer {
+      g_tests_alloc.free(page);
+   };
+   auto allocator = make_allocator_linear(page);
+
+   // Longer than inline storage, the sink's staging buffer, and the memory
+   // buffer, so the `str_vec` grows several times while it is written.
+   cat::array<char, 1'000u> letters;
+   for (cat::idx i; i < letters.size(); ++i) {
+      letters[i] = char('a' + (i.raw % 26u));
+   }
+   cat::str_view const long_text(letters.data(), letters.size());
+
+   cat::str_vec formatted = cat::fmt(allocator, "<{}>", long_text).verify();
+   cat::verify(formatted.size() == 1'002u);
+   cat::verify(formatted[0u] == '<');
+   cat::verify(cat::str_view(formatted).find(long_text).value() == 1u);
+   cat::verify(formatted[1'001u] == '>');
+   formatted.free(allocator);
+
+   // `fmt_to()` appends to a `str_vec` in place.
+   cat::str_vec appended = cat::fmt(allocator, "x{}", 1).verify();
+   cat::verify(
+      cat::fmt_to(allocator, cat::as_back_inserter(appended), "-{}", 22)
+         .has_value()
+   );
+   cat::verify(appended == "x1-22");
+   appended.free(allocator);
+
+   // A null-terminated string keeps its terminator.
+   cat::zstr_vec terminated;
+   cat::verify(
+      cat::fmt_to(allocator, cat::as_back_inserter(terminated), "{}{}", 4, 2)
+         .has_value()
+   );
+   cat::verify(terminated == "42");
+   cat::verify(terminated.data()[2u] == '\0');
+   terminated.free(allocator);
+}
+
+$test(fmt_to_non_contiguous_output) {
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(64_uki).verify();
+   $defer {
+      g_tests_alloc.free(page);
+   };
+   auto allocator = make_allocator_linear(page);
+
+   // A `list` cannot be formatted into in place, so this stages through the
+   // sink's fixed buffer and drains it more than once.
+   cat::array<char, 300u> letters;
+   for (cat::idx i; i < letters.size(); ++i) {
+      letters[i] = 'q';
+   }
+
+   cat::list<char> output;
+   cat::verify(
+      cat::fmt_to(
+         allocator, cat::as_back_inserter(output), "[{}]{}",
+         cat::str_view(letters.data(), letters.size()), 7
+      )
+         .has_value()
+   );
+   cat::verify(output.size() == 303u);
+   cat::verify(output.front() == '[');
+   cat::verify(output.back() == '7');
+}
+
 $test(format_utf8_strings) {
    cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
    $defer {
@@ -700,7 +757,7 @@ $test(format_utf8_strings) {
    // the type system considers them interconvertible.
 
    // Puppydog (kukkur), kitty (billi):
-   cat::str_view const greeting =
+   cat::str_vec const greeting =
       cat::fmt(allocator, "कुक्कुर {}", "बिल्ली").verify();
    cat::verify(greeting == "कुक्कुर बिल्ली");
    cat::verify(cat::fmt(allocator, "{:?}", "कुक्कुर").verify() == R"("कुक्कुर")");

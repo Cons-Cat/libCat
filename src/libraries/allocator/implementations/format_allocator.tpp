@@ -22,15 +22,17 @@ concept has_const_bytes_usage = requires(Allocator const& allocator) {
                                    } -> is_convertible<idx>;
                                 };
 
+template <is_allocator Allocator>
 inline auto
 format_allocator_usage(
-   format_context& context, idx used, idx capacity, str_view name
+   allocator_ref<Allocator> allocator, format_context context, idx used,
+   idx capacity, str_view name
 ) -> scaredy_format<void> {
    scaredy_format<void> result = context.append("allocator(");
    if (result.is_empty()) {
       return result;
    }
-   result = format_nested(context, used);
+   result = formatter<idx>{}.format(allocator, used, context);
    if (result.is_empty()) {
       return result;
    }
@@ -38,7 +40,7 @@ format_allocator_usage(
    if (result.is_empty()) {
       return result;
    }
-   result = format_nested(context, capacity);
+   result = formatter<idx>{}.format(allocator, capacity, context);
    if (result.is_empty()) {
       return result;
    }
@@ -62,16 +64,26 @@ template <typename Allocator, typename CharT>
       && !is_stepanov_iterable<Allocator>
    )
 struct formatter<Allocator, CharT> : formatter_base<CharT> {
+   template <is_allocator FormatAllocator>
    auto
-   format(Allocator const& value, format_context& context) const
-      -> scaredy_format<void> {
+   format(
+      allocator_ref<FormatAllocator> allocator, Allocator const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
       str_view name;
       if constexpr (requires { value.name(); }) {
          name = value.name();
       }
       return detail::format_allocator_usage(
-         context, value.bytes_used(), value.bytes_capacity(), name
+         allocator, context, value.bytes_used(), value.bytes_capacity(), name
       );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, Allocator const& value, format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

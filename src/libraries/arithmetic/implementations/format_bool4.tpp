@@ -13,9 +13,20 @@ namespace cat {
 
 template <typename CharT>
 struct formatter<bool4, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(bool4 value, format_context& context) const -> scaredy_format<void> {
-      return formatter<bool, CharT>{}.format(static_cast<bool>(value), context);
+   format(
+      allocator_ref<Allocator> allocator, bool4 value, format_context context
+   ) const -> scaredy_format<void> {
+      return formatter<bool, CharT>{}.format(
+         allocator, static_cast<bool>(value), context
+      );
+   }
+
+   auto
+   format(allocator_dyn allocator, bool4 value, format_context context) const
+      -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

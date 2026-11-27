@@ -164,10 +164,9 @@ make_file_path_inplace(Segment const& segment) noexcept(
    return result;
 }
 
-// TODO: Format `nt` paths once they can be transcoded.
 template <idx inline_capacity, path_os os, typename CharT>
-   requires(is_same<CharT, char> && os != path_os::nt)
+   requires(is_same<CharT, char>)
 struct formatter<basic_file_path_inplace<inline_capacity, os>, CharT>
-    : detail::path_formatter<CharT> {};
+    : detail::path_formatter<os, CharT> {};
 
 }  // namespace cat

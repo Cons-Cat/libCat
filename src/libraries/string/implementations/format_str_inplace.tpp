@@ -15,16 +15,27 @@ template <typename CharT, idx inline_capacity, str_vec_flags flags>
    requires(is_char_utf8_interconvertible<CharT>)
 struct formatter<basic_str_inplace<CharT, inline_capacity, flags>, char>
     : debug_formatter<char> {
+   template <is_allocator Allocator>
    auto
    format(
+      allocator_ref<Allocator> /*unused*/,
       basic_str_inplace<CharT, inline_capacity, flags> const& value,
-      format_context& context
+      format_context context
    ) const -> scaredy_format<void> {
       str_view const string = str_view(basic_str_span<CharT const>(value));
       if (this->debug) {
          return detail::append_escaped(context, string, '"');
       }
       return context.append(string);
+   }
+
+   auto
+   format(
+      allocator_dyn allocator,
+      basic_str_inplace<CharT, inline_capacity, flags> const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

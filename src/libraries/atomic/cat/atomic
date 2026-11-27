@@ -2935,39 +2935,59 @@ using atomic_accessor_seq_cst =
 
 template <typename CharT>
 struct formatter<atomic_flag, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(atomic_flag const& value, format_context& context) const noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> allocator, atomic_flag const& value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
       scaredy_format<void> result = context.append("flag(");
       if (result.is_empty()) {
          return result;
       }
-      result =
-         detail::format_nested(context, value.test(memory_order::relaxed));
+      result = formatter<bool>{}.format(
+         allocator, value.test(memory_order::relaxed), context
+      );
       if (result.is_empty()) {
          return result;
       }
       return context.append(')');
    }
+
+   auto
+   format(
+      allocator_dyn allocator, atomic_flag const& value, format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
+   }
 };
 
 template <typename T, typename CharT>
 struct formatter<atomic<T>, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(atomic<T> const& value, format_context& context) const noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> allocator, atomic<T> const& value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
       scaredy_format<void> result = context.append("atomic(");
       if (result.is_empty()) {
          return result;
       }
-      result =
-         detail::format_nested(context, value.load(memory_order::relaxed));
+      result = formatter<T>{}.format(
+         allocator, value.load(memory_order::relaxed), context
+      );
       if (result.is_empty()) {
          return result;
       }
       return context.append(')');
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, atomic<T> const& value, format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 
@@ -2976,20 +2996,33 @@ template <
    typename CharT>
 struct formatter<detail::atomic_ref_bound<T, order, overflow_policy>, CharT>
     : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
    format(
+      allocator_ref<Allocator> allocator,
       detail::atomic_ref_bound<T, order, overflow_policy> const& value,
-      format_context& context
+      format_context context
    ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
       scaredy_format<void> result = context.append("atomic_ref(");
       if (result.is_empty()) {
          return result;
       }
-      result = detail::format_nested(context, value.load());
+      result = formatter<__typeof_unqual(value.load())>{}.format(
+         allocator, value.load(), context
+      );
       if (result.is_empty()) {
          return result;
       }
       return context.append(')');
+   }
+
+   auto
+   format(
+      allocator_dyn allocator,
+      detail::atomic_ref_bound<T, order, overflow_policy> const& value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

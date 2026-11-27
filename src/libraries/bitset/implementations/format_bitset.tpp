@@ -13,9 +13,12 @@ namespace cat {
 
 template <idx bits_count, typename T, typename CharT>
 struct formatter<bitset<bits_count, T>, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(bitset<bits_count, T> const& value, format_context& context) const
-      -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> allocator, bitset<bits_count, T> const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
       scaredy_format<void> result = context.append('[');
       if (result.is_empty()) {
          return result;
@@ -29,12 +32,22 @@ struct formatter<bitset<bits_count, T>, CharT> : formatter_base<CharT> {
             }
          }
          first = false;
-         result = detail::format_nested(context, value[bit_index]);
+         result = formatter<__typeof_unqual(value[bit_index])>{}.format(
+            allocator, value[bit_index], context
+         );
          if (result.is_empty()) {
             return result;
          }
       }
       return context.append(']');
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, bitset<bits_count, T> const& value,
+      format_context context
+   ) const -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

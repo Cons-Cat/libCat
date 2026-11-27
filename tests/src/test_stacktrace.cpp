@@ -179,7 +179,7 @@ $test(stacktrace_formatting) {
    cat::stacktrace const one =
       cat::stacktrace::current(allocator, 0u, 1u).verify();
    cat::verify(one.size() == 1u);
-   cat::str_view const entry_string =
+   cat::str_vec const entry_string =
       cat::fmt(allocator, "{}", one[0u]).verify();
    cat::verify(
       entry_string
@@ -189,26 +189,26 @@ $test(stacktrace_formatting) {
    cat::str_view const header = "Stack trace:\n";
    frame_capture captured{.trace = cat::stacktrace(allocator)};
    cat_test_capture_one_frame(allocator, captured);
-   cat::str_view const formatted =
+   cat::str_vec const formatted =
       cat::fmt(allocator, "{}", captured.trace).verify();
 
    // Release builds carry no DWARF, so the location falls back to
    // `<missing-file>` while the symbol still resolves through `.symtab`.
    bool const has_line_info =
       formatted.find("test_stacktrace.cpp:").has_value();
-   cat::str_view const location =
+   cat::str_vec const location =
       has_line_info
          ? cat::fmt(allocator, "test_stacktrace.cpp:{}", captured.inner_line)
               .verify()
-         : cat::str_view("<missing-file>");
-   cat::str_view const expected =
+         : cat::fmt(allocator, "<missing-file>").verify();
+   cat::str_vec const expected =
       cat::fmt(
          allocator, "{}#1 {} cat_test_capture_one_frame()\n", header, location
       )
          .verify();
    cat::verify(formatted == expected);
 
-   cat::str_view const contextual =
+   cat::str_vec const contextual =
       cat::fmt(allocator, "{:?}", captured.trace).verify();
    cat::verify(has_prefix(contextual, "Stack trace:\n#1 Object \""));
    cat::verify(contextual.find("\", at 0x").has_value());
@@ -218,7 +218,7 @@ $test(stacktrace_formatting) {
    if (has_line_info) {
       // Clang records this path relative to the source tree only when the
       // build directory is inside it, and otherwise as an absolute path.
-      cat::str_view const source =
+      cat::str_vec const source =
          cat::fmt(
             allocator, "tests/src/test_stacktrace.cpp\", line {}, in ",
             captured.inner_line
@@ -235,14 +235,14 @@ $test(stacktrace_formatting) {
       cat::verify(contextual.find("   > ").has_value());
    }
 
-   cat::str_view const contextual_entry =
+   cat::str_vec const contextual_entry =
       cat::fmt(allocator, "{:?}", captured.trace[0u]).verify();
    cat::verify(has_prefix(contextual_entry, "#1 Object \""));
    cat::verify(
       contextual_entry.find(", in cat_test_capture_one_frame()\n").has_value()
    );
 
-   cat::str_view const first_frame =
+   cat::str_vec const first_frame =
       cat::fmt(allocator, "{}", captured.trace[0u]).verify();
    cat::verify(
       cat::fmt(allocator, "[{}]", captured.trace[0u]).verify()
@@ -268,18 +268,18 @@ $test(stacktrace_formatting_three_frames) {
    cat::verify(captured.trace.size() >= 3u);
    cat::verify(captured.trace.size() == 3u);
 
-   cat::str_view const formatted =
+   cat::str_vec const formatted =
       cat::fmt(allocator, "{}", captured.trace).verify();
    bool const has_line_info =
       formatted.find("test_stacktrace.cpp:").has_value();
-   auto location = [&](idx line) -> cat::str_view {
+   auto location = [&](idx line) -> cat::str_vec {
       if (!has_line_info) {
-         return "<missing-file>";
+         return cat::fmt(allocator, "<missing-file>").verify();
       }
       return cat::fmt(allocator, "test_stacktrace.cpp:{}", line).verify();
    };
 
-   cat::str_view const expected =
+   cat::str_vec const expected =
       cat::fmt(
          allocator,
          "Stack trace:\n"
@@ -307,18 +307,18 @@ $test(stacktrace_formatting_dropped_frames) {
    cat::verify(captured.trace.size() == 3u);
 
    cat::span<cat::stacktrace_entry const> frames(captured.trace);
-   cat::str_view const formatted =
+   cat::str_vec const formatted =
       cat::fmt(allocator, "{}", frames | cat::drop(1u)).verify();
    bool const has_line_info =
       formatted.find("test_stacktrace.cpp:").has_value();
-   auto location = [&](idx line) -> cat::str_view {
+   auto location = [&](idx line) -> cat::str_vec {
       if (!has_line_info) {
-         return "<missing-file>";
+         return cat::fmt(allocator, "<missing-file>").verify();
       }
       return cat::fmt(allocator, "test_stacktrace.cpp:{}", line).verify();
    };
 
-   cat::str_view const expected =
+   cat::str_vec const expected =
       cat::fmt(
          allocator,
          "Stack trace:\n"
@@ -335,7 +335,7 @@ $test(stacktrace_formatting_dropped_frames) {
       == "Stack trace:\n"
    );
 
-   cat::str_view const contextual =
+   cat::str_vec const contextual =
       cat::fmt(allocator, "{:?}", frames | cat::drop(2u)).verify();
    cat::verify(has_prefix(contextual, "Stack trace:\n#1 Object \""));
    cat::verify(contextual.find(", in cat_test_frame_outer()\n").has_value());
@@ -403,7 +403,7 @@ $test(stacktrace_drop_while_frames) {
    };
 
    cat::span<cat::stacktrace_entry const> frames(captured.trace);
-   auto format_dropped = [&](auto predicate) -> cat::str_view {
+   auto format_dropped = [&](auto predicate) -> cat::str_vec {
       return cat::fmt(allocator, "{}", frames | cat::drop_while(predicate))
          .verify();
    };
@@ -431,15 +431,15 @@ $test(stacktrace_drop_while_frames) {
    );
 
    // One leading frame is internal, so `#1` is the frame after it.
-   cat::str_view const after_inner =
+   cat::str_vec const after_inner =
       format_dropped([&](cat::stacktrace_entry entry) {
          return belongs_to(entry, &cat_test_frame_inner);
       });
    bool const has_line_info =
       after_inner.find("test_stacktrace.cpp:").has_value();
-   auto location = [&](idx line) -> cat::str_view {
+   auto location = [&](idx line) -> cat::str_vec {
       if (!has_line_info) {
-         return "<missing-file>";
+         return cat::fmt(allocator, "<missing-file>").verify();
       }
       return cat::fmt(allocator, "test_stacktrace.cpp:{}", line).verify();
    };

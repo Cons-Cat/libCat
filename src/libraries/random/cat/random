@@ -523,10 +523,11 @@ concept is_random_distribution =
       distribution.param();
    };
 
-template <typename Value>
+template <typename Value, is_allocator Allocator>
 auto
 append_field(
-   format_context& context, str_view label, Value const& value, bool& first
+   allocator_ref<Allocator> allocator, format_context context, str_view label,
+   Value const& value, bool& first
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
    if (!first) {
       scaredy_format<void> result = context.append(", ");
@@ -543,13 +544,14 @@ append_field(
    if (result.is_empty()) {
       return result;
    }
-   return format_nested(context, value);
+   return formatter<Value>{}.format(allocator, value, context);
 }
 
-template <typename Param>
+template <typename Param, is_allocator Allocator>
 auto
 format_distribution_param(
-   Param const& parameters, format_context& context
+   allocator_ref<Allocator> allocator, Param const& parameters,
+   format_context context
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
    scaredy_format<void> result = context.append('(');
    if (result.is_empty()) {
@@ -561,88 +563,96 @@ format_distribution_param(
                     parameters.t();
                     parameters.p();
                  }) {
-      result = append_field(context, "t", parameters.t(), first);
+      result = append_field(allocator, context, "t", parameters.t(), first);
       if (result.is_empty()) {
          return result;
       }
-      result = append_field(context, "p", parameters.p(), first);
+      result = append_field(allocator, context, "p", parameters.p(), first);
    } else if constexpr (requires {
                            parameters.k();
                            parameters.p();
                         }) {
-      result = append_field(context, "k", parameters.k(), first);
+      result = append_field(allocator, context, "k", parameters.k(), first);
       if (result.is_empty()) {
          return result;
       }
-      result = append_field(context, "p", parameters.p(), first);
+      result = append_field(allocator, context, "p", parameters.p(), first);
    } else if constexpr (requires {
                            parameters.mean();
                            parameters.stddev();
                         }) {
-      result = append_field(context, "mean", parameters.mean(), first);
+      result =
+         append_field(allocator, context, "mean", parameters.mean(), first);
       if (result.is_empty()) {
          return result;
       }
-      result = append_field(context, "stddev", parameters.stddev(), first);
+      result =
+         append_field(allocator, context, "stddev", parameters.stddev(), first);
    } else if constexpr (requires {
                            parameters.alpha();
                            parameters.beta();
                         }) {
-      result = append_field(context, "alpha", parameters.alpha(), first);
+      result =
+         append_field(allocator, context, "alpha", parameters.alpha(), first);
       if (result.is_empty()) {
          return result;
       }
-      result = append_field(context, "beta", parameters.beta(), first);
+      result =
+         append_field(allocator, context, "beta", parameters.beta(), first);
    } else if constexpr (requires {
                            parameters.m();
                            parameters.n();
                         }) {
-      result = append_field(context, "m", parameters.m(), first);
+      result = append_field(allocator, context, "m", parameters.m(), first);
       if (result.is_empty()) {
          return result;
       }
-      result = append_field(context, "n", parameters.n(), first);
+      result = append_field(allocator, context, "n", parameters.n(), first);
    } else if constexpr (requires {
                            parameters.m();
                            parameters.s();
                         }) {
-      result = append_field(context, "m", parameters.m(), first);
+      result = append_field(allocator, context, "m", parameters.m(), first);
       if (result.is_empty()) {
          return result;
       }
-      result = append_field(context, "s", parameters.s(), first);
+      result = append_field(allocator, context, "s", parameters.s(), first);
    } else if constexpr (requires { parameters.mean(); }) {
-      result = append_field(context, "mean", parameters.mean(), first);
+      result =
+         append_field(allocator, context, "mean", parameters.mean(), first);
    } else if constexpr (requires { parameters.lambda(); }) {
-      result = append_field(context, "lambda", parameters.lambda(), first);
+      result =
+         append_field(allocator, context, "lambda", parameters.lambda(), first);
    } else if constexpr (requires { parameters.n(); }) {
-      result = append_field(context, "n", parameters.n(), first);
+      result = append_field(allocator, context, "n", parameters.n(), first);
    } else if constexpr (requires {
                            parameters.a();
                            parameters.b();
                         }) {
-      result = append_field(context, "a", parameters.a(), first);
+      result = append_field(allocator, context, "a", parameters.a(), first);
       if (result.is_empty()) {
          return result;
       }
-      result = append_field(context, "b", parameters.b(), first);
+      result = append_field(allocator, context, "b", parameters.b(), first);
    } else if constexpr (requires { parameters.p(); }) {
-      result = append_field(context, "p", parameters.p(), first);
+      result = append_field(allocator, context, "p", parameters.p(), first);
    } else if constexpr (requires { parameters.probabilities(); }) {
       result = append_field(
-         context, "probabilities", parameters.probabilities(), first
+         allocator, context, "probabilities", parameters.probabilities(), first
       );
    } else if constexpr (requires {
                            parameters.boundaries();
                            parameters.densities();
                         }) {
-      result =
-         append_field(context, "boundaries", parameters.boundaries(), first);
+      result = append_field(
+         allocator, context, "boundaries", parameters.boundaries(), first
+      );
       if (result.is_empty()) {
          return result;
       }
-      result =
-         append_field(context, "densities", parameters.densities(), first);
+      result = append_field(
+         allocator, context, "densities", parameters.densities(), first
+      );
    } else {
       return format_errors::cannot_format_argument;
    }
@@ -657,42 +667,73 @@ format_distribution_param(
 
 template <typename CharT>
 struct formatter<seed_sequence, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(seed_sequence const& value, format_context& context) const noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> allocator, seed_sequence const& value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
       scaredy_format<void> result = context.append("seed_sequence");
       if (result.is_empty()) {
          return result;
       }
       return formatter<span<uint4 const>, CharT>{}.format(
-         value.values(), context
+         allocator, value.values(), context
       );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, seed_sequence const& value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 
 template <detail::is_distribution_param Param, typename CharT>
    requires(is_same<CharT, char>)  // TODO: Relax this constraint.
 struct formatter<Param, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(Param const& value, format_context& context) const noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> scaredy_format<void> {
+   format(
+      allocator_ref<Allocator> allocator, Param const& value,
+      format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
       scaredy_format<void> result = context.append("param");
       if (result.is_empty()) {
          return result;
       }
-      return detail::format_distribution_param(value, context);
+      return detail::format_distribution_param(allocator, value, context);
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, Param const& value, format_context context
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 
 template <detail::is_random_distribution Distribution, typename CharT>
    requires(is_same<CharT, char>)  // TODO: Relax this constraint.
 struct formatter<Distribution, CharT> : formatter_base<CharT> {
+   template <is_allocator Allocator>
    auto
-   format(Distribution const& value, format_context& context) const noexcept
-      -> scaredy_format<void> {
-      return detail::format_distribution_param(value.param(), context);
+   format(
+      allocator_ref<Allocator> allocator, Distribution const& value,
+      format_context context
+   ) const noexcept -> scaredy_format<void> {
+      return detail::format_distribution_param(
+         allocator, value.param(), context
+      );
+   }
+
+   auto
+   format(
+      allocator_dyn allocator, Distribution const& value, format_context context
+   ) const noexcept -> scaredy_format<void> {
+      return format<allocator_dyn>(allocator, value, context);
    }
 };
 

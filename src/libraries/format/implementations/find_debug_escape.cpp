@@ -84,7 +84,7 @@ struct debug_escape_scanner {
 };
 
 auto
-append_escape_char(format_context& context, char character)
+append_escape_char(format_context context, char character)
    -> scaredy_format<void> {
    if (character == '\n') {
       return context.append("\\n");
@@ -105,7 +105,7 @@ append_escape_char(format_context& context, char character)
 template <typename Find>
 auto
 append_escaped_loop(
-   format_context& context, str_view string, char quote, Find find
+   format_context context, str_view string, char quote, Find find
 ) -> scaredy_format<void> {
    scaredy_format<void> result = context.append(quote);
    if (result.is_empty()) {
@@ -138,7 +138,7 @@ append_escaped_loop(
 }  // namespace
 
 auto
-append_escaped(format_context& context, str_view string, char quote)
+append_escaped(format_context context, str_view string, char quote)
    -> scaredy_format<void> {
    if (string.size() == 0u) {
       scaredy_format<void> result = context.append(quote);
