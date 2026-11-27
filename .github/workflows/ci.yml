@@ -101,6 +101,7 @@ jobs:
       arithmetic_negative: ${{ steps.arithmetic-negative.outputs.arithmetic_negative }}
       safety: ${{ steps.safety.outputs.safety }}
       rng: ${{ steps.rng.outputs.rng }}
+      tsan: ${{ steps.tsan.outputs.tsan }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -212,6 +213,23 @@ jobs:
           fi
           echo "rng=${rng}" >> "${GITHUB_OUTPUT}"
           echo "rng changed: ${rng}"
+
+      - name: Detect tsan changes
+        id: tsan
+        # TSan builds are slow and frequently time out, so only run them when
+        # threading, synchronization, process, or sanitizer code changes.
+        run: |
+          set -eu
+          if [ "${CAT_FORCE_RUN}" = "true" ] || grep -Eq \
+            '^src/libraries/(atomic|mutex|semaphore|thread|sanitizer)/|^src/libraries/linux/cat/raii_process$|^src/libraries/linux/implementations/(process|futex|clonearguments|sys_futex[a-z_]*|wait_pid|sys_wait4|sys_waitid|sys_rt_sigtimedwait|block_all_signals)\.|^src/libraries/runtime/implementations/(_start|tls_[a-z_]+|__cxa_thread_atexit|__cxa_guard)\.cpp$|^tests/src/test_(atomic|futex|mutex|semaphore|thread|thread_atexit)\.cpp$|^tests/(tsan_tests\.hpp|unit_tests\.(cpp|hpp))$|^CMakeLists\.txt$|^\.github/workflows/ci\.yml$' \
+            "${CAT_CHANGED_FILES}"
+          then
+            tsan="true"
+          else
+            tsan="false"
+          fi
+          echo "tsan=${tsan}" >> "${GITHUB_OUTPUT}"
+          echo "tsan changed: ${tsan}"
 
   lint:
     # Lightweight static checks on the source tree. Runs in parallel
@@ -409,7 +427,7 @@ jobs:
           echo "OK: build-debug/.gdbinit"
 
       - name: Configure and build (Debug, TSan)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.detect-changes.outputs.tsan == 'true' }}
         # TSan cannot be combined with ASan, so it gets its own build. It also
         # runs `cat::thread` on POSIX threads.
         run: |
@@ -419,13 +437,13 @@ jobs:
           cmake --build build-debug-tsan
 
       - name: Test (Debug, TSan)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.detect-changes.outputs.tsan == 'true' }}
         run: |
           ctest --test-dir build-debug-tsan -R '^UnitTests$' --verbose --output-on-failure \
             --timeout 480
 
       - name: Run example binaries (Debug, TSan)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.detect-changes.outputs.tsan == 'true' }}
         run: |
           set -eu
 
@@ -617,7 +635,7 @@ jobs:
           echo 'OK: echo foo moooo boo (Release+ASan)'
 
       - name: Configure and build (Release, TSan)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.detect-changes.outputs.tsan == 'true' }}
         # TSan cannot be combined with ASan, so it gets its own build. It also
         # runs `cat::thread` on POSIX threads.
         run: |
@@ -627,13 +645,13 @@ jobs:
           cmake --build build-release-tsan
 
       - name: Test (Release, TSan)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.detect-changes.outputs.tsan == 'true' }}
         run: |
           ctest --test-dir build-release-tsan -R '^UnitTests$' --verbose --output-on-failure \
             --timeout 480
 
       - name: Run example binaries (Release, TSan)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.detect-changes.outputs.tsan == 'true' }}
         run: |
           set -eu
 
@@ -805,7 +823,7 @@ jobs:
           fi
 
       - name: Configure and build (CAT_USE_SHARED=ON, Debug, TSan)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.detect-changes.outputs.tsan == 'true' }}
         # TSan cannot be combined with ASan, so it gets its own build. It also
         # runs `cat::thread` on POSIX threads.
         run: |
@@ -817,13 +835,13 @@ jobs:
           cmake --build build-shared-tsan
 
       - name: Test (CAT_USE_SHARED=ON, Debug, TSan)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.detect-changes.outputs.tsan == 'true' }}
         run: |
           ctest --test-dir build-shared-tsan -R '^UnitTests$' --verbose --output-on-failure \
             --timeout 480
 
       - name: Run example binaries (CAT_USE_SHARED=ON, Debug, TSan)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && needs.detect-changes.outputs.tsan == 'true' }}
         run: |
           set -eu
 
