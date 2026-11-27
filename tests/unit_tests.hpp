@@ -17,7 +17,7 @@ inline cat::allocator_page pager;
 using constructor_fn = void (*_Nonnull const)();
 
 void
-register_test(constructor_fn p_test_fn);
+register_test(cat::str_view name, constructor_fn p_test_fn);
 
 void
 run_test_prologue(cat::str_view label, constructor_fn p_test_fn);
@@ -32,7 +32,7 @@ run_test_prologue(cat::str_view label, constructor_fn p_test_fn);
                                                                          \
    [[gnu::constructor]]                                                  \
    void cat_register_test##test_name() {                                 \
-      register_test(test_##test_name##_prologue);                        \
+      register_test(#test_name, test_##test_name##_prologue);            \
    }                                                                     \
                                                                          \
    void test_##test_name##_prologue() {                                  \

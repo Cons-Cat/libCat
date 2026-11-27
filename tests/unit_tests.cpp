@@ -2,6 +2,7 @@
 
 #include <cat/allocator_inplace>
 #include <cat/atomic>
+#include <cat/cli>
 #include <cat/exception>
 #include <cat/format>
 #include <cat/thread>
@@ -17,16 +18,90 @@ constinit cat::thread::id parent_thread_id;
 
 constinit cat::atomic<cat::idx> tests_passed{};
 constinit cat::atomic<cat::idx> tests_failed{};
-constinit cat::vec_big<void*> test_fns;
+
+struct registered_test {
+   cat::str_view name;
+   void* p_fn;
+};
+
+constinit cat::vec_big<registered_test> test_fns;
+
+// Match `text` against a glob `pattern`.
+// TODO: `cat::cli` should provide a high quality glob feature.
+constexpr auto
+glob_match(cat::str_view pattern, cat::str_view text) -> bool {
+   idx pattern_index = 0u;
+   idx text_index = 0u;
+   // Where to resume after the last `*` when a later character mismatches.
+   idx star_index = pattern.size();
+   idx star_text_index = 0u;
+
+   while (text_index < text.size()) {
+      if (
+         pattern_index < pattern.size()
+         && pattern[pattern_index] == text[text_index]
+      ) {
+         ++pattern_index;
+         ++text_index;
+      } else if (
+         pattern_index < pattern.size() && pattern[pattern_index] == '*'
+      ) {
+         star_index = pattern_index;
+         star_text_index = text_index;
+         ++pattern_index;
+      } else if (star_index != pattern.size()) {
+         pattern_index = star_index + 1u;
+         text_index = ++star_text_index;
+      } else {
+         return false;
+      }
+   }
+
+   while (pattern_index < pattern.size() && pattern[pattern_index] == '*') {
+      ++pattern_index;
+   }
+   return pattern_index == pattern.size();
+}
+
+// Test this here for now. It'll move when glob moves.
+static_assert(glob_match("mutex_*", "mutex_lock_unlock"));
+static_assert(glob_match("*lock*", "mutex_lock_unlock"));
+static_assert(glob_match("*", ""));
+static_assert(glob_match("a*b*c", "aXbYbZc"));
+static_assert(!glob_match("mutex_*", "tsan_mutex_unlocked_access"));
+static_assert(!glob_match("abc", "abcd"));
+
+// If `name` is selected by `patterns`, which are globs if `is_glob`, otherwise
+// exact names. No patterns select every test.
+auto
+is_selected(
+   cat::span<char const* _Nonnull const> patterns, bool is_glob,
+   cat::str_view name
+) -> bool {
+   if (patterns.is_empty()) {
+      return true;
+   }
+
+   for (char const* _Nonnull const p_pattern : patterns) {
+      cat::str_view const pattern = cat::zstr_view(p_pattern);
+      if (is_glob ? glob_match(pattern, name) : pattern == name) {
+         return true;
+      }
+   }
+
+   return false;
+}
+
 }  // namespace
 
 void
-register_test(constructor_fn p_test_fn) {
+register_test(cat::str_view name, constructor_fn p_test_fn) {
    if (test_fns.capacity() == 0u) {
       test_fns.reserve(g_tests_alloc, 2_uki).value();
    }
-   auto _ =
-      test_fns.push_back(g_tests_alloc, reinterpret_cast<void*>(p_test_fn));
+   auto _ = test_fns.push_back(
+      g_tests_alloc, {name, reinterpret_cast<void*>(p_test_fn)}
+   );
 }
 
 void
@@ -120,9 +195,49 @@ main() -> int {
    // Register the exception allocator once before any test runs.
    cat::alloc_exception_runtime(g_tests_alloc);
 
+   // Run only the tests named in the command, as e.g.
+   // `just test debug --glob 'mutex_*' thread`
+
+   // All tests run by default if you don't specify.
+   auto arguments = cat::detail::get_command_arguments();
+   char const* const no_arguments[] = {nullptr};
+   auto cli = arguments.is_empty()
+                 ? cat::cli(0, no_arguments)
+                 : cat::cli(int(arguments.size()), arguments.data());
+
+   auto const selecting = cli.add_bool<"g,glob">();
+   bool const is_glob = selecting.parse<bool>("glob").value_or(false);
+   auto const patterns = selecting.positionals();
+
+   for (char const* _Nonnull const p_pattern : patterns) {
+      bool is_found = false;
+      for (registered_test const& test : test_fns) {
+         if (is_selected({&p_pattern, 1u}, is_glob, test.name)) {
+            is_found = true;
+            break;
+         }
+      }
+
+      // Detect an erroneous empty glob list.
+      if (!is_found) {
+         print_allocator.reset();
+         auto _ = cat::eprint_fmt(
+            print_allocator, "No test matches `{}`.\n",
+            cat::zstr_view(p_pattern)
+         );
+
+         test_fns.free(g_tests_alloc);
+         return 1;
+      }
+   }
+
    // Call all unit test functions that were pushed into `test_fns` by the
    // `$test` macro.
    for (idx i = 0; i < test_fns.size(); ++i) {
+      if (!is_selected(patterns, is_glob, test_fns[i].name)) {
+         continue;
+      }
+
       print_allocator.reset();
       auto _ = cat::print_fmt(print_allocator, "Running test {}", i);
       if (cat::setjmp(jump_buffer)) {
@@ -132,7 +247,7 @@ main() -> int {
          cat::detail::reset_local_assert_handlers();
          continue;
       }
-      (reinterpret_cast<constructor_fn>(test_fns[i]))();
+      (reinterpret_cast<constructor_fn>(test_fns[i].p_fn))();
    }
 
    // `tests_passed` and `tests_failed` are modified within the `$test`

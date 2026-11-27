@@ -446,8 +446,8 @@ _elf-mode mode=last_mode verbose="" selector="":
       fi
 
 test *args:
-    @asan=""; ubsan=""; tsan=""; verbose=""; modes=""; tests=""; full="false"; list="false"; \
-      unset CAT_JUST_TEST_TOOL_TRAILER_B64; \
+    @asan=""; ubsan=""; tsan=""; verbose=""; modes=""; tests=""; full="false"; list="false"; globs="false"; \
+      unset CAT_JUST_TEST_TOOL_TRAILER_B64 CAT_JUST_TEST_GLOBS_B64; \
       add_test_selector() { \
         case " $tests " in \
           *" $1 "*) ;; \
@@ -463,6 +463,12 @@ test *args:
             if [ $# -gt 0 ]; then \
               CAT_JUST_TEST_TOOL_TRAILER_B64="$(printf '%s\0' "$@" | base64 -w0)"; \
               export CAT_JUST_TEST_TOOL_TRAILER_B64; \
+            fi; \
+            break ;; \
+          -g|--glob) shift; globs="true"; \
+            if [ $# -gt 0 ]; then \
+              CAT_JUST_TEST_GLOBS_B64="$(printf '%s\0' "$@" | base64 -w0)"; \
+              export CAT_JUST_TEST_GLOBS_B64; \
             fi; \
             break ;; \
           san) if [ "$asan" != ON ]; then asan=SAN; fi; ubsan=ON; shift ;; \
@@ -490,7 +496,7 @@ test *args:
           full) full="true"; shift ;; \
           list) list="true"; shift ;; \
           *) printf '%s\n' "just test: unknown option '$arg'!" >&2; \
-             printf '%s\n' "options: unit, gdb, arithmetic, safety, runtime, rng, full, list, san, nosan, asan, noasan, ubsan, noubsan, tsan, notsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
+             printf '%s\n' "options: unit, gdb, arithmetic, safety, runtime, rng, full, list, --glob <tests>..., san, nosan, asan, noasan, ubsan, noubsan, tsan, notsan, -v, debug, release, relwithdebinfo, build, all" >&2; \
              exit 1 ;; \
         esac; \
       done; \
@@ -502,6 +508,10 @@ test *args:
       if [ "$san" = ",," ]; then san=""; fi; \
       if [ "$full" = "true" ] && [ -n "$tests" ]; then \
         printf '%s\n' "just test: 'full' cannot be combined with named tests!" >&2; \
+        exit 1; \
+      fi; \
+      if [ "$globs" = "true" ] && { [ "$full" = "true" ] || [ "${tests:-UnitTests}" != "UnitTests" ]; }; then \
+        printf '%s\n' "just test: '--glob' only selects unit tests!" >&2; \
         exit 1; \
       fi; \
       if [ "$list" = "true" ] && [ -z "$tests" ]; then full="true"; fi; \
@@ -519,7 +529,7 @@ test *args:
         just _test-mode "$mode" "$san" "$verbose" "$regex" "$list" \
           || exit $?; \
       done; \
-      unset CAT_JUST_TEST_TOOL_TRAILER_B64
+      unset CAT_JUST_TEST_TOOL_TRAILER_B64 CAT_JUST_TEST_GLOBS_B64
 
 # Print out various properties of a release mode.
 # Any empty fields are folded in non-verbose output.
@@ -1091,6 +1101,11 @@ _test-config mode=last_mode san="" verbose="" test_regex="" list="false":
         mapfile -d "" -t trailer \
           < <(base64 -d <<< "${CAT_JUST_TEST_TOOL_TRAILER_B64}"); \
       fi; \
+      test_args=(); \
+      if [[ -n "${CAT_JUST_TEST_GLOBS_B64:-}" ]]; then \
+        mapfile -d "" -t globs < <(base64 -d <<< "${CAT_JUST_TEST_GLOBS_B64}"); \
+        test_args=(-- --glob "${globs[@]}"); \
+      fi; \
       ctest_args=(ctest --test-dir {{ build_dir(mode) }} {{ test_config(mode) }} \
         --progress); \
       ctest_verbose=false; \
@@ -1107,7 +1122,7 @@ _test-config mode=last_mode san="" verbose="" test_regex="" list="false":
       if [[ -n "${test_regex}" ]]; then \
         ctest_args+=(-R "${test_regex}"); \
       fi; \
-      "${ctest_args[@]}" "${trailer[@]}"' _ "{{ test_regex }}" "{{ list }}" "{{ verbose }}"
+      "${ctest_args[@]}" "${trailer[@]}" "${test_args[@]}"' _ "{{ test_regex }}" "{{ list }}" "{{ verbose }}"
 
 [private]
 _repl mode san="" verbose="" *args:
