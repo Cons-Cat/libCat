@@ -87,7 +87,8 @@ class musl_secret_engine {
 
 template <typename Allocator>
 auto
-allocate_bytes(Allocator& allocator, idx bytes) -> cat::byte* {
+allocate_bytes(Allocator& allocator [[clang::lifetimebound]], idx bytes)
+   -> cat::byte* {
    return allocator.template alloc_multi_uninit<cat::byte>(bytes)
       .verify()
       .data();
@@ -106,8 +107,10 @@ deallocate_bytes(Allocator& allocator, void const* p_allocation, idx bytes) {
 
 template <typename Allocator>
 auto
-aligned_allocate_bytes(Allocator& allocator, cat::ualign alignment, idx bytes)
-   -> cat::byte* {
+aligned_allocate_bytes(
+   Allocator& allocator [[clang::lifetimebound]], cat::ualign alignment,
+   idx bytes
+) -> cat::byte* {
    return allocator
       .template align_alloc_multi_uninit<cat::byte>(alignment, bytes)
       .verify()

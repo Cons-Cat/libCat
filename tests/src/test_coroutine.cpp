@@ -393,15 +393,16 @@ count_to(int4 limit) -> generator {
 template <typename Allocator>
 [[gnu::noinline]]
 auto
-make_square_static(Allocator& allocator, int4 value)
+make_square_static(Allocator& allocator [[clang::lifetimebound]], int4 value)
    -> cat::maybe<allocated_eager> {
    return cat::make_coroutine<Allocator>(allocator, allocated_square, value);
 }
 
 [[gnu::noinline]]
 auto
-make_square_dyn(cat::allocator_dyn allocator, int4 value)
-   -> cat::maybe<allocated_eager> {
+make_square_dyn(
+   cat::allocator_dyn allocator [[clang::lifetimebound]], int4 value
+) -> cat::maybe<allocated_eager> {
    return cat::make_coroutine(allocator, allocated_square, value);
 }
 }  // namespace

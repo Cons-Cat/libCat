@@ -1896,7 +1896,7 @@ class connection : detail::connection_state {
    // Finish `other`'s chunk, so that no completion targets its old address.
    [[nodiscard]]
    static auto
-   settled(connection& other) noexcept -> connection&;
+   settled(connection& other [[clang::lifetimebound]]) noexcept -> connection&;
 
    // Send queued requests, and for `receive` and `poll`, receive whatever
    // data is available. `poll` does not wait for data to arrive.

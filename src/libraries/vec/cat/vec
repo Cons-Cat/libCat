@@ -1320,6 +1320,9 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       return clone<allocator_dyn>(allocator);
    }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlifetime-safety-intra-tu-suggestions"
+
    template <is_allocator Allocator>
       requires(is_copy_constructible<T>)
    [[nodiscard]]
@@ -1355,6 +1358,8 @@ basic_vec : public container_interface<basic_vec<T, configuration>, T>,
       construct_back(move(value));
       return monostate;
    }
+
+#pragma clang diagnostic pop
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto

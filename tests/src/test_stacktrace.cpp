@@ -101,8 +101,9 @@ deep_trace(idx remaining) -> cat::stacktrace {
 [[gnu::noinline, clang::disable_tail_calls]]
 auto
 // NOLINTNEXTLINE
-deep_maybe_trace(cat::allocator_dyn allocator, idx remaining)
-   -> cat::maybe<cat::stacktrace> {
+deep_maybe_trace(
+   cat::allocator_dyn allocator [[clang::lifetimebound]], idx remaining
+) -> cat::maybe<cat::stacktrace> {
    if (remaining == 0u) {
       return cat::stacktrace::current(allocator);
    }

@@ -6386,7 +6386,7 @@ class allocator_ref;
 template <is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-name_of(Allocator const& allocator) -> str_view {
+name_of(Allocator const& allocator [[clang::lifetimebound]]) -> str_view {
    return allocator.name();
 }
 

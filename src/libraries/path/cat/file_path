@@ -970,7 +970,8 @@ class [[gsl::Pointer(CharT const)]] path_component_stepanov_iterator
 
    // Begin iterating `value`, whose root is `root`.
    constexpr path_component_stepanov_iterator(
-      basic_str_span<CharT const> value, detail::path_root root
+      basic_str_span<CharT const> value [[clang::lifetimebound]],
+      detail::path_root root
    ) noexcept(!__has_feature(cxx_exceptions))
        : m_value(value), m_root(root) {
       seek();
@@ -1187,7 +1188,8 @@ class basic_path_components
    constexpr basic_path_components() = default;
 
    constexpr basic_path_components(
-      basic_str_span<CharT const> value, detail::path_root root
+      basic_str_span<CharT const> value [[clang::lifetimebound]],
+      detail::path_root root
    ) noexcept
        : m_value(value), m_root(root) {
    }

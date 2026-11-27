@@ -104,12 +104,4 @@ demangle(
    }
 }
 
-template <is_allocator Allocator>
-[[nodiscard]]
-auto
-demangle(Allocator& allocator, str_view mangled) noexcept
-   -> maybe<demangled_name> {
-   return demangle(allocator_ref(allocator), mangled);
-}
-
 }  // namespace cat
