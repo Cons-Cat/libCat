@@ -686,6 +686,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/vec/cat/vec_inplace
   ${CATLIB}/vec/cat/raii_vec
   ${CATLIB}/vec/cat/detail/vec_storage.hpp
+  ${CATLIB}/vec/implementations/scan_vec.tpp
   ${CATLIB}/map/cat/map
   ${CATLIB}/map/cat/hash
   ${CATLIB}/map/cat/raii_map

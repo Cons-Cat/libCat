@@ -123,3 +123,37 @@ static_assert(cat::scan_str<bool2>("1").is_empty());
 static_assert(cat::scan_str<bool4>("true").verify());
 static_assert(!cat::scan_str<bool4>("false").verify());
 static_assert(cat::scan_str<bool4>("1").is_empty());
+
+$test(scan_str_quoted_strings) {
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
+   cat::allocator_linear linear = cat::make_allocator_linear(page);
+   cat::allocator_dyn allocator = linear;
+   using inplace = cat::str_inplace<16u>;
+
+   // Quotes are stripped and `fmt("{:?}")` escapes are resolved.
+   cat::verify(cat::scan_str<inplace>(R"("a, b")").verify() == "a, b");
+   cat::verify(cat::scan_str<inplace>(R"("")").verify() == "");
+   cat::verify(
+      cat::scan_str<inplace>(R"("q\"\\\n\r\t\x")").verify() == "q\"\\\n\r\tx"
+   );
+
+   // Without a matching pair of quotes, the input is taken as is.
+   cat::verify(cat::scan_str<inplace>(R"(")").verify() == "\"");
+   cat::verify(cat::scan_str<inplace>(R"("ab)").verify() == "\"ab");
+   cat::verify(cat::scan_str<inplace>(R"(a"b")").verify() == "a\"b\"");
+
+   // Malformed quoted strings fail.
+   cat::verify(cat::scan_str<inplace>(R"("a"b")").is_empty());
+   cat::verify(cat::scan_str<inplace>(R"("ab\")").is_empty());
+
+   cat::str_vec manual =
+      cat::scan_str<cat::str_vec>(allocator, R"("x\ty")").verify();
+   cat::verify(manual == "x\ty");
+   manual.free(allocator);
+
+   cat::raii::str_vec<> owning =
+      cat::scan_str<cat::raii::str_vec<>>(allocator, R"("x\ty")").verify();
+   cat::verify(owning == "x\ty");
+
+   g_tests_alloc.free(page);
+}

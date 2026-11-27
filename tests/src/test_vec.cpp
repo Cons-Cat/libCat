@@ -2,8 +2,11 @@
 #include <cat/allocator_null>
 #include <cat/allocator_page>
 #include <cat/array>
+#include <cat/format>
 #include <cat/iterable>
 #include <cat/meta>
+#include <cat/scan_str>
+#include <cat/string>
 #include <cat/utility>
 #include <cat/vec>
 
@@ -2996,4 +2999,106 @@ $test(raii_vec_allocation_failure) {
                    .has_value());
    allocator.never_fail();
    cat::verify(allocator.live_allocations == 0u);
+}
+
+static_assert(!cat::is_scannable_without_allocator<cat::vec<int4>>);
+static_assert(!cat::is_scannable_without_allocator<cat::raii::vec<int4>>);
+
+$test(vec_scan) {
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
+   cat::allocator_linear linear = cat::make_allocator_linear(page);
+   cat::allocator_dyn allocator = linear;
+
+   cat::vec<int4> manual =
+      cat::scan_str<cat::vec<int4>>(allocator, "1,-2,3").verify();
+   cat::verify(manual.size() == 3u);
+   cat::verify(manual[0u] == 1);
+   cat::verify(manual[1u] == -2);
+   cat::verify(manual[2u] == 3);
+   manual.free(allocator);
+
+   cat::vec<int4> empty = cat::scan_str<cat::vec<int4>>(allocator, "").verify();
+   cat::verify(empty.size() == 0u);
+
+   // Every element must scan, like `boost::lexical_cast`.
+   cat::verify(cat::scan_str<cat::vec<int4>>(allocator, "1,a").is_empty());
+   cat::verify(cat::scan_str<cat::vec<int4>>(allocator, "1,").is_empty());
+   cat::verify(cat::scan_str<cat::vec<int4>>(allocator, ",1").is_empty());
+
+   cat::vec<int4> spaced =
+      cat::scan_str<cat::vec<int4>>(allocator, " 1 ,\t2,\n3 ").verify();
+   cat::verify(spaced.size() == 3u);
+   cat::verify(spaced[0u] == 1);
+   cat::verify(spaced[1u] == 2);
+   cat::verify(spaced[2u] == 3);
+   spaced.free(allocator);
+
+   cat::verify(
+      cat::scan_str<cat::vec<int4>>(allocator, " \t ").verify().size() == 0u
+   );
+   cat::verify(cat::scan_str<cat::vec<int4>>(allocator, "1, ,2").is_empty());
+   cat::verify(cat::scan_str<cat::vec<int4>>(allocator, "1 2").is_empty());
+
+   // `fmt()` wraps lists in brackets, so they must scan back losslessly.
+   cat::vec<int4> source =
+      cat::scan_str<cat::vec<int4>>(allocator, "1,-2,3").verify();
+   cat::str_vec const formatted = cat::fmt(allocator, "{}", source).verify();
+   cat::verify(formatted == "[1, -2, 3]");
+   cat::vec<int4> round_trip =
+      cat::scan_str<cat::vec<int4>>(allocator, formatted).verify();
+   cat::verify(round_trip.size() == 3u);
+   cat::verify(round_trip[0u] == 1);
+   cat::verify(round_trip[1u] == -2);
+   cat::verify(round_trip[2u] == 3);
+   round_trip.free(allocator);
+   source.free(allocator);
+
+   cat::verify(
+      cat::scan_str<cat::vec<int4>>(allocator, "[]").verify().size() == 0u
+   );
+   cat::verify(
+      cat::scan_str<cat::vec<int4>>(allocator, " [ \t] ").verify().size() == 0u
+   );
+   cat::verify(
+      cat::scan_str<cat::vec<int4>>(allocator, " [ 4 ] ").verify().size() == 1u
+   );
+   cat::verify(cat::scan_str<cat::vec<int4>>(allocator, "[").is_empty());
+   cat::verify(cat::scan_str<cat::vec<int4>>(allocator, "[1, 2").is_empty());
+   cat::verify(cat::scan_str<cat::vec<int4>>(allocator, "1, 2]").is_empty());
+   cat::verify(cat::scan_str<cat::vec<int4>>(allocator, "[[1]]").is_empty());
+
+   cat::raii::vec<cat::str_inplace<8u>> words =
+      cat::scan_str<cat::raii::vec<cat::str_inplace<8u>>>(
+         allocator, " ab ,, cd"
+      )
+         .verify();
+   cat::verify(words.size() == 3u);
+   cat::verify(words[0u] == "ab");
+   cat::verify(words[1u] == "");
+   cat::verify(words[2u] == "cd");
+
+   // Commas inside quoted elements do not split them.
+   cat::raii::vec<cat::str_inplace<8u>> quoted =
+      cat::scan_str<cat::raii::vec<cat::str_inplace<8u>>>(
+         allocator, R"([ "a,b" , "q\"," , c'd ])"
+      )
+         .verify();
+   cat::verify(quoted.size() == 3u);
+   cat::verify(quoted[0u] == "a,b");
+   cat::verify(quoted[1u] == "q\",");
+   cat::verify(quoted[2u] == "c'd");
+
+   cat::str_vec const formatted_strings =
+      cat::fmt(allocator, "{}", quoted).verify();
+   cat::raii::vec<cat::str_inplace<8u>> strings_round_trip =
+      cat::scan_str<cat::raii::vec<cat::str_inplace<8u>>>(
+         allocator, formatted_strings
+      )
+         .verify();
+   cat::verify(strings_round_trip.size() == 3u);
+   cat::verify(strings_round_trip[0u] == "a,b");
+   cat::verify(strings_round_trip[1u] == "q\",");
+   cat::verify(strings_round_trip[2u] == "c'd");
+
+   g_tests_alloc.free(page);
 }

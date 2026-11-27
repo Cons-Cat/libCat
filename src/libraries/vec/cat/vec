@@ -2498,6 +2498,14 @@ template <
 
 }  // namespace manual
 
+template <typename T>
+struct scanner;
+
+// Implementing this here is a circular dependency. The implementation can be
+// found in <cat/vec/implementations/scan_vec.tpp>.
+template <typename T, vec_flags flags>
+struct scanner<basic_vec<T, flags>>;
+
 }  // namespace cat
 
 // `raii::vec` lives in a sister header but is bundled here so `<cat/vec>`

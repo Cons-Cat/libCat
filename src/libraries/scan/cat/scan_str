@@ -79,6 +79,57 @@ struct scanner<T> {
    }
 };
 
+namespace detail {
+
+template <typename Push>
+constexpr auto
+scan_quotable_string(str_view input, Push&& push) -> maybe<void> {
+   if (input.size() < 2u || input.front() != '"' || input.back() != '"') {
+      for (char const character : input) {
+         if (push(character).is_empty()) {
+            return nullopt;
+         }
+      }
+      return monostate;
+   }
+
+   // If `input` is wrapped in `"`, push the characters between them with the
+   // `\` escapes.
+   bool is_escaped = false;
+   for (char const character : input.substring(1u, idx(input.size() - 2u))) {
+      char decoded = character;
+      if (is_escaped) {
+         is_escaped = false;
+         if (character == 'n') {
+            decoded = '\n';
+         } else if (character == 'r') {
+            decoded = '\r';
+         } else if (character == 't') {
+            decoded = '\t';
+         }
+      } else if (character == '\\') {
+         is_escaped = true;
+         continue;
+      } else if (character == '"') {
+         // An unescaped quote cannot be inside a quoted string.
+         return nullopt;
+      }
+
+      if (push(decoded).is_empty()) {
+         return nullopt;
+      }
+   }
+
+   // A trailing `\` escaped the closing quote.
+   if (is_escaped) {
+      return nullopt;
+   }
+
+   return monostate;
+}
+
+}  // namespace detail
+
 template <idx inline_capacity, str_vec_flags flags>
    requires(!flags.vec.is_fixed_size)
 struct scanner<basic_str_inplace<char, inline_capacity, flags>> {
@@ -87,10 +138,10 @@ struct scanner<basic_str_inplace<char, inline_capacity, flags>> {
    scan(str_view input) const
       -> maybe<basic_str_inplace<char, inline_capacity, flags>> {
       basic_str_inplace<char, inline_capacity, flags> result;
-      for (char const character : input) {
-         if (result.push_back(character).is_empty()) {
-            return nullopt;
-         }
+      if (detail::scan_quotable_string(input, [&](char character) {
+             return result.push_back(character);
+          }).is_empty()) {
+         return nullopt;
       }
       return result;
    }
@@ -112,7 +163,12 @@ struct scanner<basic_str_vec<char, flags>> {
    scan(allocator_ref<Allocator> allocator, str_view input) const
       -> maybe<basic_str_vec<char, flags>> {
       basic_str_vec<char, flags> result;
-      if (result.append(allocator, input).is_empty()) {
+      if (
+         result.reserve(allocator, input.size()).is_empty()
+         || detail::scan_quotable_string(input, [&](char character) {
+               return result.push_back(allocator, character);
+            }).is_empty()
+      ) {
          result.free(allocator);
          return nullopt;
       }
@@ -129,7 +185,10 @@ struct scanner<raii::basic_str_vec<char, flags, Allocator>> {
       str_view input
    ) const -> maybe<raii::basic_str_vec<char, flags, Allocator>> {
       raii::basic_str_vec<char, flags, Allocator> result(allocator);
-      $prop(result.append(input));
+      $prop(result.reserve(input.size()));
+      $prop(detail::scan_quotable_string(input, [&](char character) {
+         return result.push_back(character);
+      }));
       return result;
    }
 };
@@ -169,3 +228,7 @@ scan_str(allocator_dyn allocator [[clang::lifetimebound]], str_view input)
 }
 
 }  // namespace cat
+
+// Scanners for types on this header's include graph. Declared under those
+// types and defined in `.tpp` after `scanner` exists.
+#include "../../vec/implementations/scan_vec.tpp"
