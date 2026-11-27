@@ -596,6 +596,24 @@ class
       return this->span();
    }
 
+   // Find the first `character` at or after `from_position`.
+   [[nodiscard]]
+   constexpr auto
+   find(CharT character, idx from_position = 0u) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<idx> {
+      return basic_str_span(*this).find(character, from_position);
+   }
+
+   // Find the first `needle` at or after `from_position`.
+   [[nodiscard]]
+   constexpr auto
+   find(
+      basic_str_span<CharT const> needle, idx from_position = 0u
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> maybe<idx> {
+      return basic_str_span(*this).find(needle, from_position);
+   }
+
    template <is_allocator Allocator>
    [[clang::reinitializes]]
    constexpr void

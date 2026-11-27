@@ -148,3 +148,12 @@ $test(str_inplace_subscript_compile_time_bounds) {
    static_assert(cat::is_same<decltype(cat::move(string)[8u]), void>);
    static_assert(cat::is_same<decltype(string[runtime]), char&>);
 }
+
+$test(str_inplace_find) {
+   cat::str_inplace<8u> const string = "a,bc,";
+   cat::verify(string.find(',').value() == 1u);
+   cat::verify(string.find(',', 2u).value() == 4u);
+   cat::verify(string.find('z').is_empty());
+   cat::verify(string.find("bc").value() == 2u);
+   cat::verify(string.find("bc", 3u).is_empty());
+}

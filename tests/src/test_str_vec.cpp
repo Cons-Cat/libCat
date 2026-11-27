@@ -623,3 +623,19 @@ $test(str_vec_allocation_failure) {
    // The destructor freed everything.
    cat::verify(allocator.live_allocations == 0u);
 }
+
+$test(str_vec_find) {
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
+   cat::allocator_linear linear = cat::make_allocator_linear(page);
+   cat::allocator_dyn allocator = linear;
+
+   cat::raii::str_vec<> string(allocator);
+   cat::verify(string.append("a,bc,").has_value());
+   cat::verify(string.find(',').value() == 1u);
+   cat::verify(string.find(',', 2u).value() == 4u);
+   cat::verify(string.find('z').is_empty());
+   cat::verify(string.find("bc").value() == 2u);
+   cat::verify(string.find("bc", 3u).is_empty());
+
+   g_tests_alloc.free(page);
+}

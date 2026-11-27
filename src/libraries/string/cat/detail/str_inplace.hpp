@@ -171,7 +171,7 @@ class
 
  public:
    constexpr basic_str_inplace() noexcept {
-      this->write_terminator();
+      write_terminator();
    }
 
    constexpr basic_str_inplace(basic_str_inplace const& string) = default;
@@ -186,7 +186,7 @@ class
       for (idx index; index < other.size(); ++index) {
          m_data[index] = other[index];
       }
-      this->write_terminator();
+      write_terminator();
       return *this;
    }
 
@@ -205,7 +205,7 @@ class
       for (idx index; index < content_size; ++index) {
          m_data[index] = string[index];
       }
-      this->write_terminator();
+      write_terminator();
    }
 
    template <typename OtherChar, idx extent>
@@ -226,7 +226,7 @@ class
          m_data[index] = string[index];
       }
 
-      this->write_terminator();
+      write_terminator();
    }
 
    // TODO: We probably can SIMD copy and transcode these here.
@@ -336,6 +336,24 @@ class
       }
    }
 
+   // Find the first `character` at or after `from_position`.
+   [[nodiscard]]
+   constexpr auto
+   find(CharT character, idx from_position = 0u) const noexcept(
+      !__has_feature(cxx_exceptions)
+   ) -> maybe<idx> {
+      return basic_str_span(*this).find(character, from_position);
+   }
+
+   // Find the first `needle` at or after `from_position`.
+   [[nodiscard]]
+   constexpr auto
+   find(
+      basic_str_span<CharT const, str_flags{}> needle, idx from_position = 0u
+   ) const noexcept(!__has_feature(cxx_exceptions)) -> maybe<idx> {
+      return basic_str_span(*this).find(needle, from_position);
+   }
+
    [[nodiscard]]
    static constexpr auto
    capacity() noexcept -> idx {
@@ -383,11 +401,13 @@ class
       if (new_size > inline_capacity) {
          return nullopt;
       }
+
       for (idx index = size(); index < new_size; ++index) {
          m_data[index] = value;
       }
+
       this->m_size = new_size;
-      this->write_terminator();
+      write_terminator();
       return monostate;
    }
 
@@ -412,7 +432,7 @@ class
       CharT& result = m_data[this->m_size];
       result = value;
       ++this->m_size;
-      this->write_terminator();
+      write_terminator();
       return result;
    }
 
@@ -430,7 +450,7 @@ class
          m_data[this->m_size + index] = string[index];
       }
       this->m_size += count;
-      this->write_terminator();
+      write_terminator();
       return monostate;
    }
 
@@ -450,7 +470,7 @@ class
          m_data[this->m_size + index] = string[index];
       }
       this->m_size += count;
-      this->write_terminator();
+      write_terminator();
       return monostate;
    }
 
@@ -488,7 +508,7 @@ class
       }
       this->m_size = idx(this->m_size - 1u);
       CharT const result = m_data[this->m_size];
-      this->write_terminator();
+      write_terminator();
       return result;
    }
 
@@ -497,7 +517,7 @@ class
       requires(!flags.vec.is_fixed_size)
    {
       this->m_size = 0u;
-      this->write_terminator();
+      write_terminator();
    }
 
    constexpr void
@@ -509,7 +529,7 @@ class
          m_data[idx(source - 1u)] = m_data[source];
       }
       this->m_size = idx(this->m_size - 1u);
-      this->write_terminator();
+      write_terminator();
    }
 
    constexpr void
@@ -523,7 +543,7 @@ class
          m_data[idx(source - count)] = m_data[source];
       }
       this->m_size = idx(this->m_size - count);
-      this->write_terminator();
+      write_terminator();
    }
 
    template <idx other_capacity, str_vec_flags other_flags>
