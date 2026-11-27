@@ -18,30 +18,28 @@ struct formatter<T, CharT> : formatter_base<CharT> {
       allocator_ref<Allocator> /*unused*/, T value, format_context context
    ) const -> scaredy_format<void> {
       uintptr<remove_pointer<T>> integer = value;
-      char digits[sizeof(integer) * 2u];
-      idx length = 0u;
+      // One hex digit per 4 bits, and at least one digit for null.
+      idx const digit_count =
+         (__builtin_stdc_bit_width(make_raw_arithmetic(integer) | 1u) + 3u)
+         / 4u;
 
-      do {
-         auto const digit = integer & 0xfu;
-         digits[length] =
-            static_cast<char>(digit < 10u ? digit + '0' : digit - 10u + 'a');
-         ++length;
+      // `0x` and the digits are written straight into the buffer, from the
+      // end, so that they come out in order.
+      maybe<char*> const p_output =
+         context.buffer().prepare_append(idx(digit_count + 2u));
+      if (!p_output.has_value()) {
+         return format_errors::out_of_memory;
+      }
+
+      char* const p_begin = p_output.value();
+      p_begin[0] = '0';
+      p_begin[1] = 'x';
+      for (idx i = digit_count + 1u; i > 1u; i = idx(i - 1u)) {
+         p_begin[i.raw] =
+            "0123456789abcdef"[make_raw_arithmetic(integer & 0xfu)];
          integer >>= 4u;
-      } while (integer != 0u);
-
-      scaredy_format<void> result = context.append("0x");
-      if (result.is_empty()) {
-         return result;
       }
-
-      iword position = make_signed(length);
-      while (position > 0) {
-         --position;
-         result = context.append(digits[position.raw]);
-         if (result.is_empty()) {
-            return result;
-         }
-      }
+      context.buffer().commit(idx(digit_count + 2u));
 
       return monostate;
    }

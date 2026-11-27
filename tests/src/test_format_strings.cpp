@@ -286,6 +286,14 @@ $test(format_classes) {
    allocator.reset();
    int* p_null = nullptr;
    cat::verify(cat::fmt(allocator, "{}", p_null).verify() == "0x0");
+
+   void* p_short = __builtin_bit_cast(void*, cat::uword(0x10u));
+   cat::verify(cat::fmt(allocator, "{}", p_short).verify() == "0x10");
+
+   void* p_full = __builtin_bit_cast(void*, cat::uword(0xfedcba9876543210u));
+   cat::verify(
+      cat::fmt(allocator, "{}", p_full).verify() == "0xfedcba9876543210"
+   );
 }
 
 $test(fmt_specs_and_braces) {
