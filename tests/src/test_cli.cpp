@@ -278,3 +278,24 @@ static_assert(cat::cli(2, short_bool_equals)
                  .is_empty());
 
 }  // namespace
+
+$test(cli_positionals) {
+   char const* argv[] = {"program", "-q", "-n", "3", "a", "-b", nullptr};
+   auto cli = cat::cli(6, argv).add_bool<"q">().add_flag<"n">();
+   cat::span positionals = cli.positionals();
+   cat::verify(positionals.size() == 2u);
+   cat::verify(cat::str_view(positionals[0]) == "a");
+   cat::verify(cat::str_view(positionals[1]) == "-b");
+
+   // Everything after `--` is positional.
+   char const* dashes_argv[] = {"program", "-q", "--", "-n", nullptr};
+   auto dashes = cat::cli(4, dashes_argv).add_bool<"q">().add_flag<"n">();
+   cat::verify(dashes.positionals().size() == 1u);
+   cat::verify(cat::str_view(dashes.positionals()[0]) == "-n");
+
+   // A trailing flag value leaves no positionals.
+   char const* flags_argv[] = {"program", "-n", "3", nullptr};
+   cat::verify(
+      cat::cli(3, flags_argv).add_flag<"n">().positionals().is_empty()
+   );
+}

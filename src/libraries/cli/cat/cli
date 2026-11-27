@@ -19,13 +19,14 @@
 //    cat::maybe<int4> number = cli.parse<int4>("number");
 //    cat::maybe<cat::str_view> file = cli.parse<cat::str_view>("f");
 //    cat::maybe<bool> enable = cli.parse<bool>("enable");
+//    cat::span files = cli.positionals();
 //
 // TODO: Elaborate usage.
 //
 // TODO: Distinguish an absent flag from a malformed value.
 // TODO: Richer error handling.
 // TODO: Let a cluster end in a flag that takes a value, like `-abf value`.
-// TODO: Positional arguments and subcommands. We need a trie?
+// TODO: Subcommands. Should we need a trie? Heuristically determine this?
 // TODO: Runtime `.add_flag()`?
 // TODO: `.add_help()` auto-generated menu.
 // TODO: `.add_copyright()`, `.add_title()`, and `.add_author()`, printed in the
@@ -488,6 +489,33 @@ class [[gsl::Pointer(char const*)]] cli {
          return nullopt;
       }
       return scan_str<T>(allocator, value.value());
+   }
+
+   // Get positional arguments that come after a flag.
+   [[nodiscard]]
+   constexpr auto
+   positionals() const -> arguments_span {
+      for (idx i = 0u; i < m_arguments.size(); ++i) {
+         char const* _Nonnull const p_argument = m_arguments[i];
+         if (p_argument[0] != '-') {
+            return m_arguments.subspan(i);
+         }
+
+         if (p_argument[1] == '-' && p_argument[2] == '\0') {
+            return m_arguments.subspan(i + 1u);
+         }
+
+         // Step over the separate value of a registered flag.
+         if (
+            (detail::cli_match_flag<detail::cli_names_of<spellings>>(p_argument)
+                .takes_next
+             || ...)
+         ) {
+            ++i;
+         }
+      }
+
+      return {};
    }
 
  private:
