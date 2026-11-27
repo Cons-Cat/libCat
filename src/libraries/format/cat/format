@@ -1310,7 +1310,7 @@ eprintln_fmt(
 #include "../implementations/format_float.tpp"
 #include "../implementations/format_integer.tpp"
 #include "../implementations/format_iterable.tpp"
-#include "../implementations/format_maybe_void.tpp"
+#include "../implementations/format_maybe.tpp"
 #include "../implementations/format_monostate.tpp"
 #include "../implementations/format_pointer.tpp"
 #include "../implementations/format_quantity.tpp"

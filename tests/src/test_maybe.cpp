@@ -1,3 +1,5 @@
+#include <cat/allocator_linear>
+#include <cat/format>
 #include <cat/iterable>
 #include <cat/maybe>
 #include <cat/memory>
@@ -2286,4 +2288,143 @@ $test(maybe_assign_views) {
    cat::verify(target.value().size() == hello.value().size());
    target = cat::maybe<cat::zstr_view>();
    cat::verify(!target.has_value());
+}
+
+$test(maybe_format) {
+   cat::span page = g_tests_alloc.alloc_multi<cat::byte>(4_uki).verify();
+   $defer {
+      g_tests_alloc.free(page);
+   };
+   auto allocator = make_allocator_linear(page);
+
+   // Value storage.
+   cat::maybe<int4> some = 7;
+   cat::maybe<int4> none;
+   cat::verify(
+      cat::fmt(allocator, "{} {}", some, none).verify() == "7 nullopt"
+   );
+
+   // A disengaged `maybe` formats the same after it was reset.
+   allocator.reset();
+   some = cat::nullopt;
+   cat::verify(cat::fmt(allocator, "{}", some).verify() == "nullopt");
+
+   // `maybe<void>` formats its `monostate`.
+   allocator.reset();
+   cat::maybe<void> engaged_void = cat::monostate;
+   cat::maybe<void> empty_void;
+   cat::verify(
+      cat::fmt(allocator, "{} {}", engaged_void, empty_void).verify()
+      == "monostate nullopt"
+   );
+
+   // Strings are unquoted at the top level.
+   allocator.reset();
+   cat::maybe<cat::str_view> some_text = cat::str_view("cat");
+   cat::maybe<cat::str_view> no_text;
+   cat::verify(
+      cat::fmt(allocator, "{} {}", some_text, no_text).verify() == "cat nullopt"
+   );
+
+   // Reference storage formats the referent, and sees changes to it.
+   allocator.reset();
+   int4 referent = 3;
+   cat::maybe<int4&> some_reference = referent;
+   cat::maybe<int4&> no_reference;
+   referent = 4;
+   cat::verify(
+      cat::fmt(allocator, "{} {}", some_reference, no_reference).verify()
+      == "4 nullopt"
+   );
+
+   allocator.reset();
+   cat::maybe<int4 const&> const_reference = referent;
+   cat::verify(cat::fmt(allocator, "{}", const_reference).verify() == "4");
+
+   // Compact storage.
+   allocator.reset();
+   cat::maybe_non_zero<int4> some_non_zero = 5;
+   cat::maybe_non_zero<int4> no_non_zero;
+   cat::verify(
+      cat::fmt(allocator, "{} {}", some_non_zero, no_non_zero).verify()
+      == "5 nullopt"
+   );
+
+   allocator.reset();
+   cat::maybe_non_negative<int4> zero = 0;
+   cat::maybe_non_negative<int4> no_non_negative;
+   cat::verify(
+      cat::fmt(allocator, "{} {}", zero, no_non_negative).verify()
+      == "0 nullopt"
+   );
+
+   // `idx` opts into compact storage by default.
+   allocator.reset();
+   cat::maybe<cat::idx> some_idx = 9u;
+   cat::maybe<cat::idx> no_idx;
+   cat::verify(
+      cat::fmt(allocator, "{} {}", some_idx, no_idx).verify() == "9 nullopt"
+   );
+
+   allocator.reset();
+   int4 pointee = 0;
+   cat::maybe_ptr<int4> some_pointer = &pointee;
+   cat::maybe_ptr<int4> no_pointer;
+   cat::verify(
+      cat::fmt(allocator, "{}", some_pointer).verify()
+      == cat::fmt(allocator, "{}", &pointee).verify()
+   );
+   cat::verify(cat::fmt(allocator, "{}", no_pointer).verify() == "nullopt");
+
+   // Nested `maybe` only prints the innermost state.
+   allocator.reset();
+   cat::maybe<cat::maybe<int4>> nested_some = cat::maybe<int4>(1);
+   cat::maybe<cat::maybe<int4>> nested_inner_none = cat::maybe<int4>();
+   cat::maybe<cat::maybe<int4>> nested_none;
+   cat::verify(
+      cat::fmt(
+         allocator, "{} {} {}", nested_some, nested_inner_none, nested_none
+      )
+         .verify()
+      == "1 nullopt nullopt"
+   );
+
+   // Inside a tuple, debug format propagates so held strings are quoted.
+   allocator.reset();
+   auto tuple = cat::make_tuple(some_text, no_text, cat::maybe<int4>(2));
+   cat::verify(
+      cat::fmt(allocator, "{}", tuple).verify() == R"(("cat", nullopt, 2))"
+   );
+
+   // A `maybe` of a tuple formats the tuple.
+   allocator.reset();
+   cat::maybe<cat::tuple<int4, cat::str_view>> some_tuple =
+      cat::make_tuple(int4(1), cat::str_view("two"));
+   cat::verify(
+      cat::fmt(allocator, "{}", some_tuple).verify() == R"((1, "two"))"
+   );
+
+   // Specifiers forward to the held value's formatter.
+   allocator.reset();
+   cat::verify(
+      cat::fmt(allocator, "{:?} {:?}", some_text, no_text).verify()
+      == R"("cat" nullopt)"
+   );
+
+   allocator.reset();
+   auto debug_int = cat::fmt(allocator, "{:?}", some);
+   cat::verify(debug_int.is_empty());
+   cat::verify(
+      debug_int.error() == cat::format_errors::unknown_format_specifier
+   );
+
+   allocator.reset();
+   auto unknown_spec = cat::fmt(allocator, "{:x}", none);
+   cat::verify(unknown_spec.is_empty());
+   cat::verify(
+      unknown_spec.error() == cat::format_errors::unknown_format_specifier
+   );
+
+   allocator.reset();
+   cat::verify(cat::fmt(allocator, "[{:}]", none).verify() == "[nullopt]");
 }

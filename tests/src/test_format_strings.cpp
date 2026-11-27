@@ -253,7 +253,9 @@ $test(format_classes) {
    allocator.reset();
    cat::maybe<int> some = 7;
    cat::maybe<int> none;
-   cat::verify(cat::fmt(allocator, "{} {}", some, none).verify() == "[7] []");
+   cat::verify(
+      cat::fmt(allocator, "{} {}", some, none).verify() == "7 nullopt"
+   );
 
    allocator.reset();
    cat::variant<int, cat::str_view> active = cat::str_view("value");
@@ -278,7 +280,7 @@ $test(format_classes) {
    cat::maybe<void> empty_void;
    cat::verify(
       cat::fmt(allocator, "{} {}", engaged_void, empty_void).verify()
-      == "[void] []"
+      == "monostate nullopt"
    );
 
    allocator.reset();

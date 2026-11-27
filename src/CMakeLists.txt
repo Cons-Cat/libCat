@@ -446,7 +446,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/format/implementations/format_float.tpp
   ${CATLIB}/format/implementations/format_integer.tpp
   ${CATLIB}/format/implementations/format_iterable.tpp
-  ${CATLIB}/format/implementations/format_maybe_void.tpp
+  ${CATLIB}/format/implementations/format_maybe.tpp
   ${CATLIB}/format/implementations/format_monostate.tpp
   ${CATLIB}/format/implementations/format_pointer.tpp
   ${CATLIB}/format/implementations/format_quantity.tpp
