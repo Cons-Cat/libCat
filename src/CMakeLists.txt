@@ -105,7 +105,6 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/string/implementations/println.cpp
   ${CATLIB}/string/implementations/eprint.cpp
   ${CATLIB}/string/implementations/eprintln.cpp
-  ${CATLIB}/format/implementations/itoa_jeaiii.cpp
   ${CATLIB}/format/implementations/ftoa_dragonbox.cpp
   ${CATLIB}/format/implementations/format.cpp
   ${CATLIB}/format/implementations/format_float.cpp
@@ -444,6 +443,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/format/cat/detail/ftoa_dragonbox_fwd.hpp
   ${CATLIB}/format/cat/detail/itoa_jeaiii.hpp
   ${CATLIB}/format/implementations/format_monostate.tpp
+  ${CATLIB}/format/implementations/to_chars_integer.tpp
   ${CATLIB}/iterable/cat/iterable
   ${CATLIB}/iterable/cat/detail/iterable_interface.hpp
   ${CATLIB}/iterable/implementations/as_rvalue.tpp

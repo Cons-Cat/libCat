@@ -9,6 +9,8 @@
 #include <cat/arithmetic>
 #include <cat/insert_iterators>
 #include <cat/iterable>
+#include <cat/limits>
+#include <cat/meta>
 #include <cat/propagate>
 #include <cat/scaredy>
 #include <cat/string>
@@ -17,10 +19,6 @@
 // TODO: Use `$prop` macros to simplify error propagation.
 
 namespace cat {
-
-// TODO: Support formatting 1 and 2-byte integers.
-// TODO: Functions in this header should return owning-`str_span`, not
-// `str_view`.
 
 // Get the upper bound buffer size for a stringified floating point type.
 namespace detail {
@@ -37,117 +35,19 @@ float_to_chars_max_size() -> idx {
 }
 }  // namespace detail
 
-// Erase the type of `cat::basic_int` from redundant template instantiations.
-template <
-   is_allocator Allocator, is_integral T, overflow_policies policy,
-   auto quantity>
-[[nodiscard]]
-auto
-to_chars(
-   allocator_ref<Allocator> allocator, basic_int<T, policy, quantity> numeral
-) -> maybe<str_view> {
-   return to_chars(allocator, make_raw_arithmetic(numeral));
-}
-
-template <is_integral T, overflow_policies policy, auto quantity>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-inline auto
-to_chars(allocator_dyn allocator, basic_int<T, policy, quantity> numeral)
-   -> maybe<str_view> {
-   return to_chars<allocator_dyn>(allocator, numeral);
-}
-
-// TODO: Zero-allocation `str_inplace` version?
-// Dynamically allocate an `is_integral` value converted to `string`.
-template <is_allocator Allocator, is_integral T>
-[[nodiscard]]
-auto
-to_chars(allocator_ref<Allocator> allocator, T integer) -> maybe<str_view> {
-   span string =
-      $prop(allocator.template alloc_multi<char>(limits<T>::digits10));
-   char* p_string = string.data();
-
-   // Modify the allocated string in-place.
-   if constexpr (is_same<T, int4::raw_type>) {
-      detail::i32toa_jeaiii(integer, p_string);
-   } else if constexpr (is_same<T, uint4::raw_type>) {
-      detail::u32toa_jeaiii(integer, p_string);
-   } else if constexpr (is_same<T, int8::raw_type>) {
-      detail::i64toa_jeaiii(integer, p_string);
-   } else if constexpr (is_same<T, uint8::raw_type>) {
-      detail::u64toa_jeaiii(integer, p_string);
-   } else {
-      // TODO: Format 1 and 2-byte integers.
-      __builtin_unreachable();
-   }
-
-   return str_view(p_string);
-}
-
-template <is_integral T>
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-inline auto
-to_chars(allocator_dyn allocator, T integer) -> maybe<str_view> {
-   return to_chars<allocator_dyn>(allocator, integer);
-}
-
-// Dynamically allocate a floating point value converted to `string`.
-template <is_allocator Allocator, typename T>
-   requires(is_floating_point<T>)
-[[nodiscard]]
-auto
-to_chars(allocator_ref<Allocator> allocator, T value) -> maybe<str_view> {
-   span string = $prop(
-      allocator.template alloc_multi<char>(detail::float_to_chars_max_size<T>())
-   );
-   char* p_string = string.data();
-
-   detail::dragonbox::to_chars(value, p_string);
-
-   return str_view(p_string);
-}
-
-template <typename T>
-   requires(is_floating_point<T>)
-[[nodiscard, gnu::always_inline, gnu::nodebug]]
-inline auto
-to_chars(allocator_dyn allocator, T value) -> maybe<str_view> {
-   return to_chars<allocator_dyn>(allocator, value);
-}
-
 namespace detail {
-template <auto value>
-consteval auto
-make_const_string() {
-   constexpr auto signed_remainder = value % 10;
-   constexpr auto remainder =
-      signed_remainder < 0 ? -signed_remainder : signed_remainder;
-   constexpr char digit =
-      (remainder > 9) ? (remainder - 10) + 'a' : remainder + '0';
-   constexpr auto new_value = value / 10;
-
-   if constexpr (new_value == 0) {
-      return basic_str_literal(digit);
-   } else {
-      return make_const_string<new_value>() + digit;
-   }
-}
+// Room for every decimal digit of `T` and a sign.
+template <typename T>
+inline constexpr idx to_chars_integer_capacity =
+   limits<decltype(make_raw_arithmetic(declval<T>()))>::digits10 + 2u;
 }  // namespace detail
 
-// Convert a `constexpr` `is_integral` to `str_literal`.
-template <auto value>
-   requires(is_integral<decltype(value)>)
+// Convert an integer to decimal characters, like `std::to_chars()`.
+template <is_integral T>
+   requires(!is_bool<T>)
 [[nodiscard]]
-consteval auto
-to_chars() {
-   if constexpr (value == 0) {
-      return str_literal("0");
-   } else if constexpr (is_signed<decltype(value)> && value < 0) {
-      return '-' + detail::make_const_string<value>();
-   } else {
-      return detail::make_const_string<value>();
-   }
-}
+constexpr auto
+to_chars(T value) -> str_inplace<detail::to_chars_integer_capacity<T>>;
 
 template <is_integral T>
 [[nodiscard]]
@@ -852,40 +752,24 @@ format_nested(format_context& context, T const& value) -> scaredy_format<void> {
 template <typename T>
 auto
 append_arithmetic(format_context& context, T value) -> scaredy_format<void> {
-   format_buffer<basic_allocator_dyn<dyn_reallocate>>& buffer =
-      context.buffer();
-
-   idx max_size;
-   if constexpr (is_floating_point<T>) {
-      max_size = float_to_chars_max_size<T>();
+   if constexpr (!is_floating_point<T>) {
+      str_inplace const text = to_chars(value);
+      return context.append(str_view(text.data(), text.size()));
    } else {
-      // Room for every decimal digit, a sign, and slack.
-      max_size = idx(limits<T>::digits10) + 3u;
-   }
+      format_buffer<basic_allocator_dyn<dyn_reallocate>>& buffer =
+         context.buffer();
+      maybe<char*> tail = buffer.prepare_append(
+         context.allocator, float_to_chars_max_size<T>()
+      );
+      if (tail.is_empty()) {
+         return format_errors::out_of_memory;
+      }
 
-   maybe<char*> tail = buffer.prepare_append(context.allocator, max_size);
-   if (tail.is_empty()) {
-      return format_errors::out_of_memory;
+      char* const p_begin = tail.value();
+      char* const p_end = dragonbox::to_chars(value, p_begin);
+      buffer.commit(idx(p_end - p_begin));
+      return monostate;
    }
-
-   char* const p_begin = tail.value();
-   char* p_end;
-   if constexpr (is_floating_point<T>) {
-      p_end = dragonbox::to_chars(value, p_begin);
-   } else if constexpr (is_same<T, int4::raw_type>) {
-      p_end = i32toa_jeaiii(value, p_begin);
-   } else if constexpr (is_same<T, uint4::raw_type>) {
-      p_end = u32toa_jeaiii(value, p_begin);
-   } else if constexpr (is_same<T, int8::raw_type>) {
-      p_end = i64toa_jeaiii(value, p_begin);
-   } else if constexpr (is_same<T, uint8::raw_type>) {
-      p_end = u64toa_jeaiii(value, p_begin);
-   } else {
-      __builtin_unreachable();
-   }
-
-   buffer.commit(idx(p_end - p_begin));
-   return monostate;
 }
 
 template <int decimal_power>
@@ -1804,3 +1688,4 @@ eprintln_fmt(
 #include "../../string/implementations/format_str_inplace.tpp"
 #include "../../string/implementations/format_str_vec.tpp"
 #include "../implementations/format_monostate.tpp"
+#include "../implementations/to_chars_integer.tpp"

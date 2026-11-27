@@ -50,9 +50,22 @@ $test(format_strings) {
    auto allocator = make_allocator_linear(page);
 
    // Test `int4` conversion.
-   cat::str_view int_string = cat::to_chars(allocator, 10).verify();
+   cat::str_view int_string = cat::fmt(allocator, "{}", 10).verify();
    cat::verify(int_string == "10");
    cat::verify(int_string.size() == 2);
+
+   cat::verify(
+      cat::fmt(allocator, "{}", cat::limits<int>::min()).verify()
+      == "-2147483648"
+   );
+   cat::verify(
+      cat::fmt(allocator, "{}", cat::limits<unsigned long long>::max()).verify()
+      == "18446744073709551615"
+   );
+   cat::verify(cat::fmt(allocator, "{}", 5ll).verify() == "5");
+   cat::verify(
+      cat::fmt(allocator, "{}", static_cast<short>(-7)).verify() == "-7"
+   );
 
    // TODO: `constexpr` string comparison.
    // TODO: Test out of memory error handling.
@@ -60,10 +73,25 @@ $test(format_strings) {
    // TODO: Test `int1`, `uint1`, `int2`, `uint2`, `uint4`, `int8`, and
    // `uint8`.
 
-   constexpr auto const_int = cat::to_chars<136>();
-   constexpr auto const_negative = cat::to_chars<-1'650>();
-   static_assert(const_int == "136");
-   static_assert(const_negative == "-1650");
+   static_assert(cat::to_chars(136) == "136");
+   static_assert(cat::to_chars(-1'650) == "-1650");
+   static_assert(cat::to_chars(0) == "0");
+   static_assert(cat::to_chars(cat::limits<int>::min()) == "-2147483648");
+   static_assert(
+      cat::to_chars(cat::limits<long long>::min()) == "-9223372036854775808"
+   );
+   static_assert(
+      cat::to_chars(cat::limits<unsigned long long>::max())
+      == "18446744073709551615"
+   );
+   static_assert(cat::to_chars(static_cast<signed char>(-128)) == "-128");
+   static_assert(cat::to_chars(cat::int4(-42)) == "-42");
+   cat::verify(cat::to_chars(cat::limits<int>::min()) == "-2147483648");
+   cat::verify(
+      cat::to_chars(cat::limits<long long>::min()) == "-9223372036854775808"
+   );
+   cat::verify(cat::to_chars(static_cast<unsigned short>(65'535u)) == "65535");
+   cat::verify(cat::to_chars(cat::uint8(7u)) == "7");
 
    // Test formatting `int`.
    allocator.reset();
@@ -76,7 +104,7 @@ $test(format_strings) {
 
    // Test formatting `float`.
    allocator.reset();
-   cat::str_view string_float = cat::to_chars(allocator, 1.234f).verify();
+   cat::str_view string_float = cat::fmt(allocator, "{}", 1.234f).verify();
    cat::verify(string_float == "1.234E0", string_float);
    // cat::println(string_float);
 

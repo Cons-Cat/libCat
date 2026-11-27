@@ -36,6 +36,7 @@
 // also pre-index `argv` to make repeated lookups cheaper?
 
 #include <cat/format>
+#include <cat/meta>
 #include <cat/runtime>
 #include <cat/scan_str>
 #include <cat/str_literal>
@@ -328,7 +329,8 @@ template <auto field>
 consteval auto
 cli_version_field_text() {
    if constexpr (is_integral<decltype(field)>) {
-      return to_chars<make_raw_arithmetic(field)>();
+      constexpr str_inplace text = to_chars(field);
+      return str_literal<text.size()>(text);
    } else {
       return field;
    }
@@ -627,6 +629,7 @@ versioned_cli : public cli<spellings...> {
    void
    print_version() const {
       // `argv[0]` precedes the arguments, and it is null when `argc` is 0.
+      // TODO: We can move more of this to compile-time and make one syscall.
       char const* const p_program = this->m_arguments.data()[-1];
       if (p_program != nullptr) {
          char const* p_name = p_program;
