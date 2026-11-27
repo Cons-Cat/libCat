@@ -321,7 +321,7 @@ $test(math_libm_libcalls) {
    cat::verify(floorf(3.f * half) == 1.f);
    cat::verify(floorf(0x1p30f * half) == 0x1p29f);
    cat::verify(floorf(__builtin_inff() * half) == __builtin_inff());
-   cat::verify(__builtin_isnan(floorf(__builtin_nanf("") * half)));
+   cat::verify(__builtin_isnan(floorf(__builtin_nanf("") * half)) != 0);
    cat::verify(ceilf(half) == 1.f);
    cat::verify(is_negative_zero(ceilf(-half)));
    cat::verify(ceilf(-3.f * half) == -1.f);
@@ -332,7 +332,7 @@ $test(math_libm_libcalls) {
 
    cat::verify(fmaf(half * 4.f, 3.f, 4.f) == 10.f);
    // Rounding through `double` would give 1 + 2^-11 here. From LLVM libc.
-   float volatile near_one = 1.f + 0x1p-12f;
+   float const near_one = 1.f + ((0x1p-12f * half) * 2.f);
    cat::verify(
       fmaf(near_one, near_one, 0x1p-53f * half * 2.f)
       == 1.f + 0x1p-11f + 0x1p-23f
@@ -808,11 +808,11 @@ $test(math_sincos) {
 
 $test(math_sine_of_signed_zero) {
    // `sin` and `tan` are odd, so they keep the sign of a zero.
-   static_assert(__builtin_signbit(cat::detail::raw_sin(-0.0)));
-   static_assert(__builtin_signbit(cat::detail::raw_tan(-0.f)));
+   static_assert(__builtin_signbit(cat::detail::raw_sin(-0.0)) != 0);
+   static_assert(__builtin_signbit(cat::detail::raw_tan(-0.f)) != 0);
    double volatile negative_zero = -0.0;
    double const zero = negative_zero;
-   cat::verify(__builtin_signbit(cat::detail::raw_sin(zero)));
-   cat::verify(__builtin_signbit(cat::detail::raw_tan(zero)));
-   cat::verify(!__builtin_signbit(cat::detail::raw_sin(-zero)));
+   cat::verify(__builtin_signbit(cat::detail::raw_sin(zero)) != 0);
+   cat::verify(__builtin_signbit(cat::detail::raw_tan(zero)) != 0);
+   cat::verify(__builtin_signbit(cat::detail::raw_sin(-zero)) == 0);
 }
