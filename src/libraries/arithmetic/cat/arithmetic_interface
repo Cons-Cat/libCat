@@ -618,7 +618,7 @@ struct plus_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator+=(T& other, Derived const& self) noexcept(
+   operator+=(T& other [[clang::lifetimebound]], Derived const& self) noexcept(
       noexcept(other = detail::reverse_add(self, other))
    ) -> T& {
       other = detail::reverse_add(self, other);
@@ -820,7 +820,7 @@ struct minus_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator-=(T& other, Derived const& self) noexcept(
+   operator-=(T& other [[clang::lifetimebound]], Derived const& self) noexcept(
       noexcept(other = self.subtract_from(other))
    ) -> T& {
       other = self.subtract_from(other);
@@ -1022,7 +1022,7 @@ struct multiply_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator*=(T& other, Derived const& self) noexcept(
+   operator*=(T& other [[clang::lifetimebound]], Derived const& self) noexcept(
       noexcept(other = detail::reverse_multiply(self, other))
    ) -> T& {
       other = detail::reverse_multiply(self, other);
@@ -1224,7 +1224,7 @@ struct divide_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator/=(T& other, Derived const& self) noexcept(
+   operator/=(T& other [[clang::lifetimebound]], Derived const& self) noexcept(
       noexcept(other = self.divide_into(other))
    ) -> T& {
       other = self.divide_into(other);
@@ -1426,7 +1426,7 @@ struct bit_and_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator&=(T& other, Derived const& self) noexcept(
+   operator&=(T& other [[clang::lifetimebound]], Derived const& self) noexcept(
       noexcept(other = detail::reverse_bit_and(self, other))
    ) -> T& {
       other = detail::reverse_bit_and(self, other);
@@ -1627,7 +1627,7 @@ struct bit_or_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator|=(T& other, Derived const& self) noexcept(
+   operator|=(T& other [[clang::lifetimebound]], Derived const& self) noexcept(
       noexcept(other = detail::reverse_bit_or(self, other))
    ) -> T& {
       other = detail::reverse_bit_or(self, other);
@@ -1829,7 +1829,7 @@ struct bit_xor_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator^=(T& other, Derived const& self) noexcept(
+   operator^=(T& other [[clang::lifetimebound]], Derived const& self) noexcept(
       noexcept(other = detail::reverse_bit_xor(self, other))
    ) -> T& {
       other = detail::reverse_bit_xor(self, other);
@@ -2031,7 +2031,7 @@ struct modulo_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator%=(T& other, Derived const& self) noexcept(
+   operator%=(T& other [[clang::lifetimebound]], Derived const& self) noexcept(
       noexcept(other = self.modulo_into(other))
    ) -> T& {
       other = self.modulo_into(other);
@@ -2234,7 +2234,7 @@ struct shift_left_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator<<=(T& other, Derived const& self) noexcept(
+   operator<<=(T& other [[clang::lifetimebound]], Derived const& self) noexcept(
       noexcept(other = self.shift_left_into(other))
    ) -> T& {
       other = self.shift_left_into(other);
@@ -2437,7 +2437,7 @@ struct shift_right_interface {
       )
    [[gnu::always_inline, gnu::nodebug]]
    friend constexpr auto
-   operator>>=(T& other, Derived const& self) noexcept(
+   operator>>=(T& other [[clang::lifetimebound]], Derived const& self) noexcept(
       noexcept(other = self.shift_right_into(other))
    ) -> T& {
       other = self.shift_right_into(other);
