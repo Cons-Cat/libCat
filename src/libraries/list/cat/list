@@ -108,8 +108,10 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    template <is_allocator Allocator, typename... Args>
    [[nodiscard]]
    constexpr auto
-   make_node(allocator_ref<Allocator> allocator, Args&&... arguments)
-      -> maybe<node_type* _Nonnull> {
+   make_node(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      Args&&... arguments
+   ) -> maybe<node_type* _Nonnull> {
       node_type* _Nullable const p_spare = m_storage.m_p_spare;
       if (p_spare != nullptr) {
          m_storage.m_p_spare = p_spare->p_next_node;
@@ -380,8 +382,8 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    [[nodiscard]]
    constexpr auto
    append_new_node(
-      allocator_ref<Allocator> allocator, node_type* _Nullable& p_tail,
-      U&& value
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      node_type* _Nullable& p_tail, U&& value
    ) -> maybe<iterator> {
       node_type* p_node = $prop(this->make_node(allocator, $fwd(value)));
       p_node->p_next_node = nullptr;
@@ -425,7 +427,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    template <is_allocator NewAllocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<NewAllocator> allocator) const& -> maybe<basic_list<T>> {
+   clone(
+      allocator_ref<NewAllocator> allocator [[clang::lifetimebound]]
+   ) const& -> maybe<basic_list<T>> {
       basic_list<T> new_list;
       node_type* p_tail = nullptr;
       node_type* p_node = m_storage.m_p_head;
@@ -451,7 +455,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Create a deep copy using `cat::allocator_dyn`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(allocator_dyn allocator) const& -> maybe<basic_list<T>> {
+   clone(
+      allocator_dyn allocator [[clang::lifetimebound]]
+   ) const& -> maybe<basic_list<T>> {
       return clone<allocator_dyn>(allocator);
    }
 
@@ -460,8 +466,10 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       requires(is_implicitly_convertible<U, T>)
    [[nodiscard]]
    constexpr auto
-   push_front(allocator_ref<Allocator> allocator, U const& value)
-      -> maybe<iterator> {
+   push_front(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      U const& value
+   ) -> maybe<iterator> {
       auto* _Nonnull p_node =
          $prop(this->make_node(allocator, static_cast<T>(value)));
       node_type& node = *p_node;
@@ -475,7 +483,8 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       requires(is_implicitly_convertible<U, T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   push_front(allocator_dyn allocator, U const& value) -> maybe<iterator> {
+   push_front(allocator_dyn allocator [[clang::lifetimebound]], U const& value)
+      -> maybe<iterator> {
       return push_front<allocator_dyn>(allocator, value);
    }
 
@@ -484,8 +493,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       requires(is_move_constructible<T>)
    [[nodiscard]]
    constexpr auto
-   push_front(allocator_ref<Allocator> allocator, T&& value)
-      -> maybe<iterator> {
+   push_front(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]], T&& value
+   ) -> maybe<iterator> {
       auto* _Nonnull p_node = $prop(this->make_node(allocator, move(value)));
       node_type& node = *p_node;
       this->place_node_front(node);
@@ -496,7 +506,8 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Insert a moved value at the front using `cat::allocator_dyn`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   push_front(allocator_dyn allocator, T&& value) -> maybe<iterator>
+   push_front(allocator_dyn allocator [[clang::lifetimebound]], T&& value)
+      -> maybe<iterator>
       requires(is_move_constructible<T>)
    {
       return push_front<allocator_dyn>(allocator, move(value));
@@ -517,8 +528,10 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    template <is_allocator Allocator, typename... Args>
    [[nodiscard]]
    constexpr auto
-   emplace_front(allocator_ref<Allocator> allocator, Args&&... arguments)
-      -> maybe<iterator> {
+   emplace_front(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      Args&&... arguments
+   ) -> maybe<iterator> {
       auto* _Nonnull p_node =
          $prop(this->make_node(allocator, $fwd(arguments)...));
       node_type& node = *p_node;
@@ -531,8 +544,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    template <typename... Args>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   emplace_front(allocator_dyn allocator, Args&&... arguments)
-      -> maybe<iterator> {
+   emplace_front(
+      allocator_dyn allocator [[clang::lifetimebound]], Args&&... arguments
+   ) -> maybe<iterator> {
       return emplace_front<allocator_dyn>(allocator, $fwd(arguments)...);
    }
 
@@ -569,8 +583,10 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       requires(is_implicitly_convertible<U, T>)
    [[nodiscard]]
    constexpr auto
-   push_back(allocator_ref<Allocator> allocator, U const& value)
-      -> maybe<iterator> {
+   push_back(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      U const& value
+   ) -> maybe<iterator> {
       node_type* p_node =
          $prop(this->make_node(allocator, static_cast<T>(value)));
 
@@ -584,7 +600,8 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       requires(is_implicitly_convertible<U, T>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   push_back(allocator_dyn allocator, U const& value) -> maybe<iterator> {
+   push_back(allocator_dyn allocator [[clang::lifetimebound]], U const& value)
+      -> maybe<iterator> {
       return push_back<allocator_dyn>(allocator, value);
    }
 
@@ -593,7 +610,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
       requires(is_move_constructible<T>)
    [[nodiscard]]
    constexpr auto
-   push_back(allocator_ref<Allocator> allocator, T&& value) -> maybe<iterator> {
+   push_back(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]], T&& value
+   ) -> maybe<iterator> {
       node_type* p_node = $prop(this->make_node(allocator, move(value)));
 
       this->place_node_back(*p_node);
@@ -604,7 +623,8 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Append a moved value using `cat::allocator_dyn`.
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   push_back(allocator_dyn allocator, T&& value) -> maybe<iterator>
+   push_back(allocator_dyn allocator [[clang::lifetimebound]], T&& value)
+      -> maybe<iterator>
       requires(is_move_constructible<T>)
    {
       return push_back<allocator_dyn>(allocator, move(value));
@@ -625,8 +645,10 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    template <is_allocator Allocator, typename... Args>
    [[nodiscard]]
    constexpr auto
-   emplace_back(allocator_ref<Allocator> allocator, Args&&... arguments)
-      -> maybe<iterator> {
+   emplace_back(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      Args&&... arguments
+   ) -> maybe<iterator> {
       auto* _Nonnull p_node =
          $prop(this->make_node(allocator, $fwd(arguments)...));
       node_type& node = *p_node;
@@ -639,8 +661,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    template <typename... Args>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   emplace_back(allocator_dyn allocator, Args&&... arguments)
-      -> maybe<iterator> {
+   emplace_back(
+      allocator_dyn allocator [[clang::lifetimebound]], Args&&... arguments
+   ) -> maybe<iterator> {
       return emplace_back<allocator_dyn>(allocator, $fwd(arguments)...);
    }
 
@@ -865,7 +888,9 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Remove elements satisfying predicate and return removed count.
    template <is_allocator Allocator, typename Pred>
    constexpr auto
-   remove_if(allocator_ref<Allocator> allocator, Pred&& pred) -> idx {
+   remove_if(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]], Pred&& pred
+   ) -> idx {
       idx const old_size = m_size;
       node_type* p_current = m_storage.m_p_head;
       while (p_current != nullptr) {
@@ -882,14 +907,18 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    template <typename Pred>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   remove_if(allocator_dyn allocator, Pred&& pred) -> idx {
+   remove_if(allocator_dyn allocator [[clang::lifetimebound]], Pred&& pred)
+      -> idx {
       return remove_if<allocator_dyn>(allocator, $fwd(pred));
    }
 
    // Remove all elements equal to value and return removed count.
    template <is_allocator Allocator>
    constexpr auto
-   remove(allocator_ref<Allocator> allocator, T const& value) -> idx {
+   remove(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      T const& value
+   ) -> idx {
       return this->remove_if(allocator, [&value](T const& element) -> bool {
          return element == value;
       });
@@ -898,14 +927,17 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Remove all elements equal to value using `cat::allocator_dyn`.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   remove(allocator_dyn allocator, T const& value) -> idx {
+   remove(allocator_dyn allocator [[clang::lifetimebound]], T const& value)
+      -> idx {
       return remove<allocator_dyn>(allocator, value);
    }
 
    // Remove consecutive duplicate elements based on predicate.
    template <is_allocator Allocator, typename Pred>
    constexpr auto
-   unique_inplace(allocator_ref<Allocator> allocator, Pred&& pred) -> idx {
+   unique_inplace(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]], Pred&& pred
+   ) -> idx {
       idx const old_size = m_size;
       node_type* p_current = m_storage.m_p_head;
       while (p_current != nullptr && p_current->p_next_node != nullptr) {
@@ -922,14 +954,16 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    template <typename Pred>
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   unique_inplace(allocator_dyn allocator, Pred&& pred) -> idx {
+   unique_inplace(allocator_dyn allocator [[clang::lifetimebound]], Pred&& pred)
+      -> idx {
       return unique_inplace<allocator_dyn>(allocator, $fwd(pred));
    }
 
    // Remove consecutive equal elements.
    template <is_allocator Allocator>
    constexpr auto
-   unique_inplace(allocator_ref<Allocator> allocator) -> idx {
+   unique_inplace(allocator_ref<Allocator> allocator [[clang::lifetimebound]])
+      -> idx {
       return this->unique_inplace(
          allocator, [](T const& left, T const& right) -> bool {
             return left == right;
@@ -940,7 +974,7 @@ class [[clang::preferred_name(list<T>), gsl::Owner]] basic_list
    // Remove consecutive equal elements using `cat::allocator_dyn`.
    [[gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   unique_inplace(allocator_dyn allocator) -> idx {
+   unique_inplace(allocator_dyn allocator [[clang::lifetimebound]]) -> idx {
       return unique_inplace<allocator_dyn>(allocator);
    }
 
@@ -1181,7 +1215,8 @@ template <typename T, is_allocator Allocator, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_list_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) -> maybe<basic_list<T>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
@@ -1197,8 +1232,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_list_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) -> maybe<basic_list<T>> {
    static_assert(is_default_constructible<T>);
    static_assert(

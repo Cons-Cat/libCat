@@ -36,8 +36,10 @@ class demangled_name {
  private:
    friend class detail::demangle_parser;
    friend auto
-   demangle(basic_allocator_dyn<dyn_reallocate> allocator, str_view mangled)
-      -> maybe<demangled_name>;
+   demangle(
+      basic_allocator_dyn<dyn_reallocate> allocator [[clang::lifetimebound]],
+      str_view mangled
+   ) -> maybe<demangled_name>;
 
    explicit demangled_name(
       basic_allocator_dyn<dyn_reallocate> allocator [[clang::lifetimebound]]
@@ -82,15 +84,17 @@ class demangled_name {
 
 [[nodiscard]]
 auto
-demangle(basic_allocator_dyn<dyn_reallocate> allocator, str_view mangled)
-   -> maybe<demangled_name>;
+demangle(
+   basic_allocator_dyn<dyn_reallocate> allocator [[clang::lifetimebound]],
+   str_view mangled
+) -> maybe<demangled_name>;
 
 template <is_allocator Allocator>
 [[nodiscard]]
 auto
-demangle(allocator_ref<Allocator> allocator, str_view mangled) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<demangled_name> {
+demangle(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], str_view mangled
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<demangled_name> {
    if constexpr (is_same<Allocator, basic_allocator_dyn<dyn_reallocate>>) {
       return demangle(allocator.get_allocator(), mangled);
    } else {

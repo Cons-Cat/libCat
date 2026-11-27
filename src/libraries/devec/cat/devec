@@ -248,7 +248,8 @@ class [[gsl::Owner]] devec
    [[nodiscard]]
    constexpr auto
    emplace_back(
-      allocator_ref<Allocator> allocator, Args&&... arguments
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      Args&&... arguments
    ) noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
    -> maybe<T&> {
       if (m_back_capacity == 0u) [[unlikely]] {
@@ -263,9 +264,10 @@ class [[gsl::Owner]] devec
       requires(is_constructible<T, Args...>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   emplace_back(allocator_dyn allocator, Args&&... arguments) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) [[clang::lifetimebound]] -> maybe<T&> {
+   emplace_back(
+      allocator_dyn allocator [[clang::lifetimebound]], Args&&... arguments
+   ) noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> maybe<T&> {
       return emplace_back<allocator_dyn>(allocator, $fwd(arguments)...);
    }
 
@@ -275,7 +277,8 @@ class [[gsl::Owner]] devec
    [[nodiscard]]
    constexpr auto
    emplace_front(
-      allocator_ref<Allocator> allocator, Args&&... arguments
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      Args&&... arguments
    ) noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
    -> maybe<T&> {
       if (m_front_capacity == 0u) [[unlikely]] {
@@ -290,9 +293,10 @@ class [[gsl::Owner]] devec
       requires(is_constructible<T, Args...>)
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   emplace_front(allocator_dyn allocator, Args&&... arguments) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) [[clang::lifetimebound]] -> maybe<T&> {
+   emplace_front(
+      allocator_dyn allocator [[clang::lifetimebound]], Args&&... arguments
+   ) noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> maybe<T&> {
       return emplace_front<allocator_dyn>(allocator, $fwd(arguments)...);
    }
 
@@ -485,7 +489,8 @@ class [[gsl::Owner]] devec
    [[nodiscard]]
    constexpr auto
    emplace(
-      allocator_ref<Allocator> allocator, idx position, Args&&... arguments
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx position,
+      Args&&... arguments
    ) noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
    -> maybe<T&> {
       assert(position <= m_size);
@@ -532,9 +537,11 @@ class [[gsl::Owner]] devec
       )
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   emplace(allocator_dyn allocator, idx position, Args&&... arguments) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) [[clang::lifetimebound]] -> maybe<T&> {
+   emplace(
+      allocator_dyn allocator [[clang::lifetimebound]], idx position,
+      Args&&... arguments
+   ) noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> maybe<T&> {
       return emplace<allocator_dyn>(allocator, position, $fwd(arguments)...);
    }
 
@@ -923,9 +930,9 @@ class [[gsl::Owner]] devec
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<Allocator> allocator) const& noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> maybe<devec>
+   clone(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   ) const& noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec>
       requires(is_copy_constructible<T>)
    {
       devec copy;
@@ -945,7 +952,7 @@ class [[gsl::Owner]] devec
 
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(allocator_dyn allocator) const& noexcept(
+   clone(allocator_dyn allocator [[clang::lifetimebound]]) const& noexcept(
       !__has_feature(cxx_exceptions)
    ) -> maybe<devec>
       requires(is_copy_constructible<T>)
@@ -1442,7 +1449,8 @@ class [[gsl::Owner]] devec
    template <is_allocator Allocator>
    constexpr auto
    grow_back_in_place(
-      allocator_ref<Allocator> allocator, idx minimum_capacity
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      idx minimum_capacity
    ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
       if consteval {
          return false;
@@ -1544,7 +1552,8 @@ class [[gsl::Owner]] devec
    [[gnu::noinline]]
    constexpr auto
    grow_and_emplace(
-      allocator_ref<Allocator> allocator, Args&&... arguments
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      Args&&... arguments
    ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<T&> {
       if constexpr (is_move_constructible<T>) {
          if (
@@ -1590,7 +1599,8 @@ template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
 make_devec(
-   allocator_ref<Allocator> allocator, initializer_list<T> values
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   initializer_list<T> values
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
    devec<T> new_devec;
    $prop(new_devec.append_range(
@@ -1602,9 +1612,9 @@ make_devec(
 template <typename T>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_devec(allocator_dyn allocator, initializer_list<T> values) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<devec<T>> {
+make_devec(
+   allocator_dyn allocator [[clang::lifetimebound]], initializer_list<T> values
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
    return manual::make_devec<T, allocator_dyn>(allocator, values);
 }
 
@@ -1612,7 +1622,8 @@ template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
 make_devec_reserved(
-   allocator_ref<Allocator> allocator, idx front_count, idx back_count
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx front_count,
+   idx back_count
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
    devec<T> new_devec;
    $prop(new_devec.reserve(allocator, front_count, back_count));
@@ -1623,7 +1634,8 @@ template <typename T>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_devec_reserved(
-   allocator_dyn allocator, idx front_count, idx back_count
+   allocator_dyn allocator [[clang::lifetimebound]], idx front_count,
+   idx back_count
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
    return manual::make_devec_reserved<T, allocator_dyn>(
       allocator, front_count, back_count
@@ -1634,7 +1646,8 @@ template <typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
 make_devec_filled(
-   allocator_ref<Allocator> allocator, idx count, T const& value
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   T const& value
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
    devec<T> new_devec;
    $prop(new_devec.resize(allocator, count, value));
@@ -1644,9 +1657,9 @@ make_devec_filled(
 template <typename T>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_devec_filled(allocator_dyn allocator, idx count, T const& value) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<devec<T>> {
+make_devec_filled(
+   allocator_dyn allocator [[clang::lifetimebound]], idx count, T const& value
+) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
    return manual::make_devec_filled<T, allocator_dyn>(allocator, count, value);
 }
 
@@ -1654,7 +1667,8 @@ template <typename T, is_allocator Allocator, is_random_generator Generator>
 [[nodiscard]]
 constexpr auto
 make_devec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
    static_assert(is_default_constructible<T>);
    static_assert(is_assignable<T&, decltype(declval<Generator&>()())>);
@@ -1670,8 +1684,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_devec_filled_random(
-   allocator_ref<Allocator> allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
    static_assert(is_default_constructible<T>);
    static_assert(
@@ -1688,7 +1702,8 @@ template <typename T, is_random_generator Generator>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_devec_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
    return manual::make_devec_filled_random<T, allocator_dyn>(
       allocator, count, $fwd(generator)
@@ -1699,8 +1714,8 @@ template <typename T, is_random_generator Generator, typename Distribution>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
 make_devec_filled_random(
-   allocator_dyn allocator, idx count, Generator&& generator,
-   Distribution&& distribution
+   allocator_dyn allocator [[clang::lifetimebound]], idx count,
+   Generator&& generator, Distribution&& distribution
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<devec<T>> {
    return manual::make_devec_filled_random<T, allocator_dyn>(
       allocator, count, $fwd(generator), $fwd(distribution)

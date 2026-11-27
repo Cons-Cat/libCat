@@ -106,7 +106,8 @@ struct resolved_frame {
 [[nodiscard]]
 auto
 initialize_symbol_index(
-   cat::detail::symbolizer& symbols, cat::allocator_dyn allocator
+   cat::detail::symbolizer& symbols,
+   cat::allocator_dyn allocator [[clang::lifetimebound]]
 ) -> bool;
 
 [[nodiscard]]
@@ -226,8 +227,10 @@ initialize_load_bias(cat::detail::symbolizer& symbols) -> bool {
 
 [[nodiscard]]
 auto
-load_executable(cat::detail::symbolizer& symbols, cat::allocator_dyn allocator)
-   -> bool {
+load_executable(
+   cat::detail::symbolizer& symbols,
+   cat::allocator_dyn allocator [[clang::lifetimebound]]
+) -> bool {
    auto path = cat::get_executable_path(allocator);
    if (path.is_empty()) {
       return false;
@@ -421,7 +424,7 @@ auto
 append_symbol_table(
    cat::detail::symbolizer const& symbols, elf_section_header const& table,
    cat::vec_big<cat::detail::symbol_index_entry>& index,
-   cat::allocator_dyn allocator
+   cat::allocator_dyn allocator [[clang::lifetimebound]]
 ) -> bool {
    elf_header const& header = *object_at<elf_header>(symbols.bytes, 0u);
    if (
@@ -481,7 +484,8 @@ append_symbol_table(
 
 auto
 initialize_symbol_index(
-   cat::detail::symbolizer& symbols, cat::allocator_dyn allocator
+   cat::detail::symbolizer& symbols,
+   cat::allocator_dyn allocator [[clang::lifetimebound]]
 ) -> bool {
    elf_header const& header = *object_at<elf_header>(symbols.bytes, 0u);
    cat::uint8 const sections_size =

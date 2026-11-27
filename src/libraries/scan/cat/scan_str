@@ -160,8 +160,10 @@ struct scanner<basic_str_vec<char, flags>> {
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   scan(allocator_ref<Allocator> allocator, str_view input) const
-      -> maybe<basic_str_vec<char, flags>> {
+   scan(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      str_view input
+   ) const -> maybe<basic_str_vec<char, flags>> {
       basic_str_vec<char, flags> result;
       if (
          result.reserve(allocator, input.size()).is_empty()

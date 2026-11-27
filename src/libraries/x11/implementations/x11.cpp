@@ -405,7 +405,8 @@ x11::manual::connection::reject(error_code code, cat::idx bad_value) noexcept {
 
 auto
 x11::manual::connection::open(
-   cat::allocator_dyn allocator, nix::manual::io_uring& ring
+   cat::allocator_dyn allocator [[clang::lifetimebound]],
+   nix::manual::io_uring& ring
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection> {
    cat::str_view const display = find_environment("DISPLAY");
 
@@ -440,8 +441,9 @@ x11::manual::connection::open(
 
 auto
 x11::manual::connection::open(
-   cat::allocator_dyn allocator, nix::manual::io_uring& ring,
-   cat::str_view display, cat::zstr_view authority_path
+   cat::allocator_dyn allocator [[clang::lifetimebound]],
+   nix::manual::io_uring& ring, cat::str_view display,
+   cat::zstr_view authority_path
 ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection> {
    cat::maybe<display_name> const parsed = parse_display_name(display);
    if (!parsed.has_value()) {
@@ -794,7 +796,7 @@ x11::manual::connection::handshake(
 
 auto
 x11::manual::connection::transfer(
-   cat::allocator_dyn allocator, transfer_mode mode
+   cat::allocator_dyn allocator [[clang::lifetimebound]], transfer_mode mode
 ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    if (m_has_failed) {
       return false;
@@ -1004,7 +1006,7 @@ x11::manual::connection::settle_operations() noexcept -> bool {
 
 auto
 x11::manual::connection::make_send_space(
-   cat::allocator_dyn allocator, cat::idx size
+   cat::allocator_dyn allocator [[clang::lifetimebound]], cat::idx size
 ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    if (!transfer(allocator, transfer_mode::send)) {
       return false;
@@ -1016,8 +1018,8 @@ x11::manual::connection::make_send_space(
 
 auto
 x11::manual::connection::grow(
-   cat::allocator_dyn allocator, cat::byte* _Nullable& p_buffer,
-   cat::idx& capacity, cat::idx minimum
+   cat::allocator_dyn allocator [[clang::lifetimebound]],
+   cat::byte* _Nullable& p_buffer, cat::idx& capacity, cat::idx minimum
 ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    cat::idx new_capacity = capacity == 0u ? minimum : capacity;
    while (new_capacity < minimum) {
@@ -1042,7 +1044,7 @@ x11::manual::connection::grow(
 
 auto
 x11::manual::connection::make_pending_space(
-   cat::allocator_dyn allocator
+   cat::allocator_dyn allocator [[clang::lifetimebound]]
 ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    cat::idx const count = cat::idx(m_pending_tail - m_pending_head);
 
@@ -1271,7 +1273,8 @@ x11::manual::connection::next_response() noexcept
 
 auto
 x11::manual::connection::queue_event(
-   cat::allocator_dyn allocator, cat::byte const* _Nonnull p_response
+   cat::allocator_dyn allocator [[clang::lifetimebound]],
+   cat::byte const* _Nonnull p_response
 ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    cat::idx const size = response_size(p_response);
    if (m_event_tail + size > m_event_capacity) {
@@ -1332,8 +1335,8 @@ x11::manual::connection::release_taken() noexcept {
 
 auto
 x11::manual::connection::route(
-   cat::allocator_dyn allocator, cat::byte const* _Nonnull p_response,
-   cat::uint8 target
+   cat::allocator_dyn allocator [[clang::lifetimebound]],
+   cat::byte const* _Nonnull p_response, cat::uint8 target
 ) noexcept(!__has_feature(cxx_exceptions)) -> routed {
    cat::uint8 const sequence = m_last_response_sequence;
    bool is_reply_request = p_response[0] == 1u;
@@ -1384,7 +1387,8 @@ x11::manual::connection::route(
 
 auto
 x11::manual::connection::park(
-   cat::allocator_dyn allocator, cat::byte const* _Nonnull p_response
+   cat::allocator_dyn allocator [[clang::lifetimebound]],
+   cat::byte const* _Nonnull p_response
 ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
    detail::parked_reply const entry{
       .sequence = m_last_response_sequence,
@@ -1426,7 +1430,7 @@ x11::manual::connection::discard_sequence(cat::uint8 sequence) noexcept {
 
 auto
 x11::manual::connection::wait_response(
-   cat::allocator_dyn allocator, cat::uint8 sequence
+   cat::allocator_dyn allocator [[clang::lifetimebound]], cat::uint8 sequence
 ) noexcept(!__has_feature(cxx_exceptions)) -> cat::byte const* _Nonnull {
    release_taken();
 
@@ -1486,7 +1490,7 @@ x11::manual::connection::wait_response(
 
 auto
 x11::manual::connection::next_event(
-   cat::allocator_dyn allocator, transfer_mode mode
+   cat::allocator_dyn allocator [[clang::lifetimebound]], transfer_mode mode
 ) noexcept(!__has_feature(cxx_exceptions)) -> event const* _Nullable {
    release_taken();
 
@@ -1605,9 +1609,9 @@ x11::manual::connection::check(
 }
 
 auto
-x11::manual::connection::poll_event(cat::allocator_dyn allocator) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> scaredy_x11<event const*> {
+x11::manual::connection::poll_event(
+   cat::allocator_dyn allocator [[clang::lifetimebound]]
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<event const*> {
    event const* p_event = next_event(allocator, transfer_mode::poll);
    if (p_event == nullptr && m_has_failed) {
       return m_failure;
@@ -1617,9 +1621,9 @@ x11::manual::connection::poll_event(cat::allocator_dyn allocator) noexcept(
 }
 
 auto
-x11::manual::connection::wait_event(cat::allocator_dyn allocator) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> scaredy_x11<event const*> {
+x11::manual::connection::wait_event(
+   cat::allocator_dyn allocator [[clang::lifetimebound]]
+) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<event const*> {
    event const* p_event = next_event(allocator, transfer_mode::receive);
    if (p_event == nullptr) {
       return m_failure;
@@ -1630,7 +1634,8 @@ x11::manual::connection::wait_event(cat::allocator_dyn allocator) noexcept(
 
 auto
 x11::manual::connection::create_window(
-   cat::allocator_dyn allocator, window_options const& options
+   cat::allocator_dyn allocator [[clang::lifetimebound]],
+   window_options const& options
 ) noexcept(!__has_feature(cxx_exceptions)) -> window {
    window const id = generate_id();
 
@@ -1663,7 +1668,8 @@ x11::manual::connection::create_window(
 
 auto
 x11::manual::connection::set_title(
-   cat::allocator_dyn allocator, window target, cat::str_view title
+   cat::allocator_dyn allocator [[clang::lifetimebound]], window target,
+   cat::str_view title
 ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
    change_property(
       allocator, target, atoms::wm_name, m_utf8_string, property_format::bits_8,
@@ -1678,7 +1684,8 @@ x11::manual::connection::set_title(
 
 auto
 x11::manual::connection::set_class(
-   cat::allocator_dyn allocator, window target, cat::zstr_view class_name
+   cat::allocator_dyn allocator [[clang::lifetimebound]], window target,
+   cat::zstr_view class_name
 ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
    cat::zstr_view instance_name = class_name;
    cat::span<char const* _Nonnull const> const arguments =
@@ -1712,7 +1719,7 @@ x11::manual::connection::set_class(
 
 auto
 x11::manual::connection::enable_close_request(
-   cat::allocator_dyn allocator, window target
+   cat::allocator_dyn allocator [[clang::lifetimebound]], window target
 ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
    return change_property(
       allocator, target, m_wm_protocols, atoms::atom, property_format::bits_32,

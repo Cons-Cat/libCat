@@ -330,8 +330,10 @@ class [[gsl::Owner]] map_base {
    template <typename Self, is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   clone(this Self const& self, allocator_ref<Allocator> allocator)
-      -> maybe<Self>
+   clone(
+      this Self const& self,
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   ) -> maybe<Self>
       requires(is_copy_constructible<Key> && is_copy_constructible<T>)
    {
       map_base const& source = self;
@@ -376,7 +378,9 @@ class [[gsl::Owner]] map_base {
    template <typename Self>
    [[nodiscard, gnu::always_inline, gnu::nodebug]]
    constexpr auto
-   clone(this Self const& self, allocator_dyn allocator) -> maybe<Self>
+   clone(
+      this Self const& self, allocator_dyn allocator [[clang::lifetimebound]]
+   ) -> maybe<Self>
       requires(is_copy_constructible<Key> && is_copy_constructible<T>)
    {
       return self.clone(allocator_ref<allocator_dyn>(allocator));
@@ -1012,7 +1016,8 @@ template <typename Key, typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
 make_map(
-   allocator_ref<Allocator> allocator, initializer_list<tuple<Key, T>> entries
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   initializer_list<tuple<Key, T>> entries
 ) -> maybe<map<Key, T>> {
    map<Key, T> new_map;
    $prop(new_map.reserve(allocator, entries.size()));
@@ -1033,8 +1038,10 @@ make_map(
 template <typename Key, typename T>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_map(allocator_dyn allocator, initializer_list<tuple<Key, T>> entries)
-   -> maybe<map<Key, T>> {
+make_map(
+   allocator_dyn allocator [[clang::lifetimebound]],
+   initializer_list<tuple<Key, T>> entries
+) -> maybe<map<Key, T>> {
    return make_map<Key, T, allocator_dyn>(allocator, entries);
 }
 
@@ -1042,8 +1049,9 @@ make_map(allocator_dyn allocator, initializer_list<tuple<Key, T>> entries)
 template <typename Key, typename T, is_allocator Allocator>
 [[nodiscard]]
 constexpr auto
-make_map_reserved(allocator_ref<Allocator> allocator, idx count)
-   -> maybe<map<Key, T>> {
+make_map_reserved(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx count
+) -> maybe<map<Key, T>> {
    map<Key, T> new_map;
    $prop(new_map.reserve(allocator, count));
    return new_map;
@@ -1052,7 +1060,8 @@ make_map_reserved(allocator_ref<Allocator> allocator, idx count)
 template <typename Key, typename T>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 constexpr auto
-make_map_reserved(allocator_dyn allocator, idx count) -> maybe<map<Key, T>> {
+make_map_reserved(allocator_dyn allocator [[clang::lifetimebound]], idx count)
+   -> maybe<map<Key, T>> {
    return make_map_reserved<Key, T, allocator_dyn>(allocator, count);
 }
 

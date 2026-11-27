@@ -970,8 +970,7 @@ class [[gsl::Pointer(CharT const)]] path_component_stepanov_iterator
 
    // Begin iterating `value`, whose root is `root`.
    constexpr path_component_stepanov_iterator(
-      basic_str_span<CharT const> value [[clang::lifetimebound]],
-      detail::path_root root
+      basic_str_span<CharT const> value, detail::path_root root
    ) noexcept(!__has_feature(cxx_exceptions))
        : m_value(value), m_root(root) {
       seek();
@@ -981,8 +980,7 @@ class [[gsl::Pointer(CharT const)]] path_component_stepanov_iterator
    [[nodiscard]]
    static constexpr auto
    resume_at(
-      basic_str_span<CharT const> value [[clang::lifetimebound]],
-      detail::path_root root, idx position
+      basic_str_span<CharT const> value, detail::path_root root, idx position
    ) noexcept(!__has_feature(cxx_exceptions))
       -> path_component_stepanov_iterator {
       path_component_stepanov_iterator result;
@@ -997,10 +995,8 @@ class [[gsl::Pointer(CharT const)]] path_component_stepanov_iterator
    // The end of iterating `value`.
    [[nodiscard]]
    static constexpr auto
-   end_of(
-      basic_str_span<CharT const> value [[clang::lifetimebound]],
-      detail::path_root root
-   ) noexcept -> path_component_stepanov_iterator {
+   end_of(basic_str_span<CharT const> value, detail::path_root root) noexcept
+      -> path_component_stepanov_iterator {
       path_component_stepanov_iterator result;
       result.m_value = value;
       result.m_root = root;
@@ -1191,8 +1187,7 @@ class basic_path_components
    constexpr basic_path_components() = default;
 
    constexpr basic_path_components(
-      basic_str_span<CharT const> value [[clang::lifetimebound]],
-      detail::path_root root
+      basic_str_span<CharT const> value, detail::path_root root
    ) noexcept
        : m_value(value), m_root(root) {
    }
@@ -1703,7 +1698,9 @@ basic_file_path
    template <is_allocator Allocator>
    [[nodiscard]]
    constexpr auto
-   clone(allocator_ref<Allocator> allocator) const& -> maybe<basic_file_path> {
+   clone(
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+   ) const& -> maybe<basic_file_path> {
       auto storage = m_storage.clone(allocator);
       if (storage.is_empty()) {
          return nullopt;
@@ -1716,7 +1713,8 @@ basic_file_path
 
    [[nodiscard]]
    constexpr auto
-   clone(allocator_dyn allocator) const& noexcept -> maybe<basic_file_path> {
+   clone(allocator_dyn allocator [[clang::lifetimebound]]) const& noexcept
+      -> maybe<basic_file_path> {
       return clone<allocator_dyn>(allocator);
    }
 
@@ -1813,8 +1811,10 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_ref<Allocator> allocator, Segment const& segment)
-   -> maybe<basic_file_path<detail::path_deduce_os<os, Segment>, flags>> {
+make_file_path(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Segment const& segment
+) -> maybe<basic_file_path<detail::path_deduce_os<os, Segment>, flags>> {
    basic_file_path<detail::path_deduce_os<os, Segment>, flags> result;
    $defer {
       result.free(allocator);
@@ -1839,9 +1839,10 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Segment>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_dyn allocator, Segment const& segment) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<basic_file_path<detail::path_deduce_os<os, Segment>, flags>> {
+make_file_path(
+   allocator_dyn allocator [[clang::lifetimebound]], Segment const& segment
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<basic_file_path<detail::path_deduce_os<os, Segment>, flags>> {
    return manual::make_file_path<allocator_dyn, os, flags>(allocator, segment);
 }
 
@@ -1850,9 +1851,10 @@ template <
    str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_ref<Allocator> allocator) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> maybe<basic_file_path<os, flags>> {
+make_file_path(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+) noexcept(!__has_feature(cxx_exceptions))
+   -> maybe<basic_file_path<os, flags>> {
    return make_file_path<Allocator, os, flags>(
       allocator, detail::path_view<os>{}
    );
@@ -1863,7 +1865,7 @@ template <
    str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 constexpr auto
-make_file_path(allocator_dyn allocator) noexcept
+make_file_path(allocator_dyn allocator [[clang::lifetimebound]]) noexcept
    -> maybe<basic_file_path<os, flags>> {
    return make_file_path<allocator_dyn, os, flags>(allocator);
 }
@@ -1874,8 +1876,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_file_path_joined(
-   allocator_ref<Allocator> allocator, basic_file_path<os, flags> const& left,
-   Segment const& right
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   basic_file_path<os, flags> const& left, Segment const& right
 ) -> maybe<basic_file_path<os, flags>> {
    basic_file_path<os, flags> result = $prop(left.clone(allocator));
    $defer {
@@ -1891,8 +1893,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_file_path_joined(
-   allocator_dyn allocator, basic_file_path<os, flags> const& left,
-   Segment const& right
+   allocator_dyn allocator [[clang::lifetimebound]],
+   basic_file_path<os, flags> const& left, Segment const& right
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<basic_file_path<os, flags>> {
    return make_file_path_joined<allocator_dyn>(allocator, left, right);
@@ -1931,7 +1933,8 @@ template <
 [[nodiscard]]
 constexpr auto
 make_file_path_lexically_normal(
-   allocator_ref<Allocator> allocator, Segment const& segment
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Segment const& segment
 ) -> maybe<basic_file_path<detail::path_deduce_os<os, Segment>, flags>> {
    constexpr path_os result_os = detail::path_deduce_os<os, Segment>;
    basic_file_path<result_os, flags> result =
@@ -1953,7 +1956,7 @@ template <
 [[nodiscard]]
 constexpr auto
 make_file_path_lexically_normal(
-   allocator_dyn allocator, Segment const& segment
+   allocator_dyn allocator [[clang::lifetimebound]], Segment const& segment
 ) noexcept(!__has_feature(cxx_exceptions))
    -> maybe<basic_file_path<detail::path_deduce_os<os, Segment>, flags>> {
    return manual::make_file_path_lexically_normal<allocator_dyn, os, flags>(
@@ -1983,7 +1986,9 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_file_path_current(allocator_ref<Allocator> allocator) noexcept(false)
+make_file_path_current(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+) noexcept(false)
    -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
    // TODO: Transcode the working directory for `nt` paths.
    static_assert(
@@ -2030,9 +2035,10 @@ template <
    str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 auto
-make_file_path_current(allocator_dyn allocator) noexcept(
-   !__has_feature(cxx_exceptions)
-) -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
+make_file_path_current(
+   allocator_dyn allocator [[clang::lifetimebound]]
+) noexcept(!__has_feature(cxx_exceptions))
+   -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
    return make_file_path_current<os, flags, allocator_dyn>(allocator);
 }
 
@@ -2043,7 +2049,8 @@ template <
 [[nodiscard]]
 auto
 make_file_path_absolute(
-   Segment const& segment, Base const& base, allocator_ref<Allocator> allocator
+   Segment const& segment, Base const& base,
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
 )
    -> scaredy<
       manual::basic_file_path<detail::path_deduce_os<os, Segment, Base>, flags>,
@@ -2113,7 +2120,8 @@ template <
 [[nodiscard]]
 auto
 make_file_path_absolute(
-   Segment const& segment, Base const& base, allocator_dyn allocator
+   Segment const& segment, Base const& base,
+   allocator_dyn allocator [[clang::lifetimebound]]
 ) noexcept(!__has_feature(cxx_exceptions))
    -> scaredy<
       manual::basic_file_path<detail::path_deduce_os<os, Segment, Base>, flags>,
@@ -2130,7 +2138,8 @@ template <
 [[nodiscard]]
 auto
 make_file_path_absolute(
-   Segment const& segment, allocator_ref<Allocator> allocator
+   Segment const& segment,
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
 ) noexcept
    -> scaredy<
       manual::basic_file_path<detail::path_deduce_os<os, Segment>, flags>,
@@ -2146,7 +2155,7 @@ template <
 [[nodiscard]]
 auto
 make_file_path_absolute(
-   Segment const& segment, allocator_dyn allocator
+   Segment const& segment, allocator_dyn allocator [[clang::lifetimebound]]
 ) noexcept
    -> scaredy<
       manual::basic_file_path<detail::path_deduce_os<os, Segment>, flags>,
@@ -2166,7 +2175,8 @@ template <
 [[nodiscard]]
 auto
 make_file_path_canonical(
-   Segment const& segment, allocator_ref<Allocator> allocator
+   Segment const& segment,
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
 )
    -> scaredy<
       manual::basic_file_path<detail::path_deduce_os<os, Segment>, flags>,
@@ -2344,7 +2354,7 @@ template <
 [[nodiscard]]
 auto
 make_file_path_canonical(
-   Segment const& segment, allocator_dyn allocator
+   Segment const& segment, allocator_dyn allocator [[clang::lifetimebound]]
 ) noexcept(!__has_feature(cxx_exceptions))
    -> scaredy<
       manual::basic_file_path<detail::path_deduce_os<os, Segment>, flags>,
@@ -2360,7 +2370,10 @@ template <
    is_path_segment Model>
 [[nodiscard]]
 auto
-make_file_path_unique(allocator_ref<Allocator> allocator, Model const& model)
+make_file_path_unique(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Model const& model
+)
    -> scaredy<
       manual::basic_file_path<detail::path_deduce_os<os, Model>, flags>,
       nix::linux_error> {
@@ -2416,8 +2429,9 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_allocator Allocator>
 [[nodiscard]]
 auto
-make_file_path_unique(allocator_ref<Allocator> allocator) noexcept
-   -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
+make_file_path_unique(
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]]
+) noexcept -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
    if constexpr (os == path_os::nt) {
       return make_file_path_unique<os, flags>(
          allocator, u"%%%%-%%%%-%%%%-%%%%"
@@ -2432,9 +2446,9 @@ template <
    str_vec_flags flags = detail::path_default_flags, is_path_segment Model>
 [[nodiscard]]
 auto
-make_file_path_unique(allocator_dyn allocator, Model const& model) noexcept(
-   !__has_feature(cxx_exceptions)
-)
+make_file_path_unique(
+   allocator_dyn allocator [[clang::lifetimebound]], Model const& model
+) noexcept(!__has_feature(cxx_exceptions))
    -> scaredy<
       manual::basic_file_path<detail::path_deduce_os<os, Model>, flags>,
       nix::linux_error> {
@@ -2446,7 +2460,7 @@ template <
    str_vec_flags flags = detail::path_default_flags>
 [[nodiscard]]
 auto
-make_file_path_unique(allocator_dyn allocator) noexcept
+make_file_path_unique(allocator_dyn allocator [[clang::lifetimebound]]) noexcept
    -> scaredy<manual::basic_file_path<os, flags>, nix::linux_error> {
    return make_file_path_unique<os, flags, allocator_dyn>(allocator);
 }

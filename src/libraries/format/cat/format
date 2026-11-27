@@ -689,7 +689,8 @@ concept is_format_contiguous_outputter =
       back_insert_stepanov_iterator<typename Outputter::container_type>>
    && is_same<typename Outputter::container_type::value_type, char>
    && requires(
-      Outputter::container_type& container, allocator_ref<Allocator> allocator
+      Outputter::container_type& container,
+      allocator_ref<Allocator> allocator [[clang::lifetimebound]]
    ) {
          container.resize(allocator, idx());
          container.data();
@@ -1546,7 +1547,7 @@ template <is_allocator Allocator>
 [[nodiscard]]
 auto
 vprint_fmt(
-   allocator_ref<Allocator> allocator, str_view format,
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], str_view format,
    detail::format_args<Allocator> arguments
 ) -> maybe<idx> {
    detail::format_memory_buffer<Allocator> buffer{allocator};
@@ -1572,8 +1573,8 @@ vfmt_to_sink<allocator_dyn>(
 
 extern template auto
 vprint_fmt<allocator_dyn>(
-   allocator_ref<allocator_dyn> allocator, str_view format,
-   detail::format_args<allocator_dyn> arguments
+   allocator_ref<allocator_dyn> allocator [[clang::lifetimebound]],
+   str_view format, detail::format_args<allocator_dyn> arguments
 ) -> maybe<idx>;
 
 namespace detail {
@@ -1614,8 +1615,8 @@ template <is_allocator Allocator, typename Outputter>
 [[nodiscard]]
 auto
 vfmt_to(
-   allocator_ref<Allocator> allocator,
-   Outputter output_iterator [[clang::lifetimebound]], str_view const format,
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Outputter output_iterator, str_view const format,
    detail::format_args<Allocator> arguments
 ) -> scaredy_format<Outputter> {
    if constexpr (detail::is_format_contiguous_outputter<Outputter, Allocator>) {
@@ -1678,9 +1679,8 @@ template <is_allocator Allocator, typename Outputter, typename... Args>
 [[nodiscard]]
 auto
 fmt_to(
-   allocator_ref<Allocator> allocator,
-   Outputter output_iterator [[clang::lifetimebound]], str_view const format,
-   Args&&... arguments
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Outputter output_iterator, str_view const format, Args&&... arguments
 ) -> scaredy_format<Outputter> {
    return vfmt_to(
       allocator, output_iterator, format,
@@ -1696,7 +1696,7 @@ template <typename Outputter, typename... Args>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
 fmt_to(
-   allocator_dyn allocator, Outputter output_iterator [[clang::lifetimebound]],
+   allocator_dyn allocator [[clang::lifetimebound]], Outputter output_iterator,
    str_view const format, Args&&... arguments
 ) -> scaredy_format<Outputter> {
    return fmt_to<allocator_dyn>(
@@ -1743,8 +1743,8 @@ template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 auto
 print_fmt(
-   allocator_ref<Allocator> allocator, str_view const format,
-   Args&&... arguments
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   str_view const format, Args&&... arguments
 ) -> maybe<idx> {
    return vprint_fmt(
       allocator, format,
@@ -1759,8 +1759,10 @@ print_fmt(
 template <typename... Args>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
-print_fmt(allocator_dyn allocator, str_view const format, Args&&... arguments)
-   -> maybe<idx> {
+print_fmt(
+   allocator_dyn allocator [[clang::lifetimebound]], str_view const format,
+   Args&&... arguments
+) -> maybe<idx> {
    return print_fmt<allocator_dyn>(allocator, format, $fwd(arguments)...);
 }
 
@@ -1769,8 +1771,8 @@ template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 auto
 println_fmt(
-   allocator_ref<Allocator> allocator, str_view const format,
-   Args&&... arguments
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   str_view const format, Args&&... arguments
 ) -> maybe<idx> {
    str_vec string =
       $prop_as(fmt(allocator, format, $fwd(arguments)...), nullopt);
@@ -1782,8 +1784,10 @@ println_fmt(
 template <typename... Args>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
-println_fmt(allocator_dyn allocator, str_view const format, Args&&... arguments)
-   -> maybe<idx> {
+println_fmt(
+   allocator_dyn allocator [[clang::lifetimebound]], str_view const format,
+   Args&&... arguments
+) -> maybe<idx> {
    return println_fmt<allocator_dyn>(allocator, format, $fwd(arguments)...);
 }
 
@@ -1792,8 +1796,8 @@ template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 auto
 eprint_fmt(
-   allocator_ref<Allocator> allocator, str_view const format,
-   Args&&... arguments
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   str_view const format, Args&&... arguments
 ) -> maybe<idx> {
    str_vec string =
       $prop_as(fmt(allocator, format, $fwd(arguments)...), nullopt);
@@ -1805,8 +1809,10 @@ eprint_fmt(
 template <typename... Args>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
-eprint_fmt(allocator_dyn allocator, str_view const format, Args&&... arguments)
-   -> maybe<idx> {
+eprint_fmt(
+   allocator_dyn allocator [[clang::lifetimebound]], str_view const format,
+   Args&&... arguments
+) -> maybe<idx> {
    return eprint_fmt<allocator_dyn>(allocator, format, $fwd(arguments)...);
 }
 
@@ -1815,8 +1821,8 @@ template <is_allocator Allocator, typename... Args>
 [[nodiscard]]
 auto
 eprintln_fmt(
-   allocator_ref<Allocator> allocator, str_view const format,
-   Args&&... arguments
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   str_view const format, Args&&... arguments
 ) -> maybe<idx> {
    str_vec string =
       $prop_as(fmt(allocator, format, $fwd(arguments)...), nullopt);
@@ -1829,7 +1835,8 @@ template <typename... Args>
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
 eprintln_fmt(
-   allocator_dyn allocator, str_view const format, Args&&... arguments
+   allocator_dyn allocator [[clang::lifetimebound]], str_view const format,
+   Args&&... arguments
 ) -> maybe<idx> {
    return eprintln_fmt<allocator_dyn>(allocator, format, $fwd(arguments)...);
 }

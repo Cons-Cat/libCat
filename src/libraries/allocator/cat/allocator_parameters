@@ -1064,7 +1064,8 @@ class [[clang::trivial_abi, gsl::Pointer]] allocator_ref
              "allocators! Pass an allocator l-value instead.");
 
    [[gnu::always_inline, gnu::nodebug]]
-   constexpr allocator_ref([[maybe_unused]] Allocator& allocator)
+   constexpr allocator_ref([[maybe_unused]] Allocator& allocator
+                           [[clang::lifetimebound]])
       requires(__is_empty(Allocator))
    {
    }

@@ -202,7 +202,7 @@ inline thread_local thread_data local_thread_data;
 template <is_allocator Allocator>
 auto
 allocate_hash_table(
-   allocator_ref<Allocator> allocator, idx thread_count
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]], idx thread_count
 ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<hash_table*> {
    assert(thread_count > 0);
 
@@ -300,7 +300,9 @@ alloc_mutex_runtime(
 
    detail::mutex_parking_lot::destroy_hash_table(
       allocator, p_new_table,
-      [](allocator_ref<Allocator> current_allocator, span<byte> mapping) {
+      [](allocator_ref<Allocator> current_allocator [[clang::lifetimebound]]
+         ,
+         span<byte> mapping) {
          current_allocator.free_multi(mapping);
       }
    );
@@ -326,7 +328,9 @@ free_mutex_runtime(allocator_ref<Allocator> allocator) noexcept(
       );
    detail::mutex_parking_lot::destroy_hash_table(
       allocator, p_table,
-      [](allocator_ref<Allocator> current_allocator, span<byte> mapping) {
+      [](allocator_ref<Allocator> current_allocator [[clang::lifetimebound]]
+         ,
+         span<byte> mapping) {
          current_allocator.free_multi(mapping);
       }
    );
@@ -348,7 +352,9 @@ cfree_mutex_runtime(allocator_ref<Allocator> allocator) noexcept(
       );
    detail::mutex_parking_lot::destroy_hash_table(
       allocator, p_table,
-      [](allocator_ref<Allocator> current_allocator, span<byte> mapping) {
+      [](allocator_ref<Allocator> current_allocator [[clang::lifetimebound]]
+         ,
+         span<byte> mapping) {
          current_allocator.cfree_multi(mapping);
       }
    );

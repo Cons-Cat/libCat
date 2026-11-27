@@ -492,8 +492,8 @@ class [[gsl::Owner]] io_uring {
    template <cat::is_allocator Allocator>
    friend auto
    make_io_uring(
-      cat::allocator_ref<Allocator> allocator, cat::uint4 entries,
-      io_uring_params params
+      cat::allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+      cat::uint4 entries, io_uring_params params
    ) noexcept(!__has_feature(cxx_exceptions))
       -> cat::scaredy<io_uring, linux_error>;
 
@@ -547,8 +547,8 @@ template <cat::is_allocator Allocator>
 [[nodiscard]]
 auto
 make_io_uring(
-   cat::allocator_ref<Allocator> allocator, cat::uint4 entries,
-   io_uring_params params = {}
+   cat::allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   cat::uint4 entries, io_uring_params params = {}
 ) noexcept(!__has_feature(cxx_exceptions))
    -> cat::scaredy<io_uring, linux_error> {
    io_uring::memory_layout const layout =
@@ -576,7 +576,8 @@ make_io_uring(
 [[nodiscard, gnu::always_inline, gnu::nodebug]]
 inline auto
 make_io_uring(
-   cat::allocator_dyn allocator, cat::uint4 entries, io_uring_params params = {}
+   cat::allocator_dyn allocator [[clang::lifetimebound]], cat::uint4 entries,
+   io_uring_params params = {}
 ) noexcept(!__has_feature(cxx_exceptions))
    -> cat::scaredy<io_uring, linux_error> {
    return manual::make_io_uring<cat::allocator_dyn>(allocator, entries, params);

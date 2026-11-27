@@ -1042,7 +1042,7 @@ class connection : detail::connection_state {
    [[nodiscard]]
    static auto
    open(
-      cat::allocator_dyn allocator,
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
       nix::manual::io_uring& ring [[clang::lifetimebound]]
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection>;
 
@@ -1052,7 +1052,7 @@ class connection : detail::connection_state {
    [[nodiscard]]
    static auto
    open(
-      cat::allocator_dyn allocator,
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
       nix::manual::io_uring& ring [[clang::lifetimebound]],
       cat::str_view display, cat::zstr_view authority_path
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<connection>;
@@ -1081,12 +1081,13 @@ class connection : detail::connection_state {
 
    auto
    create_window(
-      cat::allocator_dyn allocator, window_options const& options
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
+      window_options const& options
    ) noexcept(!__has_feature(cxx_exceptions)) -> window;
 
    auto
    change_window_attributes(
-      cat::allocator_dyn allocator, window target,
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target,
       window_attributes const& attributes
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
       struct {
@@ -1103,9 +1104,9 @@ class connection : detail::connection_state {
    }
 
    auto
-   destroy_window(cat::allocator_dyn allocator, window target) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> cookie<void> {
+   destroy_window(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
       return push<void>(
          allocator, window_request{
                        .header = {.operation = operation_code::destroy_window},
@@ -1115,9 +1116,9 @@ class connection : detail::connection_state {
    }
 
    auto
-   map_window(cat::allocator_dyn allocator, window target) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> cookie<void> {
+   map_window(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
       return push<void>(
          allocator, window_request{
                        .header = {.operation = operation_code::map_window},
@@ -1127,9 +1128,9 @@ class connection : detail::connection_state {
    }
 
    auto
-   unmap_window(cat::allocator_dyn allocator, window target) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> cookie<void> {
+   unmap_window(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
       return push<void>(
          allocator, window_request{
                        .header = {.operation = operation_code::unmap_window},
@@ -1140,7 +1141,7 @@ class connection : detail::connection_state {
 
    auto
    configure_window(
-      cat::allocator_dyn allocator, window target,
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target,
       window_configuration const& configurations
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
       struct {
@@ -1157,9 +1158,9 @@ class connection : detail::connection_state {
    }
 
    auto
-   get_geometry(cat::allocator_dyn allocator, window target) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> cookie<geometry_reply> {
+   get_geometry(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<geometry_reply> {
       return push<geometry_reply>(
          allocator, window_request{
                        .header = {.operation = operation_code::get_geometry},
@@ -1170,7 +1171,7 @@ class connection : detail::connection_state {
 
    auto
    intern_atom(
-      cat::allocator_dyn allocator, cat::str_view name,
+      cat::allocator_dyn allocator [[clang::lifetimebound]], cat::str_view name,
       bool only_if_exists = false
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<intern_atom_reply> {
       cat::maybe<cat::uint2> const name_length =
@@ -1197,8 +1198,9 @@ class connection : detail::connection_state {
    // `data` holds items of `format` bits each.
    auto
    change_property(
-      cat::allocator_dyn allocator, window target, atom property, atom type,
-      property_format format, cat::span<cat::byte const> data,
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target,
+      atom property, atom type, property_format format,
+      cat::span<cat::byte const> data,
       property_mode mode = property_mode::replace
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
       // Data must hold whole items, and their count must fit 32 bits.
@@ -1233,7 +1235,8 @@ class connection : detail::connection_state {
 
    auto
    delete_property(
-      cat::allocator_dyn allocator, window target, atom property
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target,
+      atom property
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
       struct {
          request_header header{.operation = operation_code::delete_property};
@@ -1248,8 +1251,8 @@ class connection : detail::connection_state {
    // accept any type.
    auto
    get_property(
-      cat::allocator_dyn allocator, window target, atom property,
-      atom type = atom::none, cat::uint4 offset = 0u,
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target,
+      atom property, atom type = atom::none, cat::uint4 offset = 0u,
       cat::uint4 length = 0x1fffffffu, bool delete_after = false
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<property_reply> {
       struct {
@@ -1275,8 +1278,8 @@ class connection : detail::connection_state {
    // Send a 32-byte `event` packet to `destination`.
    auto
    send_event(
-      cat::allocator_dyn allocator, window destination, event_mask mask,
-      void const* _Nonnull p_event, bool propagate = false
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window destination,
+      event_mask mask, void const* _Nonnull p_event, bool propagate = false
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
       struct {
          request_header header;
@@ -1300,8 +1303,8 @@ class connection : detail::connection_state {
    // `revert_to` is 0 for none, 1 for the pointer root, or 2 for the parent.
    auto
    set_input_focus(
-      cat::allocator_dyn allocator, window focus, cat::uint1 revert_to = 2u,
-      cat::uint4 time = 0u
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window focus,
+      cat::uint1 revert_to = 2u, cat::uint4 time = 0u
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void> {
       struct {
          request_header header;
@@ -1319,9 +1322,9 @@ class connection : detail::connection_state {
    }
 
    auto
-   query_pointer(cat::allocator_dyn allocator, window target) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> cookie<pointer_reply> {
+   query_pointer(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<pointer_reply> {
       return push<pointer_reply>(
          allocator, window_request{
                        .header = {.operation = operation_code::query_pointer},
@@ -1331,18 +1334,18 @@ class connection : detail::connection_state {
    }
 
    auto
-   get_input_focus(cat::allocator_dyn allocator) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> cookie<input_focus_reply> {
+   get_input_focus(
+      cat::allocator_dyn allocator [[clang::lifetimebound]]
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<input_focus_reply> {
       return push<input_focus_reply>(
          allocator, request_header{.operation = operation_code::get_input_focus}
       );
    }
 
    auto
-   query_extension(cat::allocator_dyn allocator, cat::str_view name) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> cookie<query_extension_reply> {
+   query_extension(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], cat::str_view name
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<query_extension_reply> {
       cat::maybe<cat::uint2> const name_length =
          cat::narrow_cast<cat::uint2>(name.size());
       if (!name_length.has_value()) [[unlikely]] {
@@ -1365,7 +1368,8 @@ class connection : detail::connection_state {
    template <typename Reply = void>
    auto
    send_request(
-      cat::allocator_dyn allocator, cat::span<cat::byte const> request
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
+      cat::span<cat::byte const> request
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<Reply> {
       cat::idx const size = pad(request.size());
       cat::maybe<cat::uint2> const length = request_length(size);
@@ -1394,21 +1398,23 @@ class connection : detail::connection_state {
    // Set `WM_NAME` and `_NET_WM_NAME` to the UTF-8 `title`.
    auto
    set_title(
-      cat::allocator_dyn allocator, window target, cat::str_view title
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target,
+      cat::str_view title
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void>;
 
    // Set `WM_CLASS`.
    auto
    set_class(
-      cat::allocator_dyn allocator, window target, cat::zstr_view class_name
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target,
+      cat::zstr_view class_name
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void>;
 
    // Ask the window manager for a close request event instead of killing
    // this connection when the user closes `target`.
    auto
-   enable_close_request(cat::allocator_dyn allocator, window target) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> cookie<void>;
+   enable_close_request(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], window target
+   ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<void>;
 
    // Whether `event` asks to close its `.window()`.
    [[nodiscard]]
@@ -1429,9 +1435,10 @@ class connection : detail::connection_state {
    template <typename Reply>
    [[nodiscard]]
    auto
-   wait(cat::allocator_dyn allocator, cookie<Reply> request) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> scaredy_x11<Reply> {
+   wait(
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
+      cookie<Reply> request
+   ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<Reply> {
       static_assert(
          !cat::is_void<Reply>,
          "Requests without replies are verified with `check()`."
@@ -1445,8 +1452,8 @@ class connection : detail::connection_state {
    [[nodiscard]]
    auto
    wait(
-      cat::allocator_dyn allocator, cookie<Reply> request,
-      cat::span<cat::byte> trailing
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
+      cookie<Reply> request, cat::span<cat::byte> trailing
    ) noexcept(!__has_feature(cxx_exceptions)) -> scaredy_x11<Reply> {
       static_assert(
          !cat::is_void<Reply>,
@@ -1486,14 +1493,14 @@ class connection : detail::connection_state {
    // arrived. This does not block.
    [[nodiscard]]
    auto
-   poll_event(cat::allocator_dyn allocator) noexcept(
+   poll_event(cat::allocator_dyn allocator [[clang::lifetimebound]]) noexcept(
       !__has_feature(cxx_exceptions)
    ) -> scaredy_x11<event const*>;
 
    // Return the next event or asynchronous error, blocking until one arrives.
    [[nodiscard]]
    auto
-   wait_event(cat::allocator_dyn allocator) noexcept(
+   wait_event(cat::allocator_dyn allocator [[clang::lifetimebound]]) noexcept(
       !__has_feature(cxx_exceptions)
    ) -> scaredy_x11<event const*>;
 
@@ -1607,7 +1614,8 @@ class connection : detail::connection_state {
    [[nodiscard]]
    auto
    begin_request(
-      cat::allocator_dyn allocator, cat::idx size, bool has_reply
+      cat::allocator_dyn allocator [[clang::lifetimebound]], cat::idx size,
+      bool has_reply
    ) noexcept(!__has_feature(cxx_exceptions)) -> cat::byte* _Nullable {
       // Once earlier requests fill a chunk, start sending them, so that the
       // server works while later requests are encoded.
@@ -1664,9 +1672,9 @@ class connection : detail::connection_state {
    // Ensure that one more pending reply can be recorded.
    [[nodiscard]]
    auto
-   reserve_pending(cat::allocator_dyn allocator) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> bool {
+   reserve_pending(
+      cat::allocator_dyn allocator [[clang::lifetimebound]]
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
       if (m_pending_tail == m_pending_capacity) [[unlikely]] {
          return make_pending_space(allocator);
       }
@@ -1676,9 +1684,9 @@ class connection : detail::connection_state {
 
    [[nodiscard]]
    auto
-   reserve_send(cat::allocator_dyn allocator, cat::idx size) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> bool {
+   reserve_send(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], cat::idx size
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool {
       if (m_send_size + size > m_send_capacity) [[unlikely]] {
          if (!make_send_space(allocator, size)) {
             return false;
@@ -1692,8 +1700,8 @@ class connection : detail::connection_state {
    template <typename Reply, typename Request>
    auto
    push(
-      cat::allocator_dyn allocator, Request const& request,
-      cat::span<cat::byte const> trailing = nullptr
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
+      Request const& request, cat::span<cat::byte const> trailing = nullptr
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<Reply> {
       constexpr cat::idx request_size = sizeof(Request);
       cat::idx const trailing_size = trailing.size();
@@ -1726,7 +1734,8 @@ class connection : detail::connection_state {
    template <typename Reply, typename Request, typename Values>
    auto
    push_with_values(
-      cat::allocator_dyn allocator, Request const& request, Values const& values
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
+      Request const& request, Values const& values
    ) noexcept(!__has_feature(cxx_exceptions)) -> cookie<Reply> {
       constexpr cat::idx request_size = sizeof(Request);
       cat::idx const count =
@@ -1785,9 +1794,9 @@ class connection : detail::connection_state {
 
    [[nodiscard]]
    auto
-   make_pending_space(cat::allocator_dyn allocator) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> bool;
+   make_pending_space(
+      cat::allocator_dyn allocator [[clang::lifetimebound]]
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool;
 
    // The index of `sequence` among the pending replies, or `m_pending_tail`.
    [[nodiscard]]
@@ -1811,8 +1820,8 @@ class connection : detail::connection_state {
    [[nodiscard]]
    auto
    route(
-      cat::allocator_dyn allocator, cat::byte const* _Nonnull p_response,
-      cat::uint8 target
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
+      cat::byte const* _Nonnull p_response, cat::uint8 target
    ) noexcept(!__has_feature(cxx_exceptions)) -> routed;
 
    // Wait until no operation of this connection is in flight. This fails if
@@ -1825,7 +1834,8 @@ class connection : detail::connection_state {
    [[nodiscard]]
    auto
    park(
-      cat::allocator_dyn allocator, cat::byte const* _Nonnull p_response
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
+      cat::byte const* _Nonnull p_response
    ) noexcept(!__has_feature(cxx_exceptions)) -> bool;
 
    // The offset of the parked entry for `sequence`, or `m_parked_size`.
@@ -1847,16 +1857,16 @@ class connection : detail::connection_state {
    // than `size`.
    [[nodiscard]]
    auto
-   make_send_space(cat::allocator_dyn allocator, cat::idx size) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> bool;
+   make_send_space(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], cat::idx size
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool;
 
    // Grow `p_buffer` to at least `minimum` bytes, keeping its contents.
    [[nodiscard]]
    auto
    grow(
-      cat::allocator_dyn allocator, cat::byte* _Nullable& p_buffer,
-      cat::idx& capacity, cat::idx minimum
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
+      cat::byte* _Nullable& p_buffer, cat::idx& capacity, cat::idx minimum
    ) noexcept(!__has_feature(cxx_exceptions)) -> bool;
 
    // Submit the unsent part of the send buffer without waiting, unless an
@@ -1886,15 +1896,15 @@ class connection : detail::connection_state {
    // Finish `other`'s chunk, so that no completion targets its old address.
    [[nodiscard]]
    static auto
-   settled(connection& other [[clang::lifetimebound]]) noexcept -> connection&;
+   settled(connection& other) noexcept -> connection&;
 
    // Send queued requests, and for `receive` and `poll`, receive whatever
    // data is available. `poll` does not wait for data to arrive.
    [[nodiscard]]
    auto
-   transfer(cat::allocator_dyn allocator, transfer_mode mode) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> bool;
+   transfer(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], transfer_mode mode
+   ) noexcept(!__has_feature(cxx_exceptions)) -> bool;
 
    // Return the next complete response in the receive buffer, or `nullptr`.
    [[nodiscard]]
@@ -1904,21 +1914,23 @@ class connection : detail::connection_state {
    [[nodiscard]]
    auto
    queue_event(
-      cat::allocator_dyn allocator, cat::byte const* _Nonnull p_response
+      cat::allocator_dyn allocator [[clang::lifetimebound]],
+      cat::byte const* _Nonnull p_response
    ) noexcept(!__has_feature(cxx_exceptions)) -> bool;
 
    // Return the reply or error for `sequence`, or this connection's failure.
    [[nodiscard]]
    auto
-   wait_response(cat::allocator_dyn allocator, cat::uint8 sequence) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) [[clang::lifetimebound]] -> cat::byte const* _Nonnull;
+   wait_response(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], cat::uint8 sequence
+   ) noexcept(!__has_feature(cxx_exceptions)) [[clang::lifetimebound]]
+   -> cat::byte const* _Nonnull;
 
    [[nodiscard]]
    auto
-   next_event(cat::allocator_dyn allocator, transfer_mode mode) noexcept(
-      !__has_feature(cxx_exceptions)
-   ) -> event const* _Nullable;
+   next_event(
+      cat::allocator_dyn allocator [[clang::lifetimebound]], transfer_mode mode
+   ) noexcept(!__has_feature(cxx_exceptions)) -> event const* _Nullable;
 
    [[nodiscard]]
    auto

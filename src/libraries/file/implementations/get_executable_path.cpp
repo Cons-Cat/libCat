@@ -4,7 +4,8 @@
 using cat::operator""_uki;
 
 auto
-cat::get_executable_path(allocator_dyn allocator) -> maybe<file_path> {
+cat::get_executable_path(allocator_dyn allocator [[clang::lifetimebound]])
+   -> maybe<file_path> {
    // The customary (but not specified) `PATH_MAX` of Linux userspace runtimes
    // is conventionally 4 KiB. This is also the limit for file paths provided to
    // some syscalls, so it's a good upper bound to assume. Technically many

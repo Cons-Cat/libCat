@@ -76,7 +76,7 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
    [[nodiscard]]
    static auto
    reserved(
-      [[maybe_unused]] is_allocator auto& allocator,
+      [[maybe_unused]] is_allocator auto& allocator [[clang::lifetimebound]],
       [[maybe_unused]] iword capacity
    ) -> maybe<ring<T>> {
    }
@@ -86,7 +86,7 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
    [[nodiscard]]
    static auto
    filled(
-      [[maybe_unused]] is_allocator auto& allocator,
+      [[maybe_unused]] is_allocator auto& allocator [[clang::lifetimebound]],
       [[maybe_unused]] iword capacity, [[maybe_unused]] T value
    ) -> maybe<ring<T>> {
    }
@@ -150,7 +150,8 @@ class [[gsl::Owner]] ring : public container_interface<ring<T>, T> {
 
    [[nodiscard]]
    auto
-   clone([[maybe_unused]] is_allocator auto& allocator) -> maybe<ring<T>> {
+   clone([[maybe_unused]] is_allocator auto& allocator [[clang::lifetimebound]])
+      -> maybe<ring<T>> {
    }
 
    // Returns `nullptr` when this `ring` is default-constructed or moved-from.

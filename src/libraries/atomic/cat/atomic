@@ -1457,8 +1457,7 @@ class atomic<T&> {
    atomic() = delete;
    ~atomic() = default;
 
-   constexpr atomic(T& value [[clang::lifetimebound]]) noexcept
-       : m_p_value(&value) {
+   constexpr atomic(T& value) noexcept : m_p_value(&value) {
    }
 
    atomic(atomic const&) = default;
@@ -2307,10 +2306,7 @@ class atomic_ref_bound {
    static constexpr bool notify_is_always_lock_free = true;
    static constexpr bool wait_is_always_signal_safe = true;
 
-   explicit constexpr atomic_ref_bound(
-      T& value [[clang::lifetimebound]]
-   ) noexcept
-       : m_reference(value) {
+   explicit constexpr atomic_ref_bound(T& value) noexcept : m_reference(value) {
    }
 
    atomic_ref_bound(atomic_ref_bound const&) = default;

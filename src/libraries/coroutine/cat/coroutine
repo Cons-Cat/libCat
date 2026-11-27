@@ -447,8 +447,8 @@ struct allocated_promise {
 template <is_allocator Allocator, typename Function, typename... Arguments>
 auto
 make_coroutine(
-   allocator_ref<Allocator> allocator, Function&& function,
-   Arguments&&... arguments
+   allocator_ref<Allocator> allocator [[clang::lifetimebound]],
+   Function&& function, Arguments&&... arguments
 ) -> maybe<__typeof_unqual($fwd(function)($fwd(arguments)...))> {
    return detail::make_allocated_coroutine(
       allocator, $fwd(function), $fwd(arguments)...
@@ -462,7 +462,8 @@ template <typename Function, typename... Arguments>
 [[gnu::always_inline, gnu::nodebug]]
 auto
 make_coroutine(
-   allocator_dyn allocator, Function&& function, Arguments&&... arguments
+   allocator_dyn allocator [[clang::lifetimebound]], Function&& function,
+   Arguments&&... arguments
 ) -> maybe<__typeof_unqual($fwd(function)($fwd(arguments)...))> {
    return detail::make_allocated_coroutine(
       allocator, $fwd(function), $fwd(arguments)...

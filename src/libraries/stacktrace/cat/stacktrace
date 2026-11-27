@@ -122,7 +122,8 @@ class stacktrace
    [[nodiscard, gnu::noinline, clang::disable_tail_calls]]
    static auto
    current(
-      allocator_dyn allocator, idx skip = 0u, idx max_depth = idx::max()
+      allocator_dyn allocator [[clang::lifetimebound]], idx skip = 0u,
+      idx max_depth = idx::max()
    ) noexcept(!__has_feature(cxx_exceptions)) -> maybe<stacktrace>;
 
    [[nodiscard]]

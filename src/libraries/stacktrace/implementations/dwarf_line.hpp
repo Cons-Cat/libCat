@@ -30,8 +30,9 @@ struct dwarf_line_context {
 
 [[nodiscard]]
 auto
-make_dwarf_line_context(span<byte const> elf, allocator_dyn allocator)
-   -> dwarf_line_context;
+make_dwarf_line_context(
+   span<byte const> elf, allocator_dyn allocator [[clang::lifetimebound]]
+) -> dwarf_line_context;
 
 [[nodiscard]]
 auto

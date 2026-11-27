@@ -20,8 +20,8 @@ vfmt_to_sink<allocator_dyn>(
 
 template auto
 vprint_fmt<allocator_dyn>(
-   allocator_ref<allocator_dyn> allocator, str_view format,
-   detail::format_args<allocator_dyn> arguments
+   allocator_ref<allocator_dyn> allocator [[clang::lifetimebound]],
+   str_view format, detail::format_args<allocator_dyn> arguments
 ) -> maybe<idx>;
 
 }  // namespace cat

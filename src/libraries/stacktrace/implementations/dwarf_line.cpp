@@ -985,8 +985,10 @@ sort_sequences(cat::vec_big<cat::detail::dwarf_line_sequence>& sequences) {
 }
 
 auto
-build_sequence_index(dwarf_sections& sections, cat::allocator_dyn allocator)
-   -> bool {
+build_sequence_index(
+   dwarf_sections& sections,
+   cat::allocator_dyn allocator [[clang::lifetimebound]]
+) -> bool {
    for (cat::idx offset = 0u; offset < sections.line.size();) {
       cat::idx next = sections.line.size();
       line_header header;
@@ -1030,7 +1032,7 @@ cat::detail::decode_dwarf_form_size(
 
 auto
 cat::detail::make_dwarf_line_context(
-   span<byte const> elf, allocator_dyn allocator
+   span<byte const> elf, allocator_dyn allocator [[clang::lifetimebound]]
 ) -> dwarf_line_context {
    dwarf_line_context result = find_sections(elf);
    result.has_sequence_index = build_sequence_index(result, allocator);

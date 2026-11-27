@@ -1,7 +1,7 @@
 #include <cat/demangle>
 
 cat::demangled_name::demangled_name(
-   basic_allocator_dyn<dyn_reallocate> allocator
+   basic_allocator_dyn<dyn_reallocate> allocator [[clang::lifetimebound]]
 )
     : m_allocator(allocator) {
 }
@@ -886,7 +886,8 @@ class demangle_parser {
 
 auto
 cat::demangle(
-   basic_allocator_dyn<dyn_reallocate> allocator, str_view const mangled
+   basic_allocator_dyn<dyn_reallocate> allocator [[clang::lifetimebound]],
+   str_view const mangled
 ) -> maybe<demangled_name> {
    if (mangled.size() >= 2u && mangled[0u] == '_' && mangled[1u] == 'Z') {
       detail::demangle_parser demangler(allocator, mangled);
