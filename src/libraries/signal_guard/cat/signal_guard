@@ -1,0 +1,199 @@
+// -*- mode: c++ -*-
+// vim: set ft=cpp:
+#pragma once
+
+// `signal_guard()` invokes a callable and catches fatal signals the callable
+// raises. This design is inspired by P2069, but this is much smaller in scope.
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p2069r0.pdf
+//
+// A convenience `signal_guard_fatal()` is provided to catch ALL fatal signals
+// that might occur.
+
+#include <cat/linux>
+#include <cat/runtime>
+#include <cat/scaredy>
+
+namespace cat {
+
+enum class [[clang::flag_enum]] signal_set : uint8::raw_type {
+   none = 0,
+   interrupt = 1ull << 2u,
+   quit = 1ull << 3u,
+   illegal_instruction = 1ull << 4u,
+   abort = 1ull << 6u,
+   bus = 1ull << 7u,
+   floating_point_error = 1ull << 8u,
+   segmentation_violation = 1ull << 11u,
+   graceful_termination = 1ull << 15u,
+};
+
+}  // namespace cat
+
+template <>
+struct cat::enum_flag_trait<cat::signal_set> : cat::true_trait {};
+
+namespace cat {
+
+// The fatal signals that a guard can catch.
+enum class signal_errors : unsigned char {
+   interrupt = 2,
+   quit = 3,
+   illegal_instruction = 4,
+   abort = 6,
+   bus = 7,
+   floating_point_error = 8,
+   segmentation_violation = 11,
+   graceful_termination = 15,
+};
+
+template <typename T = void>
+using scaredy_signal = scaredy<T, signal_errors>;
+
+namespace detail {
+struct raised_signal_info {
+   jmp_buffer callsite;
+   nix::signal signal;
+};
+
+struct signal_guard_frame {
+   explicit signal_guard_frame(signal_set guarded_signals) noexcept
+       : guarded(guarded_signals) {
+   }
+
+   // Making this `union` prevents unecessary default initialization here.
+   union {
+      raised_signal_info info;
+   };
+
+   signal_set guarded;
+   signal_guard_frame* _Nullable p_previous;
+
+   void
+   push() noexcept;
+
+   ~signal_guard_frame();
+};
+
+// The innermost guarded section of this thread.
+extern constinit thread_local signal_guard_frame* _Nullable p_signal_guards;
+}  // namespace detail
+
+namespace detail {
+// A guard returns `scaredy_signal<T>`, or adds `signal_errors` to the errors of
+// a `scaredy` that the guarded code returns.
+template <typename T>
+struct signal_guard_result {
+   using type = scaredy_signal<T>;
+};
+
+template <typename T, typename... Errors>
+struct signal_guard_result<scaredy<T, Errors...>> {
+   // Compact storage only holds one error, so this unites through the plain
+   // value type instead.
+   using value = scaredy<T, Errors...>::value_type;
+
+   using type = conditional<
+      type_list<Errors...>::template has_type<signal_errors>,
+      scaredy<T, Errors...>,
+      scaredy<
+         conditional<is_monostate<value>, void, value>, Errors...,
+         signal_errors>>;
+};
+
+template <typename Callback>
+using signal_guard_result_type =
+   signal_guard_result<remove_cvref<typeof(declval<Callback>()())>>::type;
+
+template <typename Result, typename Inner, typename Error, typename... Rest>
+constexpr auto
+unite_signal_error(Inner&& inner) -> Result {
+   if constexpr (sizeof...(Rest) == 0u) {
+      return Result($fwd(inner).template error<Error>());
+   } else {
+      if (inner.template is<Error>()) {
+         return Result($fwd(inner).template error<Error>());
+      }
+      return unite_signal_error<Result, Inner, Rest...>($fwd(inner));
+   }
+}
+
+template <typename Result, typename Inner, typename... Errors>
+constexpr auto
+unite_signal_errors(
+   Inner&& inner, type_list<Errors...> const* _Nullable /*errors*/
+) -> Result {
+   return unite_signal_error<Result, Inner, Errors...>($fwd(inner));
+}
+
+// Convert the result of guarded code into `Result`.
+template <typename Result, typename Inner>
+constexpr auto
+unite_signal_result(Inner&& inner) -> Result {
+   using inner_type = remove_cvref<Inner>;
+   if constexpr (is_same<inner_type, Result>) {
+      return $fwd(inner);
+   } else if constexpr (!is_specialization<inner_type, scaredy>) {
+      return Result($fwd(inner));
+   } else {
+      if (inner.has_value()) {
+         if constexpr (is_monostate<typename inner_type::value_type>) {
+            return Result(monostate);
+         } else {
+            return Result($fwd(inner).value());
+         }
+      }
+
+      return unite_signal_errors<Result>(
+         $fwd(inner), static_cast<inner_type::errors_list const*>(nullptr)
+      );
+   }
+}
+}  // namespace detail
+
+template <typename Callback>
+   requires(is_invocable<Callback>)
+auto
+signal_guard(signal_set guarded_signals, Callback&& guarded_code)
+   -> detail::signal_guard_result_type<Callback> {
+#ifdef CAT_NO_SIGNAL_HANDLER
+   static_assert(
+      !is_same<Callback, Callback>,
+      "`cat::signal_guard()` requires a signal handler runtime, but "
+      "`CAT_NO_SIGNAL_HANDLER` is defined!"
+   );
+#endif
+   using result = detail::signal_guard_result_type<Callback>;
+   detail::signal_guard_frame frame(guarded_signals);
+
+   if (setjmp(frame.info.callsite) == 0) {
+      frame.push();
+      if constexpr (is_void<typeof($fwd(guarded_code)())>) {
+         $fwd(guarded_code)();
+         return result(monostate);
+      } else {
+         return detail::unite_signal_result<result>($fwd(guarded_code)());
+      }
+   }
+
+   return result(static_cast<signal_errors>(to_underlying(frame.info.signal)));
+}
+
+// `signal_guard()` with every signal in `signal_set` guarded by default, except
+// the user's termination requests `interrupt` and `graceful_termination`.
+template <typename Callback>
+   requires(is_invocable<Callback>)
+auto
+signal_guard_fatal(Callback&& guarded_code)
+   -> detail::signal_guard_result_type<Callback> {
+   return signal_guard(
+      signal_set::quit
+         | signal_set::illegal_instruction
+         | signal_set::abort
+         | signal_set::bus
+         | signal_set::floating_point_error
+         | signal_set::segmentation_violation,
+      $fwd(guarded_code)
+   );
+}
+
+}  // namespace cat

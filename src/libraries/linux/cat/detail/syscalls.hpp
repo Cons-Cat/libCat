@@ -1563,6 +1563,14 @@ struct signal_info {
    cat::int4 errno_code;
    cat::int4 code;
 
+   // `si_addr`. Only meaningful for `segmentation_violation`, `bus`,
+   // `illegal_instruction`, and `floating_point_error`.
+   [[nodiscard]]
+   auto
+   fault_address() const noexcept -> void* _Nullable {
+      return __builtin_bit_cast(void*, m_fields[0]);
+   }
+
  private:
    [[maybe_unused]]
    cat::int4 m_padding;
@@ -1588,6 +1596,13 @@ struct sigaction {
    signal_action_flags flags;
    void (*_Nullable restorer)();
    signals_mask_set mask;
+
+   // Whether `handler` is `SIG_IGN`, which is the handler `1`.
+   [[nodiscard]]
+   auto
+   is_ignored() const noexcept -> bool {
+      return __builtin_bit_cast(cat::uword, handler) == 1u;
+   }
 };
 
 static_assert(sizeof(sigaction) == 32);
@@ -1752,6 +1767,12 @@ sys_access(cat::zstr_view file_path, access_mode mode) noexcept
 
 // Syscall 22. `pipefd[0]` becomes the read end and `pipefd[1]` the write end.
 auto sys_pipe(file_descriptor (&pipefd)[2]) -> scaredy_nix<void>;
+
+[[nodiscard, gnu::always_inline]]
+inline auto
+sys_pipe(cat::array<file_descriptor, 2u>& pipefd) -> scaredy_nix<void> {
+   return syscall_volatile<void>(22, pipefd.data());
+}
 
 // Syscall 24.
 auto

@@ -15,6 +15,13 @@ auto
 main() -> int;
 #endif
 
+#ifndef CAT_NO_SIGNAL_HANDLER
+namespace cat::detail {
+void
+signal_guard_top() noexcept;
+}  // namespace cat::detail
+#endif
+
 namespace {
 
 #ifndef CAT_NO_STATIC_CONSTRUCTORS
@@ -101,7 +108,7 @@ extern "C" {
 #if defined(CAT_NO_ARGC_ARGV) && defined(CAT_NO_VDSO)
 void
 call_main() {
-#elif defined(CAT_NO_VDSO)
+#elifdef CAT_NO_VDSO
 [[gnu::used]]
 void
 call_main(int argc, char* const* pp_argv) {
@@ -140,6 +147,11 @@ call_main(cat::uword const* _Nonnull p_stack) {
    // but `CAT_STATIC_LINKED` is only set alongside `--no-pie`, so this never
    // runs there.
    nix::detail::init_parent_process_tls();
+#endif
+#ifndef CAT_NO_SIGNAL_HANDLER
+   // Uncaught signals get caught outside of `main()` and they print a
+   // stacktrace.
+   cat::detail::signal_guard_top();
 #endif
 #ifndef CAT_NO_STATIC_CONSTRUCTORS
    // We must run static constructors AFTER all other runtime setup, so we can

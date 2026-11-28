@@ -205,6 +205,7 @@ if(CAT_BUILD_UNIT_TESTS)
     ${CMAKE_SOURCE_DIR}/tests/src/test_mutex.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_semaphore.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_stacktrace.cpp
+    ${CMAKE_SOURCE_DIR}/tests/src/test_signal_guard.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_pointer_in_range.cpp
     ${CMAKE_SOURCE_DIR}/tests/src/test_span.cpp
   )

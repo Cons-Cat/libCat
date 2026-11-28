@@ -156,6 +156,8 @@ if (CAT_USE_ASAN OR CAT_USE_TSAN)
 endif()
 option(CAT_NO_STACKTRACE
   "Omit frame pointers. Disables reliable `%rbp` stack traces." OFF)
+option(CAT_NO_SIGNAL_HANDLER
+  "Do not install the fatal signal handler in `_start`." OFF)
 
 # Two flag tiers: `ESSENTIAL` = usage requirements every consumer must honor (on
 # `cat` `INTERFACE`). `INTERNAL` = libCat's own warnings/diagnostics/per- config
@@ -190,6 +192,9 @@ if(CAT_NO_VDSO)
 endif()
 if(CAT_NO_STACKTRACE)
   list(APPEND CAT_CXX_FLAGS_ESSENTIAL -DCAT_NO_STACKTRACE)
+endif()
+if(CAT_NO_SIGNAL_HANDLER)
+  list(APPEND CAT_CXX_FLAGS_ESSENTIAL -DCAT_NO_SIGNAL_HANDLER)
 endif()
 
 list(

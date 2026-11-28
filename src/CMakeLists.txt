@@ -10,8 +10,8 @@ set(CAT_INCLUDE_SUBDIRS
   array span list string path tui format memory allocator utility io file
   linux thread atomic socket x11 bit bitset bitvec stepanov math type_list
   tuple vec map ring enum iterable dyn random timer chrono mutex quantity
-  stacktrace demangle exception coroutine complex devec semaphore scan cli
-  version)
+  stacktrace demangle exception signal_guard coroutine complex devec semaphore
+  scan cli version)
 set(CAT_INCLUDE_SUBDIRS ${CAT_INCLUDE_SUBDIRS} PARENT_SCOPE)
 
 target_include_directories(cat INTERFACE "${CMAKE_SOURCE_DIR}/src/")
@@ -59,6 +59,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/runtime/implementations/__clzti2.cpp
   ${CATLIB}/runtime/implementations/__floattisf.cpp
   ${CATLIB}/runtime/implementations/__eqtf2.cpp
+  ${CATLIB}/runtime/implementations/signal_guard_top.cpp
   ${CATLIB}/exception/implementations/cfi_interpreter.cpp
   ${CATLIB}/exception/implementations/eh_frame_hdr.cpp
   ${CATLIB}/exception/implementations/fde_parser.cpp
@@ -321,6 +322,7 @@ target_sources(cat-impl PRIVATE
   ${CATLIB}/stacktrace/implementations/stacktrace.cpp
   ${CATLIB}/stacktrace/implementations/dwarf_line.cpp
   ${CATLIB}/stacktrace/implementations/format_stacktrace.cpp
+  ${CATLIB}/signal_guard/implementations/signal_guard.cpp
   ${CATLIB}/demangle/implementations/demangle.cpp
 )
 
@@ -660,6 +662,7 @@ set(CAT_HEADER_FILES
   ${CATLIB}/string/cat/detail/raii_str_vec.hpp
   ${CATLIB}/stacktrace/cat/stacktrace
   ${CATLIB}/stacktrace/implementations/dwarf_line.hpp
+  ${CATLIB}/signal_guard/cat/signal_guard
   ${CATLIB}/demangle/cat/demangle
   ${CATLIB}/exception/cat/exception
   ${CATLIB}/exception/implementations/format_exception.tpp
